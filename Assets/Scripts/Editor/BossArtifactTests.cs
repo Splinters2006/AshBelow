@@ -64,6 +64,7 @@ namespace Slopgame.Editor
                 run.Player.enabled = false;
                 if (stage == 1)
                 {
+                    TestEnemies(run);
                     FreezeEnemies(run);
                     TestWizard(run);
                     while (run.Floor < 5) ClearFloor(run);
@@ -96,7 +97,7 @@ namespace Slopgame.Editor
                     Require(run.IsBossFloor && run.Boss != null, "Floor ten has no boss.");
                     run.Boss.Enemy.Hit(100000);
                     run.BeginArtifactChoice();
-                    Require(run.ChooseArtifact(AbilityType.FrostNova, 1), "Second artifact did not fill F.");
+                    Require(run.ChooseArtifact(AbilityType.FrostNova, 1), "Second artifact did not fill E.");
                     TestSlots(run);
                     StartClass(run, classes[0]);
                     stage = 3;
@@ -125,6 +126,7 @@ namespace Slopgame.Editor
                     burnTarget.transform.position = (Vector2)run.Map.Centers[run.Map.Centers.Count - 1];
                     burnTarget.Health = 100;
                     burnTarget.Burn(1, 5);
+                    Require(burnTarget.IsBurning && burnTarget.transform.Find("Burn indicator").gameObject.activeSelf, "Burn indicator did not appear.");
                     waitUntil = Time.time + 1.1f;
                     stage = 5;
                     return;
@@ -132,6 +134,7 @@ namespace Slopgame.Editor
                 if (stage == 5)
                 {
                     if (Time.time < waitUntil) return;
+                    Require(!burnTarget.IsBurning && !burnTarget.transform.Find("Burn indicator").gameObject.activeSelf, "Expired burn indicator remained visible.");
                     Require(burnTarget.Health == 95, "First burn did not tick exactly once.");
                     burnTarget.Burn(1, 1);
                     waitUntil = Time.time + 1.1f;
@@ -144,7 +147,7 @@ namespace Slopgame.Editor
                     Require(burnTarget.Health == 94, "New burn inherited expired burn damage.");
                     run.ShowMainMenu(); run.Restart();
                     Require(run.Player.Abilities.EmptySlot == 0 && run.Player.Powerups.Count(PowerupType.CriticalHits) == 0, "New run retained abilities or talents.");
-                    Finish(!failed, "Boss floors 5/10, artifact gates/Q/F/replacement, five classes, all 15 active abilities, lightning, elemental damage/burn expiration, talent gates, cooldowns, and reset");
+                    Finish(!failed, "Boss floors 5/10, artifact gates/Q/E/replacement, five classes, all 15 active abilities, lightning, elemental damage/burn expiration, talent gates, cooldowns, and reset");
                 }
             }
             catch (Exception error) { Debug.LogException(error); Finish(false, error.Message); }
@@ -176,6 +179,31 @@ namespace Slopgame.Editor
             run.ChooseUpgrade(0);
         }
 
+        private static void TestEnemies(DungeonRun run)
+        {
+            var tank = run.Enemies.Find(enemy => enemy.IsTank);
+            var normal = run.Enemies.Find(enemy => !enemy.IsTank && !enemy.IsRanged);
+            var caster = run.Enemies.Find(enemy => enemy.IsRanged);
+            Require(tank != null && tank.Health == normal.Health * 3 && tank.Speed < normal.Speed
+                && tank.HitRadius > normal.HitRadius, "Tank spawn/stats failed.");
+            Require(tank.GetComponent<SpriteRenderer>().sprite != normal.GetComponent<SpriteRenderer>().sprite
+                && caster.GetComponent<SpriteRenderer>().sprite != normal.GetComponent<SpriteRenderer>().sprite, "Enemy silhouettes were not distinct.");
+            var tactics = caster.GetComponent<EnemyTactics>();
+            for (int x = 1; x < DungeonMap.Width - 2; x++)
+                for (int y = 2; y < DungeonMap.Height - 2; y++)
+                {
+                    Vector2 p = new Vector2(x - 0.2f, y);
+                    if (!run.Map.CanStand(p) || run.Map.CanStand(p + Vector2.left * 0.18f)
+                        || !run.Map.CanStand(p + Vector2.up) || !run.Map.CanStand(p + Vector2.right)) continue;
+                    caster.transform.position = p;
+                    Vector2 direction = tactics.Direction(p + Vector2.right, true, false);
+                    Require(direction.sqrMagnitude > 0.01f && run.Map.CanStand(p + direction * 0.18f), "Caster kept retreating into a wall.");
+                    Require(tactics.Direction(p + Vector2.right, true, true) == Vector2.zero, "Charging caster moved.");
+                    return;
+                }
+            throw new Exception("No wall-retreat test position found.");
+        }
+
         private static void TestWizard(DungeonRun run)
         {
             var wizard = run.Player.Weapon as WizardAttack;
@@ -186,8 +214,16 @@ namespace Slopgame.Editor
             var offsets = new[] { Vector2.right, new Vector2(1, 1), Vector2.up };
             for (int i = 0; i < 3; i++) { run.Enemies[i].Health = 100; run.Enemies[i].transform.position = origin + offsets[i]; }
             Require(wizard.TryHeavyAttack(Vector2.right), "Lightning did not cast.");
-            for (int i = 0; i < 3; i++) Require(run.Enemies[i].Health == 98, "Lightning missed a chain target or critically hit.");
+            Require(run.Enemies[0].Health == 98 && run.Enemies[1].Health == 100 && run.Enemies[2].Health == 100,
+                "Unupgraded lightning chained or dealt incorrect damage.");
             Require(!wizard.TryHeavyAttack(Vector2.right), "Lightning bypassed cooldown.");
+            run.Player.Powerups.Add(PowerupType.LightningChains);
+            run.Player.Powerups.Add(PowerupType.LightningChains);
+            foreach (string field in new[] { "readyAt", "lightningReadyAt" })
+                typeof(WizardAttack).GetField(field, System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic).SetValue(wizard, 0f);
+            for (int i = 0; i < 3; i++) { run.Enemies[i].Health = 100; run.Enemies[i].transform.position = origin + offsets[i]; }
+            Require(wizard.TryHeavyAttack(Vector2.right), "Upgraded lightning did not cast.");
+            for (int i = 0; i < 3; i++) Require(run.Enemies[i].Health == 98, "Conductivity failed to unlock chain targets.");
             float oldRange = wizard.LightningRange;
             run.Player.Upgrade((int)PowerupType.LightningRange);
             Require(wizard.LightningRange == oldRange + 1f, "Lightning range talent has no effect.");
@@ -201,8 +237,8 @@ namespace Slopgame.Editor
         private static void TestSlots(DungeonRun run)
         {
             var skills = run.Player.Abilities;
-            Require(skills.Equipped(0) == AbilityType.Fireball && skills.Equipped(1) == AbilityType.FrostNova, "Q/F ordering failed.");
-            Require(skills.Claim(AbilityType.Blink, 0) && skills.Equipped(1) == AbilityType.FrostNova, "Replacing Q overwrote F.");
+            Require(skills.Equipped(0) == AbilityType.Fireball && skills.Equipped(1) == AbilityType.FrostNova, "Q/E ordering failed.");
+            Require(skills.Claim(AbilityType.Blink, 0) && skills.Equipped(1) == AbilityType.FrostNova, "Replacing Q overwrote E.");
             Require(!run.Player.Powerups.CanTake(PowerupType.FireballRadius), "Unequipped ability talent was offered.");
             Require(skills.Claim(AbilityType.Blink, 0) && skills.Claim(AbilityType.Blink, 0) && !skills.Claim(AbilityType.Blink, 0), "Artifact rank cap failed.");
             Require(!skills.Claim(AbilityType.Aegis, 1), "Cross-class ability was accepted.");
@@ -212,11 +248,15 @@ namespace Slopgame.Editor
         {
             Require(run.Player.ClassWeapon == type, "Wrong class selected.");
             Require(run.Player.Abilities.EmptySlot == 0, "Class swap leaked artifacts.");
+            float baseCharge = run.Player.Charge.Duration;
+            run.Player.Powerups.Add(PowerupType.AttackSpeed);
+            Require(Mathf.Abs(run.Player.Charge.Duration - baseCharge / 1.2f) < 0.001f, "Attack speed did not improve this class's charge speed.");
             int slot = 0;
             foreach (var ability in AbilityCatalog.All)
             {
                 if (ability.ClassWeapon != type || slot >= 2) continue;
-                Require(run.Player.Abilities.Claim(ability.Type, slot), "Class artifact failed to equip.");
+                Require(run.Player.Abilities.Claim(ability.Type, 1 - slot), "Class artifact failed to equip in chosen slot.");
+                if (slot == 0) Require(run.Player.Abilities.Equipped(0) == AbilityType.None, "Choosing E filled Q instead.");
                 slot++;
             }
             Require(slot == 2 && run.Player.Abilities.TryUse(0, Vector2.right), "Class Q ability failed to cast.");

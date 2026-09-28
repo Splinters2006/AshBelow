@@ -28,8 +28,6 @@ namespace Slopgame
                 ranks[type] = Rank(type) + 1;
                 return true;
             }
-            // The first two unlocks always fill Q then F; replacements require an explicit slot choice.
-            if (EmptySlot >= 0 && slot != EmptySlot) return false;
             equipped[slot] = type;
             if (Rank(type) == 0) ranks[type] = 1;
             return true;

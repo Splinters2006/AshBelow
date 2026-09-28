@@ -76,7 +76,7 @@ namespace Slopgame
             for (int i = 0; i < PlayerAbilities.SlotCount; i++)
             {
                 var ability = AbilityCatalog.Get(player.Abilities.Equipped(i));
-                Slot(new Rect(452 + i * 192, 596, 180, 78), i == 0 ? "Q" : "F", ability == null ? "Boss relic required" : ability.Name,
+                Slot(new Rect(452 + i * 192, 596, 180, 78), i == 0 ? "Q" : "E", ability == null ? "Boss relic required" : ability.Name,
                     player.Abilities.CooldownRemaining(i), ability?.Cooldown ?? 1f, ability?.Color ?? DungeonUi.Muted, ability == null);
             }
             Slot(new Rect(836, 596, 180, 78), "SPACE", "Dodge", player.DodgeCooldownRemaining, DungeonPlayer.RollCooldown, DungeonUi.Teal);
@@ -85,7 +85,7 @@ namespace Slopgame
                 DungeonUi.Label(new Rect(440, 535, 400, 24), player.Charge.Amount >= 1f ? "FULL CHARGE  /  RELEASE" : $"CHARGING  {player.Charge.Amount:P0}", 14, AbilityCatalog.Gold, TextAnchor.MiddleCenter);
                 DungeonUi.Bar(new Rect(500, 568, 280, 5), player.Charge.Amount, AbilityCatalog.Gold);
             }
-            DungeonUi.Label(new Rect(250, 690, 780, 22), "WASD  move     HOLD / RELEASE LMB  charge attack     E  interact", 13, DungeonUi.Muted, TextAnchor.UpperCenter);
+            DungeonUi.Label(new Rect(250, 690, 780, 22), "WASD  move     HOLD / RELEASE LMB  charge attack     F  interact", 13, DungeonUi.Muted, TextAnchor.UpperCenter);
         }
 
         private static void Slot(Rect rect, string key, string name, float cooldown, float total, Color accent, bool locked = false)
@@ -151,7 +151,7 @@ namespace Slopgame
 
         private void DrawArtifacts()
         {
-            ModalTitle("GUARDIAN DEFEATED", "An artifact awakens", "Choose an active ability for your class. Q and F hold two abilities. Choosing an equipped ability raises its rank.");
+            ModalTitle("GUARDIAN DEFEATED", "An artifact awakens", "Choose an active ability for your class. Q and E hold two abilities. Choosing an equipped ability raises its rank.");
             int index = 0;
             foreach (var ability in AbilityCatalog.All)
             {
@@ -159,20 +159,22 @@ namespace Slopgame
                 Rect rect = new Rect(142 + index++ * 340, 300, 316, 340);
                 bool equipped = Run.Player.Abilities.IsEquipped(ability.Type);
                 int rank = Run.Player.Abilities.Rank(ability.Type);
-                string binding = Run.Player.Abilities.Equipped(0) == ability.Type ? "Q" : "F";
+                string binding = Run.Player.Abilities.Equipped(0) == ability.Type ? "Q" : "E";
                 Card(rect, equipped ? $"{binding} EQUIPPED  /  RANK {rank}" : $"ACTIVE  /  {ability.Cooldown:0}s COOLDOWN", ability.Name, ability.Description, ability.Color, ability.Glyph);
-                int empty = Run.Player.Abilities.EmptySlot;
-                if (equipped || empty >= 0)
+                if (equipped)
                 {
-                    string label = equipped ? rank >= PlayerAbilities.MaxRank ? "Maximum rank" : $"Upgrade to rank {rank + 1}" : $"Bind to {(empty == 0 ? "Q" : "F")}";
-                    if (DungeonUi.Button("artifact" + ability.Type, new Rect(rect.x + 24, rect.yMax - 60, 268, 40), label, ability.Color, !equipped || rank < PlayerAbilities.MaxRank))
-                    { Run.ChooseArtifact(ability.Type, equipped ? 0 : empty); return; }
+                    string label = rank >= PlayerAbilities.MaxRank ? "Maximum rank" : $"Upgrade to rank {rank + 1}";
+                    if (DungeonUi.Button("artifact" + ability.Type, new Rect(rect.x + 24, rect.yMax - 60, 268, 40), label, ability.Color, rank < PlayerAbilities.MaxRank))
+                    { Run.ChooseArtifact(ability.Type, Run.Player.Abilities.Equipped(0) == ability.Type ? 0 : 1); return; }
                 }
                 else
                 {
-                    for (int slot = 0; slot < 2; slot++)
-                        if (DungeonUi.Button("replace" + ability.Type + slot, new Rect(rect.x + 24 + slot * 140, rect.yMax - 60, 128, 40), $"Replace {(slot == 0 ? "Q" : "F")}", ability.Color))
+                    for (int slot = 0; slot < PlayerAbilities.SlotCount; slot++)
+                    {
+                        string action = Run.Player.Abilities.Equipped(slot) == AbilityType.None ? "Bind to" : "Replace";
+                        if (DungeonUi.Button("bind" + ability.Type + slot, new Rect(rect.x + 24 + slot * 140, rect.yMax - 60, 128, 40), $"{action} {(slot == 0 ? "Q" : "E")}", ability.Color))
                         { Run.ChooseArtifact(ability.Type, slot); return; }
+                    }
                 }
             }
             if (DungeonUi.Button("leaveArtifact", new Rect(500, 661, 280, 35), "Leave this artifact", DungeonUi.Muted)) Run.FinishArtifactChoice();

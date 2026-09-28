@@ -18,14 +18,14 @@ namespace Slopgame
 #endif
             }
         }
-        public static bool ActiveF
+        public static bool ActiveE
         {
             get
             {
 #if ENABLE_INPUT_SYSTEM
-                return Keyboard.current?.fKey.wasPressedThisFrame ?? false;
+                return Keyboard.current?.eKey.wasPressedThisFrame ?? false;
 #else
-                return Input.GetKeyDown(KeyCode.F);
+                return Input.GetKeyDown(KeyCode.E);
 #endif
             }
         }
@@ -93,9 +93,9 @@ namespace Slopgame
             get
             {
 #if ENABLE_INPUT_SYSTEM
-                return Keyboard.current?.eKey.wasPressedThisFrame ?? false;
+                return Keyboard.current?.fKey.wasPressedThisFrame ?? false;
 #else
-                return Input.GetKeyDown(KeyCode.E);
+                return Input.GetKeyDown(KeyCode.F);
 #endif
             }
         }

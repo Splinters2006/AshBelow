@@ -368,6 +368,8 @@ namespace Slopgame.Editor
             if (Mathf.Abs(powers.AttackIntervalMultiplier - 0.5f) > 0.001f
                 || Mathf.Abs(powers.DodgeCooldownMultiplier - 0.7f) > 0.001f)
                 throw new Exception("Attack/dodge powerup scaling failed.");
+            if (Mathf.Abs(player.Charge.Duration - 0.35f) > 0.001f)
+                throw new Exception("Attack speed did not stack with Quick Draw.");
             if (powers.DamageForRoll(3, 0.54f) != 6 || powers.DamageForRoll(3, 0.55f) != 3)
                 throw new Exception("Critical damage calculation failed.");
             int health = player.Health;
@@ -393,9 +395,13 @@ namespace Slopgame.Editor
             Vector2 origin = enemy.transform.position;
             var facing = enemy.Facing;
             Vector2 before = facing.Direction;
-            facing.TurnToward(-before, 0.1f);
+            facing.TurnToward(-before * 4f, 0.1f);
             if (Vector2.Angle(before, facing.Direction) > 18.01f || Vector2.Angle(before, facing.Direction) < 17.99f)
                 throw new Exception("Enemy turn speed is not limited to 180 degrees per second.");
+            before = facing.Direction;
+            facing.TurnToward(-before * 0.5f, 0.1f);
+            if (Mathf.Abs(Vector2.Angle(before, facing.Direction) - 6.3f) > 0.02f)
+                throw new Exception("Enemy close-range turning did not slow down.");
             Vector2 front = facing.Direction;
             if (!facing.IsInFront(origin + front) || !facing.IsBehind(origin - front)
                 || facing.RegionFrom(origin + new Vector2(-front.y, front.x)) != EnemyHitRegion.Side)
@@ -470,7 +476,7 @@ namespace Slopgame.Editor
                 AssetDatabase.CreateAsset(archer, archerPath);
             }
             EnsureHero("Wizard", WeaponType.Staff, 4, 4.8f, new Color(0.65f, 0.45f, 1f),
-                "A fire-and-storm caster. Charge fireballs and chain lightning. Boss relics unlock fire, ice, and blink abilities.");
+                "A fire-and-storm caster. Charge fireballs and cast lightning. Boss relics unlock fire, ice, and blink abilities.");
             EnsureHero("Assassin", WeaponType.Daggers, 4, 5.6f, new Color(0.78f, 0.4f, 0.65f),
                 "A swift duelist with 15% starting physical crit chance, double physical backstab damage, and a shadowstep.");
             EnsureHero("Paladin", WeaponType.Hammer, 7, 4.5f, new Color(0.95f, 0.78f, 0.4f),

@@ -22,7 +22,7 @@ namespace Slopgame
             if (desired.sqrMagnitude < 0.0001f || deltaTime <= 0) return;
             float current = Mathf.Atan2(Direction.y, Direction.x) * Mathf.Rad2Deg;
             float target = Mathf.Atan2(desired.y, desired.x) * Mathf.Rad2Deg;
-            float angle = Mathf.MoveTowardsAngle(current, target, turnSpeed * deltaTime) * Mathf.Deg2Rad;
+            float angle = Mathf.MoveTowardsAngle(current, target, turnSpeed * Mathf.Lerp(0.35f, 1f, Mathf.InverseLerp(0.75f, 3f, desired.magnitude)) * deltaTime) * Mathf.Deg2Rad;
             Direction = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle));
             UpdateMarker();
         }

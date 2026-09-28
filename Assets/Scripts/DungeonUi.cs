@@ -92,7 +92,7 @@ namespace Slopgame
         }
 
         public static string SpecialName(WeaponType weapon) => weapon == WeaponType.Bow ? "Triple shot"
-            : weapon == WeaponType.Staff ? "Chain lightning" : weapon == WeaponType.Daggers ? "Shadowstep" : "Reflect shield";
+            : weapon == WeaponType.Staff ? "Lightning" : weapon == WeaponType.Daggers ? "Shadowstep" : "Reflect shield";
         public static float SpecialCooldown(WeaponType weapon) => weapon == WeaponType.Bow ? 6f
             : weapon == WeaponType.Staff ? 3f : weapon == WeaponType.Daggers ? 4f : KnightShield.Cooldown;
     }

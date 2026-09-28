@@ -87,7 +87,7 @@ namespace Slopgame
             Vector2 velocity = IsRolling ? rollDirection * Speed * 2.6f : movement * Speed * (Weapon.IsHeavyAttacking ? 0.55f : Charge.IsCharging ? 0.7f : 1f);
             transform.position = Run.Map.Move(transform.position, velocity * Time.deltaTime);
             bool usedAbility = PlayerInput.ActiveQ && Abilities.TryUse(0, AimDirection);
-            if (!usedAbility && PlayerInput.ActiveF) usedAbility = Abilities.TryUse(1, AimDirection);
+            if (!usedAbility && PlayerInput.ActiveE) usedAbility = Abilities.TryUse(1, AimDirection);
             if (!usedAbility && !Run.IsPointerOverHud && PlayerInput.HeavyAttack && !IsRolling) Weapon.TryHeavyAttack(AimDirection);
             Charge.Tick(PlayerInput.Attack, !Run.IsPointerOverHud && !usedAbility && !IsRolling && !Weapon.IsHeavyAttacking && !PlayerInput.HeavyAttack);
         }

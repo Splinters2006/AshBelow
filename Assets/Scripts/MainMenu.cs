@@ -39,7 +39,7 @@ namespace Slopgame
                     }
                 }
                 else DrawSelection();
-                DungeonUi.Label(new Rect(70, 672, 1100, 24), "WASD  move     HOLD / RELEASE LMB  attack     RMB  class skill     Q / F  relic abilities", 14, DungeonUi.Muted);
+                DungeonUi.Label(new Rect(70, 672, 1100, 24), "WASD  move     HOLD / RELEASE LMB  attack     RMB  class skill     Q / E  relic abilities", 14, DungeonUi.Muted);
             }
             finally { GUI.matrix = previous; }
         }
@@ -61,7 +61,7 @@ namespace Slopgame
             DungeonUi.Label(new Rect(536, 300, 630, 52), character.DisplayName, 38, character.Color);
             DungeonUi.Label(new Rect(538, 361, 610, 32), $"{character.StartingHealth} HP     {character.StartingDamage} DAMAGE     {character.MoveSpeed:0.#} SPEED", 16, DungeonUi.Muted);
             DungeonUi.Label(new Rect(402, 434, 766, 80), character.Description, 20);
-            DungeonUi.Label(new Rect(402, 535, 766, 28), $"RMB  {DungeonUi.SpecialName(character.Weapon)}     /     Q + F unlock from boss artifacts", 16, character.Color);
+            DungeonUi.Label(new Rect(402, 535, 766, 28), $"RMB  {DungeonUi.SpecialName(character.Weapon)}     /     Q + E unlock from boss artifacts", 16, character.Color);
             if (DungeonUi.Button("back", new Rect(70, 598, 268, 48), "Back", DungeonUi.Muted)) selecting = false;
             if (DungeonUi.Button("begin", new Rect(860, 598, 350, 48), "Begin descent", character.Color)) Run.Restart();
         }

@@ -60,14 +60,14 @@ namespace Slopgame
                 && IsFloor(Mathf.RoundToInt(p.x + radius), Mathf.RoundToInt(p.y + radius));
         }
 
-        public Vector2 Move(Vector2 position, Vector2 delta)
+        public Vector2 Move(Vector2 position, Vector2 delta, float radius = 0.28f)
         {
             int steps = Mathf.Max(1, Mathf.CeilToInt(delta.magnitude / 0.15f));
             delta /= steps;
             for (int i = 0; i < steps; i++)
             {
-                if (CanStand(position + new Vector2(delta.x, 0))) position.x += delta.x;
-                if (CanStand(position + new Vector2(0, delta.y))) position.y += delta.y;
+                if (CanStand(position + new Vector2(delta.x, 0), radius)) position.x += delta.x;
+                if (CanStand(position + new Vector2(0, delta.y), radius)) position.y += delta.y;
             }
             return position;
         }

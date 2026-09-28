@@ -14,9 +14,9 @@ namespace Slopgame
         public bool IsBossFloor => Floor > 0 && Floor % 5 == 0;
         public DungeonBoss Boss { get; private set; }
         public ArtifactPickup Artifact { get; private set; }
-        public string Objective => Artifact != null ? "Claim the glowing artifact  /  E"
+        public string Objective => Artifact != null ? "Claim the glowing artifact  /  F"
             : IsBossFloor && Enemies.Count > 0 ? "Defeat the arena guardian"
-            : Enemies.Count == 0 ? "Find the gold stairs  /  E" : "Clear the floor to unlock the stairs";
+            : Enemies.Count == 0 ? "Find the gold stairs  /  F" : "Clear the floor to unlock the stairs";
         private readonly List<PowerupDefinition> upgradeChoices = new List<PowerupDefinition>();
         public IReadOnlyList<PowerupDefinition> UpgradeChoices => upgradeChoices;
         public int Floor { get; private set; }
@@ -137,6 +137,14 @@ namespace Slopgame
                     enemy.Health = EnemyHealthForFloor(Floor);
                     enemy.Speed = Mathf.Min(3.6f, 1.8f + Floor * 0.12f);
                     if (i == 1) enemy.gameObject.AddComponent<EnemyShooter>();
+                    else if (i == 0 && room % 2 == 0)
+                    {
+                        enemy.IsTank = true;
+                        enemy.name = "Iron brute";
+                        enemy.Health *= 3;
+                        enemy.Speed *= 0.6f;
+                        enemy.transform.localScale = Vector2.one * 0.9f;
+                    }
                     Enemies.Add(enemy);
                 }
             }

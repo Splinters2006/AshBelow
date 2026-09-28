@@ -7,6 +7,54 @@ namespace Slopgame
         private static Sprite square;
         private static Sprite emberBolt;
 
+        private static readonly Sprite[] enemySprites = new Sprite[3];
+        private static Sprite flameSprite;
+        public static Sprite FlameSprite => flameSprite != null ? flameSprite : flameSprite = PixelSprite("Burn flame", new[]
+        {
+            "....W...", "...WW...", "...WW.W.", "..WWWWW.", ".WWWWWW.", ".WWWWWW.", "..WWWW..", "...WW..."
+        });
+
+        public static Sprite EnemySprite(bool ranged, bool tank)
+        {
+            int index = tank ? 2 : ranged ? 1 : 0;
+            if (enemySprites[index] == null)
+                enemySprites[index] = PixelSprite(tank ? "Iron brute" : ranged ? "Ember caster" : "Ashling", tank ? new[]
+                {
+                    "...DDDDDDDD.....", "..DWWWWWWWWD....", ".DWWDDDDDDWWD...", ".DWDWDDWDWWWD...",
+                    "DDWWDDDDDDWWDD..", "DWWWWWWWWWWWWD..", "DWWDDWWWWDDWWD..", "DDDDWWWWWWDDDD..",
+                    ".DWWWWDDWWWWD...", ".DWWWWDDWWWWD...", "..DDDDDDDDDD....", "..DWWWDDWWWD....",
+                    "..DWWWDDWWWD....", "..DDDD..DDDD....", "..DDDD..DDDD....", "................"
+                } : ranged ? new[]
+                {
+                    ".......WW.......", "......WWWW......", ".....WWWWWW.....", "....WDDDDDDW....",
+                    "....WDDWDDWW....", "....WDDDDDDW....", "...WWWWWWWWW..W.", "...WWDDDDWWW.WWW",
+                    "..WWWWDDWWWW..W.", "..WWWWDDWWWWW.D.", ".WWWWWDDWWWWW.D.", ".WWWWWWWWWWWW.D.",
+                    "WWWWWWWWWWWWWWD.", "WWWDDWWWWDDWWWD.", "WWD..WWWW..DWWD.", "................"
+                } : new[]
+                {
+                    "..WW......WW....", "..WWW....WWW....", "...WWWWWWWW.....", "..WWWWWWWWWW....",
+                    "..WDDWDDWDDW....", "..WDDDDDDDDW....", "...WWDDDDWW.....", "....WWWWWW......",
+                    "..WWWWWWWWWW....", ".WW.WWWWWW.WW...", ".WW.WWDDWW.WW...", "....WWWWWW......",
+                    "....WW..WW......", "...WWW..WWW.....", "...DDD..DDD.....", "................"
+                });
+            return enemySprites[index];
+        }
+
+        private static Sprite PixelSprite(string name, string[] rows)
+        {
+            int width = rows[0].Length, height = rows.Length;
+            var texture = new Texture2D(width, height, TextureFormat.RGBA32, false)
+            { name = name, filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Clamp };
+            var pixels = new Color[width * height];
+            for (int y = 0; y < height; y++)
+                for (int x = 0; x < width; x++)
+                    pixels[(height - y - 1) * width + x] = rows[y][x] == 'W' ? Color.white
+                        : rows[y][x] == 'D' ? new Color(0.2f, 0.22f, 0.28f) : Color.clear;
+            texture.SetPixels(pixels);
+            texture.Apply(false, true);
+            return Sprite.Create(texture, new Rect(0, 0, width, height), Vector2.one * 0.5f, width);
+        }
+
         public static SpriteRenderer CreateEmberBolt(Transform parent, Vector2 position)
         {
             if (emberBolt == null)

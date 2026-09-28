@@ -29,9 +29,10 @@ namespace Slopgame
             var target = FindTarget(origin, aim.normalized, LightningRange, struck, true);
             if (target == null) return false;
             Player.Charge.Cancel();
-            int count = 3 + Player.Powerups.Count(PowerupType.LightningChains);
-            // The elemental proc overloads the normal chain with two additional short jumps.
-            bool overload = Random.value < Player.Powerups.CritChance;
+            int chains = Player.Powerups.Count(PowerupType.LightningChains);
+            int count = 1 + chains;
+            // Conductivity unlocks chaining; overload only extends an unlocked chain.
+            bool overload = chains > 0 && Random.value < Player.Powerups.CritChance;
             if (overload) count += 2;
             for (int i = 0; i < count && target != null; i++)
             {

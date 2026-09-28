@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace Slopgame
 {
-    [RequireComponent(typeof(EnemyFacing))]
+    [RequireComponent(typeof(EnemyFacing), typeof(EnemyTactics))]
     public sealed class DungeonEnemy : MonoBehaviour
     {
         public DungeonRun Run { get; set; }
@@ -12,7 +12,12 @@ namespace Slopgame
         private SpriteRenderer body;
         private EnemyShooter shooter;
         public DungeonBoss Boss { get; set; }
-        public float HitRadius => Boss != null ? 0.85f : 0.38f;
+        public bool IsTank { get; set; }
+        public float HitRadius => Boss != null ? 0.85f : IsTank ? 0.5f : 0.38f;
+        public float MoveRadius => IsTank ? 0.42f : 0.28f;
+        public bool IsBurning => burnTicks > 0;
+        private EnemyTactics tactics;
+        private SpriteRenderer burnIndicator;
         public float MoveMultiplier => Time.time < chilledUntil ? 0.45f : 1f;
         public bool IsFlashing => Time.time < hitUntil;
         private float chilledUntil, nextBurn;
@@ -30,6 +35,13 @@ namespace Slopgame
             body = GetComponent<SpriteRenderer>();
             shooter = GetComponent<EnemyShooter>();
             if (IsRanged) gameObject.name = "Ember caster";
+            tactics = GetComponent<EnemyTactics>();
+            if (Boss == null) body.sprite = DungeonVisuals.EnemySprite(IsRanged, IsTank);
+            burnIndicator = DungeonVisuals.Create("Burn indicator", transform, transform.position,
+                new Vector2(0.28f, 0.4f), burnColor, 9);
+            burnIndicator.sprite = DungeonVisuals.FlameSprite;
+            burnIndicator.transform.localPosition = new Vector2(0, 0.95f);
+            burnIndicator.gameObject.SetActive(IsBurning);
         }
 
         private void Update()
@@ -43,6 +55,12 @@ namespace Slopgame
                 if (Health <= 0) return;
                 CombatVfx.Ring(Run.ProjectileRoot, transform.position, 0.4f, burnColor, 0.2f);
             }
+            if (burnIndicator != null)
+            {
+                burnIndicator.gameObject.SetActive(IsBurning);
+                burnIndicator.color = burnColor;
+                burnIndicator.transform.localScale = new Vector3(0.28f, 0.4f, 1f) * (1f + 0.12f * Mathf.Sin(Time.time * 12f));
+            }
             if (Boss != null) return;
             Vector2 position = transform.position;
             Vector2 target = Run.Player.transform.position;
@@ -51,19 +69,12 @@ namespace Slopgame
             if (distance < 10f)
             {
                 if (!IsRanged || !shooter.IsCharging) Facing.TurnToward(target - position, Time.deltaTime);
-                Vector2 direction = visible
-                    ? (target - position).normalized : Run.DirectionToPlayer(position);
-                if (IsRanged && visible)
-                {
-                    if (distance < 3f) direction = -direction;
-                    else if (distance < 5.5f) direction = Vector2.zero;
-                    if (shooter.IsCharging) direction = Vector2.zero;
-                }
-                transform.position = Run.Map.Move(position, direction * Speed * MoveMultiplier * Time.deltaTime);
+                Vector2 direction = tactics.Direction(target, visible, IsRanged && shooter.IsCharging);
+                transform.position = Run.Map.Move(position, direction * Speed * MoveMultiplier * Time.deltaTime, MoveRadius);
             }
             body.color = Time.time < hitUntil || (IsRanged && shooter.IsCharging) ? Color.white
-                : Time.time < chilledUntil ? AbilityCatalog.Ice : IsRanged ? new Color(1f, 0.65f, 0.2f) : new Color(1f, 0.35f, 0.4f);
-            if (!IsRanged && Vector2.Distance(transform.position, target) < 0.65f) Run.Player.Hit();
+                : Time.time < chilledUntil ? AbilityCatalog.Ice : IsTank ? new Color(0.65f, 0.7f, 0.8f) : IsRanged ? new Color(1f, 0.65f, 0.2f) : new Color(1f, 0.35f, 0.4f);
+            if (!IsRanged && Vector2.Distance(transform.position, target) < HitRadius + 0.27f) Run.Player.Hit();
         }
 
         public void Hit(int damage)
@@ -90,7 +101,7 @@ namespace Slopgame
                 return;
             }
             Vector2 away = ((Vector2)transform.position - (Vector2)Run.Player.transform.position).normalized;
-            if (Boss == null) transform.position = Run.Map.Move(transform.position, away * 0.65f);
+            if (Boss == null) transform.position = Run.Map.Move(transform.position, away * (IsTank ? 0.2f : 0.65f), MoveRadius);
         }
 
         public void Chill(float duration) { chilledUntil = Mathf.Max(chilledUntil, Time.time + duration * (Boss != null ? 0.5f : 1f)); }
@@ -104,6 +115,11 @@ namespace Slopgame
             else burnDamage = Mathf.Max(burnDamage, damage);
             burnTicks = Mathf.Max(burnTicks, ticks);
             burnColor = color ?? new Color(1f, 0.4f, 0.16f);
+            if (burnIndicator != null)
+            {
+                burnIndicator.color = burnColor;
+                burnIndicator.gameObject.SetActive(IsBurning);
+            }
         }
     }
 }
