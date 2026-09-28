@@ -8,7 +8,7 @@ namespace Slopgame
         private DungeonPlayer player;
         private Vector2 direction;
         private int damage, pierces;
-        private float remaining, radius;
+        private float remaining, radius, pulsePhase;
         private DamageElement element;
         private Color color;
         private readonly HashSet<DungeonEnemy> hits = new HashSet<DungeonEnemy>();
@@ -28,6 +28,7 @@ namespace Slopgame
             shot.remaining = range;
             shot.radius = radius;
             shot.pierces = pierces;
+            shot.pulsePhase = Random.value * Mathf.PI * 2f;
             shot.transform.rotation = Quaternion.Euler(0, 0, Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg);
             CombatVfx.Trail(shot.gameObject, shot.GlowColor, radius > 0f ? 0.3f : 0.18f, 0.16f);
             return shot;
@@ -39,7 +40,7 @@ namespace Slopgame
         private void Update()
         {
             Advance(Time.deltaTime);
-            if (!IsSpent) transform.localScale = Vector3.one * (1f + 0.12f * Mathf.Sin(Time.time * 30f + GetInstanceID()));
+            if (!IsSpent) transform.localScale = Vector3.one * (1f + 0.12f * Mathf.Sin(Time.time * 30f + pulsePhase));
         }
 
         public void Advance(float deltaTime)
