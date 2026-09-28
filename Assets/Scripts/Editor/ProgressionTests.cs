@@ -11,7 +11,7 @@ namespace Slopgame.Editor
         private static double started;
         private static int stage, hero;
         private static bool failed;
-        private static readonly WeaponType[] Classes = { WeaponType.Sword, WeaponType.Bow, WeaponType.Staff, WeaponType.Daggers, WeaponType.Hammer };
+        private static readonly WeaponType[] Classes = (WeaponType[])Enum.GetValues(typeof(WeaponType));
 
         [InitializeOnLoadMethod]
         private static void Resume()
@@ -153,7 +153,7 @@ namespace Slopgame.Editor
                     }
                     hero++;
                     if (hero < Classes.Length) { StartHero(run); return; }
-                    Finish(!failed, "Ash rewards, floor/boss deduplication, purchases, persistent upgrades across all five classes, stairs, and save survival");
+                    Finish(!failed, "Ash rewards, floor/boss deduplication, purchases, persistent upgrades across all classes, stairs, and save survival");
                 }
             }
             catch (Exception error) { Debug.LogException(error); Finish(false, error.Message); }

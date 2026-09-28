@@ -38,7 +38,8 @@ namespace Slopgame
                 }
             }
             GUI.EndScrollView();
-            DungeonUi.Label(new Rect(365, 608, 845, 35), notice ?? "Permanent upgrades survive death and game updates.", 17, DungeonUi.Muted);
+            DungeonUi.Label(new Rect(365, 608, 845, 50), progress.LastError ?? notice ?? "Permanent upgrades survive death and game updates.", 17,
+                progress.LastError != null ? new Color(1f, 0.65f, 0.4f) : DungeonUi.Muted);
         }
     }
 }

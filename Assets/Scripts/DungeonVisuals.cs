@@ -8,7 +8,7 @@ namespace Slopgame
         private static Sprite emberBolt;
 
         private static readonly Sprite[] enemySprites = new Sprite[3];
-        private static Sprite flameSprite;
+        private static Sprite flameSprite, shadowHero;
         public static Sprite FlameSprite => flameSprite != null ? flameSprite : flameSprite = PixelSprite("Burn flame", new[]
         {
             "....W...", "...WW...", "...WW.W.", "..WWWWW.", ".WWWWWW.", ".WWWWWW.", "..WWWW..", "...WW..."
@@ -128,6 +128,22 @@ namespace Slopgame
 
         public static void DecorateHero(Transform hero, WeaponType weapon, Color tint)
         {
+            if (weapon == WeaponType.Shadow)
+            {
+                if (shadowHero == null) shadowHero = PixelSprite("Shadow sovereign", new[]
+                {
+                    "...W....W....W..", "...WW..WWW..WW..", "....WWWWWWWWW...", "...WWWWWWWWWWW..",
+                    "...WDDDDDDDDDW..", "...WDWWDDWWDDW..", "...WDDDDDDDDDW..", "....WDDDDDDDW...",
+                    "...WWWWWWWWWWW..", "..WWWDDWWDDWWW..", ".WWWWDDWWDDWWWW.", "WWWWWDDWWDDWWWWW",
+                    ".WWWWWDDDDWWWWW.", "..WWWWDDDDWWWW..", "..WWW..WW..WWW..", "...W........W..."
+                });
+                hero.GetComponent<SpriteRenderer>().sprite = shadowHero;
+                Detail(hero, "Void mantle", new Vector2(0, -0.15f), new Vector2(1.15f, 0.72f), new Color(0.035f, 0.012f, 0.075f), 3);
+                Detail(hero, "Left soul eye", new Vector2(-0.16f, 0.12f), new Vector2(0.15f, 0.06f), AbilityCatalog.Ice, 7);
+                Detail(hero, "Right soul eye", new Vector2(0.16f, 0.12f), new Vector2(0.15f, 0.06f), AbilityCatalog.Ice, 7);
+                ShadowVfx.Aura(hero);
+                return;
+            }
             Detail(hero, "Shadow", new Vector2(0.06f, -0.16f), new Vector2(1.2f, 0.85f), new Color(0.01f, 0.02f, 0.04f, 0.5f), 2);
             Detail(hero, "Face", new Vector2(0, 0.16f), new Vector2(0.65f, 0.25f), new Color(0.08f, 0.12f, 0.2f));
             Detail(hero, "Eyes", new Vector2(0.12f, 0.16f), new Vector2(0.13f, 0.08f), Color.white, 7);

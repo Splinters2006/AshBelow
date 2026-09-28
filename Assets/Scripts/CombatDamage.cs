@@ -6,6 +6,21 @@ namespace Slopgame
 
     public static class CombatDamage
     {
+        public static int ShadowstepDamageForRoll(DungeonPlayer player, float roll)
+        {
+            int backstab = player.Charge.Damage(1f) * 2 + player.Powerups.Count(PowerupType.Backstab);
+            float chance = Mathf.Clamp01(player.Powerups.PhysicalCritChance * 2f);
+            return roll < chance ? backstab * 2 : backstab;
+        }
+
+        public static void ApplyShadowstep(DungeonPlayer player, DungeonEnemy enemy)
+        {
+            if (enemy == null || enemy.Health <= 0) return;
+            // Shadowstep emerges behind its victim, regardless of their turn during the blink.
+            Vector2 source = (Vector2)enemy.transform.position - enemy.Facing.Direction;
+            enemy.Hit(ShadowstepDamageForRoll(player, Random.value), source);
+        }
+
         public static void Apply(DungeonPlayer player, DungeonEnemy enemy, int damage, DamageElement element, Vector2 source)
         {
             if (enemy == null || enemy.Health <= 0) return;

@@ -48,7 +48,8 @@ namespace Slopgame
             string saveDirectory = Application.persistentDataPath;
 #if UNITY_EDITOR
             // Automated tests must never read or change the player's real wallet.
-            if (Application.isBatchMode)
+            if (Application.isBatchMode || UnityEditor.SessionState.GetBool("SlopgamePreview", false)
+                || UnityEditor.SessionState.GetBool("AdminPreview", false))
                 saveDirectory = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "ashbelow-tests", System.Guid.NewGuid().ToString("N"));
 #endif
             Progress = new PermanentProgress(saveDirectory);

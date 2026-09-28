@@ -5,7 +5,8 @@ namespace Slopgame
     public enum AbilityType
     {
         None, ShieldRush, Earthshatter, Aegis, Volley, PiercingShot, Windstep,
-        Fireball, FrostNova, Blink, FanOfKnives, VenomStrike, ShadowVeil, HealingLight, Judgment, Sanctuary
+        Fireball, FrostNova, Blink, FanOfKnives, VenomStrike, ShadowVeil, HealingLight, Judgment, Sanctuary,
+        Eclipse, SoulRend, ShadowReign
     }
 
     public sealed class AbilityDefinition
@@ -46,7 +47,10 @@ namespace Slopgame
             new AbilityDefinition(AbilityType.ShadowVeil, WeaponType.Daggers, "Shadow Veil", "Brief invulnerability lets you slip behind enemies safely.", "~", 12f, Violet),
             new AbilityDefinition(AbilityType.HealingLight, WeaponType.Hammer, "Healing Light", "Restore 2 HP to yourself and nearby allies.", "+", 16f, Gold),
             new AbilityDefinition(AbilityType.Judgment, WeaponType.Hammer, "Judgment", "Smite and slow enemies around you with a radiant shockwave.", "!", 10f, Gold),
-            new AbilityDefinition(AbilityType.Sanctuary, WeaponType.Hammer, "Sanctuary", "Protect yourself and nearby allies with temporary invulnerability.", "O", 16f, Ice)
+            new AbilityDefinition(AbilityType.Sanctuary, WeaponType.Hammer, "Sanctuary", "Protect yourself and nearby allies with temporary invulnerability.", "O", 16f, Ice),
+            new AbilityDefinition(AbilityType.Eclipse, WeaponType.Shadow, "Eclipse", "A vast black sun executes every visible enemy within 11 units, including guardians. Ranks widen its reach.", "O", 6f, Violet),
+            new AbilityDefinition(AbilityType.SoulRend, WeaponType.Shadow, "Soul Rend", "Tear open a 14-unit shadow corridor for triple fully charged damage. Ranks multiply its damage.", "///", 3f, Ice),
+            new AbilityDefinition(AbilityType.ShadowReign, WeaponType.Shadow, "Shadow Reign", "Detonate nearby shadows. Become invulnerable and double rift damage for 3 seconds. Ranks extend the reign.", "*", 8f, Violet)
         };
 
         public static AbilityDefinition Get(AbilityType type)

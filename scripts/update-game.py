@@ -21,6 +21,13 @@ MAX_ARCHIVE_BYTES = 2 * 1024**3
 MAX_EXTRACTED_BYTES = 8 * 1024**3
 
 
+def require_separate_save_directory(install_directory, save_directory):
+    install = install_directory.resolve()
+    saves = save_directory.resolve()
+    if install.is_relative_to(saves) or saves.is_relative_to(install):
+        raise RuntimeError("Keep the game installation and player save folder separate before updating.")
+
+
 def default_save_directory():
     if sys.platform == "win32":
         return Path(os.environ.get("USERPROFILE", str(Path.home()))) / "AppData/LocalLow/DefaultCompany/Ash Below"
@@ -130,6 +137,7 @@ def extract_release(archive_path, destination):
 
 
 def install_release(directory, repo, save_directory, asset_name=None, check=False):
+    require_separate_save_directory(directory, save_directory)
     release = request_json(f"https://api.github.com/repos/{repo}/releases/latest")
     asset = select_asset(release, asset_name)
     print(f"Latest release: {release['tag_name']} / {asset['name']}")
@@ -137,11 +145,10 @@ def install_release(directory, repo, save_directory, asset_name=None, check=Fals
         return None
     # A versioned sibling install allows rollback and never overwrites a running executable.
     releases = directory.parent if directory.parent.name == "AshBelow-updates" else directory.parent / "AshBelow-updates"
-    releases.mkdir(parents=True, exist_ok=True)
+    require_separate_save_directory(releases, save_directory)
     tag = re.sub(r"[^A-Za-z0-9._-]", "_", str(release["tag_name"]))[:80].strip(".") or "release"
     target = releases / f"{tag}-{int(asset['id'])}"
-    if target.resolve() == save_directory.resolve() or save_directory.resolve().is_relative_to(target.resolve()):
-        raise RuntimeError("The install destination must not contain player saves.")
+    require_separate_save_directory(target, save_directory)
     if target.exists():
         marker = target / ".ashbelow-release.json"
         if marker.exists() and json.loads(marker.read_text(encoding="utf-8")).get("asset_id") == asset["id"] and (target / "AshBelow.exe").is_file():
@@ -149,6 +156,7 @@ def install_release(directory, repo, save_directory, asset_name=None, check=Fals
             return target
         raise RuntimeError(f"Destination already exists and will not be overwritten: {target}")
     backup_saves(save_directory)
+    releases.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix=".ashbelow-download-", dir=releases) as temp:
         staging = Path(temp)
         archive = staging / "release.zip"
@@ -168,8 +176,7 @@ def git(directory, *args):
 
 
 def update_source(directory, save_directory, branch="main", check=False):
-    if save_directory.resolve().is_relative_to(directory.resolve()):
-        raise RuntimeError("Keep saves outside the source checkout before updating.")
+    require_separate_save_directory(directory, save_directory)
     if not (directory / ".git").exists() or not (directory / "Assets").is_dir():
         raise RuntimeError("Source mode requires a Unity Git checkout. It does not update a built game.")
     if git(directory, "status", "--porcelain", "--untracked-files=normal"):

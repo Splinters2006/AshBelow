@@ -54,7 +54,8 @@ namespace Slopgame
         }
 
         public float ChargedCone(float charge) => Mathf.Lerp(ConeAngle,
-            120f + Player.Powerups.Count(PowerupType.SweepingEdge) * 15f, Mathf.Clamp01(charge));
+            Player.ClassWeapon == WeaponType.Daggers ? 22f
+                : 120f + Player.Powerups.Count(PowerupType.SweepingEdge) * 15f, Mathf.Clamp01(charge));
 
         public bool TryAttack(Vector2 aim, float charge = 0f)
         {
@@ -65,7 +66,8 @@ namespace Slopgame
         public bool TrySwipe(Vector2 aim, int damage, float reach, float cone)
         {
             if (!CanAttack || aim.sqrMagnitude < 0.001f) return false;
-            SetArc(reach, cone, new Color(0.4f, 1f, 0.85f, 0.45f));
+            SetArc(reach, cone, Player.ClassWeapon == WeaponType.Daggers
+                ? new Color(0.75f, 0.45f, 1f, 0.55f) : new Color(0.4f, 1f, 0.85f, 0.45f));
             readyAt = Time.time + 0.42f * Player.Powerups.AttackIntervalMultiplier;
             visibleUntil = Time.time + 0.15f;
             FaceArc(aim);
@@ -84,8 +86,12 @@ namespace Slopgame
         {
             if (Player.Shield != null) return Player.Shield.Raise(aim);
             if (!CanAttack || HeavyCooldownRemaining > 0f || aim.sqrMagnitude < 0.001f) return false;
+            if (Player.ClassWeapon == WeaponType.Daggers)
+            {
+                if (!Player.Abilities.Shadowstep(aim)) return false;
+            }
+            else Player.Abilities.Dash(aim, 3f);
             Player.Charge.Cancel();
-            Player.Abilities.Dash(aim, 3f);
             shadowReadyAt = Time.time + 4f;
             return true;
         }
@@ -131,7 +137,9 @@ namespace Slopgame
             {
                 FaceArc(Player.AimDirection);
                 SetArc(Reach, ChargedCone(Player.Charge.Amount),
-                    Color.Lerp(new Color(0.4f, 1f, 0.85f, 0.12f), new Color(1f, 0.8f, 0.25f, 0.3f), Player.Charge.Amount));
+                    Player.ClassWeapon == WeaponType.Daggers
+                        ? Color.Lerp(new Color(0.6f, 0.3f, 1f, 0.12f), new Color(0.9f, 0.65f, 1f, 0.5f), Player.Charge.Amount)
+                        : Color.Lerp(new Color(0.4f, 1f, 0.85f, 0.12f), new Color(1f, 0.8f, 0.25f, 0.3f), Player.Charge.Amount));
             }
             arc.enabled = IsHeavyAttacking || (ShowChargePreview && Player.Charge.IsCharging) || Time.time < visibleUntil;
         }

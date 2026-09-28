@@ -23,7 +23,7 @@ namespace Slopgame
                 }
                 DungeonUi.Label(new Rect(70, 52, 900, 25), "A ROGUELIKE DESCENT", 14, AbilityCatalog.Gold);
                 DungeonUi.Label(new Rect(65, 88, 1100, 94), shopping ? "ASH SHOP" : "ASH / BELOW", 66);
-                DungeonUi.Label(new Rect(70, 188, 1100, 42), shopping ? "Spend the ash you carry home. Grow stronger with every descent." : selecting ? "Choose your hero. Shape your build. Claim the relics below." : "Five heroes. Two relic abilities. One life in the ash.", 20, DungeonUi.Muted);
+                DungeonUi.Label(new Rect(70, 188, 1100, 42), shopping ? "Spend the ash you carry home. Grow stronger with every descent." : selecting ? "Choose your hero. Shape your build. Claim the relics below." : "Six heroes. Two relic abilities. One life in the ash.", 20, DungeonUi.Muted);
                 DungeonUi.Label(new Rect(930, 55, 280, 32), Run.Progress.IsReadOnly ? "SAVE UNAVAILABLE" : $"{Run.Progress.Ash} ASH", 23, AbilityCatalog.Gold, TextAnchor.UpperRight);
                 if (shopping)
                 {
@@ -59,7 +59,7 @@ namespace Slopgame
             for (int i = 0; i < Run.Characters.Count; i++)
             {
                 var hero = Run.Characters[i];
-                Rect rect = new Rect(70, 270 + i * 60, 268, 48);
+                Rect rect = new Rect(70, 270 + i * 52, 268, 44);
                 bool selected = hero == Run.SelectedCharacter;
                 if (DungeonUi.Button("class" + i, rect, hero.DisplayName + (selected ? "  /  SELECTED" : ""), selected ? hero.Color : DungeonUi.Muted)) Run.SelectCharacter(hero);
             }
@@ -67,7 +67,7 @@ namespace Slopgame
             var permanent = new PermanentBonuses(Run.Progress, character.Weapon);
             DungeonUi.Panel(new Rect(368, 268, 842, 312), DungeonUi.PanelColor);
             DungeonUi.Panel(new Rect(402, 302, 104, 104), new Color(character.Color.r * 0.25f, character.Color.g * 0.25f, character.Color.b * 0.25f));
-            string glyph = character.Weapon == WeaponType.Staff ? "*" : character.Weapon == WeaponType.Bow ? ">" : character.Weapon == WeaponType.Daggers ? "//" : "+";
+            string glyph = character.Weapon == WeaponType.Shadow ? "///" : character.Weapon == WeaponType.Staff ? "*" : character.Weapon == WeaponType.Bow ? ">" : character.Weapon == WeaponType.Daggers ? "//" : "+";
             DungeonUi.Label(new Rect(402, 302, 104, 104), glyph, 58, character.Color, TextAnchor.MiddleCenter);
             DungeonUi.Label(new Rect(536, 300, 630, 52), character.DisplayName, 38, character.Color);
             DungeonUi.Label(new Rect(538, 361, 610, 32), $"{character.StartingHealth + permanent.Health} HP     {character.StartingDamage + permanent.Damage} DAMAGE     {character.MoveSpeed + permanent.Speed:0.#} SPEED", 16, DungeonUi.Muted);

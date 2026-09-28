@@ -60,7 +60,13 @@ namespace Slopgame
         private void Start()
         {
             body = GetComponent<SpriteRenderer>();
-            if (weaponType == WeaponType.Bow)
+            if (weaponType == WeaponType.Shadow)
+            {
+                var admin = gameObject.AddComponent<AdminAttack>();
+                admin.Player = this;
+                Weapon = admin;
+            }
+            else if (weaponType == WeaponType.Bow)
             {
                 var bow = gameObject.AddComponent<BowAttack>();
                 bow.Player = this;

@@ -487,14 +487,16 @@ namespace Slopgame.Editor
             EnsureHero("Wizard", WeaponType.Staff, 4, 4.8f, new Color(0.65f, 0.45f, 1f),
                 "A fire-and-storm caster. Charge fireballs and cast lightning.");
             EnsureHero("Assassin", WeaponType.Daggers, 4, 5.6f, new Color(0.78f, 0.4f, 0.65f),
-                "A swift duelist with 15% starting physical crit chance, double physical backstab damage, and a shadowstep.");
+                "Charge 50% faster into a narrow, deadly strike. Shadowstep through walls and backstab enemies you cross with doubled critical chance.");
             EnsureHero("Paladin", WeaponType.Hammer, 7, 4.5f, new Color(0.95f, 0.78f, 0.4f),
                 "a holy warrior who would die for his allies");
+            EnsureHero("Admin", WeaponType.Shadow, 12, 6.4f, new Color(0.58f, 0.25f, 0.95f),
+                "An unbound shadow sovereign. Tear through enemies with charged rifts. Nightfall instantly executes visible enemies, even guardians. Intentionally overpowered.", 32);
             AssetDatabase.SaveAssets();
-            Debug.Log("CHARACTER_ASSETS_OK: Five classes ready.");
+            Debug.Log("CHARACTER_ASSETS_OK: Six classes ready.");
         }
 
-        private static void EnsureHero(string name, WeaponType weapon, int health, float speed, Color color, string description)
+        private static void EnsureHero(string name, WeaponType weapon, int health, float speed, Color color, string description, int damage = 1)
         {
             string path = "Assets/Resources/Characters/" + name + ".asset";
             if (AssetDatabase.LoadAssetAtPath<CharacterDefinition>(path) != null) return;
@@ -503,6 +505,7 @@ namespace Slopgame.Editor
             serialized.FindProperty("displayName").stringValue = name;
             serialized.FindProperty("description").stringValue = description;
             serialized.FindProperty("startingHealth").intValue = health;
+            serialized.FindProperty("startingDamage").intValue = damage;
             serialized.FindProperty("moveSpeed").floatValue = speed;
             serialized.FindProperty("color").colorValue = color;
             serialized.FindProperty("weapon").enumValueIndex = (int)weapon;

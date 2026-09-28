@@ -1,6 +1,6 @@
 # Ash / Below
 
-A small Unity 6 action roguelike prototype, built with simple colored sprites. Explore connected procedural rooms, defeat every enemy, and find the gold stairs to choose an upgrade and descend. Death starts a new run; upgrades last only for the current run.
+A small Unity 6 action roguelike prototype with procedural sprites and spell effects. Explore connected rooms, defeat every enemy, and find the gold stairs to choose a boon and descend. Death starts a new run; Ash and purchased shop upgrades carry over, while floor talents and artifact abilities reset.
 
 ## Play
 
@@ -8,7 +8,7 @@ A small Unity 6 action roguelike prototype, built with simple colored sprites. E
 2. Open `Assets/Scenes/Dungeon.unity` and press **Play**. The main menu opens first; choose **Choose your hero → class → Begin descent**. If the scene is missing, use **Slopgame → Create playable dungeon scene**.
 3. Focus the Game view. Move with **WASD / arrow keys**, aim with the **mouse cursor**, hold **left mouse** to charge and release to attack (tap for a quick attack), and press **F** at unlocked gold stairs.
 
-Press **Space** to dodge in your movement direction (toward the cursor if standing still). The roll lasts 0.25 seconds, prevents damage during that window, and has a 1.4-second cooldown. You cannot attack during a roll, and walls still block movement. Sword attacks have a 2.3-unit reach and cannot hit through walls. Charging for up to 1.2 seconds widens the cone from 60 to 120 degrees and raises damage from 1x to 3x your damage stat. Bow attacks fully charge in 1 second, also up to 3x damage. Damage increases in whole-HP steps; holding beyond full charge grants no extra damage. Movement slows while charging. Dodging cancels a charge.
+Press **Space** to dodge in your movement direction (toward the cursor if standing still). The roll lasts 0.25 seconds, prevents damage during that window, and has a 1.4-second cooldown. You cannot attack during a roll, and walls still block movement. Sword attacks have a 2.3-unit reach and cannot hit through walls. Knight charging for up to 1.2 seconds widens the cone from 60 to 120 degrees and raises damage from 1x to 3x your damage stat. Bow attacks fully charge in 1 second, also up to 3x damage. Damage increases in whole-HP steps; holding beyond full charge grants no extra damage. Movement slows while charging. Dodging cancels a charge.
 
 Red ashling enemies chase and deal contact damage. Melee packs spread around the player while the closest enemy presses the attack. Armored iron brutes appear in alternating rooms, with three times normal HP, 60% normal movement speed, a larger body, and reduced knockback. Orange hooded casters steer around walls and keep their distance and only damage you with projectiles, never by touch. They flash white for 0.45 seconds before firing toward your position at the start of the windup. Bolts stop at walls and disappear when changing floors or restarting.
 
@@ -20,7 +20,7 @@ Every floor must be cleared before descending. Choose from three randomly offere
 
 Use **Slopgame → Windows → Build EXE and ZIP**. It builds Windows x64 using Mono and Direct3D 11, starting in a resizable 1280×720 window. Output goes to a new timestamped folder and ZIP under `Builds/Windows/`. Builds are excluded from Git.
 
-The build requires Windows Build Support for the matching Unity editor. This Linux installation currently lacks that module; install Windows Build Support (Mono) or open the project with Unity 6000.6.3f1 on Windows. The menu reports missing support before starting a build. Windows execution still needs testing on a Windows PC.
+The build requires Windows Build Support (Mono) for the matching Unity editor. The menu reports missing support before starting a build.
 
 Distribute the generated ZIP. Players extract it and launch `AshBelow.exe`, keeping its accompanying DLLs and data folders together. The ZIP includes launch instructions and controls. A single-file installer can be added later.
 
@@ -30,13 +30,25 @@ For automation, run Unity with `-batchmode -quit -projectPath <project-folder> -
 
 All C# lives in `Assets/Scripts`. `DungeonMap` generates connected rooms and handles wall collision. `DungeonRun` owns run progression and enemy navigation. Player, enemy, visuals, input, and HUD are separate components/helpers. The editor setup creates the scene through Unity APIs, and **Slopgame → Validate generated dungeons** checks connectivity and spawn positions across 500 seeds.
 
-The prototype uses runtime-generated placeholder sprites and an IMGUI HUD, with no external art dependencies. The project uses Unity Input System 1.20.0. Restart the editor if Unity requests it after importing the package. There is no save system, audio, or general inventory yet; the floors continue indefinitely. Boss arenas appear every fifth floor.
+The prototype uses runtime-generated sprites and an IMGUI HUD, with no external art dependencies. The project uses Unity Input System 1.20.0. Restart the editor if Unity requests it after importing the package. There is no audio or general inventory yet; the floors continue indefinitely. Boss arenas appear every fifth floor.
+
+## Ash, permanent upgrades, and updates
+
+Each ordinary enemy pays **1 Ash**, each guardian pays **50 Ash**, and clearing any floor pays another **10 Ash** immediately. Rewards cannot be claimed twice. The main-menu **Ash shop** offers permanent health, damage, movement, attack/charge speed, and dodge upgrades for all heroes, plus upgrades specific to Knight, Archer, Wizard, Assassin, and Paladin. Purchases apply when your next run starts; normal run talents retain their own stack limits.
+
+Ash and purchases are saved after every reward or purchase, outside the installation folder, at `%USERPROFILE%\AppData\LocalLow\DefaultCompany\Ash Below\progress.json` on Windows. Writes are atomic, the previous save is retained as `.bak`, and a damaged primary save can recover from that backup. A purchase takes effect only after it is saved successfully. Keep the company/product names stable when building, because Unity uses them to locate this folder.
+
+Windows ZIPs include **Update.cmd** and `update-game.py`; close the game, run Update.cmd with **Python 3.10+** installed, then launch the new version at the printed path. The updater fetches the latest published GitHub release ZIP, backs up your save folder, and places the build beside the old installation so you can roll back. It does not replace or reset your Ash. A published Windows build ZIP is required; a GitHub source archive is not a playable release.
+
+For a source checkout, run `python scripts/update-game.py --mode source --directory .`. Source updates require a clean `main` branch and use a fast-forward merge, preserving local work by stopping when changes or divergent history exist. Add `--check` to either mode to check availability without installing. The updater refuses any installation or checkout that overlaps the player save folder.
 
 ## Characters and main menu
 
-Knight, Archer, Wizard, Assassin, and Paladin are playable. Archer starts with **5 HP**, fires one arrow with left click, and fires **three arrows at -15°, 0°, +15°** with right click on a **6-second cooldown**. Tap-fired and triple-shot arrows deal the current damage stat; charged arrows deal up to 3x. Basic arrows travel 5 units when tapped, 5.5 at half charge, and 6 at full charge. Holding beyond full charge grants no extra range. Triple shots and relic arrows keep their 5-unit range. Arrows stop at the first enemy or wall, except Piercing Shot. Archer shares the dodge roll and upgrade system. The main menu offers character selection and Quit; use **Main menu** in the dungeon to abandon the current run and choose again. Starting a run resets upgrades and health.
+Knight, Archer, Wizard, Assassin, Paladin, and Admin are playable. Archer starts with **5 HP**, fires one arrow with left click, and fires **three arrows at -15°, 0°, +15°** with right click on a **6-second cooldown**. Tap-fired and triple-shot arrows deal the current damage stat; charged arrows deal up to 3x. Basic arrows travel 5 units when tapped, 5.5 at half charge, and 6 at full charge. Holding beyond full charge grants no extra range. Triple shots and relic arrows keep their 5-unit range. Arrows stop at the first enemy or wall, except Piercing Shot. Archer shares the dodge roll and upgrade system. The main menu offers character selection, the Ash shop, and Quit; use **Main menu** in the dungeon to abandon the current run and choose again. Starting a run resets floor talents and abilities, then applies permanent purchases and restores health.
 
-Character definitions are ScriptableObjects in `Assets/Resources/Characters`. Create future definitions with **Assets → Create → Slopgame → Character** and give them unique names, descriptions, colors, and starting stats. The selector discovers them automatically. New weapons and abilities still need their own gameplay implementation; select Sword, Bow, Staff, Daggers, or Hammer on the character asset to choose its moveset. The existing Hammer option now selects the Paladin sword-and-blessing moveset. All classes share the dodge component.
+Character definitions are ScriptableObjects in `Assets/Resources/Characters`. Create future definitions with **Assets → Create → Slopgame → Character** and give them unique names, descriptions, colors, and starting stats. The selector discovers them automatically. New weapons and abilities still need their own gameplay implementation; select Sword, Bow, Staff, Daggers, Hammer, or Shadow on the character asset to choose its moveset. The existing Hammer option now selects the Paladin sword-and-blessing moveset. All classes share the dodge component.
+
+**Admin** is an intentionally overpowered shadow caster with **12 HP**, **32 base damage**, and **6.4 movement speed** before permanent upgrades. Left click tears shadow rifts through enemies; right-click **Nightfall** instantly executes visible enemies, including guardians, within 9 units. Its dark aura, violet rifts, soul bursts, and execution effects emphasize excessive power. Boss artifacts unlock **Eclipse**, **Soul Rend**, or **Shadow Reign** in your chosen Q/E slot, with dedicated talents for the class and its equipped abilities. Shared permanent shop upgrades apply to Admin too.
 
 ## Powerups and enemy facing
 
@@ -59,6 +71,7 @@ Boss artifacts offer **active abilities for the selected class instead of a pass
 | Wizard | Charged fireball / lightning (3s) | Inferno Orb, Frost Nova, Arcane Blink |
 | Assassin | Charged daggers / Shadowstep (4s) | Fan of Knives, Venom Strike, Shadow Veil |
 | Paladin | Weak sword swipe / reflecting shield | Healing Light, Judgment, Sanctuary |
+| Admin | Charged shadow rifts / Nightfall execution | Eclipse, Soul Rend, Shadow Reign |
 
 Wizard starts with 4 HP. Lightning reaches 6 units and hits one enemy by default. Conductivity unlocks one additional chain target per rank within 2.5 units of the previous target; walls block each jump and no target is hit twice in a cast. Storm Reach increases cast/jump range, High Voltage increases damage, and Conductivity adds chain targets. Left-click fireballs have a 6-unit range; Inferno Orb is the boss-unlocked explosive version. Fire and ice talents become available after their corresponding artifact is equipped.
 
@@ -66,10 +79,12 @@ Assassin starts with 4 HP, 5.6 movement speed, and **15% physical crit chance**.
 
 ## Physical and elemental effects
 
+Assassin charges **50% faster** (0.8 seconds before upgrades). Charging narrows its cone from **60 to 22 degrees** while increasing damage up to **5x**. Right-click Shadowstep blinks up to 3 units through obstacles or walls, falling back to the farthest safe landing when the destination is blocked. Each enemy crossed takes one fully charged backstab with **twice the Assassin's physical critical chance**, capped at 100%. A failed blink consumes no cooldown; a successful one grants brief protection and starts the 4-second cooldown.
+
 Every class begins with **5% physical critical / elemental effect chance**. Physical critical hits deal double damage. Assassin adds 10% physical crit chance and can improve it further through Killer Instinct. Elemental damage **never critically strikes**: fire can ignite for three damage-over-time ticks with a pulsing flame indicator (green for venom), ice can chill, slowing enemy movement, turning, attack windups, cooldowns, and repeated contact attacks by 50%, and lightning's effect roll overloads a Conductivity-unlocked chain with two extra short jumps. Precision improves both critical and elemental effect chances. Bosses have half-duration chill and resist knockback.
 
 The interface includes an animated health bar, a boss health bar and attack warning, Q/E cooldown slots, charge feedback, a scrollable build panel, and class-colored reward cards. Menus use a centered 1280×720 reference layout and scale to the window. Reward choices pause the game and its cooldown/status timers.
 
 ## Validation
 
-Run the original combat regression using `Slopgame.Editor.DungeonProjectSetup.SmokeTest` in a disposable Unity project copy. Run `Slopgame.Editor.BossArtifactTests.Run` for boss floors, all five classes, Q/E slots, all 15 active abilities, element/crit separation, talent gates, cooldowns, and reset. `Slopgame.Editor.UiPreviewCapture.Capture` captures menu, class, arena, artifact, and talent screens with a graphical Unity editor. These automated commands exit the editor when complete; do not invoke them in an unsaved interactive editor session.
+Run the original combat regression using `Slopgame.Editor.DungeonProjectSetup.SmokeTest` in a disposable Unity project copy. Run `Slopgame.Editor.BossArtifactTests.Run` for boss floors, class abilities, Q/E slots, element/crit separation, talent gates, cooldowns, and reset. Run `Slopgame.Editor.AdminTests.Run` and `Slopgame.Editor.AssassinTests.Run` in batch mode for shadow attacks, capped charges, wall crossing, critical backstabs, and VFX cleanup. Run `Slopgame.Editor.ProgressionTests.Run` in batch mode for Ash rewards, permanent upgrades across every class, backup recovery, failed writes, and save survival. Batch tests use temporary wallets rather than the player's real save. Run `python -B -m unittest discover -s tests -p test_updater.py -v` for offline update/install, save preservation, and failure tests. `Slopgame.Editor.UiPreviewCapture.Capture` captures menu, class, arena, artifact, and talent screens with a graphical Unity editor. `Slopgame.Editor.AdminPreviewCapture.Capture` captures Admin selection, Nightfall, and artifact screens. Both preview tools use temporary saves. These automated Unity commands exit the editor when complete; do not invoke them in an unsaved interactive editor session.

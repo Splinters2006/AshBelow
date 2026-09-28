@@ -85,6 +85,12 @@ namespace Slopgame
                         DamageElement.Physical, definition.Color, 2f); break;
                 case AbilityType.Sanctuary:
                     ForAllies(ally => ally.Protect(2f + (rank - 1) * 0.3f + powers.Count(PowerupType.SanctuaryDuration) * 0.4f)); break;
+                case AbilityType.Eclipse:
+                case AbilityType.SoulRend:
+                case AbilityType.ShadowReign:
+                    var admin = Player.GetComponent<AdminAttack>();
+                    if (admin == null || !admin.CastRelic(definition.Type, aim, rank)) return false;
+                    break;
             }
             CombatVfx.Ring(Player.Run.ProjectileRoot, transform.position, 0.65f, definition.Color);
             readyAt[slot] = Time.time + definition.Cooldown;
@@ -104,6 +110,51 @@ namespace Slopgame
             for (int i = 0; i < count; i++)
                 PlayerProjectile.Spawn(Player.Run, transform.position,
                     Quaternion.Euler(0, 0, (i - (count - 1) * 0.5f) * spacing) * aim, damage);
+        }
+
+        public static bool FindShadowstepLanding(DungeonMap map, Vector2 from, Vector2 aim, float distance, out Vector2 landing)
+        {
+            landing = from;
+            if (map == null || aim.sqrMagnitude < 0.001f || distance < 0.15f) return false;
+            aim.Normalize();
+            int steps = Mathf.CeilToInt(distance / 0.1f);
+            // Only the destination must be clear: intervening walls are intentionally ignored.
+            for (int i = steps; i > 0; i--)
+            {
+                float travel = distance * i / steps;
+                if (travel < 0.15f) break;
+                Vector2 candidate = from + aim * travel;
+                if (!map.CanStand(candidate)) continue;
+                landing = candidate;
+                return true;
+            }
+            return false;
+        }
+
+        public bool Shadowstep(Vector2 aim, float distance = 3f)
+        {
+            if (Player.ClassWeapon != WeaponType.Daggers || !Player.Run.IsPlaying) return false;
+            Vector2 from = transform.position;
+            if (!FindShadowstepLanding(Player.Run.Map, from, aim, distance, out Vector2 landing)) return false;
+            transform.position = landing;
+            Player.Protect(0.35f);
+            Vector2 travel = landing - from;
+            var color = new Color(0.7f, 0.35f, 1f);
+            CombatVfx.Bolt(Player.Run.ProjectileRoot, from, landing, color);
+            CombatVfx.Ring(Player.Run.ProjectileRoot, from, 0.45f, color, 0.2f);
+            CombatVfx.Ring(Player.Run.ProjectileRoot, landing, 0.6f, color, 0.3f);
+            foreach (var enemy in Player.Run.Enemies.ToArray())
+            {
+                Vector2 position = enemy.transform.position;
+                float along = Mathf.Clamp01(Vector2.Dot(position - from, travel) / travel.sqrMagnitude);
+                Vector2 closest = from + travel * along;
+                float radius = enemy.HitRadius + 0.14f;
+                if (enemy.Health <= 0 || (position - closest).sqrMagnitude > radius * radius) continue;
+                CombatVfx.Bolt(Player.Run.ProjectileRoot, position + new Vector2(-0.4f, -0.5f),
+                    position + new Vector2(0.4f, 0.5f), color);
+                CombatDamage.ApplyShadowstep(Player, enemy);
+            }
+            return true;
         }
 
         public void Dash(Vector2 aim, float distance, int damage = 0)

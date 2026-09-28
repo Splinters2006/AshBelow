@@ -12,7 +12,7 @@ namespace Slopgame.Editor
         private static int stage;
         private static float waitUntil;
         private static bool failed, checkedChilledBoss;
-        private static readonly List<WeaponType> classes = new List<WeaponType> { WeaponType.Sword, WeaponType.Bow, WeaponType.Staff, WeaponType.Daggers, WeaponType.Hammer };
+        private static readonly List<WeaponType> classes = new List<WeaponType> { WeaponType.Sword, WeaponType.Bow, WeaponType.Staff, WeaponType.Daggers, WeaponType.Hammer, WeaponType.Shadow };
         private static int classIndex;
         private static int abilityIndex;
         private static DungeonEnemy burnTarget;
@@ -56,7 +56,7 @@ namespace Slopgame.Editor
             {
                 if (stage == 0)
                 {
-                    Require(run.Characters.Count == 5, "Five class assets must load.");
+                    Require(run.Characters.Count == 6, "Six class assets must load.");
                     StartClass(run, WeaponType.Staff);
                     stage = 1;
                     return;
@@ -241,7 +241,7 @@ namespace Slopgame.Editor
                     run.Player.Blessing.Apply(2, 8f);
                     run.Restart();
                     Require(run.Player.Blessing.BonusDamage == 0, "New run retained blessing.");
-                    Finish(!failed, "Bosses, artifacts, five classes, active abilities, status effects, Paladin swipe/charge/allies/range/refresh/expiration/reset");
+                    Finish(!failed, "Bosses, artifacts, six classes, active abilities, status effects, Paladin swipe/charge/allies/range/refresh/expiration/reset");
                 }
             }
             catch (Exception error) { Debug.LogException(error); Finish(false, error.Message); }

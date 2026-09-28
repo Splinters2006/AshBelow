@@ -65,6 +65,26 @@ class UpdaterTests(unittest.TestCase):
         self.assertFalse((self.root / "persistent-update-backups").exists())
         self.assertEqual(self.progress.read_bytes(), self.original)
 
+    def test_rejects_install_and_save_directory_overlap_before_writing(self):
+        for install, saves in ((self.saves / "game", self.saves), (self.install, self.install / "saves"),
+                               (self.saves, self.saves), (self.root / "AshBelow-updates" / "old", self.saves)):
+            if install.parent.name == "AshBelow-updates":
+                saves = install.parent / "saves"
+            with self.subTest(install=install, saves=saves), mock.patch.object(
+                    updater, "request_json", return_value=self.release), mock.patch.object(updater, "backup_saves") as backup:
+                with self.assertRaises(RuntimeError):
+                    updater.install_release(install, "example/repo", saves)
+                backup.assert_not_called()
+        self.assertFalse((self.root / "AshBelow-updates").exists())
+        self.assertEqual(self.progress.read_bytes(), self.original)
+
+    def test_source_update_rejects_checkout_within_save_folder(self):
+        with mock.patch.object(updater, "git") as git:
+            with self.assertRaises(RuntimeError):
+                updater.update_source(self.saves / "checkout", self.saves)
+            git.assert_not_called()
+        self.assertEqual(self.progress.read_bytes(), self.original)
+
     def test_failed_download_preserves_previous_install_and_saves(self):
         with mock.patch.object(updater, "request_json", return_value=self.release), mock.patch.object(
                 updater, "download_asset", side_effect=OSError("interrupted")):
