@@ -11,8 +11,16 @@ namespace Slopgame
         private readonly bool[,] floor = new bool[Width, Height];
         public List<Vector2Int> Centers { get; } = new List<Vector2Int>();
 
-        public DungeonMap(int seed)
+        public DungeonMap(int seed, bool bossArena = false)
         {
+            if (bossArena)
+            {
+                for (int x = 14; x <= 40; x++)
+                    for (int y = 8; y <= 30; y++) floor[x, y] = true;
+                Centers.Add(new Vector2Int(27, 14));
+                Centers.Add(new Vector2Int(27, 22));
+                return;
+            }
             var random = new System.Random(seed);
             var rooms = new List<RectInt>();
             for (int attempt = 0; attempt < 160 && rooms.Count < 9; attempt++)

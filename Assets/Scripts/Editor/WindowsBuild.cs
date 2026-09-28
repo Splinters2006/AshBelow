@@ -55,7 +55,7 @@ namespace Slopgame.Editor
                 throw new BuildFailedException("Windows build failed: " + report.summary.result);
             File.WriteAllText(Path.Combine(folder, "START-HERE.txt"),
                 "Extract the entire ZIP, then open AshBelow.exe. Keep all accompanying files and folders together.\r\n\r\n"
-                + "WASD / arrows: move | Mouse: aim | Hold/release left: charged attack | Right: shield (Knight) / triple shot (Archer)\r\n"
+                + "WASD / arrows: move | Mouse: aim | Hold/release left: charged attack | Right: class skill | Q/F: artifact abilities\r\n"
                 + "Space: dodge | E: descend after clearing the floor | Alt+F4: quit\r\n");
             string archive = Path.Combine(releases, release + ".zip");
             ZipFile.CreateFromDirectory(folder, archive, System.IO.Compression.CompressionLevel.Optimal, true);

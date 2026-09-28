@@ -38,8 +38,8 @@ namespace Slopgame
                 for (int j = run.Enemies.Count - 1; j >= 0; j--)
                 {
                     var enemy = run.Enemies[j];
-                    if (Vector2.Distance(next, enemy.transform.position) > 0.38f) continue;
-                    enemy.Hit(damage, next - Direction);
+                    if (Vector2.Distance(next, enemy.transform.position) > enemy.HitRadius) continue;
+                    CombatDamage.Apply(run.Player, enemy, damage, DamageElement.Physical, next - Direction);
                     Consume();
                     return;
                 }

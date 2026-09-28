@@ -6,11 +6,12 @@ namespace Slopgame
     {
         public const float Reach = 2.3f;
         public const float ConeAngle = 60f;
-        public bool IsHeavyAttacking => Player.Shield.IsBlocking;
-        public float HeavyCooldownRemaining => Player.Shield.CooldownRemaining;
+        public bool IsHeavyAttacking => Player.Shield != null && Player.Shield.IsBlocking;
+        public float HeavyCooldownRemaining => Player.Shield != null ? Player.Shield.CooldownRemaining : Mathf.Max(0f, shadowReadyAt - Time.time);
         public bool CanAttack => Player.Run.IsPlaying && !Player.IsRolling && !IsHeavyAttacking && Time.time >= readyAt;
         public DungeonPlayer Player { get; set; }
         private float readyAt, visibleUntil;
+        private float shadowReadyAt;
         private MeshRenderer arc;
         private Mesh mesh;
         private Material material;
@@ -69,12 +70,20 @@ namespace Slopgame
                 var enemy = Player.Run.Enemies[i];
                 if (ContainsTarget(enemy.transform.position - transform.position, aim, Reach, cone)
                     && Player.Run.HasLineOfSight(transform.position, enemy.transform.position))
-                    enemy.Hit(Player.Powerups.RollDamage(damage));
+                    CombatDamage.Apply(Player, enemy, damage, DamageElement.Physical, transform.position);
             }
             return true;
         }
 
-        public bool TryHeavyAttack(Vector2 aim) => Player.Shield.Raise(aim);
+        public bool TryHeavyAttack(Vector2 aim)
+        {
+            if (Player.Shield != null) return Player.Shield.Raise(aim);
+            if (!CanAttack || HeavyCooldownRemaining > 0f || aim.sqrMagnitude < 0.001f) return false;
+            Player.Charge.Cancel();
+            Player.Abilities.Dash(aim, 3f);
+            shadowReadyAt = Time.time + 4f;
+            return true;
+        }
 
         private void FaceArc(Vector2 aim)
         {
@@ -101,7 +110,7 @@ namespace Slopgame
         {
             visibleUntil = 0;
             Player.Charge.Cancel();
-            Player.Shield.Cancel();
+            Player.Shield?.Cancel();
             if (arc != null) arc.enabled = false;
         }
 

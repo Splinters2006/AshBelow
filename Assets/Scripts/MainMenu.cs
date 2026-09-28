@@ -6,70 +6,64 @@ namespace Slopgame
     {
         public DungeonRun Run { get; set; }
         private bool selecting;
-        private Vector2 scroll;
-        private GUIStyle title, heading, text, button;
-
         public void ResetPage() { selecting = false; }
 
         private void OnGUI()
         {
             if (Run == null || !Run.IsInMainMenu) return;
-            if (title == null)
+            Matrix4x4 previous = DungeonUi.Begin();
+            try
             {
-                title = new GUIStyle(GUI.skin.label) { fontSize = 52, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter };
-                title.normal.textColor = new Color(0.4f, 1f, 0.85f);
-                heading = new GUIStyle(title) { fontSize = 28, alignment = TextAnchor.MiddleLeft };
-                text = new GUIStyle(GUI.skin.label) { fontSize = 18, wordWrap = true };
-                button = new GUIStyle(GUI.skin.button) { fontSize = 22 };
-            }
-            float scale = Mathf.Min(Screen.width / 960f, Screen.height / 640f);
-            var previous = GUI.matrix;
-            GUI.matrix = Matrix4x4.TRS(new Vector3((Screen.width - 960 * scale) / 2, (Screen.height - 640 * scale) / 2), Quaternion.identity, Vector3.one * scale);
-            GUI.Label(new Rect(60, 35, 840, 90), "ASH / BELOW", title);
-            if (!selecting)
-            {
-                GUI.Label(new Rect(285, 165, 420, 70), "Descend into the ash. Choose your hero.\nSee how far one life will take you.", text);
-                if (GUI.Button(new Rect(290, 280, 380, 65), "Choose character", button)) selecting = true;
-                if (GUI.Button(new Rect(290, 365, 380, 65), "Quit", button))
+                DungeonUi.Panel(new Rect(-2000, -2000, 6000, 6000), DungeonUi.Background);
+                for (int i = 0; i < 8; i++)
                 {
+                    float offset = Mathf.Sin(Time.unscaledTime * 0.2f + i) * 20f;
+                    DungeonUi.Panel(new Rect(700 + i * 45 + offset, 70 + i * 65, 130, 2), new Color(0.21f, 0.3f, 0.33f, 0.22f));
+                }
+                DungeonUi.Label(new Rect(70, 52, 900, 25), "A ROGUELIKE DESCENT", 14, AbilityCatalog.Gold);
+                DungeonUi.Label(new Rect(65, 88, 1100, 94), "ASH / BELOW", 66);
+                DungeonUi.Label(new Rect(70, 188, 1100, 42), selecting ? "Choose your hero. Shape your build. Claim the relics below." : "Five heroes. Two relic abilities. One life in the ash.", 20, DungeonUi.Muted);
+                if (!selecting)
+                {
+                    DungeonUi.Panel(new Rect(70, 275, 610, 258), DungeonUi.PanelColor);
+                    DungeonUi.Label(new Rect(102, 307, 530, 55), "POWER HAS A PRICE", 29, DungeonUi.Teal);
+                    DungeonUi.Label(new Rect(102, 374, 530, 130), "Charge your attacks. Read the enemy.\nEvery fifth floor, face an arena guardian.\nTake its artifact and choose your own power.", 22, DungeonUi.Muted);
+                    if (DungeonUi.Button("chooseClass", new Rect(755, 307, 420, 64), "Choose your hero", AbilityCatalog.Gold)) selecting = true;
+                    if (DungeonUi.Button("quit", new Rect(755, 394, 420, 55), "Quit", DungeonUi.Muted))
+                    {
 #if UNITY_EDITOR
-                    UnityEditor.EditorApplication.isPlaying = false;
+                        UnityEditor.EditorApplication.isPlaying = false;
 #else
-                    Application.Quit();
+                        Application.Quit();
 #endif
+                    }
                 }
-                GUI.Label(new Rect(290, 490, 400, 40), "A roguelike dungeon crawler", text);
+                else DrawSelection();
+                DungeonUi.Label(new Rect(70, 672, 1100, 24), "WASD  move     HOLD / RELEASE LMB  attack     RMB  class skill     Q / F  relic abilities", 14, DungeonUi.Muted);
             }
-            else
+            finally { GUI.matrix = previous; }
+        }
+
+        private void DrawSelection()
+        {
+            for (int i = 0; i < Run.Characters.Count; i++)
             {
-                GUI.Label(new Rect(60, 140, 500, 50), "CHOOSE YOUR CHARACTER", heading);
-                GUI.Box(new Rect(50, 205, 290, 295), GUIContent.none);
-                scroll = GUI.BeginScrollView(new Rect(60, 215, 270, 275), scroll,
-                    new Rect(0, 0, 245, Mathf.Max(270, Run.Characters.Count * 75 + 75)));
-                for (int i = 0; i < Run.Characters.Count; i++)
-                {
-                    var character = Run.Characters[i];
-                    string label = character.DisplayName + (Run.SelectedCharacter == character ? "  [Selected]" : "");
-                    if (GUI.Button(new Rect(0, i * 75, 245, 60), label, button)) Run.SelectCharacter(character);
-                }
-                GUI.enabled = false;
-                GUI.Button(new Rect(0, Run.Characters.Count * 75, 245, 60), "More heroes soon", text);
-                GUI.enabled = true;
-                GUI.EndScrollView();
-                var selected = Run.SelectedCharacter;
-                GUI.Box(new Rect(365, 205, 545, 295), GUIContent.none);
-                var oldColor = GUI.color;
-                GUI.color = selected.Color;
-                GUI.DrawTexture(new Rect(390, 230, 54, 64), Texture2D.whiteTexture);
-                GUI.color = oldColor;
-                GUI.Label(new Rect(465, 225, 420, 50), selected.DisplayName, heading);
-                GUI.Label(new Rect(465, 278, 420, 45), $"Health {selected.StartingHealth}    Damage {selected.StartingDamage}    Speed {selected.MoveSpeed:0.#}", text);
-                GUI.Label(new Rect(390, 340, 495, 95), selected.Description, text);
-                GUI.Label(new Rect(390, 440, 495, 55), selected.Weapon == WeaponType.Bow ? "Hold left: charge arrow (5-unit range)\nRight: triple shot (6s)" : "Hold left: charge a wider slash\nRight: reflect shield (2.8s)", text);
-                if (GUI.Button(new Rect(50, 530, 220, 60), "Back", button)) selecting = false;
-                if (GUI.Button(new Rect(570, 530, 340, 60), "Begin run", button)) Run.Restart();
+                var hero = Run.Characters[i];
+                Rect rect = new Rect(70, 270 + i * 60, 268, 48);
+                bool selected = hero == Run.SelectedCharacter;
+                if (DungeonUi.Button("class" + i, rect, hero.DisplayName + (selected ? "  /  SELECTED" : ""), selected ? hero.Color : DungeonUi.Muted)) Run.SelectCharacter(hero);
             }
-            GUI.matrix = previous;
+            var character = Run.SelectedCharacter;
+            DungeonUi.Panel(new Rect(368, 268, 842, 312), DungeonUi.PanelColor);
+            DungeonUi.Panel(new Rect(402, 302, 104, 104), new Color(character.Color.r * 0.25f, character.Color.g * 0.25f, character.Color.b * 0.25f));
+            string glyph = character.Weapon == WeaponType.Staff ? "*" : character.Weapon == WeaponType.Bow ? ">" : character.Weapon == WeaponType.Daggers ? "//" : "+";
+            DungeonUi.Label(new Rect(402, 302, 104, 104), glyph, 58, character.Color, TextAnchor.MiddleCenter);
+            DungeonUi.Label(new Rect(536, 300, 630, 52), character.DisplayName, 38, character.Color);
+            DungeonUi.Label(new Rect(538, 361, 610, 32), $"{character.StartingHealth} HP     {character.StartingDamage} DAMAGE     {character.MoveSpeed:0.#} SPEED", 16, DungeonUi.Muted);
+            DungeonUi.Label(new Rect(402, 434, 766, 80), character.Description, 20);
+            DungeonUi.Label(new Rect(402, 535, 766, 28), $"RMB  {DungeonUi.SpecialName(character.Weapon)}     /     Q + F unlock from boss artifacts", 16, character.Color);
+            if (DungeonUi.Button("back", new Rect(70, 598, 268, 48), "Back", DungeonUi.Muted)) selecting = false;
+            if (DungeonUi.Button("begin", new Rect(860, 598, 350, 48), "Begin descent", character.Color)) Run.Restart();
         }
     }
 }

@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6d869144b870b499eb3cc72d761eddcd, type: 3}
+  m_Name: Assassin
+  m_EditorClassIdentifier: Assembly-CSharp::Slopgame.CharacterDefinition
+  displayName: Assassin
+  description: A swift duelist with 15% starting physical crit chance and double physical backstab damage. Right-click to shadowstep.
+  color: {r: 0.78, g: 0.4, b: 0.65, a: 1}
+  startingHealth: 4
+  startingDamage: 1
+  moveSpeed: 5.6
+  weapon: 3

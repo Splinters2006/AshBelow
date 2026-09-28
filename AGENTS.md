@@ -4,6 +4,7 @@ This is a Unity 6 project.
 
 ## Rules
 
+- Read `ideas.txt` at the start of every requested task and incorporate its relevant gameplay and design ideas. If it is missing, tell the user.
 - C# scripts belong in Assets/Scripts.
 - Follow normal Unity C# conventions.
 - Prefer components and ScriptableObjects over large monolithic classes.

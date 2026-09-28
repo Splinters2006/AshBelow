@@ -157,7 +157,8 @@ namespace Slopgame.Editor
                 var sword = player.GetComponent<SwordAttack>();
                 if (!sword.TryAttack(Vector2.right)) throw new Exception("Sword did not attack.");
                 for (int i = 0; i < offsets.Length; i++)
-                    if (run.Enemies[i].Health != (i == 0 ? 9 : 10)) throw new Exception("Sword cone hit an invalid target or missed its forward target.");
+                    if (i == 0 ? run.Enemies[i].Health != 9 && run.Enemies[i].Health != 8 : run.Enemies[i].Health != 10)
+                        throw new Exception("Sword cone hit an invalid target or missed its forward target.");
                 if (!SwordAttack.ContainsTarget(new Vector2(1, 0.5f), Vector2.right)
                     || SwordAttack.ContainsTarget(new Vector2(1, 1), Vector2.right)
                     || !SwordAttack.ContainsTarget(new Vector2(1, 1), Vector2.right, SwordAttack.Reach, 120f))
@@ -215,15 +216,18 @@ namespace Slopgame.Editor
                 run.Enemies[0].Health = run.Enemies[1].Health = 20;
                 if (player.Charge.Damage(-1f) != 1 || player.Charge.Damage(0.5f) != 2 || player.Charge.Damage(10f) != 3)
                     throw new Exception("Charge damage cap failed.");
-                if (!sword.TryAttack(Vector2.right, 1f) || run.Enemies[0].Health != 17 || run.Enemies[1].Health != 17)
+                if (!sword.TryAttack(Vector2.right, 1f) || (run.Enemies[0].Health != 17 && run.Enemies[0].Health != 14)
+                    || (run.Enemies[1].Health != 17 && run.Enemies[1].Health != 14))
                     throw new Exception("Charged slash damage or widened cone failed.");
                 if (!sword.TryHeavyAttack(Vector2.right)) throw new Exception("Shield did not raise.");
                 if (sword.TryAttack(Vector2.right)) throw new Exception("Attacked through raised shield.");
                 var bolt = EnemyProjectile.Spawn(run, run.ProjectileRoot, origin + Vector2.right * 0.8f, Vector2.left);
                 bolt.Advance(0.01f);
                 if (!bolt.IsReflected || bolt.IsSpent) throw new Exception("Shield did not reflect frontal bolt.");
+                int reflectedTargetHealth = run.Enemies[0].Health;
                 bolt.Advance(0.3f);
-                if (!bolt.IsSpent || run.Enemies[0].Health != 15) throw new Exception("Reflected bolt did not damage enemy exactly once.");
+                int reflectedLoss = reflectedTargetHealth - run.Enemies[0].Health;
+                if (!bolt.IsSpent || (reflectedLoss != 2 && reflectedLoss != 4)) throw new Exception("Reflected bolt did not damage enemy exactly once.");
                 int health = player.Health;
                 var rear = EnemyProjectile.Spawn(run, run.ProjectileRoot, origin - Vector2.right * 0.3f, Vector2.right);
                 rear.Advance(0.01f);
@@ -286,7 +290,7 @@ namespace Slopgame.Editor
                 var arrows = UnityEngine.Object.FindObjectsByType<PlayerProjectile>(FindObjectsSortMode.None);
                 if (arrows.Length != 1) throw new Exception("Base attack must fire one arrow.");
                 arrows[0].Advance(0.12f);
-                if (target.Health != 17 || !arrows[0].IsSpent || run.Player.Health != 5)
+                if ((target.Health != 17 && target.Health != 14) || !arrows[0].IsSpent || run.Player.Health != 5)
                     throw new Exception("Arrow collision/damage failed.");
                 var wall = PlayerProjectile.Spawn(run, new Vector2(-1, -1), Vector2.right, 1);
                 wall.Advance(0.1f);
@@ -364,7 +368,7 @@ namespace Slopgame.Editor
             if (Mathf.Abs(powers.AttackIntervalMultiplier - 0.5f) > 0.001f
                 || Mathf.Abs(powers.DodgeCooldownMultiplier - 0.7f) > 0.001f)
                 throw new Exception("Attack/dodge powerup scaling failed.");
-            if (powers.DamageForRoll(3, 0.49f) != 6 || powers.DamageForRoll(3, 0.5f) != 3)
+            if (powers.DamageForRoll(3, 0.54f) != 6 || powers.DamageForRoll(3, 0.55f) != 3)
                 throw new Exception("Critical damage calculation failed.");
             int health = player.Health;
             player.Hit();
@@ -377,7 +381,7 @@ namespace Slopgame.Editor
             run.Restart();
             player = run.Player;
             powers = player.Powerups;
-            if (powers.Count(PowerupType.Armor) != 0 || powers.CritChance != 0) throw new Exception("Powerups leaked into a new run.");
+            if (powers.Count(PowerupType.Armor) != 0 || Mathf.Abs(powers.CritChance - 0.05f) > 0.001f) throw new Exception("Powerups leaked into a new run.");
             player.Upgrade((int)PowerupType.LifeSteal);
             player.Hit();
             health = player.Health;
@@ -465,8 +469,30 @@ namespace Slopgame.Editor
                 serialized.ApplyModifiedPropertiesWithoutUndo();
                 AssetDatabase.CreateAsset(archer, archerPath);
             }
+            EnsureHero("Wizard", WeaponType.Staff, 4, 4.8f, new Color(0.65f, 0.45f, 1f),
+                "A fire-and-storm caster. Charge fireballs and chain lightning. Boss relics unlock fire, ice, and blink abilities.");
+            EnsureHero("Assassin", WeaponType.Daggers, 4, 5.6f, new Color(0.78f, 0.4f, 0.65f),
+                "A swift duelist with 15% starting physical crit chance, double physical backstab damage, and a shadowstep.");
+            EnsureHero("Paladin", WeaponType.Hammer, 7, 4.5f, new Color(0.95f, 0.78f, 0.4f),
+                "An armored guardian. Charge hammer strikes and block with a shield. Relics unlock healing and protection for nearby allies.");
             AssetDatabase.SaveAssets();
-            Debug.Log("CHARACTER_ASSETS_OK: Knight and Archer ready.");
+            Debug.Log("CHARACTER_ASSETS_OK: Five classes ready.");
+        }
+
+        private static void EnsureHero(string name, WeaponType weapon, int health, float speed, Color color, string description)
+        {
+            string path = "Assets/Resources/Characters/" + name + ".asset";
+            if (AssetDatabase.LoadAssetAtPath<CharacterDefinition>(path) != null) return;
+            var hero = ScriptableObject.CreateInstance<CharacterDefinition>();
+            var serialized = new SerializedObject(hero);
+            serialized.FindProperty("displayName").stringValue = name;
+            serialized.FindProperty("description").stringValue = description;
+            serialized.FindProperty("startingHealth").intValue = health;
+            serialized.FindProperty("moveSpeed").floatValue = speed;
+            serialized.FindProperty("color").colorValue = color;
+            serialized.FindProperty("weapon").enumValueIndex = (int)weapon;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+            AssetDatabase.CreateAsset(hero, path);
         }
 
         [MenuItem("Slopgame/Create playable dungeon scene")]

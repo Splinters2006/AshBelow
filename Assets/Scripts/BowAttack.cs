@@ -36,7 +36,7 @@ namespace Slopgame
 
         private void Fire(Vector2 direction, int damage)
         {
-            PlayerProjectile.Spawn(Player.Run, transform.position, direction, Player.Powerups.RollDamage(damage));
+            PlayerProjectile.Spawn(Player.Run, transform.position, direction, damage);
         }
 
         public void Hide() { Player.Charge.Cancel(); }

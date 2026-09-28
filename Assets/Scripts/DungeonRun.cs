@@ -10,6 +10,13 @@ namespace Slopgame
         public List<DungeonEnemy> Enemies { get; } = new List<DungeonEnemy>();
         public bool IsPlaying { get; private set; }
         public bool ChoosingUpgrade { get; private set; }
+        public bool ChoosingArtifact { get; private set; }
+        public bool IsBossFloor => Floor > 0 && Floor % 5 == 0;
+        public DungeonBoss Boss { get; private set; }
+        public ArtifactPickup Artifact { get; private set; }
+        public string Objective => Artifact != null ? "Claim the glowing artifact  /  E"
+            : IsBossFloor && Enemies.Count > 0 ? "Defeat the arena guardian"
+            : Enemies.Count == 0 ? "Find the gold stairs  /  E" : "Clear the floor to unlock the stairs";
         private readonly List<PowerupDefinition> upgradeChoices = new List<PowerupDefinition>();
         public IReadOnlyList<PowerupDefinition> UpgradeChoices => upgradeChoices;
         public int Floor { get; private set; }
@@ -22,6 +29,8 @@ namespace Slopgame
         public CharacterDefinition SelectedCharacter { get; private set; }
         private CharacterDefinition[] characters;
         private MainMenu menu;
+        private DungeonHud hud;
+        public bool IsPointerOverHud => hud != null && hud.BlocksPointer(PlayerInput.CursorPosition);
         private Transform level;
         private Camera view;
         private Vector2 exit;
@@ -38,7 +47,8 @@ namespace Slopgame
             view.orthographicSize = 8;
             view.clearFlags = CameraClearFlags.SolidColor;
             view.backgroundColor = new Color(0.035f, 0.055f, 0.08f);
-            gameObject.AddComponent<DungeonHud>().Run = this;
+            hud = gameObject.AddComponent<DungeonHud>();
+            hud.Run = this;
             characters = Resources.LoadAll<CharacterDefinition>("Characters");
             System.Array.Sort(characters, (a, b) => string.CompareOrdinal(a.DisplayName, b.DisplayName));
             if (characters.Length == 0)
@@ -61,6 +71,10 @@ namespace Slopgame
         {
             IsPlaying = false;
             ChoosingUpgrade = false;
+            ChoosingArtifact = false;
+            Boss = null;
+            Artifact = null;
+            Time.timeScale = 1f;
             IsInMainMenu = true;
             if (level != null) { level.gameObject.SetActive(false); Destroy(level.gameObject); level = null; }
             if (Player != null) { Player.gameObject.SetActive(false); Destroy(Player.gameObject); Player = null; }
@@ -85,20 +99,33 @@ namespace Slopgame
 
         private void NextFloor()
         {
+            Time.timeScale = 1f;
+            Boss = null;
+            Artifact = null;
+            ChoosingArtifact = false;
             upgradeChoices.Clear();
             Player.Powerups.BeginFloor();
             Player.Weapon?.Hide();
             if (level != null) { level.gameObject.SetActive(false); Destroy(level.gameObject); }
             Enemies.Clear();
             Floor++;
-            Map = new DungeonMap(Seed + Floor * 7919);
+            Map = new DungeonMap(Seed + Floor * 7919, IsBossFloor);
             level = new GameObject("Floor " + Floor).transform;
             level.SetParent(transform);
             DungeonVisuals.DrawMap(Map, level);
             Player.transform.position = (Vector2)Map.Centers[0];
             exit = Map.Centers[Map.Centers.Count - 1];
             stairs = DungeonVisuals.Create("Stairs", level, exit, Vector2.one * 0.85f, Color.gray, 1);
-            for (int room = 1; room < Map.Centers.Count; room++)
+            if (IsBossFloor)
+            {
+                var enemy = DungeonVisuals.Create("Guardian", level, exit, Vector2.one * 1.4f,
+                    new Color(0.65f, 0.3f, 0.55f), 4).gameObject.AddComponent<DungeonEnemy>();
+                Boss = enemy.gameObject.AddComponent<DungeonBoss>();
+                Boss.Initialize(this);
+                Enemies.Add(enemy);
+                DungeonVisuals.DecorateArena(level);
+            }
+            for (int room = 1; !IsBossFloor && room < Map.Centers.Count; room++)
             {
                 int count = Mathf.Min(4, 1 + Floor);
                 for (int i = 0; i < count; i++)
@@ -124,8 +151,13 @@ namespace Slopgame
         {
             if (!IsPlaying) return;
             UpdatePaths();
+            if (Artifact != null && Vector2.Distance(Player.transform.position, Artifact.transform.position) < 1.5f && PlayerInput.Interact)
+            {
+                BeginArtifactChoice();
+                return;
+            }
             stairs.color = Enemies.Count == 0 ? new Color(1f, 0.8f, 0.25f) : new Color(0.4f, 0.4f, 0.4f);
-            if (Enemies.Count == 0 && Vector2.Distance(Player.transform.position, exit) < 1.2f && PlayerInput.Interact)
+            if (Artifact == null && Enemies.Count == 0 && Vector2.Distance(Player.transform.position, exit) < 1.2f && PlayerInput.Interact)
             {
                 BeginUpgradeChoice();
             }
@@ -139,10 +171,39 @@ namespace Slopgame
         }
 
         public static int EnemyHealthForFloor(int floor) => 2 + Mathf.Max(0, floor - 3);
-        public void EndRun() { IsPlaying = false; Player.Weapon?.Hide(); }
+        public void EndRun() { IsPlaying = false; Player.Weapon?.Hide(); Time.timeScale = 0f; }
+        public void DropArtifact(Vector2 position)
+        {
+            if (Artifact == null) Artifact = ArtifactPickup.Spawn(level, position);
+        }
+        public void BeginArtifactChoice()
+        {
+            if (!IsPlaying || Artifact == null || Enemies.Count != 0) return;
+            IsPlaying = false;
+            ChoosingArtifact = true;
+            Player.Weapon?.Hide();
+            Time.timeScale = 0f;
+        }
+        public bool ChooseArtifact(AbilityType type, int slot)
+        {
+            if (!ChoosingArtifact || !Player.Abilities.Claim(type, slot)) return false;
+            Player.Heal(2);
+            FinishArtifactChoice();
+            return true;
+        }
+        public void FinishArtifactChoice()
+        {
+            if (!ChoosingArtifact) return;
+            if (Artifact != null) Destroy(Artifact.gameObject);
+            Artifact = null;
+            ChoosingArtifact = false;
+            IsPlaying = true;
+            Time.timeScale = 1f;
+        }
         public void BeginUpgradeChoice()
         {
-            if (!IsPlaying || Enemies.Count != 0) return;
+            if (!IsPlaying || Enemies.Count != 0 || Artifact != null) return;
+            if (IsBossFloor) { NextFloor(); return; }
             var pool = new List<PowerupDefinition>();
             foreach (var powerup in PowerupCatalog.All)
                 if (Player.Powerups.CanTake(powerup.Type)) pool.Add(powerup);
@@ -164,6 +225,7 @@ namespace Slopgame
             IsPlaying = false;
             Player.Weapon?.Hide();
             ChoosingUpgrade = true;
+            Time.timeScale = 0f;
         }
 
         public void ChooseUpgrade(int choice)

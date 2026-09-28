@@ -5,65 +5,184 @@ namespace Slopgame
     public sealed class DungeonHud : MonoBehaviour
     {
         public DungeonRun Run { get; set; }
-        private GUIStyle title, text, button;
+        private float displayedHealth = 1f, displayedBossHealth = 1f, modalFade;
+        private bool showTalents;
+        private Vector2 talentScroll;
+
+        public bool BlocksPointer(Vector2 screenPosition)
+        {
+            float scale = Mathf.Min(Screen.width / DungeonUi.Width, Screen.height / DungeonUi.Height);
+            Vector2 point = new Vector2(screenPosition.x - (Screen.width - DungeonUi.Width * scale) / 2f,
+                Screen.height - screenPosition.y - (Screen.height - DungeonUi.Height * scale) / 2f) / scale;
+            return !Run.IsPlaying || new Rect(1020, 24, 236, 40).Contains(point)
+                || (showTalents && new Rect(922, 82, 334, 470).Contains(point));
+        }
+
+        private void Update()
+        {
+            if (Run.Player == null) return;
+            float smooth = 1f - Mathf.Exp(-9f * Time.unscaledDeltaTime);
+            displayedHealth = Mathf.Lerp(displayedHealth, Run.Player.Health / (float)Run.Player.MaxHealth, smooth);
+            if (Run.Boss != null) displayedBossHealth = Mathf.Lerp(displayedBossHealth, Run.Boss.Enemy.Health / (float)Run.Boss.MaxHealth, smooth);
+            else displayedBossHealth = 1f;
+            modalFade = Mathf.MoveTowards(modalFade, Run.IsPlaying ? 0f : 1f, Time.unscaledDeltaTime * 5f);
+        }
 
         private void OnGUI()
         {
             if (Run == null || Run.IsInMainMenu || Run.Player == null) return;
-            if (title == null)
+            Matrix4x4 previous = DungeonUi.Begin();
+            try
             {
-                title = new GUIStyle(GUI.skin.label) { fontSize = 30, fontStyle = FontStyle.Bold };
-                title.normal.textColor = new Color(0.4f, 1f, 0.85f);
-                text = new GUIStyle(GUI.skin.label) { fontSize = 18, wordWrap = true };
-                button = new GUIStyle(GUI.skin.button) { fontSize = 18, wordWrap = true };
+                DrawStatus();
+                if (Run.Player == null) return;
+                DrawHotbar();
+                if (showTalents && Run.IsPlaying) DrawTalents();
+                if (Run.IsPlaying) return;
+                DungeonUi.Panel(new Rect(0, 0, 1280, 720), new Color(0.01f, 0.018f, 0.035f, 0.88f * modalFade));
+                if (Run.ChoosingArtifact) DrawArtifacts();
+                else if (Run.ChoosingUpgrade) DrawUpgrades();
+                else DrawDeath();
             }
-            GUI.matrix = Matrix4x4.TRS(Vector3.zero, Quaternion.identity, Vector3.one * Mathf.Min(Screen.width / 960f, Screen.height / 640f));
-            GUI.Box(new Rect(12, 12, 480, 138), GUIContent.none);
-            GUI.Label(new Rect(28, 20, 440, 40), "ASH / BELOW", title);
-            if (GUI.Button(new Rect(785, 20, 150, 40), "Main menu", button)) { Run.ShowMainMenu(); return; }
-            GUI.Label(new Rect(28, 64, 445, 30), $"Floor {Run.Floor}    HP {Run.Player.Health}/{Run.Player.MaxHealth}    Enemies {Run.Enemies.Count}", text);
-            GUI.Label(new Rect(28, 98, 445, 44), Run.Enemies.Count == 0
-                ? "Find the gold stairs. Press E to descend."
-                : "Clear the floor to unlock the stairs.", text);
-            GUI.Label(new Rect(510, 75, 425, 125), $"Ward: {Run.Player.Powerups.ArmorCharges}    Crit: {Run.Player.Powerups.CritChance:P0}\n{Run.Player.Powerups.Summary}", text);
-            GUI.Box(new Rect(12, 532, 930, 96), GUIContent.none);
-            string heavyStatus = Run.Player.Weapon == null || Run.Player.Weapon.HeavyCooldownRemaining <= 0
-                ? "READY" : $"{Run.Player.Weapon.HeavyCooldownRemaining:0.0}s";
-            string special = Run.Player.ClassWeapon == WeaponType.Sword ? "Shield / reflect" : "Triple shot";
-            string dodge = Run.Player.DodgeCooldownRemaining <= 0f ? "READY" : $"{Run.Player.DodgeCooldownRemaining:0.0}s";
-            string charge = Run.Player.Charge.IsCharging ? $"Charge: {Run.Player.Charge.Amount:P0}  Damage: {Run.Player.Charge.Damage(Run.Player.Charge.Amount)}" : "Hold left click to charge; release to attack";
-            GUI.Label(new Rect(28, 540, 900, 78), $"WASD: move    Mouse: aim    Space: dodge [{dodge}]    E: descend\n{charge}\nRight click: {special} [{heavyStatus}]", text);
-            if (Run.Player.Charge.IsCharging)
+            finally { GUI.matrix = previous; }
+        }
+
+        private void DrawStatus()
+        {
+            var player = Run.Player;
+            DungeonUi.Panel(new Rect(24, 24, 292, 100), DungeonUi.PanelColor);
+            DungeonUi.Label(new Rect(42, 37, 250, 28), Run.SelectedCharacter.DisplayName.ToUpperInvariant(), 22, Run.SelectedCharacter.Color);
+            DungeonUi.Label(new Rect(42, 73, 130, 22), $"{player.Health} / {player.MaxHealth} HP", 16);
+            DungeonUi.Label(new Rect(176, 73, 120, 22), $"WARD  {player.Powerups.ArmorCharges}", 14, DungeonUi.Muted, TextAnchor.UpperRight);
+            DungeonUi.Bar(new Rect(42, 103, 256, 6), displayedHealth, Run.SelectedCharacter.Color);
+            DungeonUi.Label(new Rect(405, 28, 470, 25), Run.IsBossFloor ? $"FLOOR {Run.Floor:00}  /  BOSS ARENA" : $"FLOOR {Run.Floor:00}  /  {Run.Enemies.Count} ENEMIES", 17, AbilityCatalog.Gold, TextAnchor.MiddleCenter);
+            DungeonUi.Label(new Rect(365, 59, 550, 40), Run.Objective, 17, DungeonUi.Text, TextAnchor.UpperCenter);
+            if (Run.Boss != null && Run.Boss.Enemy.Health > 0)
             {
-                GUI.Box(new Rect(330, 502, 300, 18), GUIContent.none);
-                Color previousColor = GUI.color;
-                GUI.color = Run.Player.Charge.Amount >= 1f ? new Color(1f, 0.8f, 0.25f) : new Color(0.4f, 1f, 0.85f);
-                GUI.DrawTexture(new Rect(333, 505, 294 * Run.Player.Charge.Amount, 12), Texture2D.whiteTexture);
-                GUI.color = previousColor;
+                DungeonUi.Panel(new Rect(390, 104, 500, 74), DungeonUi.PanelColor);
+                DungeonUi.Label(new Rect(406, 113, 468, 24), Run.Boss.Title, 18, AbilityCatalog.Gold, TextAnchor.MiddleCenter);
+                DungeonUi.Bar(new Rect(412, 145, 456, 7), displayedBossHealth, new Color(0.94f, 0.3f, 0.38f));
+                DungeonUi.Label(new Rect(400, 182, 480, 23), Run.Boss.Tell, 13, DungeonUi.Muted, TextAnchor.MiddleCenter);
             }
-            if (Run.IsPlaying) return;
-            GUI.Box(new Rect(220, 170, 520, 385), GUIContent.none);
-            if (Run.ChoosingUpgrade)
+            if (DungeonUi.Button("talents", new Rect(1020, 24, 112, 40), "Talents", DungeonUi.Teal)) showTalents = !showTalents;
+            if (DungeonUi.Button("menu", new Rect(1144, 24, 112, 40), "Menu", DungeonUi.Muted)) Run.ShowMainMenu();
+        }
+
+        private void DrawHotbar()
+        {
+            var player = Run.Player;
+            Slot(new Rect(260, 596, 180, 78), "RMB", DungeonUi.SpecialName(player.ClassWeapon), player.Weapon?.HeavyCooldownRemaining ?? 0f,
+                DungeonUi.SpecialCooldown(player.ClassWeapon), Run.SelectedCharacter.Color);
+            for (int i = 0; i < PlayerAbilities.SlotCount; i++)
             {
-                GUI.Label(new Rect(250, 190, 465, 42), "A MOMENT OF RESPITE", title);
-                GUI.Label(new Rect(250, 240, 465, 54), "Choose a boon. Every choice restores 2 HP.", text);
-                for (int i = 0; i < Run.UpgradeChoices.Count; i++)
+                var ability = AbilityCatalog.Get(player.Abilities.Equipped(i));
+                Slot(new Rect(452 + i * 192, 596, 180, 78), i == 0 ? "Q" : "F", ability == null ? "Boss relic required" : ability.Name,
+                    player.Abilities.CooldownRemaining(i), ability?.Cooldown ?? 1f, ability?.Color ?? DungeonUi.Muted, ability == null);
+            }
+            Slot(new Rect(836, 596, 180, 78), "SPACE", "Dodge", player.DodgeCooldownRemaining, DungeonPlayer.RollCooldown, DungeonUi.Teal);
+            if (player.Charge.IsCharging)
+            {
+                DungeonUi.Label(new Rect(440, 535, 400, 24), player.Charge.Amount >= 1f ? "FULL CHARGE  /  RELEASE" : $"CHARGING  {player.Charge.Amount:P0}", 14, AbilityCatalog.Gold, TextAnchor.MiddleCenter);
+                DungeonUi.Bar(new Rect(500, 568, 280, 5), player.Charge.Amount, AbilityCatalog.Gold);
+            }
+            DungeonUi.Label(new Rect(250, 690, 780, 22), "WASD  move     HOLD / RELEASE LMB  charge attack     E  interact", 13, DungeonUi.Muted, TextAnchor.UpperCenter);
+        }
+
+        private static void Slot(Rect rect, string key, string name, float cooldown, float total, Color accent, bool locked = false)
+        {
+            DungeonUi.Panel(rect, DungeonUi.PanelColor);
+            DungeonUi.Label(new Rect(rect.x + 14, rect.y + 10, 66, 22), key, 14, accent);
+            DungeonUi.Label(new Rect(rect.x + 88, rect.y + 10, 76, 22), locked ? "LOCKED" : cooldown > 0f ? $"{cooldown:0.0}s" : "READY", 13,
+                cooldown > 0 ? DungeonUi.Muted : accent, TextAnchor.UpperRight);
+            DungeonUi.Label(new Rect(rect.x + 14, rect.y + 37, rect.width - 28, 28), name, locked ? 13 : 16, locked ? DungeonUi.Muted : DungeonUi.Text);
+            DungeonUi.Bar(new Rect(rect.x + 12, rect.yMax - 7, rect.width - 24, 3), locked ? 0f : 1f - cooldown / total, accent);
+        }
+
+        private void DrawTalents()
+        {
+            DungeonUi.Panel(new Rect(922, 82, 334, 470), DungeonUi.Background);
+            DungeonUi.Label(new Rect(946, 103, 288, 30), "YOUR BUILD", 24, DungeonUi.Teal);
+            DungeonUi.Label(new Rect(946, 141, 288, 48), $"Physical crit {Run.Player.Powerups.PhysicalCritChance:P0}\nElemental effect {Run.Player.Powerups.CritChance:P0}", 15, DungeonUi.Muted);
+            int count = 0;
+            foreach (var power in PowerupCatalog.All) if (Run.Player.Powerups.Count(power.Type) > 0) count++;
+            talentScroll = GUI.BeginScrollView(new Rect(944, 205, 290, 324), talentScroll, new Rect(0, 0, 268, Mathf.Max(310, count * 45)));
+            int row = 0;
+            foreach (var power in PowerupCatalog.All)
+            {
+                int rank = Run.Player.Powerups.Count(power.Type);
+                if (rank == 0) continue;
+                DungeonUi.Label(new Rect(0, row++ * 45, 260, 42), $"{power.Name}  /  {rank}", 16);
+            }
+            if (row == 0) DungeonUi.Label(new Rect(0, 0, 260, 80), "Clear floors to earn talents.\nBoss relics unlock active abilities.", 16, DungeonUi.Muted);
+            GUI.EndScrollView();
+        }
+
+        private static void ModalTitle(string eyebrow, string title, string subtitle)
+        {
+            DungeonUi.Label(new Rect(160, 112, 960, 25), eyebrow, 14, AbilityCatalog.Gold, TextAnchor.MiddleCenter);
+            DungeonUi.Label(new Rect(120, 153, 1040, 64), title, 42, DungeonUi.Text, TextAnchor.MiddleCenter);
+            DungeonUi.Label(new Rect(220, 226, 840, 56), subtitle, 18, DungeonUi.Muted, TextAnchor.UpperCenter);
+        }
+
+        private static void Card(Rect rect, string tag, string title, string description, Color color, string glyph)
+        {
+            DungeonUi.Panel(rect, DungeonUi.PanelColor);
+            DungeonUi.Panel(new Rect(rect.x + 24, rect.y + 24, 54, 54), new Color(color.r * 0.2f, color.g * 0.2f, color.b * 0.2f));
+            DungeonUi.Label(new Rect(rect.x + 24, rect.y + 24, 54, 54), glyph, 28, color, TextAnchor.MiddleCenter);
+            DungeonUi.Label(new Rect(rect.x + 94, rect.y + 41, rect.width - 115, 28), tag, 12, color);
+            DungeonUi.Label(new Rect(rect.x + 24, rect.y + 102, rect.width - 48, 68), title, 26);
+            DungeonUi.Label(new Rect(rect.x + 24, rect.y + 183, rect.width - 48, 86), description, 17, DungeonUi.Muted);
+        }
+
+        private void DrawUpgrades()
+        {
+            ModalTitle("FLOOR CLEARED", "A moment of respite", "Choose a talent. Restore 2 HP and descend deeper.");
+            for (int i = 0; i < Run.UpgradeChoices.Count; i++)
+            {
+                var power = Run.UpgradeChoices[i];
+                Rect rect = new Rect(142 + i * 340, 300, 316, 330);
+                int rank = Run.Player.Powerups.Count(power.Type) + 1;
+                Card(rect, $"RANK {rank}  /  {(power.ClassWeapon.HasValue ? "CLASS TALENT" : "TALENT")}", power.Name,
+                    power.Description, power.ClassWeapon.HasValue ? Run.SelectedCharacter.Color : DungeonUi.Teal, "+");
+                if (DungeonUi.Button("upgrade" + i, new Rect(rect.x + 24, rect.yMax - 60, 268, 40), "Choose talent", DungeonUi.Teal))
+                { Run.ChooseUpgrade(i); return; }
+            }
+        }
+
+        private void DrawArtifacts()
+        {
+            ModalTitle("GUARDIAN DEFEATED", "An artifact awakens", "Choose an active ability for your class. Q and F hold two abilities. Choosing an equipped ability raises its rank.");
+            int index = 0;
+            foreach (var ability in AbilityCatalog.All)
+            {
+                if (ability.ClassWeapon != Run.Player.ClassWeapon) continue;
+                Rect rect = new Rect(142 + index++ * 340, 300, 316, 340);
+                bool equipped = Run.Player.Abilities.IsEquipped(ability.Type);
+                int rank = Run.Player.Abilities.Rank(ability.Type);
+                string binding = Run.Player.Abilities.Equipped(0) == ability.Type ? "Q" : "F";
+                Card(rect, equipped ? $"{binding} EQUIPPED  /  RANK {rank}" : $"ACTIVE  /  {ability.Cooldown:0}s COOLDOWN", ability.Name, ability.Description, ability.Color, ability.Glyph);
+                int empty = Run.Player.Abilities.EmptySlot;
+                if (equipped || empty >= 0)
                 {
-                    var boon = Run.UpgradeChoices[i];
-                    int rank = Run.Player.Powerups.Count(boon.Type) + 1;
-                    if (GUI.Button(new Rect(250, 304 + i * 72, 460, 60), $"{boon.Name} (rank {rank})\n{boon.Description}", button))
-                    {
-                        Run.ChooseUpgrade(i);
-                        break;
-                    }
+                    string label = equipped ? rank >= PlayerAbilities.MaxRank ? "Maximum rank" : $"Upgrade to rank {rank + 1}" : $"Bind to {(empty == 0 ? "Q" : "F")}";
+                    if (DungeonUi.Button("artifact" + ability.Type, new Rect(rect.x + 24, rect.yMax - 60, 268, 40), label, ability.Color, !equipped || rank < PlayerAbilities.MaxRank))
+                    { Run.ChooseArtifact(ability.Type, equipped ? 0 : empty); return; }
+                }
+                else
+                {
+                    for (int slot = 0; slot < 2; slot++)
+                        if (DungeonUi.Button("replace" + ability.Type + slot, new Rect(rect.x + 24 + slot * 140, rect.yMax - 60, 128, 40), $"Replace {(slot == 0 ? "Q" : "F")}", ability.Color))
+                        { Run.ChooseArtifact(ability.Type, slot); return; }
                 }
             }
-            else
-            {
-                GUI.Label(new Rect(250, 198, 465, 42), "THE ASH TAKES YOU", title);
-                GUI.Label(new Rect(250, 265, 460, 80), $"You reached floor {Run.Floor} and defeated {Run.Kills} ashling(s).\nRun seed: {Run.Seed}", text);
-                if (GUI.Button(new Rect(250, 400, 460, 70), "Begin a new run", button)) Run.Restart();
-            }
+            if (DungeonUi.Button("leaveArtifact", new Rect(500, 661, 280, 35), "Leave this artifact", DungeonUi.Muted)) Run.FinishArtifactChoice();
+        }
+
+        private void DrawDeath()
+        {
+            ModalTitle("THE DESCENT ENDS", "The ash takes you", $"Floor {Run.Floor}  /  {Run.Kills} enemies defeated\nYour next descent begins with a clean slate.");
+            if (DungeonUi.Button("restart", new Rect(450, 370, 380, 62), "Begin another descent", AbilityCatalog.Gold)) Run.Restart();
+            if (DungeonUi.Button("deathMenu", new Rect(450, 450, 380, 50), "Choose another class", DungeonUi.Muted)) Run.ShowMainMenu();
         }
     }
 }

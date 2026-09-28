@@ -72,6 +72,64 @@ namespace Slopgame
             return renderer;
         }
 
+        private static void Detail(Transform parent, string name, Vector2 offset, Vector2 size, Color color, int order = 6)
+        {
+            var part = Create(name, parent, parent.position, size, color, order);
+            part.transform.localPosition = offset;
+        }
+
+        public static void DecorateHero(Transform hero, WeaponType weapon, Color tint)
+        {
+            Detail(hero, "Shadow", new Vector2(0.06f, -0.16f), new Vector2(1.2f, 0.85f), new Color(0.01f, 0.02f, 0.04f, 0.5f), 2);
+            Detail(hero, "Face", new Vector2(0, 0.16f), new Vector2(0.65f, 0.25f), new Color(0.08f, 0.12f, 0.2f));
+            Detail(hero, "Eyes", new Vector2(0.12f, 0.16f), new Vector2(0.13f, 0.08f), Color.white, 7);
+            if (weapon == WeaponType.Staff)
+            {
+                Detail(hero, "Hat brim", new Vector2(0, 0.45f), new Vector2(1.35f, 0.18f), tint);
+                Detail(hero, "Hat crown", new Vector2(0, 0.68f), new Vector2(0.6f, 0.4f), tint);
+                Detail(hero, "Staff", new Vector2(0.72f, 0), new Vector2(0.12f, 1.3f), AbilityCatalog.Gold);
+                Detail(hero, "Staff crystal", new Vector2(0.72f, 0.7f), Vector2.one * 0.28f, AbilityCatalog.Ice, 7);
+            }
+            else if (weapon == WeaponType.Bow)
+            {
+                Detail(hero, "Bow", new Vector2(0.66f, 0), new Vector2(0.13f, 1.1f), AbilityCatalog.Gold);
+                Detail(hero, "Quiver", new Vector2(-0.55f, -0.05f), new Vector2(0.22f, 0.7f), new Color(0.3f, 0.22f, 0.15f));
+            }
+            else
+            {
+                Detail(hero, "Blade", new Vector2(0.65f, 0), new Vector2(0.14f, weapon == WeaponType.Daggers ? 0.7f : 1.1f), AbilityCatalog.Ice);
+                if (weapon == WeaponType.Daggers)
+                    Detail(hero, "Offhand dagger", new Vector2(-0.65f, 0), new Vector2(0.14f, 0.7f), AbilityCatalog.Ice);
+                else Detail(hero, "Shield", new Vector2(-0.55f, 0), new Vector2(0.42f, 0.75f), weapon == WeaponType.Hammer ? AbilityCatalog.Gold : AbilityCatalog.Ice);
+                if (weapon == WeaponType.Hammer)
+                    Detail(hero, "Hammer head", new Vector2(0.65f, 0.55f), new Vector2(0.55f, 0.32f), AbilityCatalog.Gold);
+            }
+        }
+
+        public static void DecorateBoss(Transform boss)
+        {
+            Detail(boss, "Mask", new Vector2(0, 0.15f), new Vector2(0.8f, 0.3f), new Color(0.12f, 0.06f, 0.18f));
+            Detail(boss, "Left eye", new Vector2(-0.23f, 0.17f), new Vector2(0.15f, 0.1f), AbilityCatalog.Gold, 7);
+            Detail(boss, "Right eye", new Vector2(0.23f, 0.17f), new Vector2(0.15f, 0.1f), AbilityCatalog.Gold, 7);
+            for (int i = -1; i <= 1; i++)
+                Detail(boss, "Crown", new Vector2(i * 0.4f, 0.65f), new Vector2(0.18f, i == 0 ? 0.5f : 0.3f), AbilityCatalog.Gold);
+        }
+
+        public static void DecorateArena(Transform root)
+        {
+            for (int x = 15; x <= 39; x++)
+                for (int y = 9; y <= 29; y++)
+                    if (x == 15 || x == 39 || y == 9 || y == 29)
+                        Create("Arena inlay", root, new Vector2(x, y), Vector2.one * 0.15f, new Color(0.56f, 0.38f, 0.22f), 1);
+            for (int i = 0; i < 16; i++)
+            {
+                float angle = i * Mathf.PI * 2 / 16;
+                var rune = Create("Arena rune", root, new Vector2(27, 19) + new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * 7f,
+                    new Vector2(0.12f, 0.45f), new Color(0.55f, 0.3f, 0.4f), 1);
+                rune.transform.rotation = Quaternion.Euler(0, 0, angle * Mathf.Rad2Deg);
+            }
+        }
+
         public static void DrawMap(DungeonMap map, Transform root)
         {
             for (int x = 0; x < DungeonMap.Width; x++)

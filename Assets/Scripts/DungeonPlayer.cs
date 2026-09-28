@@ -18,6 +18,7 @@ namespace Slopgame
         public WeaponType ClassWeapon => weaponType;
         public AttackCharge Charge { get; private set; }
         public KnightShield Shield { get; private set; }
+        public PlayerAbilities Abilities { get; private set; }
         private float invulnerableUntil, rollUntil, rollReady;
         private Vector2 rollDirection;
         private SpriteRenderer body;
@@ -37,13 +38,17 @@ namespace Slopgame
             characterColor = character.Color;
             weaponType = character.Weapon;
             Powerups.ClassWeapon = weaponType;
+            Abilities = gameObject.AddComponent<PlayerAbilities>();
+            Abilities.Player = this;
+            Powerups.Abilities = Abilities;
             Charge = gameObject.AddComponent<AttackCharge>();
             Charge.Player = this;
-            if (weaponType == WeaponType.Sword)
+            if (weaponType == WeaponType.Sword || weaponType == WeaponType.Hammer)
             {
                 Shield = gameObject.AddComponent<KnightShield>();
                 Shield.Player = this;
             }
+            DungeonVisuals.DecorateHero(transform, weaponType, characterColor);
         }
 
         private void Start()
@@ -54,6 +59,12 @@ namespace Slopgame
                 var bow = gameObject.AddComponent<BowAttack>();
                 bow.Player = this;
                 Weapon = bow;
+            }
+            else if (weaponType == WeaponType.Staff)
+            {
+                var staff = gameObject.AddComponent<WizardAttack>();
+                staff.Player = this;
+                Weapon = staff;
             }
             else
             {
@@ -75,8 +86,10 @@ namespace Slopgame
             if (PlayerInput.Dodge) TryRoll(movement.sqrMagnitude > 0 ? movement : AimDirection);
             Vector2 velocity = IsRolling ? rollDirection * Speed * 2.6f : movement * Speed * (Weapon.IsHeavyAttacking ? 0.55f : Charge.IsCharging ? 0.7f : 1f);
             transform.position = Run.Map.Move(transform.position, velocity * Time.deltaTime);
-            if (PlayerInput.HeavyAttack && !IsRolling) Weapon.TryHeavyAttack(AimDirection);
-            Charge.Tick(PlayerInput.Attack, !IsRolling && !Weapon.IsHeavyAttacking && !PlayerInput.HeavyAttack);
+            bool usedAbility = PlayerInput.ActiveQ && Abilities.TryUse(0, AimDirection);
+            if (!usedAbility && PlayerInput.ActiveF) usedAbility = Abilities.TryUse(1, AimDirection);
+            if (!usedAbility && !Run.IsPointerOverHud && PlayerInput.HeavyAttack && !IsRolling) Weapon.TryHeavyAttack(AimDirection);
+            Charge.Tick(PlayerInput.Attack, !Run.IsPointerOverHud && !usedAbility && !IsRolling && !Weapon.IsHeavyAttacking && !PlayerInput.HeavyAttack);
         }
 
         public bool TryRoll(Vector2 direction)
@@ -108,5 +121,6 @@ namespace Slopgame
         }
 
         public void Heal(int amount) { Health = Mathf.Min(MaxHealth, Health + amount); }
+        public void Protect(float duration) { invulnerableUntil = Mathf.Max(invulnerableUntil, Time.time + duration); }
     }
 }

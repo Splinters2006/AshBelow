@@ -7,6 +7,28 @@ namespace Slopgame
 {
     public static class PlayerInput
     {
+        public static bool ActiveQ
+        {
+            get
+            {
+#if ENABLE_INPUT_SYSTEM
+                return Keyboard.current?.qKey.wasPressedThisFrame ?? false;
+#else
+                return Input.GetKeyDown(KeyCode.Q);
+#endif
+            }
+        }
+        public static bool ActiveF
+        {
+            get
+            {
+#if ENABLE_INPUT_SYSTEM
+                return Keyboard.current?.fKey.wasPressedThisFrame ?? false;
+#else
+                return Input.GetKeyDown(KeyCode.F);
+#endif
+            }
+        }
         public static Vector2 Movement
         {
             get
