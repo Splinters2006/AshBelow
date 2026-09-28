@@ -50,6 +50,7 @@ namespace Slopgame
                     float radius = 11f + rank - 1 + Player.Powerups.Count(PowerupType.EclipseRadius);
                     ExecuteArea(radius);
                     ShadowVfx.Singularity(Player.Run.ProjectileRoot, transform.position, radius);
+                    CoopFx.Singularity(Player.Run, transform.position, radius);
                     Player.Protect(1f);
                     break;
                 case AbilityType.SoulRend:
@@ -61,6 +62,7 @@ namespace Slopgame
                     reignFloor = Player.Run.ProjectileRoot;
                     Player.Protect(duration);
                     ShadowVfx.Singularity(reignFloor, transform.position, 6f, 1.4f);
+                    CoopFx.Singularity(Player.Run, transform.position, 6f, 1.4f);
                     foreach (var enemy in Player.Run.Enemies.ToArray())
                         if (InSight(enemy, 6f)) Strike(enemy, RiftDamage(1f), transform.position);
                     break;
@@ -84,6 +86,7 @@ namespace Slopgame
             }
             float length = Vector2.Distance(origin, destination);
             ShadowVfx.Rift(Player.Run.ProjectileRoot, origin, destination, 0.6f + charge * 1.4f);
+            CoopFx.Rift(Player.Run, origin, destination, 0.6f + charge * 1.4f);
             foreach (var enemy in Player.Run.Enemies.ToArray())
             {
                 if (enemy == null || enemy.Health <= 0) continue;
@@ -104,10 +107,12 @@ namespace Slopgame
         {
             Vector2 origin = transform.position;
             ShadowVfx.Execution(Player.Run.ProjectileRoot, origin, radius);
+            CoopFx.Execution(Player.Run, origin, radius);
             foreach (var enemy in Player.Run.Enemies.ToArray())
             {
                 if (!InSight(enemy, radius)) continue;
                 ShadowVfx.Rift(Player.Run.ProjectileRoot, origin, enemy.transform.position, 0.65f);
+                CoopFx.Rift(Player.Run, origin, enemy.transform.position, 0.65f);
                 Strike(enemy, enemy.Health, origin);
             }
         }

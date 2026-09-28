@@ -48,8 +48,12 @@ namespace Slopgame
                 CombatVfx.Ring(Player.Run.ProjectileRoot, ally.transform.position, 0.6f, AbilityCatalog.Gold);
                 HeroVfx.Motes(Player.Run.ProjectileRoot, ally.transform.position, 0.6f, AbilityCatalog.Gold, 14, 1f);
             }
+            Player.Run.Coop?.SupportAllies(transform.position, BlessingRadius, SupportKind.Bless, BlessingDamage,
+                BlessingDuration + Player.Permanent.BlessingDuration);
             CombatVfx.Ring(Player.Run.ProjectileRoot, transform.position, BlessingRadius, AbilityCatalog.Gold, 0.6f);
             HeroVfx.Pulse(Player.Run.ProjectileRoot, transform.position, BlessingRadius, AbilityCatalog.Gold, 0.55f);
+            CoopFx.Ring(Player.Run, transform.position, BlessingRadius, AbilityCatalog.Gold, 0.6f);
+            CoopFx.Pulse(Player.Run, transform.position, BlessingRadius, AbilityCatalog.Gold, 0.55f);
             readyAt = Time.time + 0.6f * Player.Powerups.AttackIntervalMultiplier;
             return true;
         }

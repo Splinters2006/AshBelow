@@ -16,10 +16,14 @@ namespace Slopgame
             readyAt = enemy.ActionTime + 1f;
         }
 
+        /// <summary>Co-op guest: the host decides when casters wind up and fire.</summary>
+        public void SetCharging(bool charging) { IsCharging = charging; }
+
         private void Update()
         {
-            if (!enemy.Run.IsPlaying || enemy.Health <= 0) return;
-            Vector2 offset = enemy.Run.Player.transform.position - transform.position;
+            if (!enemy.Run.IsPlaying || enemy.Health <= 0 || enemy.Run.IsGuest) return;
+            Vector2 target = enemy.Run.NearestHero(transform.position);
+            Vector2 offset = target - (Vector2)transform.position;
             if (IsCharging)
             {
                 if (enemy.ActionTime < fireAt) return;
@@ -29,7 +33,7 @@ namespace Slopgame
             }
             else if (enemy.ActionTime >= readyAt && offset.sqrMagnitude < 64f && offset.sqrMagnitude > 0.01f
                 && Vector2.Dot(enemy.Facing.Direction, offset.normalized) >= 0.98f
-                && enemy.Run.HasLineOfSight(transform.position, enemy.Run.Player.transform.position))
+                && enemy.Run.HasLineOfSight(transform.position, target))
             {
                 // Lock aim before firing so the white windup gives the player time to evade.
                 lockedDirection = enemy.Facing.Direction;

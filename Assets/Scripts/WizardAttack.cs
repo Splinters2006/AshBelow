@@ -30,6 +30,7 @@ namespace Slopgame
             if (target == null) return false;
             Player.Charge.Cancel();
             HeroVfx.Pulse(Player.Run.ProjectileRoot, origin, 0.7f, AbilityCatalog.Ice, 0.25f);
+            CoopFx.Pulse(Player.Run, origin, 0.7f, AbilityCatalog.Ice, 0.25f);
             int chains = Player.Powerups.Count(PowerupType.LightningChains);
             int count = 1 + chains;
             // Conductivity unlocks chaining; overload only extends an unlocked chain.
@@ -40,6 +41,7 @@ namespace Slopgame
                 Vector2 destination = target.transform.position;
                 struck.Add(target);
                 CombatVfx.GlowBolt(Player.Run.ProjectileRoot, origin, destination, AbilityCatalog.Ice);
+                CoopFx.Bolt(Player.Run, origin, destination, AbilityCatalog.Ice, true);
                 HeroVfx.Sparks(Player.Run.ProjectileRoot, destination, Color.Lerp(AbilityCatalog.Ice, Color.white, 0.4f), 7, 4f, 0.25f);
                 CombatDamage.Apply(Player, target, Player.Damage + 1 + Player.Powerups.Count(PowerupType.LightningPower) + Player.Permanent.LightningDamage,
                     DamageElement.Lightning, origin);

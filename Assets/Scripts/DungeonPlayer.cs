@@ -101,7 +101,7 @@ namespace Slopgame
         private void Update()
         {
             body.color = IsRolling ? new Color(0.4f, 0.65f, 1f) : IsInvulnerable ? Color.white : characterColor;
-            if (!Run.IsPlaying) { Charge.Tick(PlayerInput.Attack, false); return; }
+            if (!Run.IsPlaying || Health <= 0) { Charge.Tick(PlayerInput.Attack, false); return; }
             Vector2 cursor = Run.View.ScreenToWorldPoint(new Vector3(PlayerInput.CursorPosition.x,
                 PlayerInput.CursorPosition.y, -Run.View.transform.position.z));
             Vector2 aim = cursor - (Vector2)transform.position;
@@ -131,7 +131,7 @@ namespace Slopgame
 
         public void Hit()
         {
-            if (!Run.IsPlaying || IsInvulnerable) return;
+            if (!Run.IsPlaying || IsInvulnerable || Health <= 0) return;
             if (DebugMode.Enabled) { Health = MaxHealth; return; }
             bool warded = Powerups.AbsorbHit();
             if (!warded) Health--;
@@ -141,7 +141,41 @@ namespace Slopgame
                 else HeroVfx.Sparks(Run.ProjectileRoot, transform.position, new Color(1f, 0.3f, 0.3f), 10, 3.6f, 0.35f);
             }
             invulnerableUntil = Time.time + 1f;
-            if (Health <= 0) Run.EndRun();
+            if (Health > 0) return;
+            if (!Run.IsNetworked) { Run.EndRun(); return; }
+            SetVisible(false);
+            Run.LocalHeroDied();
+        }
+
+        /// <summary>Co-op: a fallen hero rises at the start of the next floor with half health.</summary>
+        public void Revive()
+        {
+            Health = Mathf.Max(1, MaxHealth / 2);
+            invulnerableUntil = Time.time + 1.5f;
+            SetVisible(true);
+        }
+
+        private readonly System.Collections.Generic.List<Renderer> hiddenRenderers = new System.Collections.Generic.List<Renderer>();
+
+        // Only renderers that were showing get restored, so weapon arcs and indicators keep their own state.
+        private void SetVisible(bool value)
+        {
+            if (!value)
+            {
+                foreach (var renderer in GetComponentsInChildren<Renderer>())
+                    if (renderer.enabled) { renderer.enabled = false; hiddenRenderers.Add(renderer); }
+                return;
+            }
+            foreach (var renderer in hiddenRenderers) if (renderer != null) renderer.enabled = true;
+            hiddenRenderers.Clear();
+        }
+
+        /// <summary>Heals, shields or blesses this hero; used by local allies and by teammates over the network.</summary>
+        public void ApplySupport(SupportKind kind, int amount, float duration)
+        {
+            if (kind == SupportKind.Heal) Heal(amount);
+            else if (kind == SupportKind.Protect) Protect(duration);
+            else Blessing.Apply(amount, duration);
         }
 
         public void Upgrade(int choice)

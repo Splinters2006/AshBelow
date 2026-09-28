@@ -5,9 +5,11 @@ namespace Slopgame
     public sealed class MainMenu : MonoBehaviour
     {
         public DungeonRun Run { get; set; }
-        private bool selecting, shopping;
+        private bool selecting, shopping, coop;
         private readonly AshShop shop = new AshShop();
-        public void ResetPage() { selecting = false; shopping = false; }
+        private readonly CoopMenu coopMenu = new CoopMenu();
+        public void ResetPage(bool showCoop = false) { selecting = false; shopping = false; coop = showCoop; }
+        public void ShowCoop() => ResetPage(true);
 
         private void OnGUI()
         {
@@ -22,25 +24,38 @@ namespace Slopgame
                     DungeonUi.Panel(new Rect(700 + i * 45 + offset, 70 + i * 65, 130, 2), new Color(0.21f, 0.3f, 0.33f, 0.22f));
                 }
                 DungeonUi.Label(new Rect(70, 52, 900, 25), "A ROGUELIKE DESCENT", 14, AbilityCatalog.Gold);
-                DungeonUi.Label(new Rect(65, 88, 1100, 94), shopping ? "ASH SHOP" : "ASH / BELOW", 66);
-                DungeonUi.Label(new Rect(70, 188, 1100, 42), shopping ? "Spend the ash you carry home. Grow stronger with every descent." : selecting ? "Choose your hero. Shape your build. Claim the relics below." : "Six heroes. Two relic abilities. One life in the ash.", 20, DungeonUi.Muted);
+                DungeonUi.Label(new Rect(65, 88, 1100, 94), shopping ? "ASH SHOP" : coop ? "CO-OP" : "ASH / BELOW", 66);
+                DungeonUi.Label(new Rect(70, 188, 1100, 42), shopping ? "Spend the ash you carry home. Grow stronger with every descent."
+                    : coop ? "Descend with up to three friends. Fallen heroes rise again on the next floor."
+                    : selecting ? "Choose your hero. Shape your build. Claim the relics below." : "Six heroes. Two relic abilities. One life in the ash.", 20, DungeonUi.Muted);
                 DungeonUi.Label(new Rect(930, 55, 280, 32), Run.Progress.IsReadOnly ? "SAVE UNAVAILABLE" : $"{Run.Progress.Ash} ASH", 23, AbilityCatalog.Gold, TextAnchor.UpperRight);
                 if (shopping)
                 {
                     shop.Draw(Run);
                     if (DungeonUi.Button("shopBack", new Rect(70, 598, 268, 48), "Back", DungeonUi.Muted)) shopping = false;
                 }
+                else if (coop)
+                {
+                    coopMenu.Draw(Run);
+                    bool inParty = Run.Coop.Session.State != NetState.Offline;
+                    if (DungeonUi.Button("coopBack", new Rect(70, 598, 268, 48), inParty ? "Leave party" : "Back", DungeonUi.Muted))
+                    {
+                        CoopMenu.Leave(Run);
+                        if (!inParty) coop = false;
+                    }
+                }
                 else if (!selecting)
                 {
                     DungeonUi.Panel(new Rect(70, 275, 610, 258), DungeonUi.PanelColor);
                     DungeonUi.Label(new Rect(102, 307, 530, 55), "POWER HAS A PRICE", 29, DungeonUi.Teal);
                     DungeonUi.Label(new Rect(102, 374, 530, 130), "Charge your attacks. Read the enemy.\nEvery fifth floor, face an arena guardian.\nTake its artifact and choose your own power.", 22, DungeonUi.Muted);
-                    if (DungeonUi.Button("chooseClass", new Rect(755, 307, 420, 64), "Choose your hero", AbilityCatalog.Gold)) selecting = true;
-                    if (DungeonUi.Button("shop", new Rect(755, 390, 420, 55), "Ash shop", DungeonUi.Teal)) shopping = true;
+                    if (DungeonUi.Button("chooseClass", new Rect(755, 290, 420, 60), "Choose your hero", AbilityCatalog.Gold)) selecting = true;
+                    if (DungeonUi.Button("coop", new Rect(755, 362, 420, 48), "Co-op", AbilityCatalog.Gold)) coop = true;
+                    if (DungeonUi.Button("shop", new Rect(755, 422, 420, 48), "Ash shop", DungeonUi.Teal)) shopping = true;
                     if (DungeonUi.Button("debugMode", new Rect(755, 545, 420, 42),
                         DebugMode.Enabled ? "Debug admin mode: ON  (F1)" : "Debug admin mode: OFF  (F1)",
                         DebugMode.Enabled ? DungeonHud.DebugColor : DungeonUi.Muted)) DebugMode.Toggle();
-                    if (DungeonUi.Button("quit", new Rect(755, 470, 420, 55), "Quit", DungeonUi.Muted))
+                    if (DungeonUi.Button("quit", new Rect(755, 482, 420, 48), "Quit", DungeonUi.Muted))
                     {
 #if UNITY_EDITOR
                         UnityEditor.EditorApplication.isPlaying = false;

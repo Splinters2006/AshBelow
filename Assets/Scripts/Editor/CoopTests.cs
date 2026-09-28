@@ -1,0 +1,152 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using Unity.Collections;
+using Unity.Netcode;
+using UnityEditor;
+using UnityEditor.Build.Reporting;
+using UnityEngine;
+
+namespace Slopgame.Editor
+{
+    /// <summary>
+    /// Co-op checks that need no second machine: message round trips, the shared flow field, health scaling and
+    /// seed determinism. <see cref="BuildSmokePlayer"/> builds the Linux development player for the two-process smoke test.
+    /// </summary>
+    public static class CoopTests
+    {
+        public static void Run()
+        {
+            try
+            {
+                TestMessages();
+                TestFlowField();
+                TestScaling();
+                TestDeterminism();
+                Debug.Log("COOP_TESTS_OK: message round trips, multi-hero flow field, party health scaling, seed determinism");
+                if (Application.isBatchMode) EditorApplication.Exit(0);
+            }
+            catch (Exception error)
+            {
+                Debug.LogException(error);
+                if (Application.isBatchMode) EditorApplication.Exit(1);
+            }
+        }
+
+        private static void Require(bool condition, string message) { if (!condition) throw new Exception(message); }
+
+        private static T RoundTrip<T>(T value, Action<T, FastBufferWriter> write, Func<FastBufferReader, T> read)
+        {
+            using var writer = NetSession.Writer();
+            write(value, writer);
+            using var reader = new FastBufferReader(writer, Allocator.Temp);
+            return read(reader);
+        }
+
+        private static void TestMessages()
+        {
+            var state = new PlayerStateMessage { Id = 3, Floor = 7, Position = new Vector2(1.5f, -2f), Aim = Vector2.up, Flags = 9, Health = 4, MaxHealth = 8 };
+            var stateBack = RoundTrip(state, (m, w) => m.Write(w), PlayerStateMessage.Read);
+            Require(stateBack.Id == 3 && stateBack.Floor == 7 && stateBack.Position == state.Position && stateBack.Aim == Vector2.up
+                && stateBack.Flags == 9 && stateBack.Health == 4 && stateBack.MaxHealth == 8, "Player state did not round-trip.");
+
+            var enemy = new EnemySnapshot { Id = 12, Position = new Vector2(20f, 9f), Facing = Vector2.left, Health = 31, Flags = EnemySnapshot.Burning | EnemySnapshot.Charging };
+            var enemyBack = RoundTrip(enemy, (m, w) => m.Write(w), EnemySnapshot.Read);
+            Require(enemyBack.Id == 12 && enemyBack.Position == enemy.Position && enemyBack.Facing == Vector2.left && enemyBack.Health == 31
+                && enemyBack.Flags == enemy.Flags, "Enemy snapshot did not round-trip.");
+
+            var damage = new DamageMessage { Floor = 2, Enemy = 5, Kind = CoopDamageKind.Burn, Amount = 3, Ticks = 4, Duration = 1.5f, Source = Vector2.one, Color = new Color32(1, 2, 3, 4) };
+            var damageBack = RoundTrip(damage, (m, w) => m.Write(w), DamageMessage.Read);
+            Require(damageBack.Floor == 2 && damageBack.Enemy == 5 && damageBack.Kind == CoopDamageKind.Burn && damageBack.Amount == 3 && damageBack.Ticks == 4
+                && Mathf.Approximately(damageBack.Duration, 1.5f) && damageBack.Source == Vector2.one && damageBack.Color.Equals(damage.Color), "Damage did not round-trip.");
+
+            var fx = new FxMessage { Origin = 1, Floor = 3, Kind = FxKind.Spell, A = Vector2.right, B = Vector2.down, Color = new Color32(9, 8, 7, 255), F1 = 7f, F2 = 1.7f, N = 4 };
+            var fxBack = RoundTrip(fx, (m, w) => m.Write(w), FxMessage.Read);
+            Require(fxBack.Origin == 1 && fxBack.Floor == 3 && fxBack.Kind == FxKind.Spell && fxBack.A == Vector2.right && fxBack.B == Vector2.down
+                && fxBack.Color.Equals(fx.Color) && Mathf.Approximately(fxBack.F1, 7f) && Mathf.Approximately(fxBack.F2, 1.7f) && fxBack.N == 4, "Effect did not round-trip.");
+
+            var support = new SupportMessage { Origin = 2, Target = 3, Kind = SupportKind.Bless, Amount = 2, Duration = 6f };
+            var supportBack = RoundTrip(support, (m, w) => m.Write(w), SupportMessage.Read);
+            Require(supportBack.Origin == 2 && supportBack.Target == 3 && supportBack.Kind == SupportKind.Bless && supportBack.Amount == 2
+                && Mathf.Approximately(supportBack.Duration, 6f), "Support did not round-trip.");
+
+            var bolt = new BoltEventMessage { Origin = 1, Floor = 5, Bolt = 44, Kind = CoopBoltEventKind.Reflected, Position = new Vector2(3f, 4f), Direction = Vector2.left };
+            var boltBack = RoundTrip(bolt, (m, w) => m.Write(w), BoltEventMessage.Read);
+            Require(boltBack.Origin == 1 && boltBack.Floor == 5 && boltBack.Bolt == 44 && boltBack.Kind == CoopBoltEventKind.Reflected
+                && boltBack.Position == bolt.Position && boltBack.Direction == Vector2.left, "Bolt event did not round-trip.");
+        }
+
+        private static void TestFlowField()
+        {
+            for (int seed = 1; seed <= 40; seed++)
+            {
+                var map = new DungeonMap(seed * 7919);
+                var sources = new List<Vector2Int> { map.Centers[0], map.Centers[map.Centers.Count - 1], map.Centers[map.Centers.Count / 2] };
+                var combined = new int[DungeonMap.Width, DungeonMap.Height];
+                DungeonRun.BuildFlowField(map, sources, combined);
+                var single = new List<int[,]>();
+                foreach (var source in sources)
+                {
+                    var field = new int[DungeonMap.Width, DungeonMap.Height];
+                    DungeonRun.BuildFlowField(map, new List<Vector2Int> { source }, field);
+                    single.Add(field);
+                }
+                for (int x = 0; x < DungeonMap.Width; x++)
+                    for (int y = 0; y < DungeonMap.Height; y++)
+                    {
+                        int nearest = int.MaxValue;
+                        foreach (var field in single) nearest = Mathf.Min(nearest, field[x, y]);
+                        Require(combined[x, y] == nearest, $"Seed {seed}: cell {x},{y} should be {nearest} steps from the nearest hero, not {combined[x, y]}.");
+                    }
+                foreach (var source in sources) Require(combined[source.x, source.y] == 0, "A hero's own cell must be distance 0.");
+            }
+        }
+
+        private static void TestScaling()
+        {
+            Require(DungeonRun.ScaleHealth(2, 1) == 2, "Solo health must be unchanged.");
+            Require(DungeonRun.ScaleHealth(2, 2) == 3, "Two heroes: 1.5x health.");
+            Require(DungeonRun.ScaleHealth(3, 2) == 5, "Scaled health rounds up.");
+            Require(DungeonRun.ScaleHealth(27, 4) == 68, "Four heroes: 2.5x health.");
+            Require(DungeonRun.ScaleHealth(5, 0) == 5, "A missing party size counts as solo.");
+        }
+
+        private static void TestDeterminism()
+        {
+            for (int floor = 1; floor <= 12; floor++)
+            {
+                int seed = 424242 + floor * 7919;
+                bool boss = floor % 5 == 0;
+                var a = new DungeonMap(seed, boss);
+                var b = new DungeonMap(seed, boss);
+                Require(a.Centers.Count == b.Centers.Count, "Same seed, different room count.");
+                for (int i = 0; i < a.Centers.Count; i++) Require(a.Centers[i] == b.Centers[i], "Same seed, different rooms.");
+                for (int x = 0; x < DungeonMap.Width; x++)
+                    for (int y = 0; y < DungeonMap.Height; y++)
+                        Require(a.IsFloor(x, y) == b.IsFloor(x, y), "Same seed, different walls.");
+            }
+        }
+
+        /// <summary>Builds a Linux development player to Builds/CoopSmoke for the two-process smoke test.</summary>
+        public static void BuildSmokePlayer()
+        {
+            string folder = Path.GetFullPath(Path.Combine(Application.dataPath, "../Builds/CoopSmoke"));
+            Directory.CreateDirectory(folder);
+            var report = BuildPipeline.BuildPlayer(new BuildPlayerOptions
+            {
+                scenes = new[] { "Assets/Scenes/Dungeon.unity" },
+                locationPathName = Path.Combine(folder, "AshBelow.x86_64"),
+                target = BuildTarget.StandaloneLinux64,
+                options = BuildOptions.Development
+            });
+            if (report.summary.result != BuildResult.Succeeded)
+            {
+                Debug.LogError("Co-op smoke build failed: " + report.summary.result);
+                if (Application.isBatchMode) EditorApplication.Exit(1);
+                return;
+            }
+            Debug.Log("COOP_SMOKE_BUILD_OK: " + folder);
+            if (Application.isBatchMode) EditorApplication.Exit(0);
+        }
+    }
+}

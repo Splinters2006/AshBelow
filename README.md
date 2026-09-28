@@ -24,6 +24,19 @@ Press **F1** at any time (or use **Debug admin mode** on the main menu) to toggl
 
 Every hero has a soft class-coloured ground ring, leaves tinted afterimages while dodging, and gets sweeping slash crescents, impact sparks (bigger with a gold flash on critical hits), projectile trails, glowing lightning, charge-ready pings, shield/reflect flashes, and blessing/healing motes. These effects are intentionally calmer than the Admin's shadow magic, which keeps its own effect set. Archer shows a faint aim line with an end marker at exactly where a basic arrow will land; it stretches and brightens while charging (a ghost tick marks the full-charge range) and turns red where a wall will stop the arrow.
 
+## Co-op multiplayer
+
+Up to four players can descend together. Choose **Co-op** on the main menu:
+
+- **Host a party** creates an online party and shows a short **join code**. Friends type it under **Join code**. This goes through Unity Relay, so nobody needs to forward ports.
+- **Host on this network / Join IP** connects directly on port 7777, for the same network or a host who forwards that port. It works without any online service.
+
+Everyone picks a hero in the party lobby, then the host presses **Begin descent**. Every player sees the same floors, since they are built from a shared seed. Each player controls their own hero, and the host's game runs the enemies. Enemy health grows by half for each extra hero. Any player can open the stairs or claim a boss artifact once the floor is clear. Everyone then picks their own boon or relic, and the party moves on when all have chosen. The game does not pause in co-op. A fallen hero watches a teammate and rises with half health on the next floor, and the run ends when the whole party has fallen. Healing Light, Sanctuary and the Paladin's blessing also reach teammates. Every player earns kill and floor Ash into their own save. If the host leaves, everyone returns to the menu; a guest who leaves simply disappears from the run. Parties cannot be joined once a descent has started.
+
+**Online setup (one time, project owner):** Unity Relay only works in builds from a project linked to Unity Cloud. In Unity, open **Edit → Project Settings → Services**, choose your organization and **Create/Link** a project, then rebuild. Until then, **Host a party** explains that online play is not set up, and LAN / direct IP still works.
+
+**Automated check:** `Slopgame.Editor.CoopTests.Run` covers messages, the shared enemy pathing, health scaling and seed determinism. `Slopgame.Editor.CoopTests.BuildSmokePlayer` builds a Linux development player to `Builds/CoopSmoke`. Run it once with `-batchmode -nographics -coopSmoke host -coopPeers N` and N-1 more times with `-coopSmoke join -coopPeers N` to play a scripted 2–4 player descent over `127.0.0.1`. Each copy logs `COOP_SMOKE_<ROLE>_OK`, and smoke runs use a throwaway save.
+
 ## Windows release (primary target)
 
 Use **Slopgame → Windows → Build EXE and ZIP**. It builds Windows x64 using Mono and Direct3D 11, starting in a resizable 1280×720 window. Output goes to a new timestamped folder and ZIP under `Builds/Windows/`. Builds are excluded from Git.

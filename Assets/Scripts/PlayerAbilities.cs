@@ -79,12 +79,12 @@ namespace Slopgame
                 case AbilityType.ShadowVeil:
                     Player.Protect(1.5f + (rank - 1) * 0.3f + powers.Count(PowerupType.VeilDuration) * 0.4f); break;
                 case AbilityType.HealingLight:
-                    ForAllies(ally => ally.Heal(2 + rank - 1 + powers.Count(PowerupType.HealingPower))); break;
+                    ForAllies(SupportKind.Heal, 2 + rank - 1 + powers.Count(PowerupType.HealingPower), 0f); break;
                 case AbilityType.Judgment:
                     AreaAttack(transform.position, 3f, damage + powers.Count(PowerupType.JudgmentPower) * 2,
                         DamageElement.Physical, definition.Color, 2f); break;
                 case AbilityType.Sanctuary:
-                    ForAllies(ally => ally.Protect(2f + (rank - 1) * 0.3f + powers.Count(PowerupType.SanctuaryDuration) * 0.4f)); break;
+                    ForAllies(SupportKind.Protect, 0, 2f + (rank - 1) * 0.3f + powers.Count(PowerupType.SanctuaryDuration) * 0.4f); break;
                 case AbilityType.Eclipse:
                 case AbilityType.SoulRend:
                 case AbilityType.ShadowReign:
@@ -93,6 +93,7 @@ namespace Slopgame
                     break;
             }
             CombatVfx.Ring(Player.Run.ProjectileRoot, transform.position, 0.65f, definition.Color);
+            CoopFx.Ring(Player.Run, transform.position, 0.65f, definition.Color);
             if (Player.ClassWeapon != WeaponType.Shadow)
             {
                 HeroVfx.Pulse(Player.Run.ProjectileRoot, transform.position, 1.1f, definition.Color, 0.35f);
@@ -103,15 +104,17 @@ namespace Slopgame
             return true;
         }
 
-        private void ForAllies(System.Action<DungeonPlayer> action)
+        private void ForAllies(SupportKind kind, int amount, float duration)
         {
             foreach (var ally in FindObjectsByType<DungeonPlayer>())
-                if (ally.Run == Player.Run && Vector2.Distance(transform.position, ally.transform.position) <= 4f)
+                if (ally.Run == Player.Run && ally.Health > 0 && Vector2.Distance(transform.position, ally.transform.position) <= 4f)
                 {
-                    action(ally);
+                    ally.ApplySupport(kind, amount, duration);
                     HeroVfx.Motes(Player.Run.ProjectileRoot, ally.transform.position, 0.7f, AbilityCatalog.Gold, 14, 1f);
                 }
+            Player.Run.Coop?.SupportAllies(transform.position, 4f, kind, amount, duration);
             CombatVfx.Ring(Player.Run.ProjectileRoot, transform.position, 4f, AbilityCatalog.Gold);
+            CoopFx.Ring(Player.Run, transform.position, 4f, AbilityCatalog.Gold);
         }
 
         private void Fan(Vector2 aim, int count, float spacing, int damage)
@@ -150,8 +153,10 @@ namespace Slopgame
             Vector2 travel = landing - from;
             var color = new Color(0.7f, 0.35f, 1f);
             CombatVfx.Bolt(Player.Run.ProjectileRoot, from, landing, color);
+            CoopFx.Bolt(Player.Run, from, landing, color);
             CombatVfx.Ring(Player.Run.ProjectileRoot, from, 0.45f, color, 0.2f);
             CombatVfx.Ring(Player.Run.ProjectileRoot, landing, 0.6f, color, 0.3f);
+            CoopFx.Ring(Player.Run, landing, 0.6f, color, 0.3f);
             HeroVfx.Sparks(Player.Run.ProjectileRoot, landing, color, 10, 3.2f, 0.3f);
             foreach (var enemy in Player.Run.Enemies.ToArray())
             {
@@ -185,6 +190,7 @@ namespace Slopgame
             }
             Player.Protect(0.35f);
             CombatVfx.GlowBolt(Player.Run.ProjectileRoot, from, transform.position, AbilityCatalog.Ice);
+            CoopFx.Bolt(Player.Run, from, transform.position, AbilityCatalog.Ice, true);
             HeroVfx.Sparks(Player.Run.ProjectileRoot, transform.position, AbilityCatalog.Ice, 8, 3f, 0.3f, (Vector2)transform.position - from, 120f);
         }
 
@@ -196,6 +202,8 @@ namespace Slopgame
         {
             CombatVfx.Ring(Player.Run.ProjectileRoot, center, radius, color);
             HeroVfx.Pulse(Player.Run.ProjectileRoot, center, radius, color, 0.4f);
+            CoopFx.Ring(Player.Run, center, radius, color);
+            CoopFx.Pulse(Player.Run, center, radius, color, 0.4f);
             foreach (var enemy in Player.Run.Enemies.ToArray())
                 if (InArea(enemy, center, radius))
                 {

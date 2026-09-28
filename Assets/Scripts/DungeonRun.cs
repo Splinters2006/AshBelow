@@ -39,9 +39,18 @@ namespace Slopgame
         private float nextSaveRetry;
         public PermanentProgress Progress { get; private set; }
         public int RunAshEarned { get; private set; }
+        public CoopSync Coop { get; private set; }
+        /// <summary>True during a co-op descent; the local hero is still <see cref="Player"/>.</summary>
+        public bool IsNetworked => Coop != null && Coop.Active;
+        /// <summary>True on a co-op guest, whose enemies are driven by the host.</summary>
+        public bool IsGuest => IsNetworked && !Coop.IsHost;
+        public int PartySize { get; private set; } = 1;
+        public int EnemyHealthScaled(int health) => ScaleHealth(health, PartySize);
+        /// <summary>Each extra hero adds half of an enemy's base health.</summary>
+        public static int ScaleHealth(int health, int partySize) => Mathf.CeilToInt(health * (1f + 0.5f * (Mathf.Max(1, partySize) - 1)));
         private readonly int[,] distances = new int[DungeonMap.Width, DungeonMap.Height];
         private static readonly Vector2Int[] Steps = { Vector2Int.up, Vector2Int.down, Vector2Int.left, Vector2Int.right };
-        private Vector2Int lastPlayerCell = new Vector2Int(-1, -1);
+        private readonly List<Vector2Int> heroCells = new List<Vector2Int>(), lastHeroCells = new List<Vector2Int>();
 
         private void Start()
         {
@@ -50,6 +59,11 @@ namespace Slopgame
             // Automated tests must never read or change the player's real wallet.
             if (Application.isBatchMode || UnityEditor.SessionState.GetBool("SlopgamePreview", false)
                 || UnityEditor.SessionState.GetBool("AdminPreview", false))
+                saveDirectory = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "ashbelow-tests", System.Guid.NewGuid().ToString("N"));
+#endif
+#if DEVELOPMENT_BUILD || UNITY_EDITOR
+            // Scripted co-op smoke runs must never touch a real wallet either.
+            if (System.Array.IndexOf(System.Environment.GetCommandLineArgs(), "-coopSmoke") >= 0)
                 saveDirectory = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "ashbelow-tests", System.Guid.NewGuid().ToString("N"));
 #endif
             Progress = new PermanentProgress(saveDirectory);
@@ -71,6 +85,8 @@ namespace Slopgame
             SelectedCharacter = System.Array.Find(characters, character => character.Weapon == WeaponType.Sword) ?? characters[0];
             menu = gameObject.AddComponent<MainMenu>();
             menu.Run = this;
+            Coop = gameObject.AddComponent<CoopSync>();
+            Coop.Run = this;
             ShowMainMenu();
         }
 
@@ -79,7 +95,24 @@ namespace Slopgame
             if (IsInMainMenu && System.Array.IndexOf(characters, character) >= 0) SelectedCharacter = character;
         }
 
-        public void ShowMainMenu()
+        /// <summary>Returns to the main menu, leaving any co-op party (after a disconnect the menu explains why).</summary>
+        public void ShowMainMenu() => ShowMainMenu(false);
+
+        public void ShowMainMenu(bool disconnected)
+        {
+            if (Coop != null && Coop.Session.State != NetState.Offline && !disconnected) Coop.Session.Leave();
+            ClearRun();
+            menu.ResetPage(disconnected);
+        }
+
+        /// <summary>Back to the co-op party screen while staying connected.</summary>
+        public void ShowCoopLobby()
+        {
+            ClearRun();
+            menu.ShowCoop();
+        }
+
+        private void ClearRun()
         {
             IsPlaying = false;
             ChoosingUpgrade = false;
@@ -91,15 +124,29 @@ namespace Slopgame
             if (level != null) { level.gameObject.SetActive(false); Destroy(level.gameObject); level = null; }
             if (Player != null) { Player.gameObject.SetActive(false); Destroy(Player.gameObject); Player = null; }
             Enemies.Clear();
-            menu.ResetPage();
+            PartySize = 1;
         }
 
         public void Restart()
         {
+            if (IsNetworked) { Coop.HostBeginRun(); return; }
+            BeginRun(UnityEngine.Random.Range(0, 1000000), 1);
+        }
+
+        /// <summary>Starts a co-op descent; every machine calls this with the same seed and party size.</summary>
+        public void StartCoopRun(CharacterDefinition character, int seed, int partySize)
+        {
+            SelectedCharacter = character;
+            BeginRun(seed, partySize);
+        }
+
+        private void BeginRun(int seed, int partySize)
+        {
             if (SelectedCharacter == null) return;
             IsInMainMenu = false;
             if (Player != null) { Player.gameObject.SetActive(false); Destroy(Player.gameObject); }
-            Seed = UnityEngine.Random.Range(0, 1000000);
+            Seed = seed;
+            PartySize = Mathf.Max(1, partySize);
             Floor = 0;
             Kills = 0;
             RunAshEarned = 0;
@@ -107,6 +154,13 @@ namespace Slopgame
                 SelectedCharacter.Color, 4).gameObject.AddComponent<DungeonPlayer>();
             Player.Run = this;
             Player.Initialize(SelectedCharacter);
+            NextFloor();
+        }
+
+        /// <summary>Co-op: the host decided everyone descends now.</summary>
+        public void AdvanceCoopFloor(int partySize)
+        {
+            PartySize = Mathf.Max(1, partySize);
             NextFloor();
         }
 
@@ -148,7 +202,7 @@ namespace Slopgame
                     var enemy = DungeonVisuals.Create("Ashling", level, position, Vector2.one * 0.6f,
                         new Color(1f, 0.35f, 0.4f), 3).gameObject.AddComponent<DungeonEnemy>();
                     enemy.Run = this;
-                    enemy.Health = EnemyHealthForFloor(Floor);
+                    enemy.Health = EnemyHealthScaled(EnemyHealthForFloor(Floor));
                     enemy.Speed = Mathf.Min(3.6f, 1.8f + Floor * 0.12f);
                     if (i == 1) enemy.gameObject.AddComponent<EnemyShooter>();
                     else if (i == 0 && room % 2 == 0)
@@ -162,9 +216,10 @@ namespace Slopgame
                     Enemies.Add(enemy);
                 }
             }
-            lastPlayerCell = new Vector2Int(-1, -1);
+            lastHeroCells.Clear();
             ChoosingUpgrade = false;
             IsPlaying = true;
+            if (IsNetworked) Coop.RegisterFloor(new List<DungeonEnemy>(Enemies));
             view.transform.position = new Vector3(Player.transform.position.x, Player.transform.position.y, -10);
             UpdatePaths();
         }
@@ -176,22 +231,27 @@ namespace Slopgame
             { Progress.Save(); nextSaveRetry = Time.unscaledTime + 5f; }
             if (!IsPlaying) return;
             UpdatePaths();
-            if (Artifact != null && Vector2.Distance(Player.transform.position, Artifact.transform.position) < 1.5f && PlayerInput.Interact)
+            bool canInteract = Player.Health > 0 && PlayerInput.Interact;
+            if (Artifact != null && canInteract && Vector2.Distance(Player.transform.position, Artifact.transform.position) < 1.5f)
             {
-                BeginArtifactChoice();
+                if (IsNetworked) Coop.RequestInteract(CoopChoice.Artifact);
+                else BeginArtifactChoice();
                 return;
             }
             stairs.SetUnlocked(Enemies.Count == 0 && Artifact == null);
-            if (Artifact == null && Enemies.Count == 0 && Vector2.Distance(Player.transform.position, exit) < 1.2f && PlayerInput.Interact)
+            if (Artifact == null && Enemies.Count == 0 && canInteract && Vector2.Distance(Player.transform.position, exit) < 1.2f)
             {
-                BeginUpgradeChoice();
+                if (IsNetworked) Coop.RequestInteract(CoopChoice.Upgrade);
+                else BeginUpgradeChoice();
             }
         }
 
         private void LateUpdate()
         {
             if (Player == null) return;
-            var target = new Vector3(Player.transform.position.x, Player.transform.position.y, -10);
+            // A fallen co-op hero watches a living teammate until the next floor.
+            Transform follow = Player.Health <= 0 && IsNetworked && Coop.SpectateTarget != null ? Coop.SpectateTarget.transform : Player.transform;
+            var target = new Vector3(follow.position.x, follow.position.y, -10);
             view.transform.position = Vector3.Lerp(view.transform.position, target, 1 - Mathf.Exp(-10 * Time.deltaTime));
         }
 
@@ -211,7 +271,37 @@ namespace Slopgame
         private void OnApplicationFocus(bool focused) { if (!focused) Progress?.Save(); }
 
         public static int EnemyHealthForFloor(int floor) => 2 + Mathf.Max(0, floor - 3);
-        public void EndRun() { IsPlaying = false; Player.Weapon?.Hide(); Time.timeScale = 0f; }
+        public void EndRun()
+        {
+            IsPlaying = false;
+            ChoosingUpgrade = false;
+            ChoosingArtifact = false;
+            Player.Weapon?.Hide();
+            if (!IsNetworked) Time.timeScale = 0f;
+        }
+
+        /// <summary>Co-op: the local hero fell but teammates fight on; they revive on the next floor.</summary>
+        public void LocalHeroDied()
+        {
+            Player.Weapon?.Hide();
+            Player.Charge.Cancel();
+            Coop.LocalDied();
+        }
+
+        /// <summary>The living heroes enemies can target: the local hero plus teammates.</summary>
+        public Vector2 NearestHero(Vector2 from)
+        {
+            Vector2 best = Player.transform.position;
+            float bestDistance = Player.Health > 0 ? Vector2.SqrMagnitude(best - from) : float.PositiveInfinity;
+            if (IsNetworked)
+                foreach (var hero in Coop.RemoteHeroes)
+                {
+                    if (hero == null || !hero.IsAlive) continue;
+                    float distance = Vector2.SqrMagnitude((Vector2)hero.transform.position - from);
+                    if (distance < bestDistance) { bestDistance = distance; best = hero.transform.position; }
+                }
+            return best;
+        }
         public void DropArtifact(Vector2 position)
         {
             if (Artifact == null) Artifact = ArtifactPickup.Spawn(level, position);
@@ -222,16 +312,29 @@ namespace Slopgame
             IsPlaying = false;
             ChoosingArtifact = true;
             Player.Weapon?.Hide();
-            Time.timeScale = 0f;
+            if (!IsNetworked) Time.timeScale = 0f;
         }
         public bool ChooseArtifact(AbilityType type, int slot)
         {
-            if (!ChoosingArtifact || !Player.Abilities.Claim(type, slot)) return false;
+            if (!ChoosingArtifact || (IsNetworked && Coop.WaitingForTeam) || !Player.Abilities.Claim(type, slot)) return false;
             Player.Heal(2);
             FinishArtifactChoice();
             return true;
         }
         public void FinishArtifactChoice()
+        {
+            if (!ChoosingArtifact) return;
+            if (IsNetworked)
+            {
+                // Every teammate claims their own relic; play resumes once all have chosen.
+                if (!Coop.WaitingForTeam) Coop.FinishChoice();
+                return;
+            }
+            CloseCoopArtifact();
+        }
+
+        /// <summary>Removes the claimed artifact and resumes play.</summary>
+        public void CloseCoopArtifact()
         {
             if (!ChoosingArtifact) return;
             if (Artifact != null) Destroy(Artifact.gameObject);
@@ -265,12 +368,19 @@ namespace Slopgame
             IsPlaying = false;
             Player.Weapon?.Hide();
             ChoosingUpgrade = true;
-            Time.timeScale = 0f;
+            if (!IsNetworked) Time.timeScale = 0f;
         }
 
         public void ChooseUpgrade(int choice)
         {
             if (!ChoosingUpgrade || choice < 0 || choice >= upgradeChoices.Count) return;
+            if (IsNetworked)
+            {
+                if (Coop.WaitingForTeam) return;
+                Player.Upgrade((int)upgradeChoices[choice].Type);
+                Coop.FinishChoice();
+                return;
+            }
             Player.Upgrade((int)upgradeChoices[choice].Type);
             NextFloor();
         }
@@ -286,23 +396,46 @@ namespace Slopgame
             return true;
         }
 
+        /// <summary>A flow field from every living hero, so each enemy paths toward whoever is closest.</summary>
         private void UpdatePaths()
         {
-            Vector2Int cell = Vector2Int.RoundToInt(Player.transform.position);
-            if (cell == lastPlayerCell) return;
-            lastPlayerCell = cell;
+            heroCells.Clear();
+            if (Player.Health > 0) AddHeroCell(Player.transform.position);
+            if (IsNetworked)
+                foreach (var hero in Coop.RemoteHeroes)
+                    if (hero != null && hero.IsAlive) AddHeroCell(hero.transform.position);
+            if (heroCells.Count == 0) AddHeroCell(Player.transform.position);
+            if (heroCells.Count == lastHeroCells.Count && heroCells.TrueForAll(lastHeroCells.Contains)) return;
+            lastHeroCells.Clear();
+            lastHeroCells.AddRange(heroCells);
+            BuildFlowField(Map, heroCells, distances);
+        }
+
+        private void AddHeroCell(Vector2 position)
+        {
+            var cell = Vector2Int.RoundToInt(position);
+            if (Map.IsFloor(cell.x, cell.y) && !heroCells.Contains(cell)) heroCells.Add(cell);
+        }
+
+        /// <summary>Breadth-first distances (in cells) from the nearest source cell; walls stay at int.MaxValue.</summary>
+        public static void BuildFlowField(DungeonMap map, IReadOnlyList<Vector2Int> sources, int[,] distances)
+        {
             for (int x = 0; x < DungeonMap.Width; x++)
                 for (int y = 0; y < DungeonMap.Height; y++) distances[x, y] = int.MaxValue;
             var queue = new Queue<Vector2Int>();
-            queue.Enqueue(cell);
-            distances[cell.x, cell.y] = 0;
+            foreach (var cell in sources)
+            {
+                if (distances[cell.x, cell.y] == 0) continue;
+                distances[cell.x, cell.y] = 0;
+                queue.Enqueue(cell);
+            }
             while (queue.Count > 0)
             {
                 var current = queue.Dequeue();
                 foreach (var step in Steps)
                 {
                     var next = current + step;
-                    if (!Map.IsFloor(next.x, next.y) || distances[next.x, next.y] != int.MaxValue) continue;
+                    if (!map.IsFloor(next.x, next.y) || distances[next.x, next.y] != int.MaxValue) continue;
                     distances[next.x, next.y] = distances[current.x, current.y] + 1;
                     queue.Enqueue(next);
                 }

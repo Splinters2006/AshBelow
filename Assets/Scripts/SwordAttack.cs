@@ -73,6 +73,7 @@ namespace Slopgame
             FaceArc(aim);
             arc.enabled = true;
             HeroVfx.Slash(Player.Run.ProjectileRoot, transform.position, aim, reach, cone, SlashColor);
+            CoopFx.Slash(Player.Run, transform.position, aim, reach, cone, SlashColor);
             for (int i = Player.Run.Enemies.Count - 1; i >= 0; i--)
             {
                 var enemy = Player.Run.Enemies[i];

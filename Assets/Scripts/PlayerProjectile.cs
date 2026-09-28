@@ -11,8 +11,23 @@ namespace Slopgame
         public float RemainingRange => remainingRange;
         public Vector2 Direction { get; private set; }
         public bool IsSpent { get; private set; }
+        private bool ghost;
 
         public static PlayerProjectile Spawn(DungeonRun run, Vector2 position, Vector2 direction, int damage, float range = MaxRange)
+        {
+            CoopFx.Arrow(run, position, direction, range);
+            return Create(run, position, direction, damage, range);
+        }
+
+        /// <summary>A teammate's arrow: flies and stops like theirs, but their machine deals the damage.</summary>
+        public static PlayerProjectile SpawnGhost(DungeonRun run, Vector2 position, Vector2 direction, float range)
+        {
+            var arrow = Create(run, position, direction, 0, range);
+            arrow.ghost = true;
+            return arrow;
+        }
+
+        private static PlayerProjectile Create(DungeonRun run, Vector2 position, Vector2 direction, int damage, float range)
         {
             var arrow = DungeonVisuals.Create("Arrow", run.ProjectileRoot, position, new Vector2(0.5f, 0.1f),
                 new Color(0.95f, 1f, 0.65f), 6).gameObject.AddComponent<PlayerProjectile>();
@@ -46,7 +61,7 @@ namespace Slopgame
                 {
                     var enemy = run.Enemies[j];
                     if (Vector2.Distance(next, enemy.transform.position) > enemy.HitRadius) continue;
-                    CombatDamage.Apply(run.Player, enemy, damage, DamageElement.Physical, next - Direction);
+                    if (!ghost) CombatDamage.Apply(run.Player, enemy, damage, DamageElement.Physical, next - Direction);
                     Consume();
                     return;
                 }

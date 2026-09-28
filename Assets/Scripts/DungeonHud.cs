@@ -37,6 +37,7 @@ namespace Slopgame
             {
                 DrawStatus();
                 if (Run.Player == null) return;
+                if (Run.IsNetworked) DrawTeam();
                 DrawHotbar();
                 if (showTalents && Run.IsPlaying) DrawTalents();
                 if (Run.IsPlaying) return;
@@ -71,7 +72,7 @@ namespace Slopgame
                 DungeonUi.Label(new Rect(400, 182, 480, 23), Run.Boss.Tell, 13, DungeonUi.Muted, TextAnchor.MiddleCenter);
             }
             if (DungeonUi.Button("talents", new Rect(1020, 24, 112, 40), "Talents", DungeonUi.Teal)) showTalents = !showTalents;
-            if (DungeonUi.Button("menu", new Rect(1144, 24, 112, 40), "Menu", DungeonUi.Muted)) Run.ShowMainMenu();
+            if (DungeonUi.Button("menu", new Rect(1144, 24, 112, 40), Run.IsNetworked ? "Leave" : "Menu", DungeonUi.Muted)) Run.ShowMainMenu();
         }
 
         private void DrawHotbar()
@@ -146,8 +147,47 @@ namespace Slopgame
             DungeonUi.Label(new Rect(rect.x + 24, rect.y + 183, rect.width - 48, 86), description, 17, DungeonUi.Muted);
         }
 
+        /// <summary>Teammate health, their name tags in the world, and the fallen-hero banner.</summary>
+        private void DrawTeam()
+        {
+            var team = Run.Coop.RemoteHeroes;
+            for (int i = 0; i < team.Count; i++)
+            {
+                var hero = team[i];
+                if (hero == null) continue;
+                Rect row = new Rect(24, 200 + i * 44, 292, 38);
+                DungeonUi.Panel(row, DungeonUi.PanelColor);
+                DungeonUi.Label(new Rect(row.x + 14, row.y + 4, 170, 20), hero.PlayerName, 14, hero.Character.Color);
+                DungeonUi.Label(new Rect(row.x + 170, row.y + 4, 108, 20), hero.IsAlive ? $"{hero.Health} / {hero.MaxHealth} HP" : "FALLEN", 13,
+                    hero.IsAlive ? DungeonUi.Muted : new Color(1f, 0.4f, 0.4f), TextAnchor.UpperRight);
+                DungeonUi.Bar(new Rect(row.x + 14, row.y + 27, row.width - 28, 4), hero.IsAlive ? hero.Health / (float)hero.MaxHealth : 0f, hero.Character.Color);
+                if (!hero.IsAlive || Run.View == null) continue;
+                Vector3 screen = Run.View.WorldToScreenPoint(hero.transform.position + Vector3.up * 0.75f);
+                if (screen.z < 0f) continue;
+                float scale = Mathf.Min(Screen.width / DungeonUi.Width, Screen.height / DungeonUi.Height);
+                Vector2 point = new Vector2(screen.x - (Screen.width - DungeonUi.Width * scale) / 2f,
+                    Screen.height - screen.y - (Screen.height - DungeonUi.Height * scale) / 2f) / scale;
+                DungeonUi.Label(new Rect(point.x - 90, point.y - 24, 180, 20), hero.PlayerName, 13, hero.Character.Color, TextAnchor.MiddleCenter);
+            }
+            if (Run.Player.Health <= 0 && Run.IsPlaying)
+            {
+                DungeonUi.Panel(new Rect(390, 104, 500, 64), DungeonUi.PanelColor);
+                DungeonUi.Label(new Rect(400, 112, 480, 26), "YOU HAVE FALLEN", 20, new Color(1f, 0.45f, 0.45f), TextAnchor.MiddleCenter);
+                DungeonUi.Label(new Rect(400, 138, 480, 22), "Your party fights on. You rise again on the next floor.", 14, DungeonUi.Muted, TextAnchor.MiddleCenter);
+            }
+        }
+
+        private bool DrawWaiting()
+        {
+            if (!Run.IsNetworked || !Run.Coop.WaitingForTeam) return false;
+            int waiting = Run.Coop.WaitingCount;
+            ModalTitle("CHOICE MADE", "Waiting for your party", waiting > 0 ? $"{waiting} {(waiting == 1 ? "hero is" : "heroes are")} still choosing." : "The descent continues when everyone has chosen.");
+            return true;
+        }
+
         private void DrawUpgrades()
         {
+            if (DrawWaiting()) return;
             ModalTitle("FLOOR CLEARED", "A moment of respite", "Choose a talent. Restore 2 HP and descend deeper.");
             for (int i = 0; i < Run.UpgradeChoices.Count; i++)
             {
@@ -163,6 +203,7 @@ namespace Slopgame
 
         private void DrawArtifacts()
         {
+            if (DrawWaiting()) return;
             ModalTitle("GUARDIAN DEFEATED", "An artifact awakens", "Choose an active ability for your class. Q and E hold two abilities. Choosing an equipped ability raises its rank.");
             int index = 0;
             foreach (var ability in AbilityCatalog.All)
@@ -194,6 +235,18 @@ namespace Slopgame
 
         private void DrawDeath()
         {
+            if (Run.IsNetworked)
+            {
+                ModalTitle("THE DESCENT ENDS", "The whole party has fallen", $"Floor {Run.Floor}  /  {Run.Kills} enemies defeated\nEvery hero keeps the Ash they earned.");
+                if (Run.Coop.IsHost)
+                {
+                    if (DungeonUi.Button("coopRestart", new Rect(450, 370, 380, 62), "Begin another descent", AbilityCatalog.Gold)) Run.Coop.HostBeginRun();
+                    if (DungeonUi.Button("coopLobby", new Rect(450, 450, 380, 50), "Back to the party", DungeonUi.Teal)) Run.Coop.HostReturnToLobby();
+                }
+                else DungeonUi.Label(new Rect(450, 380, 380, 40), "Waiting for the host…", 18, DungeonUi.Muted, TextAnchor.MiddleCenter);
+                if (DungeonUi.Button("coopLeave", new Rect(450, 520, 380, 44), "Leave party", DungeonUi.Muted)) Run.ShowMainMenu();
+                return;
+            }
             ModalTitle("THE DESCENT ENDS", "The ash takes you", $"Floor {Run.Floor}  /  {Run.Kills} enemies defeated\nYour next descent begins with a clean slate.");
             if (DungeonUi.Button("restart", new Rect(450, 370, 380, 62), "Begin another descent", AbilityCatalog.Gold)) Run.Restart();
             if (DungeonUi.Button("deathMenu", new Rect(450, 450, 380, 50), "Choose another class", DungeonUi.Muted)) Run.ShowMainMenu();

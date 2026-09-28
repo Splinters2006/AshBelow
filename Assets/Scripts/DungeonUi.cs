@@ -15,6 +15,7 @@ namespace Slopgame
         private static GUIStyle panel, invisible;
         private static readonly Dictionary<int, GUIStyle> labels = new Dictionary<int, GUIStyle>();
         private static readonly Dictionary<string, float> hovers = new Dictionary<string, float>();
+        private static readonly Dictionary<int, GUIStyle> fields = new Dictionary<int, GUIStyle>();
 
         public static Matrix4x4 Begin()
         {
@@ -83,6 +84,23 @@ namespace Slopgame
             bool clicked = GUI.Button(rect, GUIContent.none, invisible);
             GUI.enabled = previous;
             return clicked;
+        }
+
+        /// <summary>A single-line text box in the menu style.</summary>
+        public static string TextField(string id, Rect rect, string value, int maxLength, int size = 20)
+        {
+            Initialize();
+            Panel(rect, PanelColor);
+            Panel(new Rect(rect.x, rect.y + rect.height - 2, rect.width, 2), Muted * 0.6f);
+            if (!fields.TryGetValue(size, out var style))
+            {
+                style = new GUIStyle(GUI.skin.textField) { fontSize = size, alignment = TextAnchor.MiddleLeft, padding = new RectOffset(14, 14, 0, 0) };
+                style.normal.background = style.focused.background = style.hover.background = null;
+                style.normal.textColor = style.focused.textColor = style.hover.textColor = Text;
+                fields.Add(size, style);
+            }
+            GUI.SetNextControlName(id);
+            return GUI.TextField(rect, value ?? "", maxLength, style);
         }
 
         public static void Bar(Rect rect, float amount, Color color)

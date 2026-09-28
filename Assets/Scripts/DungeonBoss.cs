@@ -13,6 +13,8 @@ namespace Slopgame
         private float readyAt, fireAt;
         private bool charging, dropped;
         private int pattern;
+        public bool IsCharging => charging;
+        public int Pattern => pattern;
         private Vector2 lockedAim;
         private SpriteRenderer body;
 
@@ -21,7 +23,7 @@ namespace Slopgame
             Enemy = GetComponent<DungeonEnemy>();
             Enemy.Run = run;
             Enemy.Boss = this;
-            MaxHealth = 24 + run.Floor * 3;
+            MaxHealth = run.EnemyHealthScaled(24 + run.Floor * 3);
             Enemy.Health = MaxHealth;
             Enemy.Speed = 1.5f;
             body = GetComponent<SpriteRenderer>();
@@ -33,10 +35,11 @@ namespace Slopgame
         private void Update()
         {
             if (!Enemy.Run.IsPlaying || Enemy.Health <= 0) return;
-            Vector2 offset = Enemy.Run.Player.transform.position - transform.position;
-            Enemy.Facing.TurnToward(offset, Time.deltaTime * Enemy.ActionSpeedMultiplier);
             body.color = Enemy.IsFlashing || charging ? Color.Lerp(AbilityCatalog.Gold, Color.white, 0.5f + Mathf.Sin(Time.time * 18f) * 0.5f)
                 : Enemy.IsChilled ? AbilityCatalog.Ice : IsEnraged ? new Color(1f, 0.26f, 0.28f) : new Color(0.65f, 0.3f, 0.55f);
+            if (Enemy.Run.IsGuest) return;
+            Vector2 offset = Enemy.Run.NearestHero(transform.position) - (Vector2)transform.position;
+            Enemy.Facing.TurnToward(offset, Time.deltaTime * Enemy.ActionSpeedMultiplier);
             if (charging)
             {
                 if (Enemy.ActionTime >= fireAt)
@@ -63,6 +66,13 @@ namespace Slopgame
             else if (offset.magnitude > 2f)
                 transform.position = Enemy.Run.Map.Move(transform.position, offset.normalized * Enemy.Speed * Enemy.MoveMultiplier * Time.deltaTime);
             Enemy.TryContactHit(1.05f);
+        }
+
+        /// <summary>Co-op guest: mirror the host's windup so the tell and flashing match.</summary>
+        public void ApplySnapshot(bool isCharging, bool oddPattern)
+        {
+            charging = isCharging;
+            if (pattern % 2 == 1 != oddPattern) pattern++;
         }
 
         public void Defeated()

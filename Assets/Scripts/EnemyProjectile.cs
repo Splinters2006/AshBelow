@@ -7,18 +7,26 @@ namespace Slopgame
         private const float Speed = 7.5f;
         private DungeonRun run;
         private Vector2 direction;
+        public Vector2 Direction => direction;
+        /// <summary>Co-op id assigned by the host; 0 outside co-op.</summary>
+        public int Id { get; set; }
+        private bool ghost;
         private float lifetime = 4f;
         private bool spent;
         public bool IsReflected { get; private set; }
         private int reflectedDamage;
         public bool IsSpent => spent;
 
-        public static EnemyProjectile Spawn(DungeonRun run, Transform parent, Vector2 position, Vector2 direction)
+        public static EnemyProjectile Spawn(DungeonRun run, Transform parent, Vector2 position, Vector2 direction) => Spawn(run, parent, position, direction, true);
+
+        /// <summary>Every machine flies its own copy; a copy only ever strikes that machine's hero.</summary>
+        public static EnemyProjectile Spawn(DungeonRun run, Transform parent, Vector2 position, Vector2 direction, bool announce)
         {
             var projectile = DungeonVisuals.CreateEmberBolt(parent, position).gameObject.AddComponent<EnemyProjectile>();
             projectile.run = run;
             projectile.direction = direction.normalized;
             projectile.transform.rotation = Quaternion.Euler(0, 0, Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg);
+            if (announce && run.IsNetworked && run.Coop.IsHost) run.Coop.AnnounceBolt(projectile, position, projectile.direction);
             return projectile;
         }
 
@@ -43,34 +51,48 @@ namespace Slopgame
                     {
                         var enemy = run.Enemies[j];
                         if (Vector2.Distance(next, enemy.transform.position) > enemy.HitRadius) continue;
-                        CombatDamage.Apply(run.Player, enemy, reflectedDamage, DamageElement.Physical, next - direction);
+                        // A teammate's reflection is only a picture here; their machine deals the damage.
+                        if (!ghost) CombatDamage.Apply(run.Player, enemy, reflectedDamage, DamageElement.Physical, next - direction);
                         Consume();
                         return;
                     }
                     continue;
                 }
+                if (run.Player.Health <= 0) continue;
                 var shield = run.Player.Shield;
                 if (shield != null && shield.CanReflect(next, direction))
                 {
-                    IsReflected = true;
+                    Reflect(next, -direction, false);
                     reflectedDamage = run.Player.Powerups.ReflectionDamage;
-                    direction = -direction;
-                    HeroVfx.Sparks(run.ProjectileRoot, next, new Color(0.55f, 0.85f, 1f), 9, 4.5f, 0.3f, direction, 100f);
-                    lifetime = 4f;
-                    transform.rotation = Quaternion.Euler(0, 0, Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg);
-                    GetComponent<SpriteRenderer>().color = new Color(0.55f, 0.85f, 1f);
+                    if (run.IsNetworked) run.Coop.ReportBolt(this, CoopBoltEventKind.Reflected);
                     return;
                 }
                 if (Vector2.Distance(next, run.Player.transform.position) <= 0.42f)
                 {
                     run.Player.Hit();
+                    if (run.IsNetworked) run.Coop.ReportBolt(this, CoopBoltEventKind.Consumed);
                     Consume();
                     return;
                 }
             }
         }
 
-        private void Consume()
+        private void Reflect(Vector2 position, Vector2 newDirection, bool mirrored)
+        {
+            IsReflected = true;
+            ghost = mirrored;
+            transform.position = position;
+            direction = newDirection.normalized;
+            HeroVfx.Sparks(run.ProjectileRoot, position, new Color(0.55f, 0.85f, 1f), 9, 4.5f, 0.3f, direction, 100f);
+            lifetime = 4f;
+            transform.rotation = Quaternion.Euler(0, 0, Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg);
+            GetComponent<SpriteRenderer>().color = new Color(0.55f, 0.85f, 1f);
+        }
+
+        /// <summary>A teammate's Knight turned this bolt; show it flying back without dealing damage here.</summary>
+        public void MirrorReflection(Vector2 position, Vector2 newDirection) => Reflect(position, newDirection, true);
+
+        public void Consume()
         {
             spent = true;
             gameObject.SetActive(false);

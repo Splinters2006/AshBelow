@@ -27,6 +27,14 @@ namespace Slopgame
             UpdateMarker();
         }
 
+        /// <summary>Co-op guest: adopt the host's facing directly.</summary>
+        public void Face(Vector2 direction)
+        {
+            if (direction.sqrMagnitude < 0.0001f) return;
+            Direction = direction.normalized;
+            UpdateMarker();
+        }
+
         public EnemyHitRegion RegionFrom(Vector2 source)
         {
             Vector2 offset = source - (Vector2)transform.position;
