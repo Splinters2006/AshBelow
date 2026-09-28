@@ -26,7 +26,7 @@ namespace Slopgame
             Enemy.Speed = 1.5f;
             body = GetComponent<SpriteRenderer>();
             gameObject.name = Title;
-            readyAt = Time.time + 2f;
+            readyAt = Enemy.ActionTime + 2f;
             DungeonVisuals.DecorateBoss(transform);
         }
 
@@ -34,12 +34,12 @@ namespace Slopgame
         {
             if (!Enemy.Run.IsPlaying || Enemy.Health <= 0) return;
             Vector2 offset = Enemy.Run.Player.transform.position - transform.position;
-            Enemy.Facing.TurnToward(offset, Time.deltaTime);
+            Enemy.Facing.TurnToward(offset, Time.deltaTime * Enemy.ActionSpeedMultiplier);
             body.color = Enemy.IsFlashing || charging ? Color.Lerp(AbilityCatalog.Gold, Color.white, 0.5f + Mathf.Sin(Time.time * 18f) * 0.5f)
-                : IsEnraged ? new Color(1f, 0.26f, 0.28f) : new Color(0.65f, 0.3f, 0.55f);
+                : Enemy.IsChilled ? AbilityCatalog.Ice : IsEnraged ? new Color(1f, 0.26f, 0.28f) : new Color(0.65f, 0.3f, 0.55f);
             if (charging)
             {
-                if (Time.time >= fireAt)
+                if (Enemy.ActionTime >= fireAt)
                 {
                     int shots = pattern % 2 == 0 ? (IsEnraged ? 7 : 5) : (IsEnraged ? 16 : 12);
                     for (int i = 0; i < shots; i++)
@@ -50,19 +50,19 @@ namespace Slopgame
                     }
                     pattern++;
                     charging = false;
-                    readyAt = Time.time + (IsEnraged ? 1.1f : 1.65f);
+                    readyAt = Enemy.ActionTime + (IsEnraged ? 1.1f : 1.65f);
                 }
             }
-            else if (Time.time >= readyAt)
+            else if (Enemy.ActionTime >= readyAt)
             {
                 charging = true;
                 lockedAim = offset.sqrMagnitude > 0.01f ? offset.normalized : Vector2.down;
-                fireAt = Time.time + 0.85f;
+                fireAt = Enemy.ActionTime + 0.85f;
                 CombatVfx.Ring(Enemy.Run.ProjectileRoot, transform.position, 1.5f, AbilityCatalog.Gold, 0.85f);
             }
             else if (offset.magnitude > 2f)
                 transform.position = Enemy.Run.Map.Move(transform.position, offset.normalized * Enemy.Speed * Enemy.MoveMultiplier * Time.deltaTime);
-            if (offset.magnitude < 1.05f) Enemy.Run.Player.Hit();
+            Enemy.TryContactHit(1.05f);
         }
 
         public void Defeated()

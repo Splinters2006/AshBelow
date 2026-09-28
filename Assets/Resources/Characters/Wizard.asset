@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Wizard
   m_EditorClassIdentifier: Assembly-CSharp::Slopgame.CharacterDefinition
   displayName: Wizard
-  description: A fire-and-storm caster. Hold left to charge a fireball; right-click casts lightning. Boss relics unlock explosive fire, ice, and blink.
+  description: A fire-and-storm caster. Hold left to charge a fireball; right-click casts lightning.
   color: {r: 0.65, g: 0.45, b: 1, a: 1}
   startingHealth: 4
   startingDamage: 1

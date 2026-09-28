@@ -6,6 +6,8 @@ namespace Slopgame
     {
         public const float HeavyCooldown = 6f;
         public const float SpreadAngle = 15f;
+        public const float ChargedRangeBonus = 1f;
+        public static float RangeForCharge(float charge) => PlayerProjectile.MaxRange + ChargedRangeBonus * Mathf.Clamp01(charge);
         public DungeonPlayer Player { get; set; }
         public bool IsHeavyAttacking => false;
         public float HeavyCooldownRemaining => Mathf.Max(0, heavyReadyAt - Time.time);
@@ -18,7 +20,7 @@ namespace Slopgame
         public bool TryAttack(Vector2 aim, float charge = 0f)
         {
             if (!CanFire(aim)) return false;
-            Fire(aim.normalized, Player.Charge.Damage(charge));
+            Fire(aim.normalized, Player.Charge.Damage(charge), RangeForCharge(charge));
             readyAt = Time.time + 0.35f * Player.Powerups.AttackIntervalMultiplier;
             return true;
         }
@@ -34,9 +36,9 @@ namespace Slopgame
             return true;
         }
 
-        private void Fire(Vector2 direction, int damage)
+        private void Fire(Vector2 direction, int damage, float range = PlayerProjectile.MaxRange)
         {
-            PlayerProjectile.Spawn(Player.Run, transform.position, direction, damage);
+            PlayerProjectile.Spawn(Player.Run, transform.position, direction, damage, range);
         }
 
         public void Hide() { Player.Charge.Cancel(); }

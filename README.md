@@ -30,11 +30,11 @@ For automation, run Unity with `-batchmode -quit -projectPath <project-folder> -
 
 All C# lives in `Assets/Scripts`. `DungeonMap` generates connected rooms and handles wall collision. `DungeonRun` owns run progression and enemy navigation. Player, enemy, visuals, input, and HUD are separate components/helpers. The editor setup creates the scene through Unity APIs, and **Slopgame → Validate generated dungeons** checks connectivity and spawn positions across 500 seeds.
 
-The prototype uses runtime-generated placeholder sprites and an IMGUI HUD, with no external art dependencies. It supports either Unity input backend. There is no save system, audio, or general inventory yet; the floors continue indefinitely. Boss arenas appear every fifth floor.
+The prototype uses runtime-generated placeholder sprites and an IMGUI HUD, with no external art dependencies. The project uses Unity Input System 1.20.0. Restart the editor if Unity requests it after importing the package. There is no save system, audio, or general inventory yet; the floors continue indefinitely. Boss arenas appear every fifth floor.
 
 ## Characters and main menu
 
-Knight, Archer, Wizard, Assassin, and Paladin are playable. Archer starts with **5 HP**, fires one arrow with left click, and fires **three arrows at -15°, 0°, +15°** with right click on a **6-second cooldown**. Tap-fired and triple-shot arrows deal the current damage stat; charged arrows deal up to 3x. All arrows travel up to 5 units, and stop at the first enemy or wall. Archer shares the dodge roll and upgrade system. The main menu offers character selection and Quit; use **Main menu** in the dungeon to abandon the current run and choose again. Starting a run resets upgrades and health.
+Knight, Archer, Wizard, Assassin, and Paladin are playable. Archer starts with **5 HP**, fires one arrow with left click, and fires **three arrows at -15°, 0°, +15°** with right click on a **6-second cooldown**. Tap-fired and triple-shot arrows deal the current damage stat; charged arrows deal up to 3x. Basic arrows travel 5 units when tapped, 5.5 at half charge, and 6 at full charge. Holding beyond full charge grants no extra range. Triple shots and relic arrows keep their 5-unit range. Arrows stop at the first enemy or wall, except Piercing Shot. Archer shares the dodge roll and upgrade system. The main menu offers character selection and Quit; use **Main menu** in the dungeon to abandon the current run and choose again. Starting a run resets upgrades and health.
 
 Character definitions are ScriptableObjects in `Assets/Resources/Characters`. Create future definitions with **Assets → Create → Slopgame → Character** and give them unique names, descriptions, colors, and starting stats. The selector discovers them automatically. New weapons and abilities still need their own gameplay implementation; select Sword, Bow, Staff, Daggers, or Hammer on the character asset to choose its weapon. All classes share the dodge component.
 
@@ -55,7 +55,7 @@ Boss artifacts offer **active abilities for the selected class instead of a pass
 | Class | Left click / right click | Boss artifact choices |
 | --- | --- | --- |
 | Knight | Charged sweeping slash / reflecting shield | Shield Rush, Earthshatter, Aegis |
-| Archer | Charged 5-unit arrow / triple shot | Arrow Volley, Piercing Shot, Windstep |
+| Archer | Charged 5–6-unit arrow / triple shot | Arrow Volley, Piercing Shot, Windstep |
 | Wizard | Charged fireball / lightning (3s) | Inferno Orb, Frost Nova, Arcane Blink |
 | Assassin | Charged daggers / Shadowstep (4s) | Fan of Knives, Venom Strike, Shadow Veil |
 | Paladin | Charged hammer / reflecting shield | Healing Light, Judgment, Sanctuary |
@@ -66,7 +66,7 @@ Assassin starts with 4 HP, 5.6 movement speed, and **15% physical crit chance**.
 
 ## Physical and elemental effects
 
-Every class begins with **5% physical critical / elemental effect chance**. Physical critical hits deal double damage. Assassin adds 10% physical crit chance and can improve it further through Killer Instinct. Elemental damage **never critically strikes**: fire can ignite for three damage-over-time ticks with a pulsing flame indicator (green for venom), ice can chill, and lightning's effect roll overloads a Conductivity-unlocked chain with two extra short jumps. Precision improves both critical and elemental effect chances. Bosses have half-duration chill and resist knockback.
+Every class begins with **5% physical critical / elemental effect chance**. Physical critical hits deal double damage. Assassin adds 10% physical crit chance and can improve it further through Killer Instinct. Elemental damage **never critically strikes**: fire can ignite for three damage-over-time ticks with a pulsing flame indicator (green for venom), ice can chill, slowing enemy movement, turning, attack windups, cooldowns, and repeated contact attacks by 50%, and lightning's effect roll overloads a Conductivity-unlocked chain with two extra short jumps. Precision improves both critical and elemental effect chances. Bosses have half-duration chill and resist knockback.
 
 The interface includes an animated health bar, a boss health bar and attack warning, Q/E cooldown slots, charge feedback, a scrollable build panel, and class-colored reward cards. Menus use a centered 1280×720 reference layout and scale to the window. Reward choices pause the game and its cooldown/status timers.
 

@@ -12,12 +12,13 @@ namespace Slopgame
         public Vector2 Direction { get; private set; }
         public bool IsSpent { get; private set; }
 
-        public static PlayerProjectile Spawn(DungeonRun run, Vector2 position, Vector2 direction, int damage)
+        public static PlayerProjectile Spawn(DungeonRun run, Vector2 position, Vector2 direction, int damage, float range = MaxRange)
         {
             var arrow = DungeonVisuals.Create("Arrow", run.ProjectileRoot, position, new Vector2(0.5f, 0.1f),
                 new Color(0.95f, 1f, 0.65f), 6).gameObject.AddComponent<PlayerProjectile>();
             arrow.run = run;
             arrow.damage = damage;
+            arrow.remainingRange = Mathf.Max(0f, range);
             arrow.Direction = direction.normalized;
             arrow.transform.rotation = Quaternion.Euler(0, 0, Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg);
             return arrow;

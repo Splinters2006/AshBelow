@@ -289,6 +289,7 @@ namespace Slopgame.Editor
                 if (!bow.TryAttack(Vector2.right, 1f)) throw new Exception("Archer charged attack failed.");
                 var arrows = UnityEngine.Object.FindObjectsByType<PlayerProjectile>(FindObjectsSortMode.None);
                 if (arrows.Length != 1) throw new Exception("Base attack must fire one arrow.");
+                if (Mathf.Abs(arrows[0].RemainingRange - 6f) > 0.001f) throw new Exception("Charged basic arrow did not gain range.");
                 arrows[0].Advance(0.12f);
                 if ((target.Health != 17 && target.Health != 14) || !arrows[0].IsSpent || run.Player.Health != 5)
                     throw new Exception("Arrow collision/damage failed.");
@@ -307,7 +308,11 @@ namespace Slopgame.Editor
                 var arrows = UnityEngine.Object.FindObjectsByType<PlayerProjectile>(FindObjectsSortMode.None);
                 if (arrows.Length != 3) throw new Exception("Heavy attack must fire exactly three arrows.");
                 var angles = new List<float>();
-                foreach (var arrow in arrows) angles.Add(Vector2.SignedAngle(Vector2.right, arrow.Direction));
+                foreach (var arrow in arrows)
+                {
+                    if (Mathf.Abs(arrow.RemainingRange - 5f) > 0.001f) throw new Exception("Triple shot gained charged range.");
+                    angles.Add(Vector2.SignedAngle(Vector2.right, arrow.Direction));
+                }
                 angles.Sort();
                 if (Mathf.Abs(angles[0] + 15) > 0.01f || Mathf.Abs(angles[1]) > 0.01f || Mathf.Abs(angles[2] - 15) > 0.01f)
                     throw new Exception("Triple arrow cone spread is incorrect.");
@@ -442,13 +447,17 @@ namespace Slopgame.Editor
                         positions.Add(enemy.transform.position);
                         enemy.transform.position = new Vector3(-10, -10, 0);
                     }
-                    var arrow = PlayerProjectile.Spawn(run, origin, Vector2.right, 1);
-                    arrow.Advance(0.4f);
-                    if (arrow.IsSpent || Vector2.Distance(origin, arrow.transform.position) > 4.81f)
-                        throw new Exception("Arrow expired early or moved too far.");
-                    arrow.Advance(0.1f);
-                    if (!arrow.IsSpent || Mathf.Abs(Vector2.Distance(origin, arrow.transform.position) - 5f) > 0.01f)
-                        throw new Exception("Arrow did not stop at five units.");
+                    foreach (float charge in new[] { -1f, 0f, 0.5f, 1f, 2f })
+                    {
+                        float expectedRange = charge <= 0f ? 5f : charge < 1f ? 5.5f : 6f;
+                        var arrow = PlayerProjectile.Spawn(run, origin, Vector2.right, 1, BowAttack.RangeForCharge(charge));
+                        arrow.Advance(0.4f);
+                        if (arrow.IsSpent || Mathf.Abs(Vector2.Distance(origin, arrow.transform.position) - 4.8f) > 0.01f)
+                            throw new Exception("Arrow expired early or changed speed.");
+                        arrow.Advance(0.2f);
+                        if (!arrow.IsSpent || Mathf.Abs(Vector2.Distance(origin, arrow.transform.position) - expectedRange) > 0.01f)
+                            throw new Exception("Arrow charge range scaling or cap failed.");
+                    }
                     for (int i = 0; i < positions.Count; i++) run.Enemies[i].transform.position = positions[i];
                     return;
                 }
@@ -468,7 +477,7 @@ namespace Slopgame.Editor
                 var archer = ScriptableObject.CreateInstance<CharacterDefinition>();
                 var serialized = new SerializedObject(archer);
                 serialized.FindProperty("displayName").stringValue = "Archer";
-                serialized.FindProperty("description").stringValue = "A close-range archer with 5 HP. Charge powerful arrows or fire a three-arrow spread. Arrows travel up to 5 units.";
+                serialized.FindProperty("description").stringValue = "A close-range archer with 5 HP. Charge powerful arrows or fire a three-arrow spread. Arrows travel 5 units, increasing to 6 at full charge.";
                 serialized.FindProperty("startingHealth").intValue = 5;
                 serialized.FindProperty("color").colorValue = new Color(0.65f, 0.85f, 0.35f);
                 serialized.FindProperty("weapon").enumValueIndex = (int)WeaponType.Bow;
@@ -476,11 +485,11 @@ namespace Slopgame.Editor
                 AssetDatabase.CreateAsset(archer, archerPath);
             }
             EnsureHero("Wizard", WeaponType.Staff, 4, 4.8f, new Color(0.65f, 0.45f, 1f),
-                "A fire-and-storm caster. Charge fireballs and cast lightning. Boss relics unlock fire, ice, and blink abilities.");
+                "A fire-and-storm caster. Charge fireballs and cast lightning.");
             EnsureHero("Assassin", WeaponType.Daggers, 4, 5.6f, new Color(0.78f, 0.4f, 0.65f),
                 "A swift duelist with 15% starting physical crit chance, double physical backstab damage, and a shadowstep.");
             EnsureHero("Paladin", WeaponType.Hammer, 7, 4.5f, new Color(0.95f, 0.78f, 0.4f),
-                "An armored guardian. Charge hammer strikes and block with a shield. Relics unlock healing and protection for nearby allies.");
+                "An armored guardian. Charge hammer strikes and block with a shield.");
             AssetDatabase.SaveAssets();
             Debug.Log("CHARACTER_ASSETS_OK: Five classes ready.");
         }

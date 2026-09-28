@@ -39,7 +39,7 @@ namespace Slopgame
             new AbilityDefinition(AbilityType.PiercingShot, WeaponType.Bow, "Piercing Shot", "A powerful arrow pierces a line of enemies. Range: 5 units.", "->", 9f, Gold),
             new AbilityDefinition(AbilityType.Windstep, WeaponType.Bow, "Windstep", "Dash in your aim direction and fire a three-arrow counterattack.", ">>", 10f, Green),
             new AbilityDefinition(AbilityType.Fireball, WeaponType.Staff, "Inferno Orb", "Unlock an explosive fireball. Its elemental effect can ignite enemies.", "*", 8f, new Color(1f, 0.43f, 0.23f)),
-            new AbilityDefinition(AbilityType.FrostNova, WeaponType.Staff, "Frost Nova", "Unlock ice: damage and chill enemies in a circle around you.", "+", 10f, Ice),
+            new AbilityDefinition(AbilityType.FrostNova, WeaponType.Staff, "Frost Nova", "Damage nearby enemies with ice, slowing all their actions by 50%.", "+", 10f, Ice),
             new AbilityDefinition(AbilityType.Blink, WeaponType.Staff, "Arcane Blink", "Blink forward and release an icy pulse at your destination.", "<>", 9f, Violet),
             new AbilityDefinition(AbilityType.FanOfKnives, WeaponType.Daggers, "Fan of Knives", "Throw a ring of short-range knives. Each can critically strike.", "X", 8f, Violet),
             new AbilityDefinition(AbilityType.VenomStrike, WeaponType.Daggers, "Venom Strike", "Wound nearby enemies with poison and a heavy physical hit.", "+", 9f, Green),

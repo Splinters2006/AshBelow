@@ -13,7 +13,7 @@ namespace Slopgame
         private void Start()
         {
             enemy = GetComponent<DungeonEnemy>();
-            readyAt = Time.time + 1f;
+            readyAt = enemy.ActionTime + 1f;
         }
 
         private void Update()
@@ -22,19 +22,19 @@ namespace Slopgame
             Vector2 offset = enemy.Run.Player.transform.position - transform.position;
             if (IsCharging)
             {
-                if (Time.time < fireAt) return;
+                if (enemy.ActionTime < fireAt) return;
                 EnemyProjectile.Spawn(enemy.Run, transform.parent, transform.position, lockedDirection);
                 IsCharging = false;
-                readyAt = Time.time + 1.5f;
+                readyAt = enemy.ActionTime + 1.5f;
             }
-            else if (Time.time >= readyAt && offset.sqrMagnitude < 64f && offset.sqrMagnitude > 0.01f
+            else if (enemy.ActionTime >= readyAt && offset.sqrMagnitude < 64f && offset.sqrMagnitude > 0.01f
                 && Vector2.Dot(enemy.Facing.Direction, offset.normalized) >= 0.98f
                 && enemy.Run.HasLineOfSight(transform.position, enemy.Run.Player.transform.position))
             {
                 // Lock aim before firing so the white windup gives the player time to evade.
                 lockedDirection = enemy.Facing.Direction;
                 IsCharging = true;
-                fireAt = Time.time + 0.45f;
+                fireAt = enemy.ActionTime + 0.45f;
             }
         }
     }

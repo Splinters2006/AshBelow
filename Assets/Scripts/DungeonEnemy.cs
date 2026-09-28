@@ -18,7 +18,12 @@ namespace Slopgame
         public bool IsBurning => burnTicks > 0;
         private EnemyTactics tactics;
         private SpriteRenderer burnIndicator;
-        public float MoveMultiplier => Time.time < chilledUntil ? 0.45f : 1f;
+        public bool IsChilled => Time.time < chilledUntil;
+        public float ActionSpeedMultiplier => IsChilled ? 0.5f : 1f;
+        public float MoveMultiplier => ActionSpeedMultiplier;
+        // Attack timers follow local action time; status durations and damage-over-time use world time.
+        public float ActionTime { get; private set; }
+        private float contactReadyAt;
         public bool IsFlashing => Time.time < hitUntil;
         private float chilledUntil, nextBurn;
         private int burnTicks, burnDamage;
@@ -47,6 +52,7 @@ namespace Slopgame
         private void Update()
         {
             if (!Run.IsPlaying || Health <= 0) return;
+            ActionTime += Time.deltaTime * ActionSpeedMultiplier;
             if (burnTicks > 0 && Time.time >= nextBurn)
             {
                 burnTicks--;
@@ -68,13 +74,21 @@ namespace Slopgame
             bool visible = Run.HasLineOfSight(position, target);
             if (distance < 10f)
             {
-                if (!IsRanged || !shooter.IsCharging) Facing.TurnToward(target - position, Time.deltaTime);
+                if (!IsRanged || !shooter.IsCharging) Facing.TurnToward(target - position, Time.deltaTime * ActionSpeedMultiplier);
                 Vector2 direction = tactics.Direction(target, visible, IsRanged && shooter.IsCharging);
                 transform.position = Run.Map.Move(position, direction * Speed * MoveMultiplier * Time.deltaTime, MoveRadius);
             }
             body.color = Time.time < hitUntil || (IsRanged && shooter.IsCharging) ? Color.white
                 : Time.time < chilledUntil ? AbilityCatalog.Ice : IsTank ? new Color(0.65f, 0.7f, 0.8f) : IsRanged ? new Color(1f, 0.65f, 0.2f) : new Color(1f, 0.35f, 0.4f);
-            if (!IsRanged && Vector2.Distance(transform.position, target) < HitRadius + 0.27f) Run.Player.Hit();
+            if (!IsRanged) TryContactHit(HitRadius + 0.27f);
+        }
+
+        public void TryContactHit(float reach)
+        {
+            if (!Run.IsPlaying || Health <= 0 || ActionTime < contactReadyAt || Run.Player.IsInvulnerable
+                || Vector2.Distance(transform.position, Run.Player.transform.position) >= reach) return;
+            Run.Player.Hit();
+            contactReadyAt = ActionTime + 1f;
         }
 
         public void Hit(int damage)

@@ -11,7 +11,7 @@ namespace Slopgame.Editor
         private static double started;
         private static int stage;
         private static float waitUntil;
-        private static bool failed;
+        private static bool failed, checkedChilledBoss;
         private static readonly List<WeaponType> classes = new List<WeaponType> { WeaponType.Sword, WeaponType.Bow, WeaponType.Staff, WeaponType.Daggers, WeaponType.Hammer };
         private static int classIndex;
         private static int abilityIndex;
@@ -71,6 +71,7 @@ namespace Slopgame.Editor
                     Require(run.IsBossFloor && run.Boss != null && run.Enemies.Count == 1, "Floor five did not create a dedicated boss arena.");
                     Require(run.Map.CanStand(new Vector2(15, 9)) && !run.Map.CanStand(new Vector2(12, 9)), "Arena bounds are wrong.");
                     run.Player.Protect(30f);
+                    run.Boss.Enemy.Chill(20f);
                     waitUntil = Time.time + 3.05f;
                     stage = 2;
                     return;
@@ -78,7 +79,17 @@ namespace Slopgame.Editor
                 if (stage == 2)
                 {
                     if (Time.time < waitUntil) return;
-                    Require(run.ProjectileRoot.GetComponentsInChildren<EnemyProjectile>().Length > 0, "Boss never fired its telegraphed fan.");
+                    if (!checkedChilledBoss)
+                    {
+                        Require(run.ProjectileRoot.GetComponentsInChildren<EnemyProjectile>().Length == 0,
+                            "Chilled boss attacked at normal speed.");
+                        Require(Mathf.Abs(run.Boss.Enemy.ActionTime - 1.525f) < 0.15f,
+                            "Chill did not halve the boss action clock.");
+                        checkedChilledBoss = true;
+                        waitUntil = Time.time + 3f;
+                        return;
+                    }
+                    Require(run.ProjectileRoot.GetComponentsInChildren<EnemyProjectile>().Length > 0, "Chilled boss never fired its delayed fan.");
                     run.Boss.Enemy.Hit(100000);
                     Require(run.Artifact != null && run.Enemies.Count == 0, "Boss failed to drop an artifact.");
                     Require(run.ProjectileRoot.GetComponentsInChildren<EnemyProjectile>().Length == 0, "Boss bolts survived its death.");
@@ -125,6 +136,8 @@ namespace Slopgame.Editor
                     burnTarget.Speed = 0f;
                     burnTarget.transform.position = (Vector2)run.Map.Centers[run.Map.Centers.Count - 1];
                     burnTarget.Health = 100;
+                    burnTarget.Chill(0.5f);
+                    Require(burnTarget.ActionSpeedMultiplier == 0.5f && burnTarget.MoveMultiplier == 0.5f, "Ice did not apply a 50% action slow.");
                     burnTarget.Burn(1, 5);
                     Require(burnTarget.IsBurning && burnTarget.transform.Find("Burn indicator").gameObject.activeSelf, "Burn indicator did not appear.");
                     waitUntil = Time.time + 1.1f;
@@ -135,6 +148,7 @@ namespace Slopgame.Editor
                 {
                     if (Time.time < waitUntil) return;
                     Require(!burnTarget.IsBurning && !burnTarget.transform.Find("Burn indicator").gameObject.activeSelf, "Expired burn indicator remained visible.");
+                    Require(!burnTarget.IsChilled && burnTarget.ActionSpeedMultiplier == 1f, "Expired chill did not restore action speed.");
                     Require(burnTarget.Health == 95, "First burn did not tick exactly once.");
                     burnTarget.Burn(1, 1);
                     waitUntil = Time.time + 1.1f;
@@ -297,7 +311,7 @@ namespace Slopgame.Editor
             switch (ability.Type)
             {
                 case AbilityType.FrostNova:
-                    Require(target.Health < 100 && target.MoveMultiplier < 1f, "Frost Nova did not damage and chill."); break;
+                    Require(target.Health < 100 && target.ActionSpeedMultiplier == 0.5f, "Frost Nova did not damage and chill."); break;
                 case AbilityType.Aegis:
                 case AbilityType.ShadowVeil:
                 case AbilityType.Sanctuary:
