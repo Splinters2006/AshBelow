@@ -18,6 +18,16 @@ namespace Slopgame
         private Vector2 rollDirection;
         private SpriteRenderer body;
         private SwordAttack sword;
+        public SwordAttack Sword => sword;
+        private Color characterColor;
+
+        public void Initialize(CharacterDefinition character)
+        {
+            MaxHealth = Health = character.StartingHealth;
+            Damage = character.StartingDamage;
+            Speed = character.MoveSpeed;
+            characterColor = character.Color;
+        }
 
         private void Start()
         {
@@ -28,7 +38,7 @@ namespace Slopgame
 
         private void Update()
         {
-            body.color = IsRolling ? new Color(0.4f, 0.65f, 1f) : IsInvulnerable ? Color.white : new Color(0.35f, 0.95f, 0.8f);
+            body.color = IsRolling ? new Color(0.4f, 0.65f, 1f) : IsInvulnerable ? Color.white : characterColor;
             if (!Run.IsPlaying) return;
             Vector2 cursor = Run.View.ScreenToWorldPoint(new Vector3(PlayerInput.CursorPosition.x,
                 PlayerInput.CursorPosition.y, -Run.View.transform.position.z));
@@ -36,9 +46,10 @@ namespace Slopgame
             if (aim.sqrMagnitude > 0.001f) AimDirection = aim.normalized;
             Vector2 movement = PlayerInput.Movement;
             if (PlayerInput.Dodge) TryRoll(movement.sqrMagnitude > 0 ? movement : AimDirection);
-            Vector2 velocity = IsRolling ? rollDirection * Speed * 2.6f : movement * Speed;
+            Vector2 velocity = IsRolling ? rollDirection * Speed * 2.6f : movement * Speed * (sword.IsHeavyAttacking ? 0.55f : 1f);
             transform.position = Run.Map.Move(transform.position, velocity * Time.deltaTime);
-            if (PlayerInput.Attack && !IsRolling) sword.TryAttack(AimDirection);
+            if (PlayerInput.HeavyAttack && !IsRolling) sword.TryHeavyAttack(AimDirection);
+            else if (PlayerInput.Attack && !IsRolling) sword.TryAttack(AimDirection);
         }
 
         public bool TryRoll(Vector2 direction)

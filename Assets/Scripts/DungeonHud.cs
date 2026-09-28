@@ -9,7 +9,7 @@ namespace Slopgame
 
         private void OnGUI()
         {
-            if (Run == null || Run.Player == null) return;
+            if (Run == null || Run.IsInMainMenu || Run.Player == null) return;
             if (title == null)
             {
                 title = new GUIStyle(GUI.skin.label) { fontSize = 30, fontStyle = FontStyle.Bold };
@@ -20,12 +20,15 @@ namespace Slopgame
             GUI.matrix = Matrix4x4.TRS(Vector3.zero, Quaternion.identity, Vector3.one * Mathf.Min(Screen.width / 960f, Screen.height / 640f));
             GUI.Box(new Rect(12, 12, 480, 138), GUIContent.none);
             GUI.Label(new Rect(28, 20, 440, 40), "ASH / BELOW", title);
+            if (GUI.Button(new Rect(785, 20, 150, 40), "Main menu", button)) { Run.ShowMainMenu(); return; }
             GUI.Label(new Rect(28, 64, 445, 30), $"Floor {Run.Floor}    HP {Run.Player.Health}/{Run.Player.MaxHealth}    Enemies {Run.Enemies.Count}", text);
             GUI.Label(new Rect(28, 98, 445, 44), Run.Enemies.Count == 0
                 ? "Find the gold stairs. Press E to descend."
                 : "Clear the floor to unlock the stairs.", text);
             GUI.Box(new Rect(12, 560, 930, 68), GUIContent.none);
-            GUI.Label(new Rect(28, 568, 900, 52), "WASD / Arrows: move    Mouse: aim    Left click: slash    Space: dodge    E: descend\nOrange casters shoot bolts; dodge while they flash white.", text);
+            string heavyStatus = Run.Player.Sword == null || Run.Player.Sword.HeavyCooldownRemaining <= 0
+                ? "READY" : $"{Run.Player.Sword.HeavyCooldownRemaining:0.0}s";
+            GUI.Label(new Rect(28, 568, 900, 52), $"WASD / Arrows: move    Mouse: aim    Left click: slash    Space: dodge    E: descend\nRight click: heavy swipe [{heavyStatus}]    Orange casters flash white before shooting.", text);
             if (Run.IsPlaying) return;
             GUI.Box(new Rect(220, 170, 520, 385), GUIContent.none);
             if (Run.ChoosingUpgrade)

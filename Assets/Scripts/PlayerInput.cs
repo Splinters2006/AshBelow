@@ -33,6 +33,17 @@ namespace Slopgame
 #endif
             }
         }
+        public static bool HeavyAttack
+        {
+            get
+            {
+#if ENABLE_INPUT_SYSTEM
+                return Mouse.current?.rightButton.wasPressedThisFrame ?? false;
+#else
+                return Input.GetMouseButtonDown(1);
+#endif
+            }
+        }
         public static Vector2 CursorPosition
         {
             get

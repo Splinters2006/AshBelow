@@ -14,6 +14,11 @@ namespace Slopgame
         public int Kills { get; set; }
         public int Seed { get; private set; }
         public Camera View => view;
+        public bool IsInMainMenu { get; private set; }
+        public IReadOnlyList<CharacterDefinition> Characters => characters;
+        public CharacterDefinition SelectedCharacter { get; private set; }
+        private CharacterDefinition[] characters;
+        private MainMenu menu;
         private Transform level;
         private Camera view;
         private Vector2 exit;
@@ -31,23 +36,53 @@ namespace Slopgame
             view.clearFlags = CameraClearFlags.SolidColor;
             view.backgroundColor = new Color(0.035f, 0.055f, 0.08f);
             gameObject.AddComponent<DungeonHud>().Run = this;
-            Restart();
+            characters = Resources.LoadAll<CharacterDefinition>("Characters");
+            System.Array.Sort(characters, (a, b) => string.CompareOrdinal(a.DisplayName, b.DisplayName));
+            if (characters.Length == 0)
+            {
+                Debug.LogError("No character assets found in Resources/Characters.");
+                return;
+            }
+            SelectedCharacter = characters[0];
+            menu = gameObject.AddComponent<MainMenu>();
+            menu.Run = this;
+            ShowMainMenu();
+        }
+
+        public void SelectCharacter(CharacterDefinition character)
+        {
+            if (IsInMainMenu && System.Array.IndexOf(characters, character) >= 0) SelectedCharacter = character;
+        }
+
+        public void ShowMainMenu()
+        {
+            IsPlaying = false;
+            ChoosingUpgrade = false;
+            IsInMainMenu = true;
+            if (level != null) { level.gameObject.SetActive(false); Destroy(level.gameObject); level = null; }
+            if (Player != null) { Player.gameObject.SetActive(false); Destroy(Player.gameObject); Player = null; }
+            Enemies.Clear();
+            menu.ResetPage();
         }
 
         public void Restart()
         {
+            if (SelectedCharacter == null) return;
+            IsInMainMenu = false;
             if (Player != null) { Player.gameObject.SetActive(false); Destroy(Player.gameObject); }
             Seed = UnityEngine.Random.Range(0, 1000000);
             Floor = 0;
             Kills = 0;
-            Player = DungeonVisuals.Create("Delver", transform, Vector2.zero, Vector2.one * 0.65f,
-                new Color(0.35f, 0.95f, 0.8f), 4).gameObject.AddComponent<DungeonPlayer>();
+            Player = DungeonVisuals.Create(SelectedCharacter.DisplayName, transform, Vector2.zero, Vector2.one * 0.65f,
+                SelectedCharacter.Color, 4).gameObject.AddComponent<DungeonPlayer>();
             Player.Run = this;
+            Player.Initialize(SelectedCharacter);
             NextFloor();
         }
 
         private void NextFloor()
         {
+            if (Player.Sword != null) Player.Sword.Hide();
             if (level != null) { level.gameObject.SetActive(false); Destroy(level.gameObject); }
             Enemies.Clear();
             Floor++;

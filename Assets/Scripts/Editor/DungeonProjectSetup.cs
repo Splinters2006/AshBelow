@@ -14,6 +14,9 @@ namespace Slopgame.Editor
         private static int combatStage;
         private static float combatResumeAt;
         private static int combatHealth;
+        private static int heavyStage;
+        private static float heavyStarted;
+        private static bool menuChecked;
 
         [InitializeOnLoadMethod]
         private static void ResumeSmokeTest()
@@ -31,6 +34,8 @@ namespace Slopgame.Editor
             checkedProgression = false;
             smokeFailed = false;
             combatStage = 0;
+            heavyStage = 0;
+            menuChecked = false;
             SessionState.SetBool("SlopgameSmoke", true);
             Application.logMessageReceived += CaptureError;
             EditorApplication.update += CheckPlayMode;
@@ -58,10 +63,24 @@ namespace Slopgame.Editor
             try
             {
                 var run = UnityEngine.Object.FindFirstObjectByType<DungeonRun>();
+                if (run == null) throw new Exception("Run controller missing.");
+                if (!menuChecked)
+                {
+                    if (!run.IsInMainMenu || run.IsPlaying || run.Player != null || run.Enemies.Count != 0)
+                        throw new Exception("Game did not start at a peaceful main menu.");
+                    if (run.Characters.Count != 1 || run.SelectedCharacter.DisplayName != "Knight")
+                        throw new Exception("Knight character selection missing.");
+                    run.SelectCharacter(run.Characters[0]);
+                    run.Restart();
+                    menuChecked = true;
+                    return;
+                }
+                if (run.Player != null && run.Player.Sword == null) return;
                 if (run == null || run.Player == null || run.Enemies.Count == 0) throw new Exception("Run failed to initialize.");
                 if (!checkedProgression)
                 {
                     if (!CheckCombat(run)) return;
+                    if (!CheckHeavyAttack(run)) return;
                     while (run.Enemies.Count > 0) run.Enemies[0].Hit(1000);
                     if (run.Kills == 0) throw new Exception("Kills were not recorded.");
                     run.ChooseUpgrade(1);
@@ -75,7 +94,13 @@ namespace Slopgame.Editor
                 if (run.Floor != 1 || run.Kills != 0 || run.Player.MaxHealth != 6) throw new Exception("Restart failed to reset the run.");
                 if (UnityEngine.Object.FindObjectsByType<EnemyProjectile>(FindObjectsSortMode.None).Length != 0)
                     throw new Exception("Projectiles survived a floor change/restart.");
-                Debug.Log(smokeFailed ? "SLOPGAME_SMOKE_FAILED" : "SLOPGAME_SMOKE_OK: Cone hits, ranged contact immunity, projectile damage/walls, dodge immunity/expiry, progression, and restart passed.");
+                run.ShowMainMenu();
+                if (!run.IsInMainMenu || run.IsPlaying || run.Player != null || run.Enemies.Count != 0)
+                    throw new Exception("Returning to menu did not clear the run.");
+                run.Restart();
+                if (run.IsInMainMenu || run.Player.Health != run.SelectedCharacter.StartingHealth || run.Floor != 1)
+                    throw new Exception("Starting again from the menu failed.");
+                Debug.Log(smokeFailed ? "SLOPGAME_SMOKE_FAILED" : "SLOPGAME_SMOKE_OK: Main menu, Knight selection, return/new run, narrow/longer attacks, heavy cooldown, projectiles, dodge, and progression passed.");
                 EditorApplication.update -= CheckPlayMode;
                 SessionState.SetBool("SlopgameSmoke", false);
                 Application.logMessageReceived -= CaptureError;
@@ -91,12 +116,13 @@ namespace Slopgame.Editor
 
         private static bool CheckCombat(DungeonRun run)
         {
+            if (combatStage == 3) return true;
             var player = run.Player;
             if (combatStage == 0)
             {
                 Vector2 origin = run.Map.Centers[0];
                 player.transform.position = origin;
-                var offsets = new[] { Vector2.right, Vector2.left, Vector2.up, Vector2.right * 2f };
+                var offsets = new[] { Vector2.right * 2f, Vector2.left, Vector2.up, Vector2.right * (SwordAttack.Reach + 0.2f) };
                 if (run.Enemies.Count < offsets.Length) throw new Exception("Insufficient combat test targets.");
                 foreach (var enemy in run.Enemies)
                 {
@@ -113,8 +139,10 @@ namespace Slopgame.Editor
                 if (!sword.TryAttack(Vector2.right)) throw new Exception("Sword did not attack.");
                 for (int i = 0; i < offsets.Length; i++)
                     if (run.Enemies[i].Health != (i == 0 ? 9 : 10)) throw new Exception("Sword cone hit an invalid target or missed its forward target.");
-                if (!SwordAttack.ContainsTarget(new Vector2(1, 1), Vector2.right)
-                    || SwordAttack.ContainsTarget(new Vector2(0.5f, 1), Vector2.right)) throw new Exception("Cone boundary mismatch.");
+                if (!SwordAttack.ContainsTarget(new Vector2(1, 0.5f), Vector2.right)
+                    || SwordAttack.ContainsTarget(new Vector2(1, 1), Vector2.right)
+                    || !SwordAttack.ContainsTarget(new Vector2(1, 1), Vector2.right, SwordAttack.HeavyReach, SwordAttack.HeavyConeAngle))
+                    throw new Exception("Light/heavy cone boundary mismatch.");
                 var caster = run.Enemies.Find(enemy => enemy.IsRanged);
                 if (caster == null) throw new Exception("No ranged enemies spawned.");
                 caster.transform.position = origin;
@@ -149,13 +177,75 @@ namespace Slopgame.Editor
             wall.Advance(0.01f);
             if (!wall.IsSpent) throw new Exception("Projectile passed through a wall.");
             EnemyProjectile.Spawn(run, run.Enemies[0].transform.parent, run.Map.Centers[1], Vector2.right);
+            combatStage = 3;
             return true;
+        }
+
+        private static bool CheckHeavyAttack(DungeonRun run)
+        {
+            var sword = run.Player.Sword;
+            if (heavyStage == 0)
+            {
+                if (Time.timeSinceLevelLoad < 3.2f) return false;
+                Vector2 origin = (Vector2)run.Map.Centers[0] - Vector2.right;
+                run.Player.transform.position = origin;
+                foreach (var enemy in run.Enemies) enemy.transform.position = (Vector2)run.Map.Centers[run.Map.Centers.Count - 1];
+                run.Enemies[0].transform.position = origin + Vector2.right * 3.1f;
+                run.Enemies[1].transform.position = origin - Vector2.right;
+                run.Enemies[0].Health = run.Enemies[1].Health = 20;
+                if (!sword.TryHeavyAttack(Vector2.right)) throw new Exception("Heavy attack did not start.");
+                if (Mathf.Abs(sword.HeavyCooldownRemaining - 5f) > 0.02f) throw new Exception("Heavy cooldown is not five seconds.");
+                if (sword.TryAttack(Vector2.right)) throw new Exception("Light attack interrupted heavy attack.");
+                heavyStarted = Time.time;
+                heavyStage = 1;
+                return false;
+            }
+            float elapsed = Time.time - heavyStarted;
+            if (heavyStage == 1)
+            {
+                if (elapsed < 0.2f) return false;
+                if (run.Enemies[0].Health != 20) throw new Exception("Heavy attack damaged during windup.");
+                heavyStage = 2;
+            }
+            if (heavyStage == 2)
+            {
+                if (elapsed < 1.1f) return false;
+                if (run.Enemies[0].Health != 17 || run.Enemies[1].Health != 20)
+                    throw new Exception("Heavy range, damage, direction, or single-hit behavior failed.");
+                if (sword.TryHeavyAttack(Vector2.right)) throw new Exception("Heavy cooldown was bypassed.");
+                heavyStage = 3;
+            }
+            if (heavyStage == 3)
+            {
+                if (elapsed < 5.05f) return false;
+                if (!sword.TryHeavyAttack(Vector2.right)) throw new Exception("Heavy cooldown did not expire.");
+                if (!run.Player.TryRoll(Vector2.left) || sword.IsHeavyAttacking) throw new Exception("Dodge did not cancel heavy attack.");
+                if (sword.HeavyCooldownRemaining < 4.9f) throw new Exception("Cancelled heavy refunded cooldown.");
+                heavyStarted = Time.time;
+                heavyStage = 4;
+                return false;
+            }
+            if (Time.time - heavyStarted < 1f) return false;
+            if (run.Enemies[0].Health != 17) throw new Exception("Cancelled heavy dealt delayed damage.");
+            return true;
+        }
+
+        public static void EnsureCharacterAssets()
+        {
+            if (!AssetDatabase.IsValidFolder("Assets/Resources")) AssetDatabase.CreateFolder("Assets", "Resources");
+            if (!AssetDatabase.IsValidFolder("Assets/Resources/Characters")) AssetDatabase.CreateFolder("Assets/Resources", "Characters");
+            const string path = "Assets/Resources/Characters/Knight.asset";
+            if (AssetDatabase.LoadAssetAtPath<CharacterDefinition>(path) == null)
+                AssetDatabase.CreateAsset(ScriptableObject.CreateInstance<CharacterDefinition>(), path);
+            AssetDatabase.SaveAssets();
+            Debug.Log("CHARACTER_ASSETS_OK: Knight character ready.");
         }
 
         [MenuItem("Slopgame/Create playable dungeon scene")]
         public static void CreateScene()
         {
             if (!Application.isBatchMode && !EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
+            EnsureCharacterAssets();
             if (!AssetDatabase.IsValidFolder("Assets/Scenes")) AssetDatabase.CreateFolder("Assets", "Scenes");
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             new GameObject("Dungeon Run").AddComponent<DungeonRun>();
