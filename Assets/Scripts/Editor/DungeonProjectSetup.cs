@@ -67,7 +67,7 @@ namespace Slopgame.Editor
             if (!EditorApplication.isPlaying || Time.timeSinceLevelLoad < 2) return;
             try
             {
-                var run = UnityEngine.Object.FindFirstObjectByType<DungeonRun>();
+                var run = UnityEngine.Object.FindAnyObjectByType<DungeonRun>();
                 if (run == null) throw new Exception("Run controller missing.");
                 if (!menuChecked)
                 {
@@ -101,7 +101,7 @@ namespace Slopgame.Editor
                 if (!switchedToArcher)
                 {
                     if (run.Floor != 1 || run.Kills != 0 || run.Player.MaxHealth != 6) throw new Exception("Restart failed to reset the run.");
-                    if (UnityEngine.Object.FindObjectsByType<EnemyProjectile>(FindObjectsSortMode.None).Length != 0)
+                    if (UnityEngine.Object.FindObjectsByType<EnemyProjectile>().Length != 0)
                         throw new Exception("Projectiles survived a floor change/restart.");
                     run.ShowMainMenu();
                     foreach (var character in run.Characters)
@@ -287,7 +287,7 @@ namespace Slopgame.Editor
                 target.Health = 20;
                 target.transform.position = run.Player.transform.position + Vector3.right;
                 if (!bow.TryAttack(Vector2.right, 1f)) throw new Exception("Archer charged attack failed.");
-                var arrows = UnityEngine.Object.FindObjectsByType<PlayerProjectile>(FindObjectsSortMode.None);
+                var arrows = UnityEngine.Object.FindObjectsByType<PlayerProjectile>();
                 if (arrows.Length != 1) throw new Exception("Base attack must fire one arrow.");
                 if (Mathf.Abs(arrows[0].RemainingRange - 6f) > 0.001f) throw new Exception("Charged basic arrow did not gain range.");
                 arrows[0].Advance(0.12f);
@@ -305,7 +305,7 @@ namespace Slopgame.Editor
             {
                 if (Time.time - archerStarted < 0.4f) return false;
                 if (!bow.TryHeavyAttack(Vector2.right)) throw new Exception("Triple shot failed.");
-                var arrows = UnityEngine.Object.FindObjectsByType<PlayerProjectile>(FindObjectsSortMode.None);
+                var arrows = UnityEngine.Object.FindObjectsByType<PlayerProjectile>();
                 if (arrows.Length != 3) throw new Exception("Heavy attack must fire exactly three arrows.");
                 var angles = new List<float>();
                 foreach (var arrow in arrows)
@@ -341,7 +341,7 @@ namespace Slopgame.Editor
                 archerStage = 4;
                 return false;
             }
-            if (UnityEngine.Object.FindObjectsByType<PlayerProjectile>(FindObjectsSortMode.None).Length != 0)
+            if (UnityEngine.Object.FindObjectsByType<PlayerProjectile>().Length != 0)
                 throw new Exception("Arrows survived a floor change.");
             if (run.Player.Damage < 2) throw new Exception("Archer damage upgrade failed.");
             return true;
