@@ -16,6 +16,7 @@ namespace Slopgame.Editor
         private static int classIndex;
         private static int abilityIndex;
         private static DungeonEnemy burnTarget;
+        private static DungeonPlayer nearbyAlly, distantAlly, otherRunAlly;
 
         [InitializeOnLoadMethod]
         private static void Resume()
@@ -161,10 +162,100 @@ namespace Slopgame.Editor
                     Require(burnTarget.Health == 94, "New burn inherited expired burn damage.");
                     run.ShowMainMenu(); run.Restart();
                     Require(run.Player.Abilities.EmptySlot == 0 && run.Player.Powerups.Count(PowerupType.CriticalHits) == 0, "New run retained abilities or talents.");
-                    Finish(!failed, "Boss floors 5/10, artifact gates/Q/E/replacement, five classes, all 15 active abilities, lightning, elemental damage/burn expiration, talent gates, cooldowns, and reset");
+                    StartClass(run, WeaponType.Hammer);
+                    stage = 7;
+                    return;
+                }
+                if (stage == 7)
+                {
+                    FreezeEnemies(run);
+                    Require(run.Player.Weapon is PaladinAttack && run.Player.Charge.Duration == 3f, "Paladin weapon/long charge missing.");
+                    var target = run.Enemies[0];
+                    target.transform.position = run.Player.transform.position + Vector3.right;
+                    target.Health = 100;
+                    Require(run.Player.Weapon.TryAttack(Vector2.right, 0.5f), "Paladin early release did not swipe.");
+                    Require((target.Health == 99 || target.Health == 98) && run.Player.Blessing.BonusDamage == 0,
+                        "Partial charge gained heavy damage or granted a blessing.");
+                    nearbyAlly = MakeAlly(run, 2f);
+                    distantAlly = MakeAlly(run, 5f);
+                    otherRunAlly = MakeAlly(run, 1f);
+                    otherRunAlly.Run = null;
+                    waitUntil = Time.time + 0.5f;
+                    stage = 8;
+                    return;
+                }
+                if (stage == 8)
+                {
+                    if (Time.time < waitUntil) return;
+                    run.Player.Charge.Tick(true, true);
+                    Require(run.Player.Charge.IsCharging && run.Player.TryRoll(Vector2.left) && !run.Player.Charge.IsCharging,
+                        "Dodge did not cancel blessing charge.");
+                    run.Player.Charge.Tick(false, false);
+                    Require(run.Player.Blessing.BonusDamage == 0, "Cancelled blessing granted damage.");
+                    waitUntil = Time.time + 0.4f;
+                    stage = 9;
+                    return;
+                }
+                if (stage == 9)
+                {
+                    if (Time.time < waitUntil) return;
+                    run.Player.Charge.Tick(true, true);
+                    Require(run.Player.Charge.IsCharging, "Blessing charge did not start.");
+                    waitUntil = Time.time + 3.05f;
+                    stage = 10;
+                    return;
+                }
+                if (stage == 10)
+                {
+                    if (Time.time < waitUntil) return;
+                    int targetHealth = run.Enemies[0].Health;
+                    run.Player.Charge.Tick(false, true);
+                    Require(run.Player.Damage == run.Player.BaseDamage + 2 && nearbyAlly.Damage == nearbyAlly.BaseDamage + 2,
+                        "Blessing did not increase self and nearby ally damage.");
+                    Require(distantAlly.Blessing.BonusDamage == 0 && otherRunAlly.Blessing.BonusDamage == 0,
+                        "Blessing reached a distant ally or another run.");
+                    Require(run.Enemies[0].Health == targetHealth, "Full blessing charge still performed a damaging attack.");
+                    run.Player.Upgrade((int)PowerupType.Damage);
+                    waitUntil = Time.time + 0.7f;
+                    stage = 11;
+                    return;
+                }
+                if (stage == 11)
+                {
+                    if (Time.time < waitUntil) return;
+                    Require(run.Player.Weapon.TryAttack(Vector2.right, 1f), "Blessing could not be refreshed.");
+                    Require(run.Player.Damage == run.Player.BaseDamage + 2 && run.Player.Blessing.Remaining > 7.9f,
+                        "Blessing stacked damage or failed to refresh duration.");
+                    waitUntil = Time.time + 8.1f;
+                    stage = 12;
+                    return;
+                }
+                if (stage == 12)
+                {
+                    if (Time.time < waitUntil) return;
+                    Require(run.Player.Damage == run.Player.BaseDamage && nearbyAlly.Damage == nearbyAlly.BaseDamage,
+                        "Expired blessing retained damage or lost permanent upgrades.");
+                    UnityEngine.Object.Destroy(nearbyAlly.gameObject);
+                    UnityEngine.Object.Destroy(distantAlly.gameObject);
+                    UnityEngine.Object.Destroy(otherRunAlly.gameObject);
+                    run.Player.Blessing.Apply(2, 8f);
+                    run.Restart();
+                    Require(run.Player.Blessing.BonusDamage == 0, "New run retained blessing.");
+                    Finish(!failed, "Bosses, artifacts, five classes, active abilities, status effects, Paladin swipe/charge/allies/range/refresh/expiration/reset");
                 }
             }
             catch (Exception error) { Debug.LogException(error); Finish(false, error.Message); }
+        }
+
+        private static DungeonPlayer MakeAlly(DungeonRun run, float distance)
+        {
+            var ally = DungeonVisuals.Create("Test ally", run.transform,
+                run.Player.transform.position + Vector3.up * distance, Vector2.one, Color.white, 3)
+                .gameObject.AddComponent<DungeonPlayer>();
+            ally.Run = run;
+            ally.Initialize(run.SelectedCharacter);
+            ally.enabled = false;
+            return ally;
         }
 
         private static void StartClass(DungeonRun run, WeaponType type)

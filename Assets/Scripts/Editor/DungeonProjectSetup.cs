@@ -489,7 +489,7 @@ namespace Slopgame.Editor
             EnsureHero("Assassin", WeaponType.Daggers, 4, 5.6f, new Color(0.78f, 0.4f, 0.65f),
                 "A swift duelist with 15% starting physical crit chance, double physical backstab damage, and a shadowstep.");
             EnsureHero("Paladin", WeaponType.Hammer, 7, 4.5f, new Color(0.95f, 0.78f, 0.4f),
-                "An armored guardian. Charge hammer strikes and block with a shield.");
+                "a holy warrior who would die for his allies");
             AssetDatabase.SaveAssets();
             Debug.Log("CHARACTER_ASSETS_OK: Five classes ready.");
         }

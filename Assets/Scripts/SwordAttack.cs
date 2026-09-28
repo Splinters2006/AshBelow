@@ -6,6 +6,7 @@ namespace Slopgame
     {
         public const float Reach = 2.3f;
         public const float ConeAngle = 60f;
+        public bool ShowChargePreview { get; set; } = true;
         public bool IsHeavyAttacking => Player.Shield != null && Player.Shield.IsBlocking;
         public float HeavyCooldownRemaining => Player.Shield != null ? Player.Shield.CooldownRemaining : Mathf.Max(0f, shadowReadyAt - Time.time);
         public bool CanAttack => Player.Run.IsPlaying && !Player.IsRolling && !IsHeavyAttacking && Time.time >= readyAt;
@@ -58,17 +59,21 @@ namespace Slopgame
         public bool TryAttack(Vector2 aim, float charge = 0f)
         {
             if (!CanAttack || aim.sqrMagnitude < 0.001f) return false;
-            float cone = ChargedCone(charge);
-            SetArc(Reach, cone, new Color(0.4f, 1f, 0.85f, 0.45f));
+            return TrySwipe(aim, Player.Charge.Damage(charge), Reach, ChargedCone(charge));
+        }
+
+        public bool TrySwipe(Vector2 aim, int damage, float reach, float cone)
+        {
+            if (!CanAttack || aim.sqrMagnitude < 0.001f) return false;
+            SetArc(reach, cone, new Color(0.4f, 1f, 0.85f, 0.45f));
             readyAt = Time.time + 0.42f * Player.Powerups.AttackIntervalMultiplier;
             visibleUntil = Time.time + 0.15f;
             FaceArc(aim);
             arc.enabled = true;
-            int damage = Player.Charge.Damage(charge);
             for (int i = Player.Run.Enemies.Count - 1; i >= 0; i--)
             {
                 var enemy = Player.Run.Enemies[i];
-                if (ContainsTarget(enemy.transform.position - transform.position, aim, Reach, cone)
+                if (ContainsTarget(enemy.transform.position - transform.position, aim, reach, cone)
                     && Player.Run.HasLineOfSight(transform.position, enemy.transform.position))
                     CombatDamage.Apply(Player, enemy, damage, DamageElement.Physical, transform.position);
             }
@@ -122,13 +127,13 @@ namespace Slopgame
                 FaceArc(Player.Shield.Direction);
                 SetArc(0.9f, 120f, new Color(0.4f, 0.75f, 1f, 0.65f));
             }
-            else if (Player.Charge.IsCharging)
+            else if (ShowChargePreview && Player.Charge.IsCharging)
             {
                 FaceArc(Player.AimDirection);
                 SetArc(Reach, ChargedCone(Player.Charge.Amount),
                     Color.Lerp(new Color(0.4f, 1f, 0.85f, 0.12f), new Color(1f, 0.8f, 0.25f, 0.3f), Player.Charge.Amount));
             }
-            arc.enabled = IsHeavyAttacking || Player.Charge.IsCharging || Time.time < visibleUntil;
+            arc.enabled = IsHeavyAttacking || (ShowChargePreview && Player.Charge.IsCharging) || Time.time < visibleUntil;
         }
         private void OnDestroy() { if (mesh != null) Destroy(mesh); if (material != null) Destroy(material); }
     }

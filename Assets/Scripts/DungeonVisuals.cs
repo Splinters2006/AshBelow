@@ -149,8 +149,6 @@ namespace Slopgame
                 if (weapon == WeaponType.Daggers)
                     Detail(hero, "Offhand dagger", new Vector2(-0.65f, 0), new Vector2(0.14f, 0.7f), AbilityCatalog.Ice);
                 else Detail(hero, "Shield", new Vector2(-0.55f, 0), new Vector2(0.42f, 0.75f), weapon == WeaponType.Hammer ? AbilityCatalog.Gold : AbilityCatalog.Ice);
-                if (weapon == WeaponType.Hammer)
-                    Detail(hero, "Hammer head", new Vector2(0.65f, 0.55f), new Vector2(0.55f, 0.32f), AbilityCatalog.Gold);
             }
         }
 

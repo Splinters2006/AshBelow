@@ -5,8 +5,9 @@ namespace Slopgame
     public sealed class MainMenu : MonoBehaviour
     {
         public DungeonRun Run { get; set; }
-        private bool selecting;
-        public void ResetPage() { selecting = false; }
+        private bool selecting, shopping;
+        private readonly AshShop shop = new AshShop();
+        public void ResetPage() { selecting = false; shopping = false; }
 
         private void OnGUI()
         {
@@ -21,15 +22,22 @@ namespace Slopgame
                     DungeonUi.Panel(new Rect(700 + i * 45 + offset, 70 + i * 65, 130, 2), new Color(0.21f, 0.3f, 0.33f, 0.22f));
                 }
                 DungeonUi.Label(new Rect(70, 52, 900, 25), "A ROGUELIKE DESCENT", 14, AbilityCatalog.Gold);
-                DungeonUi.Label(new Rect(65, 88, 1100, 94), "ASH / BELOW", 66);
-                DungeonUi.Label(new Rect(70, 188, 1100, 42), selecting ? "Choose your hero. Shape your build. Claim the relics below." : "Five heroes. Two relic abilities. One life in the ash.", 20, DungeonUi.Muted);
-                if (!selecting)
+                DungeonUi.Label(new Rect(65, 88, 1100, 94), shopping ? "ASH SHOP" : "ASH / BELOW", 66);
+                DungeonUi.Label(new Rect(70, 188, 1100, 42), shopping ? "Spend the ash you carry home. Grow stronger with every descent." : selecting ? "Choose your hero. Shape your build. Claim the relics below." : "Five heroes. Two relic abilities. One life in the ash.", 20, DungeonUi.Muted);
+                DungeonUi.Label(new Rect(930, 55, 280, 32), Run.Progress.IsReadOnly ? "SAVE UNAVAILABLE" : $"{Run.Progress.Ash} ASH", 23, AbilityCatalog.Gold, TextAnchor.UpperRight);
+                if (shopping)
+                {
+                    shop.Draw(Run);
+                    if (DungeonUi.Button("shopBack", new Rect(70, 598, 268, 48), "Back", DungeonUi.Muted)) shopping = false;
+                }
+                else if (!selecting)
                 {
                     DungeonUi.Panel(new Rect(70, 275, 610, 258), DungeonUi.PanelColor);
                     DungeonUi.Label(new Rect(102, 307, 530, 55), "POWER HAS A PRICE", 29, DungeonUi.Teal);
                     DungeonUi.Label(new Rect(102, 374, 530, 130), "Charge your attacks. Read the enemy.\nEvery fifth floor, face an arena guardian.\nTake its artifact and choose your own power.", 22, DungeonUi.Muted);
                     if (DungeonUi.Button("chooseClass", new Rect(755, 307, 420, 64), "Choose your hero", AbilityCatalog.Gold)) selecting = true;
-                    if (DungeonUi.Button("quit", new Rect(755, 394, 420, 55), "Quit", DungeonUi.Muted))
+                    if (DungeonUi.Button("shop", new Rect(755, 390, 420, 55), "Ash shop", DungeonUi.Teal)) shopping = true;
+                    if (DungeonUi.Button("quit", new Rect(755, 470, 420, 55), "Quit", DungeonUi.Muted))
                     {
 #if UNITY_EDITOR
                         UnityEditor.EditorApplication.isPlaying = false;
@@ -39,6 +47,8 @@ namespace Slopgame
                     }
                 }
                 else DrawSelection();
+                if (!string.IsNullOrEmpty(Run.Progress.LastError))
+                    DungeonUi.Label(new Rect(70, 645, 1140, 24), Run.Progress.LastError, 14, AbilityCatalog.Gold);
                 DungeonUi.Label(new Rect(70, 672, 1100, 24), "WASD  move     HOLD / RELEASE LMB  attack     RMB  class skill     Q / E  relic abilities", 14, DungeonUi.Muted);
             }
             finally { GUI.matrix = previous; }
@@ -54,12 +64,13 @@ namespace Slopgame
                 if (DungeonUi.Button("class" + i, rect, hero.DisplayName + (selected ? "  /  SELECTED" : ""), selected ? hero.Color : DungeonUi.Muted)) Run.SelectCharacter(hero);
             }
             var character = Run.SelectedCharacter;
+            var permanent = new PermanentBonuses(Run.Progress, character.Weapon);
             DungeonUi.Panel(new Rect(368, 268, 842, 312), DungeonUi.PanelColor);
             DungeonUi.Panel(new Rect(402, 302, 104, 104), new Color(character.Color.r * 0.25f, character.Color.g * 0.25f, character.Color.b * 0.25f));
             string glyph = character.Weapon == WeaponType.Staff ? "*" : character.Weapon == WeaponType.Bow ? ">" : character.Weapon == WeaponType.Daggers ? "//" : "+";
             DungeonUi.Label(new Rect(402, 302, 104, 104), glyph, 58, character.Color, TextAnchor.MiddleCenter);
             DungeonUi.Label(new Rect(536, 300, 630, 52), character.DisplayName, 38, character.Color);
-            DungeonUi.Label(new Rect(538, 361, 610, 32), $"{character.StartingHealth} HP     {character.StartingDamage} DAMAGE     {character.MoveSpeed:0.#} SPEED", 16, DungeonUi.Muted);
+            DungeonUi.Label(new Rect(538, 361, 610, 32), $"{character.StartingHealth + permanent.Health} HP     {character.StartingDamage + permanent.Damage} DAMAGE     {character.MoveSpeed + permanent.Speed:0.#} SPEED", 16, DungeonUi.Muted);
             DungeonUi.Label(new Rect(402, 434, 766, 80), character.Description, 20);
             DungeonUi.Label(new Rect(402, 535, 766, 28), $"RMB  {DungeonUi.SpecialName(character.Weapon)}     /     Q + E unlock from boss artifacts", 16, character.Color);
             if (DungeonUi.Button("back", new Rect(70, 598, 268, 48), "Back", DungeonUi.Muted)) selecting = false;

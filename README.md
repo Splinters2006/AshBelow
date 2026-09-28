@@ -36,7 +36,7 @@ The prototype uses runtime-generated placeholder sprites and an IMGUI HUD, with 
 
 Knight, Archer, Wizard, Assassin, and Paladin are playable. Archer starts with **5 HP**, fires one arrow with left click, and fires **three arrows at -15°, 0°, +15°** with right click on a **6-second cooldown**. Tap-fired and triple-shot arrows deal the current damage stat; charged arrows deal up to 3x. Basic arrows travel 5 units when tapped, 5.5 at half charge, and 6 at full charge. Holding beyond full charge grants no extra range. Triple shots and relic arrows keep their 5-unit range. Arrows stop at the first enemy or wall, except Piercing Shot. Archer shares the dodge roll and upgrade system. The main menu offers character selection and Quit; use **Main menu** in the dungeon to abandon the current run and choose again. Starting a run resets upgrades and health.
 
-Character definitions are ScriptableObjects in `Assets/Resources/Characters`. Create future definitions with **Assets → Create → Slopgame → Character** and give them unique names, descriptions, colors, and starting stats. The selector discovers them automatically. New weapons and abilities still need their own gameplay implementation; select Sword, Bow, Staff, Daggers, or Hammer on the character asset to choose its weapon. All classes share the dodge component.
+Character definitions are ScriptableObjects in `Assets/Resources/Characters`. Create future definitions with **Assets → Create → Slopgame → Character** and give them unique names, descriptions, colors, and starting stats. The selector discovers them automatically. New weapons and abilities still need their own gameplay implementation; select Sword, Bow, Staff, Daggers, or Hammer on the character asset to choose its moveset. The existing Hammer option now selects the Paladin sword-and-blessing moveset. All classes share the dodge component.
 
 ## Powerups and enemy facing
 
@@ -58,11 +58,11 @@ Boss artifacts offer **active abilities for the selected class instead of a pass
 | Archer | Charged 5–6-unit arrow / triple shot | Arrow Volley, Piercing Shot, Windstep |
 | Wizard | Charged fireball / lightning (3s) | Inferno Orb, Frost Nova, Arcane Blink |
 | Assassin | Charged daggers / Shadowstep (4s) | Fan of Knives, Venom Strike, Shadow Veil |
-| Paladin | Charged hammer / reflecting shield | Healing Light, Judgment, Sanctuary |
+| Paladin | Weak sword swipe / reflecting shield | Healing Light, Judgment, Sanctuary |
 
 Wizard starts with 4 HP. Lightning reaches 6 units and hits one enemy by default. Conductivity unlocks one additional chain target per rank within 2.5 units of the previous target; walls block each jump and no target is hit twice in a cast. Storm Reach increases cast/jump range, High Voltage increases damage, and Conductivity adds chain targets. Left-click fireballs have a 6-unit range; Inferno Orb is the boss-unlocked explosive version. Fire and ice talents become available after their corresponding artifact is equipped.
 
-Assassin starts with 4 HP, 5.6 movement speed, and **15% physical crit chance**. Paladin starts with 7 HP and 4.5 movement speed. Healing Light and Sanctuary affect the caster and any friendly DungeonPlayer within 4 units in the same run; the current game remains single-player.
+Assassin starts with 4 HP, 5.6 movement speed, and **15% physical crit chance**. Paladin starts with 7 HP and 4.5 movement speed. Tap left click for a short, weak sword swipe (half base damage, minimum 1, plus any blessing bonus). Hold left click for 3 seconds, then release to bless yourself and friendly players within 4 units with +2 damage for 8 seconds. Attack speed shortens this charge. Releasing early performs only the weak swipe; dodging or raising the shield cancels charging. A gold circle previews the buff radius and the HUD shows its remaining duration. Recasting refreshes the buff without stacking its damage. Healing Light and Sanctuary affect the caster and any friendly DungeonPlayer within 4 units in the same run; the current game remains single-player.
 
 ## Physical and elemental effects
 

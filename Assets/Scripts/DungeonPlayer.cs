@@ -7,7 +7,9 @@ namespace Slopgame
         public DungeonRun Run { get; set; }
         public int MaxHealth { get; private set; } = 6;
         public int Health { get; private set; } = 6;
-        public int Damage { get; private set; } = 1;
+        public int BaseDamage { get; private set; } = 1;
+        public int Damage => BaseDamage + (Blessing != null ? Blessing.BonusDamage : 0);
+        public DamageBlessing Blessing { get; private set; }
         public float Speed { get; private set; } = 5f;
         public bool IsRolling => Time.time < rollUntil;
         public bool IsInvulnerable => Time.time < invulnerableUntil || IsRolling;
@@ -26,15 +28,19 @@ namespace Slopgame
         public SwordAttack Sword => sword;
         public IPlayerWeapon Weapon { get; private set; }
         public PlayerPowerups Powerups { get; private set; }
+        public PermanentBonuses Permanent { get; private set; }
         private WeaponType weaponType;
         private Color characterColor;
 
         public void Initialize(CharacterDefinition character)
         {
             Powerups = gameObject.AddComponent<PlayerPowerups>();
-            MaxHealth = Health = character.StartingHealth;
-            Damage = character.StartingDamage;
-            Speed = character.MoveSpeed;
+            Permanent = new PermanentBonuses(Run?.Progress, character.Weapon);
+            Powerups.Permanent = Permanent;
+            MaxHealth = Health = character.StartingHealth + Permanent.Health;
+            BaseDamage = character.StartingDamage + Permanent.Damage;
+            Blessing = gameObject.AddComponent<DamageBlessing>();
+            Speed = character.MoveSpeed + Permanent.Speed;
             characterColor = character.Color;
             weaponType = character.Weapon;
             Powerups.ClassWeapon = weaponType;
@@ -71,6 +77,12 @@ namespace Slopgame
                 sword = gameObject.AddComponent<SwordAttack>();
                 sword.Player = this;
                 Weapon = sword;
+                if (weaponType == WeaponType.Hammer)
+                {
+                    var paladin = gameObject.AddComponent<PaladinAttack>();
+                    paladin.Initialize(this, sword);
+                    Weapon = paladin;
+                }
             }
         }
 
@@ -114,7 +126,7 @@ namespace Slopgame
         public void Upgrade(int choice)
         {
             if (choice < 0 || choice >= PowerupCatalog.All.Count || !Powerups.Add((PowerupType)choice)) return;
-            if (choice == 0) Damage++;
+            if (choice == 0) BaseDamage++;
             if (choice == 1) { MaxHealth += 2; Health = MaxHealth; }
             if (choice == 2) Speed += 0.7f;
             Heal(2);

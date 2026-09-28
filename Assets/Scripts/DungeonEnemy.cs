@@ -105,8 +105,7 @@ namespace Slopgame
             hitUntil = Time.time + 0.15f;
             if (Health <= 0)
             {
-                Run.Enemies.Remove(this);
-                Run.Kills++;
+                Run.EnemyDefeated(this);
                 Run.Player.Powerups.OnKill(Run.Player);
                 Boss?.Defeated();
                 CombatVfx.Ring(Run.ProjectileRoot, transform.position, Boss != null ? 1.6f : 0.45f, AbilityCatalog.Gold);

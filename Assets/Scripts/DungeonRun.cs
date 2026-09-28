@@ -34,13 +34,24 @@ namespace Slopgame
         private Transform level;
         private Camera view;
         private Vector2 exit;
-        private SpriteRenderer stairs;
+        private StairVisual stairs;
+        private bool floorRewardGranted;
+        private float nextSaveRetry;
+        public PermanentProgress Progress { get; private set; }
+        public int RunAshEarned { get; private set; }
         private readonly int[,] distances = new int[DungeonMap.Width, DungeonMap.Height];
         private static readonly Vector2Int[] Steps = { Vector2Int.up, Vector2Int.down, Vector2Int.left, Vector2Int.right };
         private Vector2Int lastPlayerCell = new Vector2Int(-1, -1);
 
         private void Start()
         {
+            string saveDirectory = Application.persistentDataPath;
+#if UNITY_EDITOR
+            // Automated tests must never read or change the player's real wallet.
+            if (Application.isBatchMode)
+                saveDirectory = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "ashbelow-tests", System.Guid.NewGuid().ToString("N"));
+#endif
+            Progress = new PermanentProgress(saveDirectory);
             view = Camera.main;
             if (view == null) view = new GameObject("Dungeon Camera", typeof(Camera)).GetComponent<Camera>();
             view.orthographic = true;
@@ -90,6 +101,7 @@ namespace Slopgame
             Seed = UnityEngine.Random.Range(0, 1000000);
             Floor = 0;
             Kills = 0;
+            RunAshEarned = 0;
             Player = DungeonVisuals.Create(SelectedCharacter.DisplayName, transform, Vector2.zero, Vector2.one * 0.65f,
                 SelectedCharacter.Color, 4).gameObject.AddComponent<DungeonPlayer>();
             Player.Run = this;
@@ -109,13 +121,14 @@ namespace Slopgame
             if (level != null) { level.gameObject.SetActive(false); Destroy(level.gameObject); }
             Enemies.Clear();
             Floor++;
+            floorRewardGranted = false;
             Map = new DungeonMap(Seed + Floor * 7919, IsBossFloor);
             level = new GameObject("Floor " + Floor).transform;
             level.SetParent(transform);
             DungeonVisuals.DrawMap(Map, level);
             Player.transform.position = (Vector2)Map.Centers[0];
             exit = Map.Centers[Map.Centers.Count - 1];
-            stairs = DungeonVisuals.Create("Stairs", level, exit, Vector2.one * 0.85f, Color.gray, 1);
+            stairs = StairVisual.Create(level, exit);
             if (IsBossFloor)
             {
                 var enemy = DungeonVisuals.Create("Guardian", level, exit, Vector2.one * 1.4f,
@@ -157,6 +170,8 @@ namespace Slopgame
 
         private void Update()
         {
+            if (Progress.HasUnsavedChanges && Time.unscaledTime >= nextSaveRetry)
+            { Progress.Save(); nextSaveRetry = Time.unscaledTime + 5f; }
             if (!IsPlaying) return;
             UpdatePaths();
             if (Artifact != null && Vector2.Distance(Player.transform.position, Artifact.transform.position) < 1.5f && PlayerInput.Interact)
@@ -164,7 +179,7 @@ namespace Slopgame
                 BeginArtifactChoice();
                 return;
             }
-            stairs.color = Enemies.Count == 0 ? new Color(1f, 0.8f, 0.25f) : new Color(0.4f, 0.4f, 0.4f);
+            stairs.SetUnlocked(Enemies.Count == 0 && Artifact == null);
             if (Artifact == null && Enemies.Count == 0 && Vector2.Distance(Player.transform.position, exit) < 1.2f && PlayerInput.Interact)
             {
                 BeginUpgradeChoice();
@@ -177,6 +192,21 @@ namespace Slopgame
             var target = new Vector3(Player.transform.position.x, Player.transform.position.y, -10);
             view.transform.position = Vector3.Lerp(view.transform.position, target, 1 - Mathf.Exp(-10 * Time.deltaTime));
         }
+
+        public void EnemyDefeated(DungeonEnemy enemy)
+        {
+            if (!Enemies.Remove(enemy)) return;
+            Kills++;
+            int reward = enemy.Boss != null ? 50 : 1;
+            if (Enemies.Count == 0 && !floorRewardGranted)
+            { reward += 10; floorRewardGranted = true; }
+            RunAshEarned += reward;
+            Progress.AwardAsh(reward);
+        }
+
+        public bool TryBuyUpgrade(string id) => IsInMainMenu && Progress.TryPurchase(id);
+        private void OnApplicationQuit() { Progress?.Save(); }
+        private void OnApplicationFocus(bool focused) { if (!focused) Progress?.Save(); }
 
         public static int EnemyHealthForFloor(int floor) => 2 + Mathf.Max(0, floor - 3);
         public void EndRun() { IsPlaying = false; Player.Weapon?.Hide(); Time.timeScale = 0f; }

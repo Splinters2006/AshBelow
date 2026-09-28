@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Paladin
   m_EditorClassIdentifier: Assembly-CSharp::Slopgame.CharacterDefinition
   displayName: Paladin
-  description: An armored guardian. Charge a hammer strike and reflect bolts with your shield.
+  description: a holy warrior who would die for his allies
   color: {r: 0.95, g: 0.78, b: 0.4, a: 1}
   startingHealth: 7
   startingDamage: 1

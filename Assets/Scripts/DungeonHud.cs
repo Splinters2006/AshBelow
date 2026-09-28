@@ -54,6 +54,9 @@ namespace Slopgame
             DungeonUi.Label(new Rect(42, 37, 250, 28), Run.SelectedCharacter.DisplayName.ToUpperInvariant(), 22, Run.SelectedCharacter.Color);
             DungeonUi.Label(new Rect(42, 73, 130, 22), $"{player.Health} / {player.MaxHealth} HP", 16);
             DungeonUi.Label(new Rect(176, 73, 120, 22), $"WARD  {player.Powerups.ArmorCharges}", 14, DungeonUi.Muted, TextAnchor.UpperRight);
+            DungeonUi.Label(new Rect(24, 135, 300, 26), $"ASH  {Run.Progress.Ash}   /   +{Run.RunAshEarned} this run", 16, AbilityCatalog.Gold);
+            if (!string.IsNullOrEmpty(Run.Progress.LastError))
+                DungeonUi.Label(new Rect(24, 165, 310, 70), Run.Progress.LastError, 14, AbilityCatalog.Gold);
             DungeonUi.Bar(new Rect(42, 103, 256, 6), displayedHealth, Run.SelectedCharacter.Color);
             DungeonUi.Label(new Rect(405, 28, 470, 25), Run.IsBossFloor ? $"FLOOR {Run.Floor:00}  /  BOSS ARENA" : $"FLOOR {Run.Floor:00}  /  {Run.Enemies.Count} ENEMIES", 17, AbilityCatalog.Gold, TextAnchor.MiddleCenter);
             DungeonUi.Label(new Rect(365, 59, 550, 40), Run.Objective, 17, DungeonUi.Text, TextAnchor.UpperCenter);
@@ -80,12 +83,18 @@ namespace Slopgame
                     player.Abilities.CooldownRemaining(i), ability?.Cooldown ?? 1f, ability?.Color ?? DungeonUi.Muted, ability == null);
             }
             Slot(new Rect(836, 596, 180, 78), "SPACE", "Dodge", player.DodgeCooldownRemaining, DungeonPlayer.RollCooldown, DungeonUi.Teal);
+            if (player.Blessing.BonusDamage > 0)
+                DungeonUi.Label(new Rect(440, 505, 400, 24), $"BLESSED  +{player.Blessing.BonusDamage} DAMAGE  /  {player.Blessing.Remaining:0.0}s", 14, AbilityCatalog.Gold, TextAnchor.MiddleCenter);
             if (player.Charge.IsCharging)
             {
-                DungeonUi.Label(new Rect(440, 535, 400, 24), player.Charge.Amount >= 1f ? "FULL CHARGE  /  RELEASE" : $"CHARGING  {player.Charge.Amount:P0}", 14, AbilityCatalog.Gold, TextAnchor.MiddleCenter);
+                DungeonUi.Label(new Rect(440, 535, 400, 24), player.ClassWeapon == WeaponType.Hammer
+                    ? player.Charge.Amount >= 1f ? "RELEASE TO BLESS ALLIES" : $"CHARGING BLESSING  {player.Charge.Amount:P0}"
+                    : player.Charge.Amount >= 1f ? "FULL CHARGE  /  RELEASE" : $"CHARGING  {player.Charge.Amount:P0}", 14, AbilityCatalog.Gold, TextAnchor.MiddleCenter);
                 DungeonUi.Bar(new Rect(500, 568, 280, 5), player.Charge.Amount, AbilityCatalog.Gold);
             }
-            DungeonUi.Label(new Rect(250, 690, 780, 22), "WASD  move     HOLD / RELEASE LMB  charge attack     F  interact", 13, DungeonUi.Muted, TextAnchor.UpperCenter);
+            DungeonUi.Label(new Rect(250, 690, 780, 22), player.ClassWeapon == WeaponType.Hammer
+                ? "LMB  weak swipe     HOLD / RELEASE LMB  bless allies     F  interact"
+                : "WASD  move     HOLD / RELEASE LMB  charge attack     F  interact", 13, DungeonUi.Muted, TextAnchor.UpperCenter);
         }
 
         private static void Slot(Rect rect, string key, string name, float cooldown, float total, Color accent, bool locked = false)

@@ -8,16 +8,18 @@ namespace Slopgame
         private readonly Dictionary<PowerupType, int> stacks = new Dictionary<PowerupType, int>();
         private int harvestKills;
         public WeaponType ClassWeapon { get; set; }
+        public PermanentBonuses Permanent { get; set; } = new PermanentBonuses(null, WeaponType.Sword);
         public PlayerAbilities Abilities { get; set; }
-        public float DrawTimeMultiplier => 1f - 0.15f * Count(PowerupType.QuickDraw);
+        public float DrawTimeMultiplier => (1f - 0.15f * Count(PowerupType.QuickDraw)) * Permanent.DrawMultiplier;
         public float ArrowChargeMultiplier => 3f + 0.5f * Count(PowerupType.Bodkin);
-        public int ReflectionDamage => 2 + Count(PowerupType.Riposte);
+        public int ReflectionDamage => 2 + Count(PowerupType.Riposte) + Permanent.ReflectionDamage;
         public int ArmorCharges { get; private set; }
-        public float AttackIntervalMultiplier => 1f / (1f + 0.2f * Count(PowerupType.AttackSpeed));
+        public float AttackIntervalMultiplier => 1f / (1f + 0.2f * Count(PowerupType.AttackSpeed) + Permanent.AttackSpeed);
         public float CritChance => 0.05f + Count(PowerupType.CriticalHits) * 0.1f;
-        public float PhysicalCritChance => Mathf.Min(0.9f, CritChance
+        public float ElementalEffectChance => Mathf.Min(0.9f, CritChance + Permanent.EffectChance);
+        public float PhysicalCritChance => Mathf.Min(0.9f, CritChance + Permanent.PhysicalCritChance
             + (ClassWeapon == WeaponType.Daggers ? 0.1f + Count(PowerupType.AssassinCrit) * 0.05f : 0f));
-        public float DodgeCooldownMultiplier => 1f - 0.1f * Count(PowerupType.DodgeRecovery);
+        public float DodgeCooldownMultiplier => (1f - 0.1f * Count(PowerupType.DodgeRecovery)) * Permanent.DodgeMultiplier;
         public int Count(PowerupType type) => stacks.TryGetValue(type, out int count) ? count : 0;
         public bool CanTake(PowerupType type) => Count(type) < PowerupCatalog.Get(type).MaxStacks
             && (!PowerupCatalog.Get(type).ClassWeapon.HasValue || PowerupCatalog.Get(type).ClassWeapon == ClassWeapon)

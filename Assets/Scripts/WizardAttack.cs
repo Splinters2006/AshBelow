@@ -32,14 +32,14 @@ namespace Slopgame
             int chains = Player.Powerups.Count(PowerupType.LightningChains);
             int count = 1 + chains;
             // Conductivity unlocks chaining; overload only extends an unlocked chain.
-            bool overload = chains > 0 && Random.value < Player.Powerups.CritChance;
+            bool overload = chains > 0 && Random.value < Player.Powerups.ElementalEffectChance;
             if (overload) count += 2;
             for (int i = 0; i < count && target != null; i++)
             {
                 Vector2 destination = target.transform.position;
                 struck.Add(target);
                 CombatVfx.Bolt(Player.Run.ProjectileRoot, origin, destination, AbilityCatalog.Ice);
-                CombatDamage.Apply(Player, target, Player.Damage + 1 + Player.Powerups.Count(PowerupType.LightningPower),
+                CombatDamage.Apply(Player, target, Player.Damage + 1 + Player.Powerups.Count(PowerupType.LightningPower) + Player.Permanent.LightningDamage,
                     DamageElement.Lightning, origin);
                 origin = destination;
                 target = FindTarget(origin, aim, i >= count - 3 && overload ? 1.75f : JumpRange, struck, false);
