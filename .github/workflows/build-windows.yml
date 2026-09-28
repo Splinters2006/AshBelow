@@ -1,9 +1,8 @@
 name: Build Windows
 
+# Manual-only until a Unity .ulf license is stored in the UNITY_LICENSE secret; then restore:
+#   push: { branches: [main], tags: ["v*"] }
 on:
-  push:
-    branches: [main]
-    tags: ["v*"]
   workflow_dispatch:
 
 permissions:
