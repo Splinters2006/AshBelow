@@ -1,0 +1,11 @@
+CLASSES
+
+assasin that deals more damage on backhits and has a higher crit chance
+paladin that blocks and heals for allies
+
+GENERAL
+give all characters 5% chance to crit on phyusical damage, split between physical and elemental damage, 
+elemental damage can not crit but can proc the elemental effect
+wizard has lightning on rightclick and fireballs on on left click, fireballs have 5% chance to proc fire, dealing a bit of damage over time lightning has a 5%chance to chain to enemies in a small circle
+this 5% is obviously based on crit chance, so where physical damage would just deal 2x dmg, magic damage would proc its status effect based on the type of element
+
