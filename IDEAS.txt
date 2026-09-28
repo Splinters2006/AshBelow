@@ -1,0 +1,3 @@
+add debug admin mode, which gives infinite hp damage, no roll cooldown etc, and double movespeed
+make vfx on all characters better, not as extreme as the admin class but also not as boring and bland as they are now
+add indicator for showing how far arrows will fly on archer
