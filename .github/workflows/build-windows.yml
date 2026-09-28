@@ -1,0 +1,62 @@
+name: Build Windows
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-windows-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      # The Unity Windows build image needs more disk than a default runner leaves free.
+      - uses: jlumbroso/free-disk-space@v1.3.1
+        with:
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: false
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/cache@v4
+        with:
+          path: Library
+          key: Library-StandaloneWindows64-${{ hashFiles('Packages/packages-lock.json', 'ProjectSettings/ProjectVersion.txt') }}
+          restore-keys: Library-StandaloneWindows64-
+
+      # Reuses the editor build method so CI output matches the local menu build (EXE, updater, START-HERE, ZIP).
+      - uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          targetPlatform: StandaloneWindows64
+          buildMethod: Slopgame.Editor.WindowsBuild.Build
+          versioning: None
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AshBelow-Windows
+          path: |
+            Builds/Windows
+            !Builds/Windows/*.zip
+          if-no-files-found: error
+
+      # Tagged builds become the latest release; Update.cmd installs the single AshBelow-*.zip it finds there.
+      - if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: Builds/Windows/AshBelow-*.zip
+          fail_on_unmatched_files: true
+          generate_release_notes: true
