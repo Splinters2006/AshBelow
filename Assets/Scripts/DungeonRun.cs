@@ -10,6 +10,8 @@ namespace Slopgame
         public List<DungeonEnemy> Enemies { get; } = new List<DungeonEnemy>();
         public bool IsPlaying { get; private set; }
         public bool ChoosingUpgrade { get; private set; }
+        private readonly List<PowerupDefinition> upgradeChoices = new List<PowerupDefinition>();
+        public IReadOnlyList<PowerupDefinition> UpgradeChoices => upgradeChoices;
         public int Floor { get; private set; }
         public int Kills { get; set; }
         public int Seed { get; private set; }
@@ -83,6 +85,8 @@ namespace Slopgame
 
         private void NextFloor()
         {
+            upgradeChoices.Clear();
+            Player.Powerups.BeginFloor();
             Player.Weapon?.Hide();
             if (level != null) { level.gameObject.SetActive(false); Destroy(level.gameObject); }
             Enemies.Clear();
@@ -123,8 +127,7 @@ namespace Slopgame
             stairs.color = Enemies.Count == 0 ? new Color(1f, 0.8f, 0.25f) : new Color(0.4f, 0.4f, 0.4f);
             if (Enemies.Count == 0 && Vector2.Distance(Player.transform.position, exit) < 1.2f && PlayerInput.Interact)
             {
-                IsPlaying = false;
-                ChoosingUpgrade = true;
+                BeginUpgradeChoice();
             }
         }
 
@@ -136,7 +139,30 @@ namespace Slopgame
         }
 
         public void EndRun() { IsPlaying = false; }
-        public void ChooseUpgrade(int choice) { Player.Upgrade(choice); NextFloor(); }
+        public void BeginUpgradeChoice()
+        {
+            if (!IsPlaying || Enemies.Count != 0) return;
+            var pool = new List<PowerupDefinition>();
+            foreach (var powerup in PowerupCatalog.All)
+                if (Player.Powerups.CanTake(powerup.Type)) pool.Add(powerup);
+            upgradeChoices.Clear();
+            var random = new System.Random(Seed + Floor * 3571);
+            while (upgradeChoices.Count < 3 && pool.Count > 0)
+            {
+                int index = random.Next(pool.Count);
+                upgradeChoices.Add(pool[index]);
+                pool.RemoveAt(index);
+            }
+            IsPlaying = false;
+            ChoosingUpgrade = true;
+        }
+
+        public void ChooseUpgrade(int choice)
+        {
+            if (!ChoosingUpgrade || choice < 0 || choice >= upgradeChoices.Count) return;
+            Player.Upgrade((int)upgradeChoices[choice].Type);
+            NextFloor();
+        }
 
         public bool HasLineOfSight(Vector2 from, Vector2 to)
         {

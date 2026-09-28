@@ -88,8 +88,10 @@ namespace Slopgame.Editor
                     if (!CheckHeavyAttack(run)) return;
                     while (run.Enemies.Count > 0) run.Enemies[0].Hit(1000);
                     if (run.Kills == 0) throw new Exception("Kills were not recorded.");
-                    run.ChooseUpgrade(1);
-                    if (run.Floor != 2 || run.Player.MaxHealth != 8 || run.Enemies.Count == 0) throw new Exception("Floor progression failed.");
+                    run.Player.Upgrade((int)PowerupType.Vitality);
+                    run.BeginUpgradeChoice();
+                    run.ChooseUpgrade(0);
+                    if (run.Floor != 2 || run.Player.MaxHealth < 8 || run.Enemies.Count == 0) throw new Exception("Floor progression failed.");
                     run.EndRun();
                     if (run.IsPlaying) throw new Exception("Death did not stop gameplay.");
                     run.Restart();
@@ -110,13 +112,14 @@ namespace Slopgame.Editor
                     return;
                 }
                 if (!CheckArcher(run)) return;
+                CheckPowerupsAndFacing(run);
                 run.ShowMainMenu();
                 if (!run.IsInMainMenu || run.IsPlaying || run.Player != null || run.Enemies.Count != 0)
                     throw new Exception("Returning to menu did not clear the run.");
                 run.Restart();
                 if (run.IsInMainMenu || run.Player.Health != run.SelectedCharacter.StartingHealth || run.Floor != 1)
                     throw new Exception("Starting again from the menu failed.");
-                Debug.Log(smokeFailed ? "SLOPGAME_SMOKE_FAILED" : "SLOPGAME_SMOKE_OK: Knight combat, Archer selection/5 HP/arrows/walls/triple spread/6s cooldown/dodge/floor cleanup, menu, and progression passed.");
+                Debug.Log(smokeFailed ? "SLOPGAME_SMOKE_FAILED" : "SLOPGAME_SMOKE_OK: Knight/Archer combat, powerup effects/caps/offers/reset, enemy facing/turning/hit regions, menu, and progression passed.");
                 EditorApplication.update -= CheckPlayMode;
                 SessionState.SetBool("SlopgameSmoke", false);
                 Application.logMessageReceived -= CaptureError;
@@ -306,14 +309,81 @@ namespace Slopgame.Editor
             {
                 if (Time.time - archerStarted < 6.1f) return false;
                 if (!bow.TryHeavyAttack(Vector2.right)) throw new Exception("Archer heavy cooldown did not expire.");
+                run.Player.Upgrade((int)PowerupType.Damage);
+                while (run.Enemies.Count > 0) run.Enemies[0].Hit(1000);
+                run.BeginUpgradeChoice();
                 run.ChooseUpgrade(0);
                 archerStage = 4;
                 return false;
             }
             if (UnityEngine.Object.FindObjectsByType<PlayerProjectile>(FindObjectsSortMode.None).Length != 0)
                 throw new Exception("Arrows survived a floor change.");
-            if (run.Player.Damage != 2) throw new Exception("Archer damage upgrade failed.");
+            if (run.Player.Damage < 2) throw new Exception("Archer damage upgrade failed.");
             return true;
+        }
+
+        private static void CheckPowerupsAndFacing(DungeonRun run)
+        {
+            run.Restart();
+            var player = run.Player;
+            var powers = player.Powerups;
+            foreach (var type in new[] { PowerupType.AttackSpeed, PowerupType.CriticalHits, PowerupType.Armor, PowerupType.DodgeRecovery })
+            {
+                int cap = PowerupCatalog.Get(type).MaxStacks;
+                for (int i = 0; i < cap + 1; i++) player.Upgrade((int)type);
+                if (powers.Count(type) != cap || powers.CanTake(type)) throw new Exception("Powerup stacking cap failed.");
+            }
+            if (Mathf.Abs(powers.AttackIntervalMultiplier - 0.5f) > 0.001f
+                || Mathf.Abs(powers.DodgeCooldownMultiplier - 0.4f) > 0.001f)
+                throw new Exception("Attack/dodge powerup scaling failed.");
+            if (powers.DamageForRoll(3, 0.49f) != 6 || powers.DamageForRoll(3, 0.5f) != 3)
+                throw new Exception("Critical damage calculation failed.");
+            int health = player.Health;
+            player.Hit();
+            if (player.Health != health || powers.ArmorCharges != 2) throw new Exception("Ward did not absorb damage.");
+            powers.BeginFloor();
+            if (powers.ArmorCharges != 3) throw new Exception("Ward did not refresh on descent.");
+            while (powers.AbsorbHit()) { }
+            player.Upgrade((int)PowerupType.LifeSteal);
+            // Use a separate fresh player to verify kill healing without the ward hit's immunity timer.
+            run.Restart();
+            player = run.Player;
+            powers = player.Powerups;
+            if (powers.Count(PowerupType.Armor) != 0 || powers.CritChance != 0) throw new Exception("Powerups leaked into a new run.");
+            player.Upgrade((int)PowerupType.LifeSteal);
+            player.Hit();
+            health = player.Health;
+            for (int i = 0; i < 4; i++) powers.OnKill(player);
+            if (player.Health != health) throw new Exception("Soul Harvest healed early.");
+            powers.OnKill(player);
+            if (player.Health != health + 1) throw new Exception("Soul Harvest failed to heal.");
+            var enemy = run.Enemies[0];
+            Vector2 origin = enemy.transform.position;
+            var facing = enemy.Facing;
+            Vector2 before = facing.Direction;
+            facing.TurnToward(-before, 0.1f);
+            if (Vector2.Angle(before, facing.Direction) > 18.01f || Vector2.Angle(before, facing.Direction) < 17.99f)
+                throw new Exception("Enemy turn speed is not limited to 180 degrees per second.");
+            Vector2 front = facing.Direction;
+            if (!facing.IsInFront(origin + front) || !facing.IsBehind(origin - front)
+                || facing.RegionFrom(origin + new Vector2(-front.y, front.x)) != EnemyHitRegion.Side)
+                throw new Exception("Enemy front/back/side classification failed.");
+            enemy.Health = 10;
+            enemy.Hit(1, origin - front);
+            if (enemy.LastHitRegion != EnemyHitRegion.Back || enemy.Health != 9) throw new Exception("Rear hit was not recorded correctly.");
+            while (run.Enemies.Count > 0) run.Enemies[0].Hit(1000);
+            for (int i = 0; i < 5; i++) player.Upgrade((int)PowerupType.CriticalHits);
+            run.BeginUpgradeChoice();
+            var seen = new HashSet<PowerupType>();
+            if (run.UpgradeChoices.Count != 3) throw new Exception("Missing powerup offers.");
+            foreach (var choice in run.UpgradeChoices)
+                if (!seen.Add(choice.Type) || !powers.CanTake(choice.Type)) throw new Exception("Duplicate or capped boon offered.");
+            var selected = run.UpgradeChoices[0].Type;
+            int previous = powers.Count(selected);
+            run.ChooseUpgrade(0);
+            if (run.Floor != 2 || powers.Count(selected) != previous + 1) throw new Exception("Chosen powerup was not applied.");
+            run.ChooseUpgrade(0);
+            if (run.Floor != 2) throw new Exception("Upgrade accepted outside the selection screen.");
         }
 
         public static void EnsureCharacterAssets()

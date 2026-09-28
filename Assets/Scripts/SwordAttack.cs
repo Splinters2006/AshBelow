@@ -63,7 +63,7 @@ namespace Slopgame
         {
             if (!Player.Run.IsPlaying || Player.IsRolling || IsHeavyAttacking || Time.time < readyAt || aim.sqrMagnitude < 0.001f) return false;
             SetArc(Reach, 1f, false);
-            readyAt = Time.time + 0.42f;
+            readyAt = Time.time + 0.42f * Player.Powerups.AttackIntervalMultiplier;
             visibleUntil = Time.time + 0.12f;
             arc.transform.rotation = Quaternion.Euler(0, 0, Mathf.Atan2(aim.y, aim.x) * Mathf.Rad2Deg);
             arc.enabled = true;
@@ -71,7 +71,7 @@ namespace Slopgame
             {
                 var enemy = Player.Run.Enemies[i];
                 if (ContainsTarget(enemy.transform.position - transform.position, aim)
-                    && Player.Run.HasLineOfSight(transform.position, enemy.transform.position)) enemy.Hit(Player.Damage);
+                    && Player.Run.HasLineOfSight(transform.position, enemy.transform.position)) enemy.Hit(Player.Powerups.RollDamage(Player.Damage));
             }
             return true;
         }
@@ -136,7 +136,7 @@ namespace Slopgame
                         && Player.Run.HasLineOfSight(transform.position, enemy.transform.position))
                     {
                         heavyHits.Add(enemy);
-                        enemy.Hit(Player.Damage * 3);
+                        enemy.Hit(Player.Powerups.RollDamage(Player.Damage * 3));
                     }
                 }
                 if (sweep >= 1f) { IsHeavyAttacking = false; visibleUntil = Time.time + 0.1f; }

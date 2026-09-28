@@ -37,7 +37,7 @@ namespace Slopgame
                 {
                     var enemy = run.Enemies[j];
                     if (Vector2.Distance(next, enemy.transform.position) > 0.38f) continue;
-                    enemy.Hit(damage);
+                    enemy.Hit(damage, next - Direction);
                     Consume();
                     return;
                 }

@@ -25,6 +25,7 @@ namespace Slopgame
             GUI.Label(new Rect(28, 98, 445, 44), Run.Enemies.Count == 0
                 ? "Find the gold stairs. Press E to descend."
                 : "Clear the floor to unlock the stairs.", text);
+            GUI.Label(new Rect(510, 75, 425, 125), $"Ward: {Run.Player.Powerups.ArmorCharges}    Crit: {Run.Player.Powerups.CritChance:P0}\n{Run.Player.Powerups.Summary}", text);
             GUI.Box(new Rect(12, 560, 930, 68), GUIContent.none);
             string heavyStatus = Run.Player.Weapon == null || Run.Player.Weapon.HeavyCooldownRemaining <= 0
                 ? "READY" : $"{Run.Player.Weapon.HeavyCooldownRemaining:0.0}s";
@@ -35,9 +36,16 @@ namespace Slopgame
             {
                 GUI.Label(new Rect(250, 190, 465, 42), "A MOMENT OF RESPITE", title);
                 GUI.Label(new Rect(250, 240, 465, 54), "Choose a boon. Every choice restores 2 HP.", text);
-                if (GUI.Button(new Rect(250, 304, 460, 60), "Increase damage  /  +1 damage", button)) Run.ChooseUpgrade(0);
-                if (GUI.Button(new Rect(250, 376, 460, 60), "Renew vitality  /  +2 max HP, full heal", button)) Run.ChooseUpgrade(1);
-                if (GUI.Button(new Rect(250, 448, 460, 60), "Lighten step  /  +movement speed", button)) Run.ChooseUpgrade(2);
+                for (int i = 0; i < Run.UpgradeChoices.Count; i++)
+                {
+                    var boon = Run.UpgradeChoices[i];
+                    int rank = Run.Player.Powerups.Count(boon.Type) + 1;
+                    if (GUI.Button(new Rect(250, 304 + i * 72, 460, 60), $"{boon.Name} (rank {rank})\n{boon.Description}", button))
+                    {
+                        Run.ChooseUpgrade(i);
+                        break;
+                    }
+                }
             }
             else
             {

@@ -18,7 +18,7 @@ namespace Slopgame
         {
             if (!CanFire(aim)) return false;
             Fire(aim.normalized);
-            readyAt = Time.time + 0.35f;
+            readyAt = Time.time + 0.35f * Player.Powerups.AttackIntervalMultiplier;
             return true;
         }
 
@@ -28,13 +28,13 @@ namespace Slopgame
             for (int i = -1; i <= 1; i++)
                 Fire(Quaternion.Euler(0, 0, SpreadAngle * i) * aim.normalized);
             heavyReadyAt = Time.time + HeavyCooldown;
-            readyAt = Time.time + 0.35f;
+            readyAt = Time.time + 0.35f * Player.Powerups.AttackIntervalMultiplier;
             return true;
         }
 
         private void Fire(Vector2 direction)
         {
-            PlayerProjectile.Spawn(Player.Run, transform.position, direction, Player.Damage);
+            PlayerProjectile.Spawn(Player.Run, transform.position, direction, Player.Powerups.RollDamage(Player.Damage));
         }
 
         public void Hide() { } // Fired arrows belong to the floor and expire independently.

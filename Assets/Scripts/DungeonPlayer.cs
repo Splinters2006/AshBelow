@@ -20,11 +20,13 @@ namespace Slopgame
         private SwordAttack sword;
         public SwordAttack Sword => sword;
         public IPlayerWeapon Weapon { get; private set; }
+        public PlayerPowerups Powerups { get; private set; }
         private WeaponType weaponType;
         private Color characterColor;
 
         public void Initialize(CharacterDefinition character)
         {
+            Powerups = gameObject.AddComponent<PlayerPowerups>();
             MaxHealth = Health = character.StartingHealth;
             Damage = character.StartingDamage;
             Speed = character.MoveSpeed;
@@ -70,7 +72,7 @@ namespace Slopgame
             if (!Run.IsPlaying || IsRolling || Time.time < rollReady || direction.sqrMagnitude < 0.001f) return false;
             rollDirection = direction.normalized;
             rollUntil = Time.time + RollDuration;
-            rollReady = Time.time + RollCooldown;
+            rollReady = Time.time + RollCooldown * Powerups.DodgeCooldownMultiplier;
             Weapon?.Hide();
             return true;
         }
@@ -78,17 +80,20 @@ namespace Slopgame
         public void Hit()
         {
             if (!Run.IsPlaying || IsInvulnerable) return;
-            Health--;
+            if (!Powerups.AbsorbHit()) Health--;
             invulnerableUntil = Time.time + 1f;
             if (Health <= 0) Run.EndRun();
         }
 
         public void Upgrade(int choice)
         {
+            if (choice < 0 || choice >= PowerupCatalog.All.Count || !Powerups.Add((PowerupType)choice)) return;
             if (choice == 0) Damage++;
             if (choice == 1) { MaxHealth += 2; Health = MaxHealth; }
             if (choice == 2) Speed += 0.7f;
-            Health = Mathf.Min(MaxHealth, Health + 2);
+            Heal(2);
         }
+
+        public void Heal(int amount) { Health = Mathf.Min(MaxHealth, Health + amount); }
     }
 }

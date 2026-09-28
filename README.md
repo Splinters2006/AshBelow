@@ -12,7 +12,7 @@ Press **Space** to dodge in your movement direction (toward the cursor if standi
 
 Red enemies chase and deal contact damage. Orange casters keep their distance and only damage you with projectiles, never by touch. They flash white for 0.45 seconds before firing toward your position at the start of the windup. Bolts stop at walls and disappear when changing floors or restarting.
 
-Every floor must be cleared before descending. Choose damage, maximum health, or movement speed between floors. Enemies become stronger as you descend. After death, click **Begin a new run**.
+Every floor must be cleared before descending. Choose from three randomly offered boons between floors (fewer only if most boons have reached their stack caps). Every choice restores 2 HP. Enemies become stronger as you descend. After death, click **Begin a new run**.
 
 **Knight right click** starts a heavy swipe aimed toward the cursor at the moment you click. It has a **5-second cooldown**, **2.88-unit reach**, a 100-degree cone, and deals **3× normal damage** once per enemy. A gold preview shows its 0.45-second windup, followed by a 0.35-second sweep. Movement slows during the attack; dodging cancels it without refunding the cooldown. The HUD shows when it is ready again.
 
@@ -37,3 +37,9 @@ The prototype uses runtime-generated placeholder sprites and an IMGUI HUD, with 
 Knight and Archer are playable. Archer starts with **5 HP**, fires one arrow with left click, and fires **three arrows at -15°, 0°, +15°** with right click on a **6-second cooldown**. Arrows deal the current damage stat, travel up to 12 units, and stop at the first enemy or wall. Archer shares the dodge roll and upgrade system. The main menu offers character selection and Quit; use **Main menu** in the dungeon to abandon the current run and choose again. Starting a run resets upgrades and health.
 
 Character definitions are ScriptableObjects in `Assets/Resources/Characters`. Create future definitions with **Assets → Create → Slopgame → Character** and give them unique names, descriptions, colors, and starting stats. The selector discovers them automatically. New weapons and abilities still need their own gameplay implementation; select Sword or Bow on the character asset to choose its existing weapon. Both share the dodge component.
+
+## Powerups and enemy facing
+
+Both classes can gain Keen Edge (+1 damage), Vitality (+2 max HP/full heal), Fleet Foot (+0.7 speed, 5 ranks), Quick Hands (+20% base attack speed, 5 ranks), Deadeye (+10% double-damage chance, 5 ranks), Ward (block one hit per floor per rank, 3 ranks), Soul Harvest (heal 1 HP every 5/4/3 kills, 3 ranks), and Second Wind (20% shorter dodge cooldown per rank, 3 ranks). Heavy cooldowns stay at 5 seconds for Knight and 6 seconds for Archer. Boons stack for the current run; capped boons stop appearing. The HUD lists acquired boons, critical chance, and remaining ward charges.
+
+Enemies have a visible facing marker and turn at up to 180 degrees per second. Casters align before charging a shot and hold that facing during the windup. `EnemyFacing` identifies a 120-degree front sector, a 120-degree rear sector, and the sides. `DungeonEnemy.LastHitRegion` and `HitReceived` expose front/side/back hit information for future backstab abilities. Arrows use their incoming direction; melee uses the attacker's position. Rear hits currently receive no automatic bonus damage.

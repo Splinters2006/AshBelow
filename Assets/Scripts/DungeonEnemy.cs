@@ -2,6 +2,7 @@ using UnityEngine;
 
 namespace Slopgame
 {
+    [RequireComponent(typeof(EnemyFacing))]
     public sealed class DungeonEnemy : MonoBehaviour
     {
         public DungeonRun Run { get; set; }
@@ -11,6 +12,11 @@ namespace Slopgame
         private SpriteRenderer body;
         private EnemyShooter shooter;
         public bool IsRanged => shooter != null;
+        public EnemyFacing Facing { get; private set; }
+        public EnemyHitRegion LastHitRegion { get; private set; }
+        public event System.Action<EnemyHitRegion> HitReceived;
+
+        private void Awake() { Facing = GetComponent<EnemyFacing>(); }
 
         private void Start()
         {
@@ -21,13 +27,14 @@ namespace Slopgame
 
         private void Update()
         {
-            if (!Run.IsPlaying) return;
+            if (!Run.IsPlaying || Health <= 0) return;
             Vector2 position = transform.position;
             Vector2 target = Run.Player.transform.position;
             float distance = Vector2.Distance(position, target);
             bool visible = Run.HasLineOfSight(position, target);
             if (distance < 10f)
             {
+                if (!IsRanged || !shooter.IsCharging) Facing.TurnToward(target - position, Time.deltaTime);
                 Vector2 direction = visible
                     ? (target - position).normalized : Run.DirectionToPlayer(position);
                 if (IsRanged && visible)
@@ -45,12 +52,21 @@ namespace Slopgame
 
         public void Hit(int damage)
         {
+            Hit(damage, Run.Player.transform.position);
+        }
+
+        public void Hit(int damage, Vector2 source)
+        {
+            if (Health <= 0) return;
+            LastHitRegion = Facing.RegionFrom(source);
+            HitReceived?.Invoke(LastHitRegion);
             Health -= damage;
             hitUntil = Time.time + 0.15f;
             if (Health <= 0)
             {
                 Run.Enemies.Remove(this);
                 Run.Kills++;
+                Run.Player.Powerups.OnKill(Run.Player);
                 Destroy(gameObject);
                 return;
             }

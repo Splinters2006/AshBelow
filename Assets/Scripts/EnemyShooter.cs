@@ -28,10 +28,11 @@ namespace Slopgame
                 readyAt = Time.time + 1.5f;
             }
             else if (Time.time >= readyAt && offset.sqrMagnitude < 64f && offset.sqrMagnitude > 0.01f
+                && Vector2.Dot(enemy.Facing.Direction, offset.normalized) >= 0.98f
                 && enemy.Run.HasLineOfSight(transform.position, enemy.Run.Player.transform.position))
             {
                 // Lock aim before firing so the white windup gives the player time to evade.
-                lockedDirection = offset.normalized;
+                lockedDirection = enemy.Facing.Direction;
                 IsCharging = true;
                 fireAt = Time.time + 0.45f;
             }
