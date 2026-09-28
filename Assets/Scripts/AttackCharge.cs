@@ -7,7 +7,7 @@ namespace Slopgame
         public DungeonPlayer Player { get; set; }
         public bool IsCharging { get; private set; }
         private float startedAt;
-        private bool wasHeld;
+        private bool wasHeld, fullPinged;
         public float Duration => (Player.ClassWeapon == WeaponType.Bow
             ? Player.Powerups.DrawTimeMultiplier : Player.ClassWeapon == WeaponType.Hammer ? PaladinAttack.ChargeDuration
             : Player.ClassWeapon == WeaponType.Daggers ? 1.2f / 1.5f : 1.2f) * Player.Powerups.AttackIntervalMultiplier;
@@ -20,6 +20,7 @@ namespace Slopgame
             {
                 startedAt = Time.time;
                 IsCharging = true;
+                fullPinged = false;
             }
             else if (!held && IsCharging)
             {
@@ -28,6 +29,11 @@ namespace Slopgame
                 Player.Weapon.TryAttack(Player.AimDirection, charge);
             }
             wasHeld = held;
+            if (IsCharging && !fullPinged && Amount >= 1f)
+            {
+                fullPinged = true;
+                HeroVfx.Pulse(Player.transform, Player.transform.position, 0.85f, AbilityCatalog.Gold, 0.3f);
+            }
         }
 
         public int Damage(float charge)

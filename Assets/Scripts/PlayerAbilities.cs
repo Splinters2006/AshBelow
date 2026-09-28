@@ -15,7 +15,7 @@ namespace Slopgame
         public AbilityType Equipped(int slot) => slot >= 0 && slot < SlotCount ? equipped[slot] : AbilityType.None;
         public int Rank(AbilityType type) => ranks.TryGetValue(type, out int value) ? value : 0;
         public bool IsEquipped(AbilityType type) => type != AbilityType.None && (equipped[0] == type || equipped[1] == type);
-        public float CooldownRemaining(int slot) => Mathf.Max(0f, readyAt[slot] - Time.time);
+        public float CooldownRemaining(int slot) => DebugMode.Cooldown(Mathf.Max(0f, readyAt[slot] - Time.time));
         public int EmptySlot => equipped[0] == AbilityType.None ? 0 : equipped[1] == AbilityType.None ? 1 : -1;
 
         public bool Claim(AbilityType type, int slot)
@@ -93,6 +93,11 @@ namespace Slopgame
                     break;
             }
             CombatVfx.Ring(Player.Run.ProjectileRoot, transform.position, 0.65f, definition.Color);
+            if (Player.ClassWeapon != WeaponType.Shadow)
+            {
+                HeroVfx.Pulse(Player.Run.ProjectileRoot, transform.position, 1.1f, definition.Color, 0.35f);
+                HeroVfx.Sparks(Player.Run.ProjectileRoot, transform.position, definition.Color, 10, 3.5f, 0.35f);
+            }
             readyAt[slot] = Time.time + definition.Cooldown;
             castReadyAt = Time.time + 0.2f;
             return true;
@@ -101,7 +106,11 @@ namespace Slopgame
         private void ForAllies(System.Action<DungeonPlayer> action)
         {
             foreach (var ally in FindObjectsByType<DungeonPlayer>())
-                if (ally.Run == Player.Run && Vector2.Distance(transform.position, ally.transform.position) <= 4f) action(ally);
+                if (ally.Run == Player.Run && Vector2.Distance(transform.position, ally.transform.position) <= 4f)
+                {
+                    action(ally);
+                    HeroVfx.Motes(Player.Run.ProjectileRoot, ally.transform.position, 0.7f, AbilityCatalog.Gold, 14, 1f);
+                }
             CombatVfx.Ring(Player.Run.ProjectileRoot, transform.position, 4f, AbilityCatalog.Gold);
         }
 
@@ -143,6 +152,7 @@ namespace Slopgame
             CombatVfx.Bolt(Player.Run.ProjectileRoot, from, landing, color);
             CombatVfx.Ring(Player.Run.ProjectileRoot, from, 0.45f, color, 0.2f);
             CombatVfx.Ring(Player.Run.ProjectileRoot, landing, 0.6f, color, 0.3f);
+            HeroVfx.Sparks(Player.Run.ProjectileRoot, landing, color, 10, 3.2f, 0.3f);
             foreach (var enemy in Player.Run.Enemies.ToArray())
             {
                 Vector2 position = enemy.transform.position;
@@ -174,7 +184,8 @@ namespace Slopgame
                     }
             }
             Player.Protect(0.35f);
-            CombatVfx.Bolt(Player.Run.ProjectileRoot, from, transform.position, AbilityCatalog.Ice);
+            CombatVfx.GlowBolt(Player.Run.ProjectileRoot, from, transform.position, AbilityCatalog.Ice);
+            HeroVfx.Sparks(Player.Run.ProjectileRoot, transform.position, AbilityCatalog.Ice, 8, 3f, 0.3f, (Vector2)transform.position - from, 120f);
         }
 
         private bool InArea(DungeonEnemy enemy, Vector2 center, float radius) => enemy.Health > 0
@@ -184,6 +195,7 @@ namespace Slopgame
         public void AreaAttack(Vector2 center, float radius, int damage, DamageElement element, Color color, float slow = 0f)
         {
             CombatVfx.Ring(Player.Run.ProjectileRoot, center, radius, color);
+            HeroVfx.Pulse(Player.Run.ProjectileRoot, center, radius, color, 0.4f);
             foreach (var enemy in Player.Run.Enemies.ToArray())
                 if (InArea(enemy, center, radius))
                 {

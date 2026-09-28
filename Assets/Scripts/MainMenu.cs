@@ -37,6 +37,9 @@ namespace Slopgame
                     DungeonUi.Label(new Rect(102, 374, 530, 130), "Charge your attacks. Read the enemy.\nEvery fifth floor, face an arena guardian.\nTake its artifact and choose your own power.", 22, DungeonUi.Muted);
                     if (DungeonUi.Button("chooseClass", new Rect(755, 307, 420, 64), "Choose your hero", AbilityCatalog.Gold)) selecting = true;
                     if (DungeonUi.Button("shop", new Rect(755, 390, 420, 55), "Ash shop", DungeonUi.Teal)) shopping = true;
+                    if (DungeonUi.Button("debugMode", new Rect(755, 545, 420, 42),
+                        DebugMode.Enabled ? "Debug admin mode: ON  (F1)" : "Debug admin mode: OFF  (F1)",
+                        DebugMode.Enabled ? DungeonHud.DebugColor : DungeonUi.Muted)) DebugMode.Toggle();
                     if (DungeonUi.Button("quit", new Rect(755, 470, 420, 55), "Quit", DungeonUi.Muted))
                     {
 #if UNITY_EDITOR

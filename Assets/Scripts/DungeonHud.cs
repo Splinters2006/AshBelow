@@ -4,6 +4,7 @@ namespace Slopgame
 {
     public sealed class DungeonHud : MonoBehaviour
     {
+        public static readonly Color DebugColor = new Color(1f, 0.38f, 0.62f);
         public DungeonRun Run { get; set; }
         private float displayedHealth = 1f, displayedBossHealth = 1f, modalFade;
         private bool showTalents;
@@ -52,12 +53,14 @@ namespace Slopgame
             var player = Run.Player;
             DungeonUi.Panel(new Rect(24, 24, 292, 100), DungeonUi.PanelColor);
             DungeonUi.Label(new Rect(42, 37, 250, 28), Run.SelectedCharacter.DisplayName.ToUpperInvariant(), 22, Run.SelectedCharacter.Color);
-            DungeonUi.Label(new Rect(42, 73, 130, 22), $"{player.Health} / {player.MaxHealth} HP", 16);
+            DungeonUi.Label(new Rect(42, 73, 130, 22), DebugMode.Enabled ? "INFINITE HP" : $"{player.Health} / {player.MaxHealth} HP", 16, DebugMode.Enabled ? DebugColor : (Color?)null);
             DungeonUi.Label(new Rect(176, 73, 120, 22), $"WARD  {player.Powerups.ArmorCharges}", 14, DungeonUi.Muted, TextAnchor.UpperRight);
             DungeonUi.Label(new Rect(24, 135, 300, 26), $"ASH  {Run.Progress.Ash}   /   +{Run.RunAshEarned} this run", 16, AbilityCatalog.Gold);
             if (!string.IsNullOrEmpty(Run.Progress.LastError))
                 DungeonUi.Label(new Rect(24, 165, 310, 70), Run.Progress.LastError, 14, AbilityCatalog.Gold);
             DungeonUi.Bar(new Rect(42, 103, 256, 6), displayedHealth, Run.SelectedCharacter.Color);
+            if (DebugMode.Enabled)
+                DungeonUi.Label(new Rect(365, 4, 550, 22), "DEBUG ADMIN MODE  /  INVINCIBLE  ONE-HIT KILLS  NO COOLDOWNS  2X SPEED  /  F1", 12, DebugColor, TextAnchor.MiddleCenter);
             DungeonUi.Label(new Rect(405, 28, 470, 25), Run.IsBossFloor ? $"FLOOR {Run.Floor:00}  /  BOSS ARENA" : $"FLOOR {Run.Floor:00}  /  {Run.Enemies.Count} ENEMIES", 17, AbilityCatalog.Gold, TextAnchor.MiddleCenter);
             DungeonUi.Label(new Rect(365, 59, 550, 40), Run.Objective, 17, DungeonUi.Text, TextAnchor.UpperCenter);
             if (Run.Boss != null && Run.Boss.Enemy.Health > 0)

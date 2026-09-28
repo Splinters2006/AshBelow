@@ -145,6 +145,7 @@ namespace Slopgame
                 return;
             }
             Detail(hero, "Shadow", new Vector2(0.06f, -0.16f), new Vector2(1.2f, 0.85f), new Color(0.01f, 0.02f, 0.04f, 0.5f), 2);
+            HeroVfx.Aura(hero, tint);
             Detail(hero, "Face", new Vector2(0, 0.16f), new Vector2(0.65f, 0.25f), new Color(0.08f, 0.12f, 0.2f));
             Detail(hero, "Eyes", new Vector2(0.12f, 0.16f), new Vector2(0.13f, 0.08f), Color.white, 7);
             if (weapon == WeaponType.Staff)

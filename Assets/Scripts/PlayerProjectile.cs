@@ -21,6 +21,7 @@ namespace Slopgame
             arrow.remainingRange = Mathf.Max(0f, range);
             arrow.Direction = direction.normalized;
             arrow.transform.rotation = Quaternion.Euler(0, 0, Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg);
+            CombatVfx.Trail(arrow.gameObject, new Color(0.95f, 1f, 0.65f, 0.8f), 0.07f, 0.1f);
             return arrow;
         }
 
@@ -34,7 +35,12 @@ namespace Slopgame
             for (int i = 0; i < steps; i++)
             {
                 Vector2 next = (Vector2)transform.position + Direction * (distance / steps);
-                if (!run.Map.CanStand(next, 0.08f)) { Consume(); return; }
+                if (!run.Map.CanStand(next, 0.08f))
+                {
+                    HeroVfx.Sparks(run.ProjectileRoot, transform.position, new Color(0.85f, 0.85f, 0.7f), 5, 2.5f, 0.2f, -Direction, 140f, 0.7f);
+                    Consume();
+                    return;
+                }
                 transform.position = next;
                 for (int j = run.Enemies.Count - 1; j >= 0; j--)
                 {

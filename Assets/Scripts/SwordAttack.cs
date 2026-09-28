@@ -8,7 +8,7 @@ namespace Slopgame
         public const float ConeAngle = 60f;
         public bool ShowChargePreview { get; set; } = true;
         public bool IsHeavyAttacking => Player.Shield != null && Player.Shield.IsBlocking;
-        public float HeavyCooldownRemaining => Player.Shield != null ? Player.Shield.CooldownRemaining : Mathf.Max(0f, shadowReadyAt - Time.time);
+        public float HeavyCooldownRemaining => Player.Shield != null ? Player.Shield.CooldownRemaining : DebugMode.Cooldown(Mathf.Max(0f, shadowReadyAt - Time.time));
         public bool CanAttack => Player.Run.IsPlaying && !Player.IsRolling && !IsHeavyAttacking && Time.time >= readyAt;
         public DungeonPlayer Player { get; set; }
         private float readyAt, visibleUntil;
@@ -72,6 +72,7 @@ namespace Slopgame
             visibleUntil = Time.time + 0.15f;
             FaceArc(aim);
             arc.enabled = true;
+            HeroVfx.Slash(Player.Run.ProjectileRoot, transform.position, aim, reach, cone, SlashColor);
             for (int i = Player.Run.Enemies.Count - 1; i >= 0; i--)
             {
                 var enemy = Player.Run.Enemies[i];
@@ -95,6 +96,9 @@ namespace Slopgame
             shadowReadyAt = Time.time + 4f;
             return true;
         }
+
+        private Color SlashColor => Player.ClassWeapon == WeaponType.Daggers ? new Color(0.8f, 0.5f, 1f)
+            : Player.ClassWeapon == WeaponType.Hammer ? AbilityCatalog.Gold : new Color(0.5f, 1f, 0.9f);
 
         private void FaceArc(Vector2 aim)
         {

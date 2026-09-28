@@ -99,6 +99,7 @@ namespace Slopgame
         public void Hit(int damage, Vector2 source)
         {
             if (Health <= 0) return;
+            if (DebugMode.Enabled) damage = Mathf.Max(damage, Health);
             LastHitRegion = Facing.RegionFrom(source);
             HitReceived?.Invoke(LastHitRegion);
             Health -= damage;
@@ -109,6 +110,12 @@ namespace Slopgame
                 Run.Player.Powerups.OnKill(Run.Player);
                 Boss?.Defeated();
                 CombatVfx.Ring(Run.ProjectileRoot, transform.position, Boss != null ? 1.6f : 0.45f, AbilityCatalog.Gold);
+                if (Run.Player != null && Run.Player.ClassWeapon != WeaponType.Shadow)
+                {
+                    HeroVfx.Sparks(Run.ProjectileRoot, transform.position, new Color(1f, 0.62f, 0.25f), Boss != null ? 28 : 12,
+                        Boss != null ? 6f : 4.2f, Boss != null ? 0.6f : 0.4f);
+                    HeroVfx.Pulse(Run.ProjectileRoot, transform.position, Boss != null ? 2.4f : 0.8f, AbilityCatalog.Gold, Boss != null ? 0.6f : 0.3f);
+                }
                 gameObject.SetActive(false);
                 Destroy(gameObject);
                 return;

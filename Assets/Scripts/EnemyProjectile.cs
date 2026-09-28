@@ -55,6 +55,7 @@ namespace Slopgame
                     IsReflected = true;
                     reflectedDamage = run.Player.Powerups.ReflectionDamage;
                     direction = -direction;
+                    HeroVfx.Sparks(run.ProjectileRoot, next, new Color(0.55f, 0.85f, 1f), 9, 4.5f, 0.3f, direction, 100f);
                     lifetime = 4f;
                     transform.rotation = Quaternion.Euler(0, 0, Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg);
                     GetComponent<SpriteRenderer>().color = new Color(0.55f, 0.85f, 1f);

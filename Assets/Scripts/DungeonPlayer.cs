@@ -16,8 +16,9 @@ namespace Slopgame
         public Vector2 AimDirection { get; private set; } = Vector2.right;
         private const float RollDuration = 0.25f;
         public const float RollCooldown = 1.4f;
-        public float DodgeCooldownRemaining => Mathf.Max(0f, rollReady - Time.time);
+        public float DodgeCooldownRemaining => DebugMode.Cooldown(Mathf.Max(0f, rollReady - Time.time));
         public WeaponType ClassWeapon => weaponType;
+        public Vector2 RollDirection => rollDirection;
         public AttackCharge Charge { get; private set; }
         public KnightShield Shield { get; private set; }
         public PlayerAbilities Abilities { get; private set; }
@@ -55,6 +56,9 @@ namespace Slopgame
                 Shield.Player = this;
             }
             DungeonVisuals.DecorateHero(transform, weaponType, characterColor);
+            var afterimage = gameObject.AddComponent<DodgeAfterimage>();
+            afterimage.Player = this;
+            afterimage.Tint = Color.Lerp(characterColor, new Color(0.4f, 0.65f, 1f), 0.55f);
         }
 
         private void Start()
@@ -71,6 +75,7 @@ namespace Slopgame
                 var bow = gameObject.AddComponent<BowAttack>();
                 bow.Player = this;
                 Weapon = bow;
+                gameObject.AddComponent<ArrowRangeIndicator>().Player = this;
             }
             else if (weaponType == WeaponType.Staff)
             {
@@ -103,6 +108,7 @@ namespace Slopgame
             Vector2 movement = PlayerInput.Movement;
             if (PlayerInput.Dodge) TryRoll(movement.sqrMagnitude > 0 ? movement : AimDirection);
             Vector2 velocity = IsRolling ? rollDirection * Speed * 2.6f : movement * Speed * (Weapon.IsHeavyAttacking ? 0.55f : Charge.IsCharging ? 0.7f : 1f);
+            if (DebugMode.Enabled) velocity *= DebugMode.SpeedMultiplier;
             transform.position = Run.Map.Move(transform.position, velocity * Time.deltaTime);
             bool usedAbility = PlayerInput.ActiveQ && Abilities.TryUse(0, AimDirection);
             if (!usedAbility && PlayerInput.ActiveE) usedAbility = Abilities.TryUse(1, AimDirection);
@@ -112,7 +118,7 @@ namespace Slopgame
 
         public bool TryRoll(Vector2 direction)
         {
-            if (!Run.IsPlaying || IsRolling || Time.time < rollReady || direction.sqrMagnitude < 0.001f) return false;
+            if (!Run.IsPlaying || IsRolling || DodgeCooldownRemaining > 0f || direction.sqrMagnitude < 0.001f) return false;
             rollDirection = direction.normalized;
             rollUntil = Time.time + RollDuration;
             rollReady = Time.time + RollCooldown * Powerups.DodgeCooldownMultiplier;
@@ -124,7 +130,14 @@ namespace Slopgame
         public void Hit()
         {
             if (!Run.IsPlaying || IsInvulnerable) return;
-            if (!Powerups.AbsorbHit()) Health--;
+            if (DebugMode.Enabled) { Health = MaxHealth; return; }
+            bool warded = Powerups.AbsorbHit();
+            if (!warded) Health--;
+            if (Run.ProjectileRoot != null)
+            {
+                if (warded) HeroVfx.Pulse(transform, transform.position, 0.95f, AbilityCatalog.Ice, 0.3f);
+                else HeroVfx.Sparks(Run.ProjectileRoot, transform.position, new Color(1f, 0.3f, 0.3f), 10, 3.6f, 0.35f);
+            }
             invulnerableUntil = Time.time + 1f;
             if (Health <= 0) Run.EndRun();
         }

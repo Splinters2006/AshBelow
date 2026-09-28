@@ -28,9 +28,45 @@ namespace Slopgame
             return effect;
         }
 
-        public static void Bolt(Transform parent, Vector2 from, Vector2 to, Color color)
+        private static Material trailMaterial;
+
+        /// <summary>Adds a short fading trail to a moving projectile. The trail dies with its object.</summary>
+        public static TrailRenderer Trail(GameObject target, Color color, float width = 0.12f, float time = 0.14f)
         {
-            var effect = Create(parent, color, 0.22f, 0.09f);
+            if (trailMaterial == null)
+                trailMaterial = new Material(Shader.Find("Sprites/Default")) { name = "Projectile trails (shared)", hideFlags = HideFlags.HideAndDontSave };
+            var trail = target.AddComponent<TrailRenderer>();
+            trail.sharedMaterial = trailMaterial;
+            trail.time = time;
+            trail.minVertexDistance = 0.05f;
+            trail.widthMultiplier = width;
+            trail.widthCurve = AnimationCurve.Linear(0f, 1f, 1f, 0f);
+            trail.numCapVertices = 2;
+            trail.sortingOrder = 5;
+            trail.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            trail.receiveShadows = false;
+            var gradient = new Gradient();
+            gradient.SetKeys(
+                new[] { new GradientColorKey(Color.Lerp(color, Color.white, 0.5f), 0f), new GradientColorKey(color, 1f) },
+                new[] { new GradientAlphaKey(0.85f, 0f), new GradientAlphaKey(0f, 1f) });
+            trail.colorGradient = gradient;
+            return trail;
+        }
+
+        public static void Bolt(Transform parent, Vector2 from, Vector2 to, Color color) => Bolt(parent, from, to, color, 0.09f, 0.22f);
+
+        /// <summary>Lightning with a wide soft glow under a thin white-hot core.</summary>
+        public static void GlowBolt(Transform parent, Vector2 from, Vector2 to, Color color)
+        {
+            var glow = color;
+            glow.a *= 0.35f;
+            Bolt(parent, from, to, glow, 0.24f, 0.3f);
+            Bolt(parent, from, to, Color.Lerp(color, Color.white, 0.75f), 0.05f, 0.2f);
+        }
+
+        public static void Bolt(Transform parent, Vector2 from, Vector2 to, Color color, float width, float duration)
+        {
+            var effect = Create(parent, color, duration, width);
             const int count = 9;
             effect.line.positionCount = count;
             Vector2 normal = Vector2.Perpendicular((to - from).normalized);

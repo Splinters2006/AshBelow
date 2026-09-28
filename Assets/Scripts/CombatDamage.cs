@@ -18,7 +18,19 @@ namespace Slopgame
             if (enemy == null || enemy.Health <= 0) return;
             // Shadowstep emerges behind its victim, regardless of their turn during the blink.
             Vector2 source = (Vector2)enemy.transform.position - enemy.Facing.Direction;
+            HitVfx(player, enemy.transform.position, source, new Color(0.8f, 0.5f, 1f), true);
             enemy.Hit(ShadowstepDamageForRoll(player, Random.value), source);
+        }
+
+        /// <summary>Impact sparks sprayed away from the attacker; critical hits add a gold flash.</summary>
+        private static void HitVfx(DungeonPlayer player, Vector2 position, Vector2 source, Color color, bool critical)
+        {
+            // The Admin class keeps its own shadow effects.
+            if (player == null || player.ClassWeapon == WeaponType.Shadow || player.Run == null || player.Run.ProjectileRoot == null) return;
+            var root = player.Run.ProjectileRoot;
+            HeroVfx.Sparks(root, position, color, critical ? 12 : 6, critical ? 5.5f : 3.8f, critical ? 0.35f : 0.25f,
+                position - source, 120f, critical ? 1.3f : 1f);
+            if (critical) HeroVfx.Pulse(root, position, 0.7f, AbilityCatalog.Gold, 0.25f);
         }
 
         public static void Apply(DungeonPlayer player, DungeonEnemy enemy, int damage, DamageElement element, Vector2 source)
@@ -28,10 +40,14 @@ namespace Slopgame
             {
                 if (player.ClassWeapon == WeaponType.Daggers && enemy.Facing.IsBehind(source))
                     damage = damage * 2 + player.Powerups.Count(PowerupType.Backstab);
-                enemy.Hit(player.Powerups.RollDamage(damage), source);
+                int rolled = player.Powerups.RollDamage(damage);
+                HitVfx(player, enemy.transform.position, source, new Color(1f, 0.95f, 0.8f), rolled > damage);
+                enemy.Hit(rolled, source);
                 return;
             }
             // Elemental attacks roll for a status effect instead of critical damage.
+            HitVfx(player, enemy.transform.position, source, element == DamageElement.Fire ? new Color(1f, 0.55f, 0.15f)
+                : element == DamageElement.Ice ? AbilityCatalog.Ice : Color.Lerp(AbilityCatalog.Ice, Color.white, 0.5f), false);
             enemy.Hit(damage, source);
             if (element == DamageElement.Lightning) return; // WizardAttack rolls the chain's overload once per cast.
             if (enemy.Health <= 0 || Random.value >= player.Powerups.ElementalEffectChance) return;

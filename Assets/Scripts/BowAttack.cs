@@ -10,7 +10,7 @@ namespace Slopgame
         public static float RangeForCharge(float charge) => PlayerProjectile.MaxRange + ChargedRangeBonus * Mathf.Clamp01(charge);
         public DungeonPlayer Player { get; set; }
         public bool IsHeavyAttacking => false;
-        public float HeavyCooldownRemaining => Mathf.Max(0, heavyReadyAt - Time.time);
+        public float HeavyCooldownRemaining => DebugMode.Cooldown(Mathf.Max(0, heavyReadyAt - Time.time));
         private float readyAt, heavyReadyAt;
         public bool CanAttack => Player.Run.IsPlaying && !Player.IsRolling && Time.time >= readyAt;
 

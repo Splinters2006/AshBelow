@@ -29,10 +29,18 @@ namespace Slopgame
             shot.radius = radius;
             shot.pierces = pierces;
             shot.transform.rotation = Quaternion.Euler(0, 0, Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg);
+            CombatVfx.Trail(shot.gameObject, shot.GlowColor, radius > 0f ? 0.3f : 0.18f, 0.16f);
             return shot;
         }
 
-        private void Update() { Advance(Time.deltaTime); }
+        // Plain white casts use the ember sprite's own colours, so glow orange like it.
+        private Color GlowColor => color == Color.white ? new Color(1f, 0.55f, 0.18f) : color;
+
+        private void Update()
+        {
+            Advance(Time.deltaTime);
+            if (!IsSpent) transform.localScale = Vector3.one * (1f + 0.12f * Mathf.Sin(Time.time * 30f + GetInstanceID()));
+        }
 
         public void Advance(float deltaTime)
         {
@@ -61,7 +69,11 @@ namespace Slopgame
         private void Explode()
         {
             if (radius > 0f) player.Abilities.AreaAttack(transform.position, radius, damage, element, color);
-            else CombatVfx.Ring(player.Run.ProjectileRoot, transform.position, 0.25f, color, 0.18f);
+            else
+            {
+                CombatVfx.Ring(player.Run.ProjectileRoot, transform.position, 0.25f, color, 0.18f);
+                HeroVfx.Sparks(player.Run.ProjectileRoot, transform.position, GlowColor, 8, 3f, 0.28f);
+            }
             Finish();
         }
 

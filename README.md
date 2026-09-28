@@ -16,6 +16,14 @@ Every floor must be cleared before descending. Choose from three randomly offere
 
 **Knight right click** raises a shield for **0.8 seconds** with a **2.8-second cooldown**. Its blue 120-degree arc faces the cursor direction when raised. Frontal projectiles reflect back along their incoming path and deal 2 damage to the first enemy they hit. The shield does not protect against rear projectiles or melee contact. Movement slows while blocking; left-click attacks are disabled. Dodging lowers it without refunding the cooldown. The HUD shows shield and dodge cooldowns and charge progress.
 
+## Debug admin mode
+
+Press **F1** at any time (or use **Debug admin mode** on the main menu) to toggle a session-only debug mode for testing. While it is on, the player cannot lose HP, every hit kills its target outright, dodge, class-skill (RMB) and Q/E relic cooldowns are skipped, and movement speed is doubled. A pink banner at the top of the HUD shows it is active. It works with every class, resets when the game restarts, and never changes the save file.
+
+## Combat effects and aiming
+
+Every hero has a soft class-coloured ground ring, leaves tinted afterimages while dodging, and gets sweeping slash crescents, impact sparks (bigger with a gold flash on critical hits), projectile trails, glowing lightning, charge-ready pings, shield/reflect flashes, and blessing/healing motes. These effects are intentionally calmer than the Admin's shadow magic, which keeps its own effect set. Archer shows a faint aim line with an end marker at exactly where a basic arrow will land; it stretches and brightens while charging (a ghost tick marks the full-charge range) and turns red where a wall will stop the arrow.
+
 ## Windows release (primary target)
 
 Use **Slopgame → Windows → Build EXE and ZIP**. It builds Windows x64 using Mono and Direct3D 11, starting in a resizable 1280×720 window. Output goes to a new timestamped folder and ZIP under `Builds/Windows/`. Builds are excluded from Git.

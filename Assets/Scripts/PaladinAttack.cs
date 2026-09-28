@@ -46,8 +46,10 @@ namespace Slopgame
                     || Vector2.Distance(transform.position, ally.transform.position) > BlessingRadius) continue;
                 ally.Blessing.Apply(BlessingDamage, BlessingDuration + Player.Permanent.BlessingDuration);
                 CombatVfx.Ring(Player.Run.ProjectileRoot, ally.transform.position, 0.6f, AbilityCatalog.Gold);
+                HeroVfx.Motes(Player.Run.ProjectileRoot, ally.transform.position, 0.6f, AbilityCatalog.Gold, 14, 1f);
             }
             CombatVfx.Ring(Player.Run.ProjectileRoot, transform.position, BlessingRadius, AbilityCatalog.Gold, 0.6f);
+            HeroVfx.Pulse(Player.Run.ProjectileRoot, transform.position, BlessingRadius, AbilityCatalog.Gold, 0.55f);
             readyAt = Time.time + 0.6f * Player.Powerups.AttackIntervalMultiplier;
             return true;
         }

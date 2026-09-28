@@ -9,7 +9,7 @@ namespace Slopgame
         public DungeonPlayer Player { get; set; }
         private float blockingUntil, readyAt;
         public bool IsBlocking => Player.Run.IsPlaying && !Player.IsRolling && Time.time < blockingUntil;
-        public float CooldownRemaining => Mathf.Max(0f, readyAt - Time.time);
+        public float CooldownRemaining => DebugMode.Cooldown(Mathf.Max(0f, readyAt - Time.time));
         public Vector2 Direction { get; private set; }
 
         public bool Raise(Vector2 aim)
@@ -19,6 +19,7 @@ namespace Slopgame
             blockingUntil = Time.time + Duration;
             readyAt = Time.time + Cooldown;
             Player.Charge.Cancel();
+            HeroVfx.Pulse(Player.transform, Player.transform.position, 0.95f, new Color(0.4f, 0.75f, 1f), 0.25f);
             return true;
         }
 

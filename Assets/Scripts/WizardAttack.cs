@@ -9,7 +9,7 @@ namespace Slopgame
         private float readyAt, lightningReadyAt;
         public bool IsHeavyAttacking => false;
         public bool CanAttack => Player.Run.IsPlaying && !Player.IsRolling && Time.time >= readyAt;
-        public float HeavyCooldownRemaining => Mathf.Max(0f, lightningReadyAt - Time.time);
+        public float HeavyCooldownRemaining => DebugMode.Cooldown(Mathf.Max(0f, lightningReadyAt - Time.time));
         public float LightningRange => 6f + Player.Powerups.Count(PowerupType.LightningRange);
         public float JumpRange => 2.5f + Player.Powerups.Count(PowerupType.LightningRange) * 0.5f;
 
@@ -29,6 +29,7 @@ namespace Slopgame
             var target = FindTarget(origin, aim.normalized, LightningRange, struck, true);
             if (target == null) return false;
             Player.Charge.Cancel();
+            HeroVfx.Pulse(Player.Run.ProjectileRoot, origin, 0.7f, AbilityCatalog.Ice, 0.25f);
             int chains = Player.Powerups.Count(PowerupType.LightningChains);
             int count = 1 + chains;
             // Conductivity unlocks chaining; overload only extends an unlocked chain.
@@ -38,7 +39,8 @@ namespace Slopgame
             {
                 Vector2 destination = target.transform.position;
                 struck.Add(target);
-                CombatVfx.Bolt(Player.Run.ProjectileRoot, origin, destination, AbilityCatalog.Ice);
+                CombatVfx.GlowBolt(Player.Run.ProjectileRoot, origin, destination, AbilityCatalog.Ice);
+                HeroVfx.Sparks(Player.Run.ProjectileRoot, destination, Color.Lerp(AbilityCatalog.Ice, Color.white, 0.4f), 7, 4f, 0.25f);
                 CombatDamage.Apply(Player, target, Player.Damage + 1 + Player.Powerups.Count(PowerupType.LightningPower) + Player.Permanent.LightningDamage,
                     DamageElement.Lightning, origin);
                 origin = destination;

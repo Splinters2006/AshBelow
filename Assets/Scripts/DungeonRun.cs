@@ -171,6 +171,7 @@ namespace Slopgame
 
         private void Update()
         {
+            if (PlayerInput.DebugToggle) DebugMode.Toggle();
             if (Progress.HasUnsavedChanges && Time.unscaledTime >= nextSaveRetry)
             { Progress.Save(); nextSaveRetry = Time.unscaledTime + 5f; }
             if (!IsPlaying) return;

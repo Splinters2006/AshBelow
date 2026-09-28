@@ -88,6 +88,17 @@ namespace Slopgame
 #endif
             }
         }
+        public static bool DebugToggle
+        {
+            get
+            {
+#if ENABLE_INPUT_SYSTEM
+                return Keyboard.current?.f1Key.wasPressedThisFrame ?? false;
+#else
+                return Input.GetKeyDown(KeyCode.F1);
+#endif
+            }
+        }
         public static bool Interact
         {
             get
