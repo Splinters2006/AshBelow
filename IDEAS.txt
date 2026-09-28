@@ -1,6 +1,0 @@
-give the user 1 "ash" per killed enemy, and 10 cleared floor and 50 for bosses, also add a script to update from git repo/github releases, make sure ashes are not lost on update, add a shop (permanent upgrades store) on the main menu where you can buy increased max hp and other character wide upgrades but also character specific upgrades
-make assasin able to blink past obstacles, or through walls
-if shadowstep passes through an enemy, deliver a backstab that has double the crit chance, and deals the damage of a fully charged attack
-make assassin charging speed 50% faster
-make assassin charging make the cone narrower but increase its damage even more
-
