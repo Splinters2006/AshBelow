@@ -71,7 +71,20 @@ namespace Slopgame
             DungeonUi.Panel(new Rect(368, 268, 842, 312), DungeonUi.PanelColor);
             DungeonUi.Panel(new Rect(402, 302, 104, 104), new Color(character.Color.r * 0.25f, character.Color.g * 0.25f, character.Color.b * 0.25f));
             string glyph = character.Weapon == WeaponType.Shadow ? "///" : character.Weapon == WeaponType.Staff ? "*" : character.Weapon == WeaponType.Bow ? ">" : character.Weapon == WeaponType.Daggers ? "//" : "+";
-            DungeonUi.Label(new Rect(402, 302, 104, 104), glyph, 58, character.Color, TextAnchor.MiddleCenter);
+            var portrait = character.Weapon == WeaponType.Shadow ? DungeonVisuals.ShadowHeroSprite : HeroSprites.Body(character.Weapon);
+            if (portrait != null)
+            {
+                // Pixel-art portrait: tinted body layer, then the fixed-colour details on top.
+                Rect frame = new Rect(412, 312, 84, 84);
+                Color previousColor = GUI.color;
+                GUI.color = character.Color;
+                GUI.DrawTexture(frame, portrait.texture, ScaleMode.ScaleToFit, true);
+                var details = HeroSprites.Accent(character.Weapon);
+                GUI.color = Color.white;
+                if (details != null) GUI.DrawTexture(frame, details.texture, ScaleMode.ScaleToFit, true);
+                GUI.color = previousColor;
+            }
+            else DungeonUi.Label(new Rect(402, 302, 104, 104), glyph, 58, character.Color, TextAnchor.MiddleCenter);
             DungeonUi.Label(new Rect(536, 300, 630, 52), character.DisplayName, 38, character.Color);
             DungeonUi.Label(new Rect(538, 361, 610, 32), $"{character.StartingHealth + permanent.Health} HP     {character.StartingDamage + permanent.Damage} DAMAGE     {character.MoveSpeed + permanent.Speed:0.#} SPEED", 16, DungeonUi.Muted);
             DungeonUi.Label(new Rect(402, 434, 766, 80), character.Description, 20);

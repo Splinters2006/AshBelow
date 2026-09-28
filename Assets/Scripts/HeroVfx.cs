@@ -223,7 +223,7 @@ namespace Slopgame
         private void DrawAura()
         {
             float pulse = 0.75f + Mathf.Sin(age * 2.2f) * 0.25f;
-            Vector2 feet = new Vector2(0f, -0.32f);
+            Vector2 feet = new Vector2(0f, -0.43f);
             // Squashed ellipse reads as a ground ring in top-down view.
             EllipseRing(feet, 0.55f, 0.2f, 0.035f, Alpha(color, 0.35f * pulse), 36);
             EllipseDisc(feet, 0.5f, 0.17f, Alpha(color, 0.08f * pulse), 28);

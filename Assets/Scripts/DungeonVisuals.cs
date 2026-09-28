@@ -126,47 +126,43 @@ namespace Slopgame
             part.transform.localPosition = offset;
         }
 
-        public static void DecorateHero(Transform hero, WeaponType weapon, Color tint)
+        /// <summary>The Admin's shadow-sovereign sprite (tinted by the class colour).</summary>
+        public static Sprite ShadowHeroSprite => shadowHero != null ? shadowHero : shadowHero = PixelSprite("Shadow sovereign", new[]
         {
+            "...W....W....W..", "...WW..WWW..WW..", "....WWWWWWWWW...", "...WWWWWWWWWWW..",
+            "...WDDDDDDDDDW..", "...WDWWDDWWDDW..", "...WDDDDDDDDDW..", "....WDDDDDDDW...",
+            "...WWWWWWWWWWW..", "..WWWDDWWDDWWW..", ".WWWWDDWWDDWWWW.", "WWWWWDDWWDDWWWWW",
+            ".WWWWWDDDDWWWWW.", "..WWWWDDDDWWWW..", "..WWW..WW..WWW..", "...W........W..."
+        });
+
+        /// <summary>
+        /// Dresses the hero. Returns the fixed-colour detail layer for regular heroes (so it can be flipped
+        /// with the body), or null for the Admin.
+        /// </summary>
+        public static SpriteRenderer DecorateHero(Transform hero, WeaponType weapon, Color tint)
+        {
+            var body = hero.GetComponent<SpriteRenderer>();
             if (weapon == WeaponType.Shadow)
             {
-                if (shadowHero == null) shadowHero = PixelSprite("Shadow sovereign", new[]
-                {
-                    "...W....W....W..", "...WW..WWW..WW..", "....WWWWWWWWW...", "...WWWWWWWWWWW..",
-                    "...WDDDDDDDDDW..", "...WDWWDDWWDDW..", "...WDDDDDDDDDW..", "....WDDDDDDDW...",
-                    "...WWWWWWWWWWW..", "..WWWDDWWDDWWW..", ".WWWWDDWWDDWWWW.", "WWWWWDDWWDDWWWWW",
-                    ".WWWWWDDDDWWWWW.", "..WWWWDDDDWWWW..", "..WWW..WW..WWW..", "...W........W..."
-                });
-                hero.GetComponent<SpriteRenderer>().sprite = shadowHero;
+                body.sprite = ShadowHeroSprite;
                 Detail(hero, "Void mantle", new Vector2(0, -0.15f), new Vector2(1.15f, 0.72f), new Color(0.035f, 0.012f, 0.075f), 3);
                 Detail(hero, "Left soul eye", new Vector2(-0.16f, 0.12f), new Vector2(0.15f, 0.06f), AbilityCatalog.Ice, 7);
                 Detail(hero, "Right soul eye", new Vector2(0.16f, 0.12f), new Vector2(0.15f, 0.06f), AbilityCatalog.Ice, 7);
                 ShadowVfx.Aura(hero);
-                return;
+                return null;
             }
-            Detail(hero, "Shadow", new Vector2(0.06f, -0.16f), new Vector2(1.2f, 0.85f), new Color(0.01f, 0.02f, 0.04f, 0.5f), 2);
+            // A soft oval ground shadow under the feet (two overlapping bars read as an ellipse).
+            Detail(hero, "Shadow", new Vector2(0f, -0.66f), new Vector2(0.95f, 0.14f), new Color(0.01f, 0.02f, 0.04f, 0.35f), 2);
+            Detail(hero, "Shadow core", new Vector2(0f, -0.66f), new Vector2(0.65f, 0.22f), new Color(0.01f, 0.02f, 0.04f, 0.3f), 2);
             HeroVfx.Aura(hero, tint);
-            Detail(hero, "Face", new Vector2(0, 0.16f), new Vector2(0.65f, 0.25f), new Color(0.08f, 0.12f, 0.2f));
-            Detail(hero, "Eyes", new Vector2(0.12f, 0.16f), new Vector2(0.13f, 0.08f), Color.white, 7);
-            if (weapon == WeaponType.Staff)
-            {
-                Detail(hero, "Hat brim", new Vector2(0, 0.45f), new Vector2(1.35f, 0.18f), tint);
-                Detail(hero, "Hat crown", new Vector2(0, 0.68f), new Vector2(0.6f, 0.4f), tint);
-                Detail(hero, "Staff", new Vector2(0.72f, 0), new Vector2(0.12f, 1.3f), AbilityCatalog.Gold);
-                Detail(hero, "Staff crystal", new Vector2(0.72f, 0.7f), Vector2.one * 0.28f, AbilityCatalog.Ice, 7);
-            }
-            else if (weapon == WeaponType.Bow)
-            {
-                Detail(hero, "Bow", new Vector2(0.66f, 0), new Vector2(0.13f, 1.1f), AbilityCatalog.Gold);
-                Detail(hero, "Quiver", new Vector2(-0.55f, -0.05f), new Vector2(0.22f, 0.7f), new Color(0.3f, 0.22f, 0.15f));
-            }
-            else
-            {
-                Detail(hero, "Blade", new Vector2(0.65f, 0), new Vector2(0.14f, weapon == WeaponType.Daggers ? 0.7f : 1.1f), AbilityCatalog.Ice);
-                if (weapon == WeaponType.Daggers)
-                    Detail(hero, "Offhand dagger", new Vector2(-0.65f, 0), new Vector2(0.14f, 0.7f), AbilityCatalog.Ice);
-                else Detail(hero, "Shield", new Vector2(-0.55f, 0), new Vector2(0.42f, 0.75f), weapon == WeaponType.Hammer ? AbilityCatalog.Gold : AbilityCatalog.Ice);
-            }
+            if (!HeroSprites.Has(weapon)) return null;
+            body.sprite = HeroSprites.Body(weapon);
+            var details = new GameObject("Hero details").AddComponent<SpriteRenderer>();
+            details.transform.SetParent(hero, false);
+            details.sprite = HeroSprites.Accent(weapon);
+            details.color = Color.white;
+            details.sortingOrder = body.sortingOrder + 1;
+            return details;
         }
 
         public static void DecorateBoss(Transform boss)

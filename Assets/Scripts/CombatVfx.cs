@@ -35,7 +35,10 @@ namespace Slopgame
         {
             if (trailMaterial == null)
                 trailMaterial = new Material(Shader.Find("Sprites/Default")) { name = "Projectile trails (shared)", hideFlags = HideFlags.HideAndDontSave };
-            var trail = target.AddComponent<TrailRenderer>();
+            // A GameObject may hold only one Renderer, and projectiles already have a SpriteRenderer.
+            var holder = new GameObject("Trail");
+            holder.transform.SetParent(target.transform, false);
+            var trail = holder.AddComponent<TrailRenderer>();
             trail.sharedMaterial = trailMaterial;
             trail.time = time;
             trail.minVertexDistance = 0.05f;

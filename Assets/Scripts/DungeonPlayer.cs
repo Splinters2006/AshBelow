@@ -24,7 +24,8 @@ namespace Slopgame
         public PlayerAbilities Abilities { get; private set; }
         private float invulnerableUntil, rollUntil, rollReady;
         private Vector2 rollDirection;
-        private SpriteRenderer body;
+        private SpriteRenderer body, details;
+        private bool facingLeft;
         private SwordAttack sword;
         public SwordAttack Sword => sword;
         public IPlayerWeapon Weapon { get; private set; }
@@ -55,7 +56,7 @@ namespace Slopgame
                 Shield = gameObject.AddComponent<KnightShield>();
                 Shield.Player = this;
             }
-            DungeonVisuals.DecorateHero(transform, weaponType, characterColor);
+            details = DungeonVisuals.DecorateHero(transform, weaponType, characterColor);
             var afterimage = gameObject.AddComponent<DodgeAfterimage>();
             afterimage.Player = this;
             afterimage.Tint = Color.Lerp(characterColor, new Color(0.4f, 0.65f, 1f), 0.55f);
@@ -105,6 +106,7 @@ namespace Slopgame
                 PlayerInput.CursorPosition.y, -Run.View.transform.position.z));
             Vector2 aim = cursor - (Vector2)transform.position;
             if (aim.sqrMagnitude > 0.001f) AimDirection = aim.normalized;
+            FaceAim();
             Vector2 movement = PlayerInput.Movement;
             if (PlayerInput.Dodge) TryRoll(movement.sqrMagnitude > 0 ? movement : AimDirection);
             Vector2 velocity = IsRolling ? rollDirection * Speed * 2.6f : movement * Speed * (Weapon.IsHeavyAttacking ? 0.55f : Charge.IsCharging ? 0.7f : 1f);
@@ -149,6 +151,15 @@ namespace Slopgame
             if (choice == 1) { MaxHealth += 2; Health = MaxHealth; }
             if (choice == 2) Speed += 0.7f;
             Heal(2);
+        }
+
+        // Regular hero sprites face right; mirror them when aiming left (small dead zone avoids flicker).
+        private void FaceAim()
+        {
+            if (details == null) return;
+            if (AimDirection.x < -0.15f) facingLeft = true;
+            else if (AimDirection.x > 0.15f) facingLeft = false;
+            body.flipX = details.flipX = facingLeft;
         }
 
         public void Heal(int amount) { Health = Mathf.Min(MaxHealth, Health + amount); }

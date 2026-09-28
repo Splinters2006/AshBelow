@@ -43,6 +43,7 @@ namespace Slopgame
                 copy.transform.rotation = part.transform.rotation;
                 copy.transform.localScale = part.transform.lossyScale;
                 copy.sprite = part.sprite;
+                copy.flipX = part.flipX;
                 copy.sortingOrder = Mathf.Min(part.sortingOrder, body.sortingOrder) - 1;
                 var color = part == body ? tint : Color.Lerp(tint, part.color, 0.25f);
                 color.a = part == body ? tint.a : tint.a * 0.8f;
