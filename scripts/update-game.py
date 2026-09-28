@@ -16,7 +16,7 @@ import urllib.error
 import urllib.request
 import zipfile
 
-DEFAULT_REPO = "Splinters2006/slopgame"
+DEFAULT_REPO = "Splinters2006/AshBelow"
 MAX_ARCHIVE_BYTES = 2 * 1024**3
 MAX_EXTRACTED_BYTES = 8 * 1024**3
 
