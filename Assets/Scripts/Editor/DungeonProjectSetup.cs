@@ -160,7 +160,7 @@ namespace Slopgame.Editor
                     if (run.Enemies[i].Health != (i == 0 ? 9 : 10)) throw new Exception("Sword cone hit an invalid target or missed its forward target.");
                 if (!SwordAttack.ContainsTarget(new Vector2(1, 0.5f), Vector2.right)
                     || SwordAttack.ContainsTarget(new Vector2(1, 1), Vector2.right)
-                    || !SwordAttack.ContainsTarget(new Vector2(1, 1), Vector2.right, SwordAttack.HeavyReach, SwordAttack.HeavyConeAngle))
+                    || !SwordAttack.ContainsTarget(new Vector2(1, 1), Vector2.right, SwordAttack.Reach, 120f))
                     throw new Exception("Light/heavy cone boundary mismatch.");
                 var caster = run.Enemies.Find(enemy => enemy.IsRanged);
                 if (caster == null) throw new Exception("No ranged enemies spawned.");
@@ -202,53 +202,68 @@ namespace Slopgame.Editor
 
         private static bool CheckHeavyAttack(DungeonRun run)
         {
-            var sword = run.Player.Sword;
+            var player = run.Player;
+            var sword = player.Sword;
             if (heavyStage == 0)
             {
-                if (Time.timeSinceLevelLoad < 3.2f) return false;
-                Vector2 origin = (Vector2)run.Map.Centers[0] - Vector2.right;
-                run.Player.transform.position = origin;
+                if (Time.timeSinceLevelLoad < 3.2f || player.IsInvulnerable) return false;
+                Vector2 origin = run.Map.Centers[0];
+                player.transform.position = origin;
                 foreach (var enemy in run.Enemies) enemy.transform.position = (Vector2)run.Map.Centers[run.Map.Centers.Count - 1];
-                run.Enemies[0].transform.position = origin + Vector2.right * (SwordAttack.HeavyReach - 0.3f);
-                run.Enemies[1].transform.position = origin - Vector2.right;
+                run.Enemies[0].transform.position = origin + Vector2.right * 1.8f;
+                run.Enemies[1].transform.position = origin + new Vector2(1f, 1f);
                 run.Enemies[0].Health = run.Enemies[1].Health = 20;
-                if (!sword.TryHeavyAttack(Vector2.right)) throw new Exception("Heavy attack did not start.");
-                if (Mathf.Abs(sword.HeavyCooldownRemaining - 5f) > 0.02f) throw new Exception("Heavy cooldown is not five seconds.");
-                if (sword.TryAttack(Vector2.right)) throw new Exception("Light attack interrupted heavy attack.");
+                if (player.Charge.Damage(-1f) != 1 || player.Charge.Damage(0.5f) != 2 || player.Charge.Damage(10f) != 3)
+                    throw new Exception("Charge damage cap failed.");
+                if (!sword.TryAttack(Vector2.right, 1f) || run.Enemies[0].Health != 17 || run.Enemies[1].Health != 17)
+                    throw new Exception("Charged slash damage or widened cone failed.");
+                if (!sword.TryHeavyAttack(Vector2.right)) throw new Exception("Shield did not raise.");
+                if (sword.TryAttack(Vector2.right)) throw new Exception("Attacked through raised shield.");
+                var bolt = EnemyProjectile.Spawn(run, run.ProjectileRoot, origin + Vector2.right * 0.8f, Vector2.left);
+                bolt.Advance(0.01f);
+                if (!bolt.IsReflected || bolt.IsSpent) throw new Exception("Shield did not reflect frontal bolt.");
+                bolt.Advance(0.3f);
+                if (!bolt.IsSpent || run.Enemies[0].Health != 15) throw new Exception("Reflected bolt did not damage enemy exactly once.");
+                int health = player.Health;
+                var rear = EnemyProjectile.Spawn(run, run.ProjectileRoot, origin - Vector2.right * 0.3f, Vector2.right);
+                rear.Advance(0.01f);
+                if (rear.IsReflected || !rear.IsSpent || player.Health != health - 1)
+                    throw new Exception("Shield incorrectly protected player's rear.");
                 heavyStarted = Time.time;
                 heavyStage = 1;
                 return false;
             }
-            float elapsed = Time.time - heavyStarted;
             if (heavyStage == 1)
             {
-                if (elapsed < 0.2f) return false;
-                if (run.Enemies[0].Health != 20) throw new Exception("Heavy attack damaged during windup.");
+                if (Time.time - heavyStarted < 0.9f) return false;
+                if (sword.IsHeavyAttacking || sword.TryHeavyAttack(Vector2.right))
+                    throw new Exception("Shield duration or cooldown failed.");
+                if (Mathf.Abs(sword.ChargedCone(10f) - 120f) > 0.01f) throw new Exception("Charged cone cap failed.");
+                player.Upgrade((int)PowerupType.SweepingEdge);
+                player.Upgrade((int)PowerupType.SweepingEdge);
+                player.Upgrade((int)PowerupType.SweepingEdge);
+                if (sword.ChargedCone(1f) != 150f || player.Powerups.CanTake(PowerupType.SweepingEdge))
+                    throw new Exception("Knight cone talent/cap failed.");
+                if (player.Powerups.Add(PowerupType.QuickDraw)) throw new Exception("Knight accepted archer talent.");
                 heavyStage = 2;
             }
             if (heavyStage == 2)
             {
-                if (elapsed < 1.1f) return false;
-                if (run.Enemies[0].Health != 17 || run.Enemies[1].Health != 20)
-                    throw new Exception("Heavy range, damage, direction, or single-hit behavior failed.");
-                if (sword.TryHeavyAttack(Vector2.right)) throw new Exception("Heavy cooldown was bypassed.");
-                heavyStage = 3;
-            }
-            if (heavyStage == 3)
-            {
-                if (elapsed < 5.05f) return false;
-                if (!sword.TryHeavyAttack(Vector2.right)) throw new Exception("Heavy cooldown did not expire.");
-                if (!run.Player.TryRoll(Vector2.left) || sword.IsHeavyAttacking) throw new Exception("Dodge did not cancel heavy attack.");
-                if (sword.HeavyCooldownRemaining < 4.9f) throw new Exception("Cancelled heavy refunded cooldown.");
+                if (Time.time - heavyStarted < KnightShield.Cooldown + 0.05f) return false;
+                if (!sword.TryHeavyAttack(Vector2.right)) throw new Exception("Shield cooldown did not expire.");
+                if (!player.TryRoll(Vector2.left) || sword.IsHeavyAttacking) throw new Exception("Dodge did not cancel shield.");
+                if (sword.HeavyCooldownRemaining < 2.7f) throw new Exception("Cancel refunded shield cooldown.");
                 heavyStarted = Time.time;
-                heavyStage = 4;
+                heavyStage = 3;
                 return false;
             }
-            if (Time.time - heavyStarted < 1f) return false;
-            if (run.Enemies[0].Health != 17) throw new Exception("Cancelled heavy dealt delayed damage.");
+            if (Time.time - heavyStarted < 1.5f) return false;
+            player.Charge.Tick(true, true);
+            if (!player.Charge.IsCharging) throw new Exception("Held attack did not begin charging.");
+            if (!player.TryRoll(Vector2.left) || player.Charge.IsCharging) throw new Exception("Dodge did not cancel charge.");
+            player.Charge.Tick(false, false);
             return true;
         }
-
         private static bool CheckArcher(DungeonRun run)
         {
             var bow = run.Player.Weapon as BowAttack;
@@ -267,15 +282,16 @@ namespace Slopgame.Editor
                 var target = run.Enemies[0];
                 target.Health = 20;
                 target.transform.position = run.Player.transform.position + Vector3.right;
-                if (!bow.TryAttack(Vector2.right)) throw new Exception("Archer base attack failed.");
+                if (!bow.TryAttack(Vector2.right, 1f)) throw new Exception("Archer charged attack failed.");
                 var arrows = UnityEngine.Object.FindObjectsByType<PlayerProjectile>(FindObjectsSortMode.None);
                 if (arrows.Length != 1) throw new Exception("Base attack must fire one arrow.");
                 arrows[0].Advance(0.12f);
-                if (target.Health != 19 || !arrows[0].IsSpent || run.Player.Health != 5)
+                if (target.Health != 17 || !arrows[0].IsSpent || run.Player.Health != 5)
                     throw new Exception("Arrow collision/damage failed.");
                 var wall = PlayerProjectile.Spawn(run, new Vector2(-1, -1), Vector2.right, 1);
                 wall.Advance(0.1f);
                 if (!wall.IsSpent) throw new Exception("Arrow passed through a wall.");
+                CheckArrowRange(run);
                 archerStarted = Time.time;
                 archerStage = 1;
                 return false;
@@ -327,6 +343,18 @@ namespace Slopgame.Editor
             run.Restart();
             var player = run.Player;
             var powers = player.Powerups;
+            if (powers.Add(PowerupType.Riposte)) throw new Exception("Archer accepted knight talent.");
+            for (int i = 0; i < 3; i++)
+            {
+                powers.Add(PowerupType.QuickDraw);
+                powers.Add(PowerupType.Bodkin);
+            }
+            if (Mathf.Abs(player.Charge.Duration - 0.7f) > 0.001f || player.Charge.Damage(10f) != 4
+                || powers.CanTake(PowerupType.Bodkin) || powers.CanTake(PowerupType.QuickDraw))
+                throw new Exception("Archer talents or charge cap failed.");
+            for (int floor = 1; floor <= 8; floor++)
+                if (DungeonRun.EnemyHealthForFloor(floor) != (floor <= 3 ? 2 : floor - 1))
+                    throw new Exception("Enemy HP scaling after floor three failed.");
             foreach (var type in new[] { PowerupType.AttackSpeed, PowerupType.CriticalHits, PowerupType.Armor, PowerupType.DodgeRecovery })
             {
                 int cap = PowerupCatalog.Get(type).MaxStacks;
@@ -334,7 +362,7 @@ namespace Slopgame.Editor
                 if (powers.Count(type) != cap || powers.CanTake(type)) throw new Exception("Powerup stacking cap failed.");
             }
             if (Mathf.Abs(powers.AttackIntervalMultiplier - 0.5f) > 0.001f
-                || Mathf.Abs(powers.DodgeCooldownMultiplier - 0.4f) > 0.001f)
+                || Mathf.Abs(powers.DodgeCooldownMultiplier - 0.7f) > 0.001f)
                 throw new Exception("Attack/dodge powerup scaling failed.");
             if (powers.DamageForRoll(3, 0.49f) != 6 || powers.DamageForRoll(3, 0.5f) != 3)
                 throw new Exception("Critical damage calculation failed.");
@@ -378,12 +406,43 @@ namespace Slopgame.Editor
             if (run.UpgradeChoices.Count != 3) throw new Exception("Missing powerup offers.");
             foreach (var choice in run.UpgradeChoices)
                 if (!seen.Add(choice.Type) || !powers.CanTake(choice.Type)) throw new Exception("Duplicate or capped boon offered.");
+            if (!seen.Contains(PowerupType.QuickDraw) && !seen.Contains(PowerupType.Bodkin))
+                throw new Exception("Upgrade offers missing available class talent.");
             var selected = run.UpgradeChoices[0].Type;
             int previous = powers.Count(selected);
             run.ChooseUpgrade(0);
             if (run.Floor != 2 || powers.Count(selected) != previous + 1) throw new Exception("Chosen powerup was not applied.");
             run.ChooseUpgrade(0);
             if (run.Floor != 2) throw new Exception("Upgrade accepted outside the selection screen.");
+        }
+
+        private static void CheckArrowRange(DungeonRun run)
+        {
+            for (int y = 1; y < DungeonMap.Height - 1; y++)
+                for (int x = 1; x < DungeonMap.Width - 7; x++)
+                {
+                    var origin = new Vector2(x, y);
+                    bool clear = true;
+                    for (int step = 0; step <= 60; step++)
+                        if (!run.Map.CanStand(origin + Vector2.right * (step * 0.1f), 0.08f)) { clear = false; break; }
+                    if (!clear) continue;
+                    var positions = new List<Vector3>();
+                    foreach (var enemy in run.Enemies)
+                    {
+                        positions.Add(enemy.transform.position);
+                        enemy.transform.position = new Vector3(-10, -10, 0);
+                    }
+                    var arrow = PlayerProjectile.Spawn(run, origin, Vector2.right, 1);
+                    arrow.Advance(0.4f);
+                    if (arrow.IsSpent || Vector2.Distance(origin, arrow.transform.position) > 4.81f)
+                        throw new Exception("Arrow expired early or moved too far.");
+                    arrow.Advance(0.1f);
+                    if (!arrow.IsSpent || Mathf.Abs(Vector2.Distance(origin, arrow.transform.position) - 5f) > 0.01f)
+                        throw new Exception("Arrow did not stop at five units.");
+                    for (int i = 0; i < positions.Count; i++) run.Enemies[i].transform.position = positions[i];
+                    return;
+                }
+            throw new Exception("No clear corridor found for arrow range test.");
         }
 
         public static void EnsureCharacterAssets()
@@ -399,7 +458,7 @@ namespace Slopgame.Editor
                 var archer = ScriptableObject.CreateInstance<CharacterDefinition>();
                 var serialized = new SerializedObject(archer);
                 serialized.FindProperty("displayName").stringValue = "Archer";
-                serialized.FindProperty("description").stringValue = "A nimble ranged delver with 5 HP. Fire precise arrows or unleash a three-arrow cone spread every six seconds.";
+                serialized.FindProperty("description").stringValue = "A close-range archer with 5 HP. Charge powerful arrows or fire a three-arrow spread. Arrows travel up to 5 units.";
                 serialized.FindProperty("startingHealth").intValue = 5;
                 serialized.FindProperty("color").colorValue = new Color(0.65f, 0.85f, 0.35f);
                 serialized.FindProperty("weapon").enumValueIndex = (int)WeaponType.Bow;

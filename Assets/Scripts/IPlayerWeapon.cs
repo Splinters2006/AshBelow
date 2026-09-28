@@ -6,7 +6,8 @@ namespace Slopgame
     {
         bool IsHeavyAttacking { get; }
         float HeavyCooldownRemaining { get; }
-        bool TryAttack(Vector2 aim);
+        bool CanAttack { get; }
+        bool TryAttack(Vector2 aim, float charge = 0f);
         bool TryHeavyAttack(Vector2 aim);
         void Hide();
     }

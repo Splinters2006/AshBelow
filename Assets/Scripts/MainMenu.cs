@@ -65,7 +65,7 @@ namespace Slopgame
                 GUI.Label(new Rect(465, 225, 420, 50), selected.DisplayName, heading);
                 GUI.Label(new Rect(465, 278, 420, 45), $"Health {selected.StartingHealth}    Damage {selected.StartingDamage}    Speed {selected.MoveSpeed:0.#}", text);
                 GUI.Label(new Rect(390, 340, 495, 95), selected.Description, text);
-                GUI.Label(new Rect(390, 440, 495, 45), selected.Weapon == WeaponType.Bow ? "Left: arrow  |  Right: triple shot (6s)" : "Left: slash  |  Right: heavy swipe (5s)", text);
+                GUI.Label(new Rect(390, 440, 495, 55), selected.Weapon == WeaponType.Bow ? "Hold left: charge arrow (5-unit range)\nRight: triple shot (6s)" : "Hold left: charge a wider slash\nRight: reflect shield (2.8s)", text);
                 if (GUI.Button(new Rect(50, 530, 220, 60), "Back", button)) selecting = false;
                 if (GUI.Button(new Rect(570, 530, 340, 60), "Begin run", button)) Run.Restart();
             }

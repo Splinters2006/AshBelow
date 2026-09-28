@@ -1,0 +1,31 @@
+# Unity regenerates these local caches and temporary files.
+/[Ll]ibrary/
+/[Tt]emp/
+/[Oo]bj/
+/[Ll]ogs/
+/[Uu]ser[Ss]ettings/
+/[Mm]emoryCaptures/
+/[Rr]ecordings/
+
+# Build outputs.
+/[Bb]uild/
+/[Bb]uilds/
+
+# IDE files generated from the Unity project.
+/.vs/
+/.idea/
+/*.csproj
+/*.sln
+/*.slnx
+/*.suo
+/*.user
+/*.userprefs
+/*.pidb
+/*.booproj
+/*.opendb
+/*.VC.db
+
+# Operating-system metadata.
+.DS_Store
+Thumbs.db
+Desktop.ini

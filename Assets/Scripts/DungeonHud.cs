@@ -26,10 +26,21 @@ namespace Slopgame
                 ? "Find the gold stairs. Press E to descend."
                 : "Clear the floor to unlock the stairs.", text);
             GUI.Label(new Rect(510, 75, 425, 125), $"Ward: {Run.Player.Powerups.ArmorCharges}    Crit: {Run.Player.Powerups.CritChance:P0}\n{Run.Player.Powerups.Summary}", text);
-            GUI.Box(new Rect(12, 560, 930, 68), GUIContent.none);
+            GUI.Box(new Rect(12, 532, 930, 96), GUIContent.none);
             string heavyStatus = Run.Player.Weapon == null || Run.Player.Weapon.HeavyCooldownRemaining <= 0
                 ? "READY" : $"{Run.Player.Weapon.HeavyCooldownRemaining:0.0}s";
-            GUI.Label(new Rect(28, 568, 900, 52), $"WASD / Arrows: move    Mouse: aim    Left click: attack    Space: dodge    E: descend\nRight click: heavy attack [{heavyStatus}]    Orange casters flash white before shooting.", text);
+            string special = Run.Player.ClassWeapon == WeaponType.Sword ? "Shield / reflect" : "Triple shot";
+            string dodge = Run.Player.DodgeCooldownRemaining <= 0f ? "READY" : $"{Run.Player.DodgeCooldownRemaining:0.0}s";
+            string charge = Run.Player.Charge.IsCharging ? $"Charge: {Run.Player.Charge.Amount:P0}  Damage: {Run.Player.Charge.Damage(Run.Player.Charge.Amount)}" : "Hold left click to charge; release to attack";
+            GUI.Label(new Rect(28, 540, 900, 78), $"WASD: move    Mouse: aim    Space: dodge [{dodge}]    E: descend\n{charge}\nRight click: {special} [{heavyStatus}]", text);
+            if (Run.Player.Charge.IsCharging)
+            {
+                GUI.Box(new Rect(330, 502, 300, 18), GUIContent.none);
+                Color previousColor = GUI.color;
+                GUI.color = Run.Player.Charge.Amount >= 1f ? new Color(1f, 0.8f, 0.25f) : new Color(0.4f, 1f, 0.85f);
+                GUI.DrawTexture(new Rect(333, 505, 294 * Run.Player.Charge.Amount, 12), Texture2D.whiteTexture);
+                GUI.color = previousColor;
+            }
             if (Run.IsPlaying) return;
             GUI.Box(new Rect(220, 170, 520, 385), GUIContent.none);
             if (Run.ChoosingUpgrade)

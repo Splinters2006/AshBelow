@@ -7,12 +7,17 @@ namespace Slopgame
     {
         private readonly Dictionary<PowerupType, int> stacks = new Dictionary<PowerupType, int>();
         private int harvestKills;
+        public WeaponType ClassWeapon { get; set; }
+        public float DrawTimeMultiplier => 1f - 0.15f * Count(PowerupType.QuickDraw);
+        public float ArrowChargeMultiplier => 3f + 0.5f * Count(PowerupType.Bodkin);
+        public int ReflectionDamage => 2 + Count(PowerupType.Riposte);
         public int ArmorCharges { get; private set; }
         public float AttackIntervalMultiplier => 1f / (1f + 0.2f * Count(PowerupType.AttackSpeed));
         public float CritChance => Count(PowerupType.CriticalHits) * 0.1f;
-        public float DodgeCooldownMultiplier => 1f - 0.2f * Count(PowerupType.DodgeRecovery);
+        public float DodgeCooldownMultiplier => 1f - 0.1f * Count(PowerupType.DodgeRecovery);
         public int Count(PowerupType type) => stacks.TryGetValue(type, out int count) ? count : 0;
-        public bool CanTake(PowerupType type) => Count(type) < PowerupCatalog.Get(type).MaxStacks;
+        public bool CanTake(PowerupType type) => Count(type) < PowerupCatalog.Get(type).MaxStacks
+            && (!PowerupCatalog.Get(type).ClassWeapon.HasValue || PowerupCatalog.Get(type).ClassWeapon == ClassWeapon);
 
         public bool Add(PowerupType type)
         {

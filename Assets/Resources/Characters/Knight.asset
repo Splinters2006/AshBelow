@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Knight
   m_EditorClassIdentifier: Assembly-CSharp::Slopgame.CharacterDefinition
   displayName: Knight
-  description: A sword-wielding delver. Precise slashes, powerful sweeping strikes, and a quick dodge roll.
+  description: A sword-and-shield delver. Charge wide slashes and reflect incoming bolts with a timed directional shield.
   color: {r: 0.35, g: 0.95, b: 0.8, a: 1}
   startingHealth: 6
   startingDamage: 1

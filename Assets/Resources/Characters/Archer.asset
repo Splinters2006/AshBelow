@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Archer
   m_EditorClassIdentifier: Assembly-CSharp::Slopgame.CharacterDefinition
   displayName: Archer
-  description: A nimble ranged delver with 5 HP. Fire precise arrows or unleash a three-arrow cone spread every six seconds.
+  description: A close-range archer with 5 HP. Charge powerful arrows or fire a three-arrow spread. Arrows travel up to 5 units.
   color: {r: 0.65, g: 0.85, b: 0.35, a: 1}
   startingHealth: 5
   startingDamage: 1

@@ -6,7 +6,9 @@ namespace Slopgame
     {
         private DungeonRun run;
         private int damage;
-        private float remainingRange = 12f;
+        public const float MaxRange = 5f;
+        private float remainingRange = MaxRange;
+        public float RemainingRange => remainingRange;
         public Vector2 Direction { get; private set; }
         public bool IsSpent { get; private set; }
 

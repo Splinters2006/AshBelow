@@ -1,5 +1,4 @@
 using UnityEngine;
-using System.Collections.Generic;
 
 namespace Slopgame
 {
@@ -7,18 +6,11 @@ namespace Slopgame
     {
         public const float Reach = 2.3f;
         public const float ConeAngle = 60f;
-        public const float HeavyReach = 2.88f;
-        public const float HeavyConeAngle = 100f;
-        public const float HeavyCooldown = 5f;
-        public const float HeavyWindup = 0.45f;
-        public const float HeavySweepDuration = 0.35f;
-        public bool IsHeavyAttacking { get; private set; }
-        public float HeavyCooldownRemaining => Mathf.Max(0, heavyReadyAt - Time.time);
+        public bool IsHeavyAttacking => Player.Shield.IsBlocking;
+        public float HeavyCooldownRemaining => Player.Shield.CooldownRemaining;
+        public bool CanAttack => Player.Run.IsPlaying && !Player.IsRolling && !IsHeavyAttacking && Time.time >= readyAt;
         public DungeonPlayer Player { get; set; }
         private float readyAt, visibleUntil;
-        private float heavyReadyAt, heavyStartedAt;
-        private Vector2 heavyAim;
-        private readonly HashSet<DungeonEnemy> heavyHits = new HashSet<DungeonEnemy>();
         private MeshRenderer arc;
         private Mesh mesh;
         private Material material;
@@ -59,51 +51,46 @@ namespace Slopgame
                 (offset.sqrMagnitude < 0.0001f || Vector2.Dot(offset.normalized, aim.normalized) >= Mathf.Cos(coneAngle * 0.5f * Mathf.Deg2Rad));
         }
 
-        public bool TryAttack(Vector2 aim)
+        public float ChargedCone(float charge) => Mathf.Lerp(ConeAngle,
+            120f + Player.Powerups.Count(PowerupType.SweepingEdge) * 15f, Mathf.Clamp01(charge));
+
+        public bool TryAttack(Vector2 aim, float charge = 0f)
         {
-            if (!Player.Run.IsPlaying || Player.IsRolling || IsHeavyAttacking || Time.time < readyAt || aim.sqrMagnitude < 0.001f) return false;
-            SetArc(Reach, 1f, false);
+            if (!CanAttack || aim.sqrMagnitude < 0.001f) return false;
+            float cone = ChargedCone(charge);
+            SetArc(Reach, cone, new Color(0.4f, 1f, 0.85f, 0.45f));
             readyAt = Time.time + 0.42f * Player.Powerups.AttackIntervalMultiplier;
-            visibleUntil = Time.time + 0.12f;
-            arc.transform.rotation = Quaternion.Euler(0, 0, Mathf.Atan2(aim.y, aim.x) * Mathf.Rad2Deg);
+            visibleUntil = Time.time + 0.15f;
+            FaceArc(aim);
             arc.enabled = true;
+            int damage = Player.Charge.Damage(charge);
             for (int i = Player.Run.Enemies.Count - 1; i >= 0; i--)
             {
                 var enemy = Player.Run.Enemies[i];
-                if (ContainsTarget(enemy.transform.position - transform.position, aim)
-                    && Player.Run.HasLineOfSight(transform.position, enemy.transform.position)) enemy.Hit(Player.Powerups.RollDamage(Player.Damage));
+                if (ContainsTarget(enemy.transform.position - transform.position, aim, Reach, cone)
+                    && Player.Run.HasLineOfSight(transform.position, enemy.transform.position))
+                    enemy.Hit(Player.Powerups.RollDamage(damage));
             }
             return true;
         }
 
-        public bool TryHeavyAttack(Vector2 aim)
+        public bool TryHeavyAttack(Vector2 aim) => Player.Shield.Raise(aim);
+
+        private void FaceArc(Vector2 aim)
         {
-            if (!Player.Run.IsPlaying || Player.IsRolling || IsHeavyAttacking || Time.time < readyAt
-                || HeavyCooldownRemaining > 0 || aim.sqrMagnitude < 0.001f) return false;
-            heavyAim = aim.normalized;
-            heavyStartedAt = Time.time;
-            heavyReadyAt = Time.time + HeavyCooldown;
-            readyAt = Time.time + HeavyWindup + HeavySweepDuration + 0.2f;
-            IsHeavyAttacking = true;
-            heavyHits.Clear();
             arc.transform.rotation = Quaternion.Euler(0, 0, Mathf.Atan2(aim.y, aim.x) * Mathf.Rad2Deg);
-            SetArc(HeavyReach, 1f, true, 0.12f);
-            arc.enabled = true;
-            return true;
         }
 
-        private void SetArc(float reach, float sweep, bool heavy, float alpha = 0.35f)
+        private void SetArc(float reach, float coneAngle, Color color)
         {
             var vertices = mesh.vertices;
             var colors = mesh.colors;
             int segments = vertices.Length - 2;
-            float coneAngle = heavy ? HeavyConeAngle : ConeAngle;
             for (int i = 0; i <= segments; i++)
             {
-                float angle = (-coneAngle / 2 + coneAngle * sweep * i / segments) * Mathf.Deg2Rad;
+                float angle = (-coneAngle / 2 + coneAngle * i / segments) * Mathf.Deg2Rad;
                 vertices[i + 1] = new Vector3(Mathf.Cos(angle), Mathf.Sin(angle)) * reach;
             }
-            Color color = heavy ? new Color(1f, 0.65f, 0.2f, alpha) : new Color(0.4f, 1f, 0.85f, alpha);
             for (int i = 0; i < colors.Length; i++) colors[i] = color;
             mesh.vertices = vertices;
             mesh.colors = colors;
@@ -113,8 +100,8 @@ namespace Slopgame
         public void Hide()
         {
             visibleUntil = 0;
-            IsHeavyAttacking = false;
-            heavyHits.Clear();
+            Player.Charge.Cancel();
+            Player.Shield.Cancel();
             if (arc != null) arc.enabled = false;
         }
 
@@ -123,25 +110,16 @@ namespace Slopgame
             if (!Player.Run.IsPlaying || Player.IsRolling) { Hide(); return; }
             if (IsHeavyAttacking)
             {
-                float elapsed = Time.time - heavyStartedAt;
-                if (elapsed < HeavyWindup) return;
-                float sweep = Mathf.Clamp01((elapsed - HeavyWindup) / HeavySweepDuration);
-                SetArc(HeavyReach, sweep, true, 0.5f);
-                for (int i = Player.Run.Enemies.Count - 1; i >= 0; i--)
-                {
-                    var enemy = Player.Run.Enemies[i];
-                    Vector2 offset = enemy.transform.position - transform.position;
-                    if (!heavyHits.Contains(enemy) && ContainsTarget(offset, heavyAim, HeavyReach, HeavyConeAngle)
-                        && Vector2.SignedAngle(heavyAim, offset) <= -HeavyConeAngle / 2 + HeavyConeAngle * sweep
-                        && Player.Run.HasLineOfSight(transform.position, enemy.transform.position))
-                    {
-                        heavyHits.Add(enemy);
-                        enemy.Hit(Player.Powerups.RollDamage(Player.Damage * 3));
-                    }
-                }
-                if (sweep >= 1f) { IsHeavyAttacking = false; visibleUntil = Time.time + 0.1f; }
+                FaceArc(Player.Shield.Direction);
+                SetArc(0.9f, 120f, new Color(0.4f, 0.75f, 1f, 0.65f));
             }
-            arc.enabled = IsHeavyAttacking || Time.time < visibleUntil;
+            else if (Player.Charge.IsCharging)
+            {
+                FaceArc(Player.AimDirection);
+                SetArc(Reach, ChargedCone(Player.Charge.Amount),
+                    Color.Lerp(new Color(0.4f, 1f, 0.85f, 0.12f), new Color(1f, 0.8f, 0.25f, 0.3f), Player.Charge.Amount));
+            }
+            arc.enabled = IsHeavyAttacking || Player.Charge.IsCharging || Time.time < visibleUntil;
         }
         private void OnDestroy() { if (mesh != null) Destroy(mesh); if (material != null) Destroy(material); }
     }

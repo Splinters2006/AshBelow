@@ -13,7 +13,11 @@ namespace Slopgame
         public bool IsInvulnerable => Time.time < invulnerableUntil || IsRolling;
         public Vector2 AimDirection { get; private set; } = Vector2.right;
         private const float RollDuration = 0.25f;
-        private const float RollCooldown = 0.8f;
+        public const float RollCooldown = 1.4f;
+        public float DodgeCooldownRemaining => Mathf.Max(0f, rollReady - Time.time);
+        public WeaponType ClassWeapon => weaponType;
+        public AttackCharge Charge { get; private set; }
+        public KnightShield Shield { get; private set; }
         private float invulnerableUntil, rollUntil, rollReady;
         private Vector2 rollDirection;
         private SpriteRenderer body;
@@ -32,6 +36,14 @@ namespace Slopgame
             Speed = character.MoveSpeed;
             characterColor = character.Color;
             weaponType = character.Weapon;
+            Powerups.ClassWeapon = weaponType;
+            Charge = gameObject.AddComponent<AttackCharge>();
+            Charge.Player = this;
+            if (weaponType == WeaponType.Sword)
+            {
+                Shield = gameObject.AddComponent<KnightShield>();
+                Shield.Player = this;
+            }
         }
 
         private void Start()
@@ -54,17 +66,17 @@ namespace Slopgame
         private void Update()
         {
             body.color = IsRolling ? new Color(0.4f, 0.65f, 1f) : IsInvulnerable ? Color.white : characterColor;
-            if (!Run.IsPlaying) return;
+            if (!Run.IsPlaying) { Charge.Tick(PlayerInput.Attack, false); return; }
             Vector2 cursor = Run.View.ScreenToWorldPoint(new Vector3(PlayerInput.CursorPosition.x,
                 PlayerInput.CursorPosition.y, -Run.View.transform.position.z));
             Vector2 aim = cursor - (Vector2)transform.position;
             if (aim.sqrMagnitude > 0.001f) AimDirection = aim.normalized;
             Vector2 movement = PlayerInput.Movement;
             if (PlayerInput.Dodge) TryRoll(movement.sqrMagnitude > 0 ? movement : AimDirection);
-            Vector2 velocity = IsRolling ? rollDirection * Speed * 2.6f : movement * Speed * (Weapon.IsHeavyAttacking ? 0.55f : 1f);
+            Vector2 velocity = IsRolling ? rollDirection * Speed * 2.6f : movement * Speed * (Weapon.IsHeavyAttacking ? 0.55f : Charge.IsCharging ? 0.7f : 1f);
             transform.position = Run.Map.Move(transform.position, velocity * Time.deltaTime);
             if (PlayerInput.HeavyAttack && !IsRolling) Weapon.TryHeavyAttack(AimDirection);
-            else if (PlayerInput.Attack && !IsRolling) Weapon.TryAttack(AimDirection);
+            Charge.Tick(PlayerInput.Attack, !IsRolling && !Weapon.IsHeavyAttacking && !PlayerInput.HeavyAttack);
         }
 
         public bool TryRoll(Vector2 direction)
@@ -74,6 +86,7 @@ namespace Slopgame
             rollUntil = Time.time + RollDuration;
             rollReady = Time.time + RollCooldown * Powerups.DodgeCooldownMultiplier;
             Weapon?.Hide();
+            Charge.Cancel();
             return true;
         }
 

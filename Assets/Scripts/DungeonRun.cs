@@ -107,7 +107,7 @@ namespace Slopgame
                     var enemy = DungeonVisuals.Create("Ashling", level, position, Vector2.one * 0.6f,
                         new Color(1f, 0.35f, 0.4f), 3).gameObject.AddComponent<DungeonEnemy>();
                     enemy.Run = this;
-                    enemy.Health = 2 + (Floor - 1) / 2;
+                    enemy.Health = EnemyHealthForFloor(Floor);
                     enemy.Speed = Mathf.Min(3.6f, 1.8f + Floor * 0.12f);
                     if (i == 1) enemy.gameObject.AddComponent<EnemyShooter>();
                     Enemies.Add(enemy);
@@ -138,7 +138,8 @@ namespace Slopgame
             view.transform.position = Vector3.Lerp(view.transform.position, target, 1 - Mathf.Exp(-10 * Time.deltaTime));
         }
 
-        public void EndRun() { IsPlaying = false; }
+        public static int EnemyHealthForFloor(int floor) => 2 + Mathf.Max(0, floor - 3);
+        public void EndRun() { IsPlaying = false; Player.Weapon?.Hide(); }
         public void BeginUpgradeChoice()
         {
             if (!IsPlaying || Enemies.Count != 0) return;
@@ -147,6 +148,13 @@ namespace Slopgame
                 if (Player.Powerups.CanTake(powerup.Type)) pool.Add(powerup);
             upgradeChoices.Clear();
             var random = new System.Random(Seed + Floor * 3571);
+            var talents = pool.FindAll(powerup => powerup.ClassWeapon.HasValue);
+            if (talents.Count > 0)
+            {
+                var talent = talents[random.Next(talents.Count)];
+                upgradeChoices.Add(talent);
+                pool.Remove(talent);
+            }
             while (upgradeChoices.Count < 3 && pool.Count > 0)
             {
                 int index = random.Next(pool.Count);
@@ -154,6 +162,7 @@ namespace Slopgame
                 pool.RemoveAt(index);
             }
             IsPlaying = false;
+            Player.Weapon?.Hide();
             ChoosingUpgrade = true;
         }
 
