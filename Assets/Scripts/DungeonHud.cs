@@ -26,16 +26,16 @@ namespace Slopgame
                 ? "Find the gold stairs. Press E to descend."
                 : "Clear the floor to unlock the stairs.", text);
             GUI.Box(new Rect(12, 560, 930, 68), GUIContent.none);
-            string heavyStatus = Run.Player.Sword == null || Run.Player.Sword.HeavyCooldownRemaining <= 0
-                ? "READY" : $"{Run.Player.Sword.HeavyCooldownRemaining:0.0}s";
-            GUI.Label(new Rect(28, 568, 900, 52), $"WASD / Arrows: move    Mouse: aim    Left click: slash    Space: dodge    E: descend\nRight click: heavy swipe [{heavyStatus}]    Orange casters flash white before shooting.", text);
+            string heavyStatus = Run.Player.Weapon == null || Run.Player.Weapon.HeavyCooldownRemaining <= 0
+                ? "READY" : $"{Run.Player.Weapon.HeavyCooldownRemaining:0.0}s";
+            GUI.Label(new Rect(28, 568, 900, 52), $"WASD / Arrows: move    Mouse: aim    Left click: attack    Space: dodge    E: descend\nRight click: heavy attack [{heavyStatus}]    Orange casters flash white before shooting.", text);
             if (Run.IsPlaying) return;
             GUI.Box(new Rect(220, 170, 520, 385), GUIContent.none);
             if (Run.ChoosingUpgrade)
             {
                 GUI.Label(new Rect(250, 190, 465, 42), "A MOMENT OF RESPITE", title);
                 GUI.Label(new Rect(250, 240, 465, 54), "Choose a boon. Every choice restores 2 HP.", text);
-                if (GUI.Button(new Rect(250, 304, 460, 60), "Sharpen blade  /  +1 damage", button)) Run.ChooseUpgrade(0);
+                if (GUI.Button(new Rect(250, 304, 460, 60), "Increase damage  /  +1 damage", button)) Run.ChooseUpgrade(0);
                 if (GUI.Button(new Rect(250, 376, 460, 60), "Renew vitality  /  +2 max HP, full heal", button)) Run.ChooseUpgrade(1);
                 if (GUI.Button(new Rect(250, 448, 460, 60), "Lighten step  /  +movement speed", button)) Run.ChooseUpgrade(2);
             }

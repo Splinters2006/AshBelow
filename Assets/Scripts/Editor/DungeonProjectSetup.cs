@@ -17,6 +17,9 @@ namespace Slopgame.Editor
         private static int heavyStage;
         private static float heavyStarted;
         private static bool menuChecked;
+        private static bool switchedToArcher;
+        private static int archerStage;
+        private static float archerStarted;
 
         [InitializeOnLoadMethod]
         private static void ResumeSmokeTest()
@@ -36,6 +39,8 @@ namespace Slopgame.Editor
             combatStage = 0;
             heavyStage = 0;
             menuChecked = false;
+            switchedToArcher = false;
+            archerStage = 0;
             SessionState.SetBool("SlopgameSmoke", true);
             Application.logMessageReceived += CaptureError;
             EditorApplication.update += CheckPlayMode;
@@ -68,14 +73,14 @@ namespace Slopgame.Editor
                 {
                     if (!run.IsInMainMenu || run.IsPlaying || run.Player != null || run.Enemies.Count != 0)
                         throw new Exception("Game did not start at a peaceful main menu.");
-                    if (run.Characters.Count != 1 || run.SelectedCharacter.DisplayName != "Knight")
+                    if (run.Characters.Count < 2 || run.SelectedCharacter.DisplayName != "Knight")
                         throw new Exception("Knight character selection missing.");
-                    run.SelectCharacter(run.Characters[0]);
+                    run.SelectCharacter(run.SelectedCharacter);
                     run.Restart();
                     menuChecked = true;
                     return;
                 }
-                if (run.Player != null && run.Player.Sword == null) return;
+                if (run.Player != null && run.Player.Weapon == null) return;
                 if (run == null || run.Player == null || run.Enemies.Count == 0) throw new Exception("Run failed to initialize.");
                 if (!checkedProgression)
                 {
@@ -91,16 +96,27 @@ namespace Slopgame.Editor
                     checkedProgression = true;
                     return;
                 }
-                if (run.Floor != 1 || run.Kills != 0 || run.Player.MaxHealth != 6) throw new Exception("Restart failed to reset the run.");
-                if (UnityEngine.Object.FindObjectsByType<EnemyProjectile>(FindObjectsSortMode.None).Length != 0)
-                    throw new Exception("Projectiles survived a floor change/restart.");
+                if (!switchedToArcher)
+                {
+                    if (run.Floor != 1 || run.Kills != 0 || run.Player.MaxHealth != 6) throw new Exception("Restart failed to reset the run.");
+                    if (UnityEngine.Object.FindObjectsByType<EnemyProjectile>(FindObjectsSortMode.None).Length != 0)
+                        throw new Exception("Projectiles survived a floor change/restart.");
+                    run.ShowMainMenu();
+                    foreach (var character in run.Characters)
+                        if (character.Weapon == WeaponType.Bow) run.SelectCharacter(character);
+                    if (run.SelectedCharacter.DisplayName != "Archer") throw new Exception("Archer selection missing.");
+                    run.Restart();
+                    switchedToArcher = true;
+                    return;
+                }
+                if (!CheckArcher(run)) return;
                 run.ShowMainMenu();
                 if (!run.IsInMainMenu || run.IsPlaying || run.Player != null || run.Enemies.Count != 0)
                     throw new Exception("Returning to menu did not clear the run.");
                 run.Restart();
                 if (run.IsInMainMenu || run.Player.Health != run.SelectedCharacter.StartingHealth || run.Floor != 1)
                     throw new Exception("Starting again from the menu failed.");
-                Debug.Log(smokeFailed ? "SLOPGAME_SMOKE_FAILED" : "SLOPGAME_SMOKE_OK: Main menu, Knight selection, return/new run, narrow/longer attacks, heavy cooldown, projectiles, dodge, and progression passed.");
+                Debug.Log(smokeFailed ? "SLOPGAME_SMOKE_FAILED" : "SLOPGAME_SMOKE_OK: Knight combat, Archer selection/5 HP/arrows/walls/triple spread/6s cooldown/dodge/floor cleanup, menu, and progression passed.");
                 EditorApplication.update -= CheckPlayMode;
                 SessionState.SetBool("SlopgameSmoke", false);
                 Application.logMessageReceived -= CaptureError;
@@ -190,7 +206,7 @@ namespace Slopgame.Editor
                 Vector2 origin = (Vector2)run.Map.Centers[0] - Vector2.right;
                 run.Player.transform.position = origin;
                 foreach (var enemy in run.Enemies) enemy.transform.position = (Vector2)run.Map.Centers[run.Map.Centers.Count - 1];
-                run.Enemies[0].transform.position = origin + Vector2.right * 3.1f;
+                run.Enemies[0].transform.position = origin + Vector2.right * (SwordAttack.HeavyReach - 0.3f);
                 run.Enemies[1].transform.position = origin - Vector2.right;
                 run.Enemies[0].Health = run.Enemies[1].Health = 20;
                 if (!sword.TryHeavyAttack(Vector2.right)) throw new Exception("Heavy attack did not start.");
@@ -230,6 +246,76 @@ namespace Slopgame.Editor
             return true;
         }
 
+        private static bool CheckArcher(DungeonRun run)
+        {
+            var bow = run.Player.Weapon as BowAttack;
+            if (bow == null || run.Player.Sword != null || run.Player.MaxHealth != 5)
+                throw new Exception("Archer did not initialize with bow and five HP.");
+            if (archerStage == 0)
+            {
+                foreach (var enemy in run.Enemies)
+                {
+                    enemy.enabled = false;
+                    var shooter = enemy.GetComponent<EnemyShooter>();
+                    if (shooter != null) shooter.enabled = false;
+                    enemy.transform.position = (Vector2)run.Map.Centers[run.Map.Centers.Count - 1];
+                }
+                run.Player.transform.position = (Vector2)run.Map.Centers[0];
+                var target = run.Enemies[0];
+                target.Health = 20;
+                target.transform.position = run.Player.transform.position + Vector3.right;
+                if (!bow.TryAttack(Vector2.right)) throw new Exception("Archer base attack failed.");
+                var arrows = UnityEngine.Object.FindObjectsByType<PlayerProjectile>(FindObjectsSortMode.None);
+                if (arrows.Length != 1) throw new Exception("Base attack must fire one arrow.");
+                arrows[0].Advance(0.12f);
+                if (target.Health != 19 || !arrows[0].IsSpent || run.Player.Health != 5)
+                    throw new Exception("Arrow collision/damage failed.");
+                var wall = PlayerProjectile.Spawn(run, new Vector2(-1, -1), Vector2.right, 1);
+                wall.Advance(0.1f);
+                if (!wall.IsSpent) throw new Exception("Arrow passed through a wall.");
+                archerStarted = Time.time;
+                archerStage = 1;
+                return false;
+            }
+            if (archerStage == 1)
+            {
+                if (Time.time - archerStarted < 0.4f) return false;
+                if (!bow.TryHeavyAttack(Vector2.right)) throw new Exception("Triple shot failed.");
+                var arrows = UnityEngine.Object.FindObjectsByType<PlayerProjectile>(FindObjectsSortMode.None);
+                if (arrows.Length != 3) throw new Exception("Heavy attack must fire exactly three arrows.");
+                var angles = new List<float>();
+                foreach (var arrow in arrows) angles.Add(Vector2.SignedAngle(Vector2.right, arrow.Direction));
+                angles.Sort();
+                if (Mathf.Abs(angles[0] + 15) > 0.01f || Mathf.Abs(angles[1]) > 0.01f || Mathf.Abs(angles[2] - 15) > 0.01f)
+                    throw new Exception("Triple arrow cone spread is incorrect.");
+                if (Mathf.Abs(bow.HeavyCooldownRemaining - 6f) > 0.02f) throw new Exception("Archer cooldown must be six seconds.");
+                archerStarted = Time.time;
+                archerStage = 2;
+                return false;
+            }
+            if (archerStage == 2)
+            {
+                if (Time.time - archerStarted < 0.5f) return false;
+                if (bow.TryHeavyAttack(Vector2.right)) throw new Exception("Archer bypassed heavy cooldown.");
+                if (!bow.TryAttack(Vector2.right)) throw new Exception("Heavy cooldown blocked the base attack.");
+                run.Player.TryRoll(Vector2.left);
+                if (bow.TryAttack(Vector2.right) || bow.TryHeavyAttack(Vector2.right)) throw new Exception("Archer fired during dodge.");
+                archerStage = 3;
+            }
+            if (archerStage == 3)
+            {
+                if (Time.time - archerStarted < 6.1f) return false;
+                if (!bow.TryHeavyAttack(Vector2.right)) throw new Exception("Archer heavy cooldown did not expire.");
+                run.ChooseUpgrade(0);
+                archerStage = 4;
+                return false;
+            }
+            if (UnityEngine.Object.FindObjectsByType<PlayerProjectile>(FindObjectsSortMode.None).Length != 0)
+                throw new Exception("Arrows survived a floor change.");
+            if (run.Player.Damage != 2) throw new Exception("Archer damage upgrade failed.");
+            return true;
+        }
+
         public static void EnsureCharacterAssets()
         {
             if (!AssetDatabase.IsValidFolder("Assets/Resources")) AssetDatabase.CreateFolder("Assets", "Resources");
@@ -237,8 +323,21 @@ namespace Slopgame.Editor
             const string path = "Assets/Resources/Characters/Knight.asset";
             if (AssetDatabase.LoadAssetAtPath<CharacterDefinition>(path) == null)
                 AssetDatabase.CreateAsset(ScriptableObject.CreateInstance<CharacterDefinition>(), path);
+            const string archerPath = "Assets/Resources/Characters/Archer.asset";
+            if (AssetDatabase.LoadAssetAtPath<CharacterDefinition>(archerPath) == null)
+            {
+                var archer = ScriptableObject.CreateInstance<CharacterDefinition>();
+                var serialized = new SerializedObject(archer);
+                serialized.FindProperty("displayName").stringValue = "Archer";
+                serialized.FindProperty("description").stringValue = "A nimble ranged delver with 5 HP. Fire precise arrows or unleash a three-arrow cone spread every six seconds.";
+                serialized.FindProperty("startingHealth").intValue = 5;
+                serialized.FindProperty("color").colorValue = new Color(0.65f, 0.85f, 0.35f);
+                serialized.FindProperty("weapon").enumValueIndex = (int)WeaponType.Bow;
+                serialized.ApplyModifiedPropertiesWithoutUndo();
+                AssetDatabase.CreateAsset(archer, archerPath);
+            }
             AssetDatabase.SaveAssets();
-            Debug.Log("CHARACTER_ASSETS_OK: Knight character ready.");
+            Debug.Log("CHARACTER_ASSETS_OK: Knight and Archer ready.");
         }
 
         [MenuItem("Slopgame/Create playable dungeon scene")]

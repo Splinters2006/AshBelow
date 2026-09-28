@@ -5,8 +5,8 @@ A small Unity 6 action roguelike prototype, built with simple colored sprites. E
 ## Play
 
 1. Open this folder with Unity **6000.6.3f1** through Unity Hub.
-2. Open `Assets/Scenes/Dungeon.unity` and press **Play**. The main menu opens first; choose **Choose character → Knight → Begin run**. If the scene is missing, use **Slopgame → Create playable dungeon scene**.
-3. Focus the Game view. Move with **WASD / arrow keys**, aim with the **mouse cursor**, hold **left mouse** for a cone-shaped sword slash, and press **E** at unlocked gold stairs.
+2. Open `Assets/Scenes/Dungeon.unity` and press **Play**. The main menu opens first; choose **Choose character → Knight or Archer → Begin run**. If the scene is missing, use **Slopgame → Create playable dungeon scene**.
+3. Focus the Game view. Move with **WASD / arrow keys**, aim with the **mouse cursor**, hold **left mouse** for your base attack, and press **E** at unlocked gold stairs.
 
 Press **Space** to dodge in your movement direction (toward the cursor if standing still). The roll lasts 0.25 seconds, prevents damage during that window, and has a 0.8-second cooldown. You cannot attack during a roll, and walls still block movement. Sword attacks cover a 60-degree cone with a 2.3-unit reach and cannot hit through walls.
 
@@ -14,7 +14,7 @@ Red enemies chase and deal contact damage. Orange casters keep their distance an
 
 Every floor must be cleared before descending. Choose damage, maximum health, or movement speed between floors. Enemies become stronger as you descend. After death, click **Begin a new run**.
 
-**Right click** starts a heavy swipe aimed toward the cursor at the moment you click. It has a **5-second cooldown**, **3.6-unit reach**, a 100-degree cone, and deals **3× normal damage** once per enemy. A gold preview shows its 0.45-second windup, followed by a 0.35-second sweep. Movement slows during the attack; dodging cancels it without refunding the cooldown. The HUD shows when it is ready again.
+**Knight right click** starts a heavy swipe aimed toward the cursor at the moment you click. It has a **5-second cooldown**, **2.88-unit reach**, a 100-degree cone, and deals **3× normal damage** once per enemy. A gold preview shows its 0.45-second windup, followed by a 0.35-second sweep. Movement slows during the attack; dodging cancels it without refunding the cooldown. The HUD shows when it is ready again.
 
 ## Windows release (primary target)
 
@@ -34,6 +34,6 @@ The prototype uses runtime-generated placeholder sprites and an IMGUI HUD, with 
 
 ## Characters and main menu
 
-Knight is the first playable character. The main menu offers character selection and Quit; use **Main menu** in the dungeon to abandon the current run and choose again. Starting a run resets upgrades and health.
+Knight and Archer are playable. Archer starts with **5 HP**, fires one arrow with left click, and fires **three arrows at -15°, 0°, +15°** with right click on a **6-second cooldown**. Arrows deal the current damage stat, travel up to 12 units, and stop at the first enemy or wall. Archer shares the dodge roll and upgrade system. The main menu offers character selection and Quit; use **Main menu** in the dungeon to abandon the current run and choose again. Starting a run resets upgrades and health.
 
-Character definitions are ScriptableObjects in `Assets/Resources/Characters`. Create future definitions with **Assets → Create → Slopgame → Character** and give them unique names, descriptions, colors, and starting stats. The selector discovers them automatically. New weapons and abilities still need their own gameplay implementation; all current definitions use the knight sword and dodge components.
+Character definitions are ScriptableObjects in `Assets/Resources/Characters`. Create future definitions with **Assets → Create → Slopgame → Character** and give them unique names, descriptions, colors, and starting stats. The selector discovers them automatically. New weapons and abilities still need their own gameplay implementation; select Sword or Bow on the character asset to choose its existing weapon. Both share the dodge component.

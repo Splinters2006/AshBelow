@@ -3,11 +3,11 @@ using System.Collections.Generic;
 
 namespace Slopgame
 {
-    public sealed class SwordAttack : MonoBehaviour
+    public sealed class SwordAttack : MonoBehaviour, IPlayerWeapon
     {
         public const float Reach = 2.3f;
         public const float ConeAngle = 60f;
-        public const float HeavyReach = 3.6f;
+        public const float HeavyReach = 2.88f;
         public const float HeavyConeAngle = 100f;
         public const float HeavyCooldown = 5f;
         public const float HeavyWindup = 0.45f;

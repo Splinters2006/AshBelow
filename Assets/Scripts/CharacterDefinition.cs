@@ -2,6 +2,7 @@ using UnityEngine;
 
 namespace Slopgame
 {
+    public enum WeaponType { Sword, Bow }
     [CreateAssetMenu(menuName = "Slopgame/Character", fileName = "NewCharacter")]
     public sealed class CharacterDefinition : ScriptableObject
     {
@@ -11,6 +12,8 @@ namespace Slopgame
         [SerializeField, Min(1)] private int startingHealth = 6;
         [SerializeField, Min(1)] private int startingDamage = 1;
         [SerializeField, Min(1)] private float moveSpeed = 5f;
+        [SerializeField] private WeaponType weapon;
+        public WeaponType Weapon => weapon;
         public string DisplayName => displayName;
         public string Description => description;
         public Color Color => color;

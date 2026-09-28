@@ -19,6 +19,8 @@ namespace Slopgame
         private SpriteRenderer body;
         private SwordAttack sword;
         public SwordAttack Sword => sword;
+        public IPlayerWeapon Weapon { get; private set; }
+        private WeaponType weaponType;
         private Color characterColor;
 
         public void Initialize(CharacterDefinition character)
@@ -27,13 +29,24 @@ namespace Slopgame
             Damage = character.StartingDamage;
             Speed = character.MoveSpeed;
             characterColor = character.Color;
+            weaponType = character.Weapon;
         }
 
         private void Start()
         {
             body = GetComponent<SpriteRenderer>();
-            sword = gameObject.AddComponent<SwordAttack>();
-            sword.Player = this;
+            if (weaponType == WeaponType.Bow)
+            {
+                var bow = gameObject.AddComponent<BowAttack>();
+                bow.Player = this;
+                Weapon = bow;
+            }
+            else
+            {
+                sword = gameObject.AddComponent<SwordAttack>();
+                sword.Player = this;
+                Weapon = sword;
+            }
         }
 
         private void Update()
@@ -46,10 +59,10 @@ namespace Slopgame
             if (aim.sqrMagnitude > 0.001f) AimDirection = aim.normalized;
             Vector2 movement = PlayerInput.Movement;
             if (PlayerInput.Dodge) TryRoll(movement.sqrMagnitude > 0 ? movement : AimDirection);
-            Vector2 velocity = IsRolling ? rollDirection * Speed * 2.6f : movement * Speed * (sword.IsHeavyAttacking ? 0.55f : 1f);
+            Vector2 velocity = IsRolling ? rollDirection * Speed * 2.6f : movement * Speed * (Weapon.IsHeavyAttacking ? 0.55f : 1f);
             transform.position = Run.Map.Move(transform.position, velocity * Time.deltaTime);
-            if (PlayerInput.HeavyAttack && !IsRolling) sword.TryHeavyAttack(AimDirection);
-            else if (PlayerInput.Attack && !IsRolling) sword.TryAttack(AimDirection);
+            if (PlayerInput.HeavyAttack && !IsRolling) Weapon.TryHeavyAttack(AimDirection);
+            else if (PlayerInput.Attack && !IsRolling) Weapon.TryAttack(AimDirection);
         }
 
         public bool TryRoll(Vector2 direction)
@@ -58,7 +71,7 @@ namespace Slopgame
             rollDirection = direction.normalized;
             rollUntil = Time.time + RollDuration;
             rollReady = Time.time + RollCooldown;
-            if (sword != null) sword.Hide();
+            Weapon?.Hide();
             return true;
         }
 

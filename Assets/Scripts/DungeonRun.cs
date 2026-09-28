@@ -14,6 +14,7 @@ namespace Slopgame
         public int Kills { get; set; }
         public int Seed { get; private set; }
         public Camera View => view;
+        public Transform ProjectileRoot => level;
         public bool IsInMainMenu { get; private set; }
         public IReadOnlyList<CharacterDefinition> Characters => characters;
         public CharacterDefinition SelectedCharacter { get; private set; }
@@ -43,7 +44,7 @@ namespace Slopgame
                 Debug.LogError("No character assets found in Resources/Characters.");
                 return;
             }
-            SelectedCharacter = characters[0];
+            SelectedCharacter = System.Array.Find(characters, character => character.Weapon == WeaponType.Sword) ?? characters[0];
             menu = gameObject.AddComponent<MainMenu>();
             menu.Run = this;
             ShowMainMenu();
@@ -82,7 +83,7 @@ namespace Slopgame
 
         private void NextFloor()
         {
-            if (Player.Sword != null) Player.Sword.Hide();
+            Player.Weapon?.Hide();
             if (level != null) { level.gameObject.SetActive(false); Destroy(level.gameObject); }
             Enemies.Clear();
             Floor++;
