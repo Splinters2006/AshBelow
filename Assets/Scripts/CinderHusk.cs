@@ -4,7 +4,7 @@ namespace Slopgame
 {
     /// <summary>
     /// A slow, hardy husk with a burning core. When it dies the core flares for a moment and then bursts,
-    /// hurting heroes (and, on the host, other enemies) caught nearby. Kill it at range, or dodge away.
+    /// hurting other enemies caught nearby (never the heroes), so it is worth killing in a crowd.
     /// </summary>
     public sealed class CinderHusk : EnemyVariant
     {
@@ -90,9 +90,6 @@ namespace Slopgame
             var root = run.ProjectileRoot;
             HeroVfx.Pulse(root, center, CinderHusk.BurstRadius, new Color(1f, 0.5f, 0.15f, 0.55f), 0.35f);
             HeroVfx.Sparks(root, center, CinderHusk.Ember, 18, 5f, 0.45f);
-            // Each machine judges only its own hero, like enemy contact hits.
-            var player = run.Player;
-            if (player != null && Vector2.Distance(player.transform.position, center) <= CinderHusk.BurstRadius) player.Hit();
             // Only the host damages other enemies; guests learn of it from the host's snapshots.
             if (run.IsGuest) return;
             foreach (var enemy in run.Enemies.ToArray())

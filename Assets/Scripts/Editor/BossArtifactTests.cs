@@ -421,7 +421,7 @@ namespace Slopgame.Editor
             husk.Configure(huskEnemy);
             Require(huskEnemy.Health == health + 2 && Crystal.ValueFor(huskEnemy) == 2, "The cinder husk's health or crystals are wrong.");
 
-            // Killing the husk leaves a fuse; the burst then hurts the hero and nearby enemies.
+            // Killing the husk leaves a fuse; the burst then hurts nearby enemies but spares the hero.
             Vector2 at = player.transform.position;
             huskEnemy.transform.position = at + Vector2.right * 0.8f;
             skitterEnemy.transform.position = at + Vector2.right * 1.6f;
@@ -431,7 +431,7 @@ namespace Slopgame.Editor
             var fuses = run.GetComponentsInChildren<CinderBurst>();
             Require(fuses.Length == 1 && player.Health == hearts && run.Enemies.Contains(skitterEnemy), "The cinder husk burst without a fuse.");
             fuses[0].Detonate();
-            Require(player.Health == hearts - 1 || player.Powerups.ArmorCharges == wards - 1, "The cinder burst did not hurt a hero in range.");
+            Require(player.Health == hearts && player.Powerups.ArmorCharges == wards, "The cinder burst hurt the hero.");
             Require(!run.Enemies.Contains(skitterEnemy), "The cinder burst did not hurt a nearby enemy.");
         }
 
