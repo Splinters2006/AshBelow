@@ -7,6 +7,7 @@ namespace Slopgame
     {
         private const string NameKey = "AshBelow.CoopName", AddressKey = "AshBelow.CoopAddress";
         private string code = "", address, playerName;
+        private Vector2 heroScroll;
 
         public void Draw(DungeonRun run)
         {
@@ -56,7 +57,7 @@ namespace Slopgame
             if (DungeonUi.Button("coopCancel", new Rect(100, 380, 268, 48), "Cancel", DungeonUi.Muted)) { session.Leave(); session.Status = null; }
         }
 
-        private static void DrawLobby(DungeonRun run, NetSession session)
+        private void DrawLobby(DungeonRun run, NetSession session)
         {
             DungeonUi.Panel(new Rect(70, 250, 540, 336), DungeonUi.PanelColor);
             if (!string.IsNullOrEmpty(session.JoinCode))
@@ -83,17 +84,21 @@ namespace Slopgame
 
             DungeonUi.Panel(new Rect(650, 250, 560, 336), DungeonUi.PanelColor);
             DungeonUi.Label(new Rect(680, 268, 500, 24), "YOUR HERO", 14, DungeonUi.Muted);
+            // Two columns that scroll once there are more heroes than fit above the note.
+            int rows = (run.Characters.Count + 1) / 2;
+            heroScroll = GUI.BeginScrollView(new Rect(680, 300, 522, 176), heroScroll, new Rect(0, 0, 500, Mathf.Max(176, rows * 58 - 10)));
             for (int i = 0; i < run.Characters.Count; i++)
             {
                 var hero = run.Characters[i];
                 bool selected = i == session.LocalClassIndex;
-                if (DungeonUi.Button("coopClass" + i, new Rect(680 + i % 2 * 256, 300 + i / 2 * 58, 244, 48),
+                if (DungeonUi.Button("coopClass" + i, new Rect(i % 2 * 256, i / 2 * 58, 244, 48),
                     hero.DisplayName, selected ? hero.Color : DungeonUi.Muted))
                 {
                     session.SetLocalClass(i);
                     run.SelectCharacter(hero);
                 }
             }
+            GUI.EndScrollView();
             DungeonUi.Label(new Rect(680, 486, 500, 60), "Enemies grow tougher with every hero. Each player earns Ash into their own save.", 15, DungeonUi.Muted);
 
             if (session.IsHost)

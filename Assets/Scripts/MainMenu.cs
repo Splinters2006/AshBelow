@@ -6,6 +6,7 @@ namespace Slopgame
     {
         public DungeonRun Run { get; set; }
         private bool selecting, shopping, coop, controls;
+        private Vector2 heroScroll;
         private readonly AshShop shop = new AshShop();
         private readonly CoopMenu coopMenu = new CoopMenu();
         private readonly KeybindMenu keybindMenu = new KeybindMenu();
@@ -84,13 +85,17 @@ namespace Slopgame
 
         private void DrawSelection()
         {
-            for (int i = 0; i < Run.Characters.Count; i++)
+            // The hero list scrolls (mouse wheel or scrollbar) so it never runs into the Back button.
+            int count = Run.Characters.Count;
+            heroScroll = GUI.BeginScrollView(new Rect(70, 270, 292, 312), heroScroll, new Rect(0, 0, 268, Mathf.Max(312, count * 46 - 6)));
+            for (int i = 0; i < count; i++)
             {
                 var hero = Run.Characters[i];
-                Rect rect = new Rect(70, 270 + i * 46, 268, 40);
+                Rect rect = new Rect(0, i * 46, 268, 40);
                 bool selected = hero == Run.SelectedCharacter;
                 if (DungeonUi.Button("class" + i, rect, hero.DisplayName + (selected ? "  /  SELECTED" : ""), selected ? hero.Color : DungeonUi.Muted)) Run.SelectCharacter(hero);
             }
+            GUI.EndScrollView();
             var character = Run.SelectedCharacter;
             var permanent = new PermanentBonuses(Run.Progress, character.Weapon);
             DungeonUi.Panel(new Rect(368, 268, 842, 312), DungeonUi.PanelColor);
