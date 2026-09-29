@@ -31,7 +31,12 @@ You can rebind every action under **Controls** in the main menu. Each action get
 - **Clear the floor.** Defeat every enemy, then find the gold stairs and press **F** to descend.
 - **Pick a boon.** Between floors you choose one of three upgrades for this run. Each choice also restores 2 HP. Some boons belong to your class, and some only show up after you unlock the ability they improve. Open **Talents** in the HUD to see your build.
 - **Gather crystals.** Every enemy you defeat drops purple crystals (armoured brutes drop 3, guardians 15). Walk near them to pick them up. They last the whole run.
-- **Visit the crystal shop.** Before every guardian you reach a lantern-lit shop. Press **F** at the merchant's counter to spend crystals on a Healing Draught (+2 HP), a Grand Elixir (full HP), a Heart Crystal (+1 max HP for the run) or boons that last only for the boss fight: Stoneskin Tonic (+2 wards), Whetstone (+1 damage) and Quicksilver (+20% move speed). Each ware costs 50% more every time you buy it in the same shop. The shop's stairs lead to the guardian.
+- **Visit the crystal shop.** Before every guardian you reach a lantern-lit shop. The merchant glows when you can talk to him. Press **F** at his counter to spend crystals. Each shop stocks a random five wares:
+  - **One healing ware:** a Healing Draught (+2 HP) or a Grand Elixir (full HP).
+  - **Two boss-fight boons,** which last only for the next guardian: Stoneskin Tonic (+2 wards), Whetstone (+1 damage) or Quicksilver (+20% move speed).
+  - **Two relics,** which last the rest of the run: Heart Crystal (+1 max HP), Ember Hone (+1 damage), Windrunner Boots (+0.7 speed), Quickfinger Gloves (+20% attack speed), Hawkeye Lens (+10% crit chance), Warding Sigil (+1 ward every floor), Vampire Fang (a rank of Soul Harvest) or Phoenix Feather (shorter dodge cooldown). Relics add ranks to the matching boon and stop selling once it's maxed.
+
+  Each ware costs 50% more every time you buy it in the same shop. In co-op, everyone sees the same stock. The shop's stairs lead to the guardian.
 - **Beat the guardians.** Every fifth floor is a boss arena. Three guardians take turns, and each gets more dangerous below half health:
   - **The Ash Warden**, a caster who fills the arena with ember fans, novas, spirals and falling fire.
   - **The Ashen Duelist**, a fast, fragile swordsman who dashes, throws blade fans and teleports behind you.

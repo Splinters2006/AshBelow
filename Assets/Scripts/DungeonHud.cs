@@ -251,20 +251,23 @@ namespace Slopgame
             DungeonUi.Panel(rect, DungeonUi.Background);
             DungeonUi.Label(new Rect(rect.x + 20, rect.y + 14, 220, 28), "CRYSTAL SHOP", 22, CrystalPouch.CrystalColor);
             DungeonUi.Label(new Rect(rect.x + 200, rect.y + 18, 160, 24), $"{pouch.Crystals} CRYSTALS", 16, CrystalPouch.CrystalColor, TextAnchor.UpperRight);
-            for (int i = 0; i < CrystalShop.Offers.Length; i++)
+            for (int i = 0; i < shop.Stock.Count; i++)
             {
-                var offer = CrystalShop.Offers[i];
+                var offer = shop.Stock[i];
                 var row = new Rect(rect.x + 16, rect.y + 52 + i * 58, rect.width - 32, 52);
-                if (DungeonUi.Button("shop" + i, new Rect(row.x, row.y, row.width, 32), $"{offer.Name}  /  {shop.Cost(offer)} crystals", offer.Color, shop.CanBuy(offer)))
+                bool maxed = offer.Powerup.HasValue && !Run.Player.Powerups.CanTake(offer.Powerup.Value);
+                string price = maxed ? "maxed" : $"{shop.Cost(offer)} crystals";
+                if (DungeonUi.Button("shop" + i, new Rect(row.x, row.y, row.width, 32), $"{offer.Name}  /  {price}", offer.Color, shop.CanBuy(offer)))
                     shop.Buy(offer);
-                DungeonUi.Label(new Rect(row.x + 6, row.y + 34, row.width - 12, 18), offer.Description, 12, DungeonUi.Muted);
+                string description = offer.Category == CrystalShop.Category.Relic ? "Relic: " + offer.Description : offer.Description;
+                DungeonUi.Label(new Rect(row.x + 6, row.y + 34, row.width - 12, 18), description, 12, DungeonUi.Muted);
             }
             var boons = new System.Collections.Generic.List<string>();
             if (pouch.PendingWards > 0) boons.Add($"+{pouch.PendingWards} wards");
             if (pouch.PendingDamage > 0) boons.Add($"+{pouch.PendingDamage} damage");
             if (pouch.PendingSwiftness > 0) boons.Add($"+{pouch.PendingSwiftness * CrystalPouch.SwiftnessPerBoon:P0} speed");
             DungeonUi.Label(new Rect(rect.x + 20, rect.y + 404, rect.width - 40, 22),
-                boons.Count > 0 ? "For the guardian:  " + string.Join("   ", boons) : "Arena boons last for the boss fight only.", 13, boons.Count > 0 ? AbilityCatalog.Gold : DungeonUi.Muted);
+                boons.Count > 0 ? "For the guardian:  " + string.Join("   ", boons) : "Boons last the boss fight, relics the whole run.", 13, boons.Count > 0 ? AbilityCatalog.Gold : DungeonUi.Muted);
             DungeonUi.Label(new Rect(rect.x + 20, rect.yMax - 44, rect.width - 40, 36),
                 shop.LastResult ?? $"{KeyBindings.Label(GameAction.Interact)} or walking away closes the shop. Crystals carry over to later shops.", 13,
                 shop.LastResult != null ? CrystalPouch.CrystalColor : DungeonUi.Muted);

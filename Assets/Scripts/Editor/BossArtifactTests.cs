@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -352,6 +353,31 @@ namespace Slopgame.Editor
             Require(run.Map.CanStand(run.Map.Centers[0]) && run.Map.CanStand(run.Exit) && !run.Map.IsFloor(27, 22), "The shop room layout is wrong.");
             var shop = run.Shop;
             CrystalShop.Offer Offer(CrystalShop.Ware ware) => Array.Find(CrystalShop.Offers, offer => offer.Ware == ware);
+            int Stocked(CrystalShop.Category category) => shop.Stock.Count(offer => offer.Category == category);
+            Require(Stocked(CrystalShop.Category.Healing) == CrystalShop.HealingStock && Stocked(CrystalShop.Category.Arena) == CrystalShop.ArenaStock
+                && Stocked(CrystalShop.Category.Relic) == CrystalShop.RelicStock && shop.Stock.Distinct().Count() == shop.Stock.Count,
+                "The shop did not stock one healing ware, two arena boons and two distinct relics.");
+            var stocked = shop.Stock.ToList();
+            shop.Restock(run.Seed + run.Floor * 104729);
+            Require(shop.Stock.SequenceEqual(stocked), "The same run and floor stocked a different shop.");
+            var assortments = new HashSet<string>();
+            for (int seed = 0; seed < 40; seed++)
+            {
+                shop.Restock(seed);
+                assortments.Add(string.Join(",", shop.Stock.Select(offer => offer.Ware)));
+            }
+            Require(assortments.Count > 5, "Shop stock was not randomised.");
+            var missing = Array.Find(CrystalShop.Offers, offer => !shop.Stock.Contains(offer));
+            pouch.Add(1000 - pouch.Crystals);
+            Require(!shop.CanBuy(missing) && !shop.Buy(missing), "The shop sold a ware it did not stock.");
+            shop.SetStock(CrystalShop.Offers);
+            var hone = Offer(CrystalShop.Ware.EmberHone);
+            int baseDamage = player.Damage;
+            Require(shop.Buy(hone) && player.Powerups.Count(PowerupType.Damage) > 0 && player.Damage == baseDamage + 1, "The Ember Hone did not raise damage for the descent.");
+            var feather = Offer(CrystalShop.Ware.PhoenixFeather);
+            while (shop.Buy(feather)) pouch.Add(1000 - pouch.Crystals);
+            Require(player.Powerups.Count(PowerupType.DodgeRecovery) == PowerupCatalog.Get(PowerupType.DodgeRecovery).MaxStacks && !shop.CanBuy(feather),
+                "A relic was sold past its boon's highest rank.");
             pouch.Add(1000 - pouch.Crystals);
             Require(!shop.CanBuy(Offer(CrystalShop.Ware.Draught)) && !shop.Buy(Offer(CrystalShop.Ware.Elixir)), "Healing was sold to a hero at full health.");
             Require(player.Hit() && player.Health == player.MaxHealth - 1, "The shop test could not wound the hero.");

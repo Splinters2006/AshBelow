@@ -256,11 +256,18 @@ namespace Slopgame
 
         public void Upgrade(int choice)
         {
-            if (choice < 0 || choice >= PowerupCatalog.All.Count || !Powerups.Add((PowerupType)choice)) return;
-            if (choice == 0) BaseDamage++;
-            if (choice == 1) { MaxHealth += 2; if (Health > 0) Health = MaxHealth; }
-            if (choice == 2) Speed += 0.7f;
+            if (choice < 0 || choice >= PowerupCatalog.All.Count || !GrantPowerup((PowerupType)choice)) return;
             Heal(2);
+        }
+
+        /// <summary>Adds a rank of <paramref name="type"/> and its stat change (boon choices, crystal shop relics).</summary>
+        public bool GrantPowerup(PowerupType type)
+        {
+            if (!Powerups.Add(type)) return false;
+            if (type == PowerupType.Damage) BaseDamage++;
+            if (type == PowerupType.Vitality) { MaxHealth += 2; if (Health > 0) Health = MaxHealth; }
+            if (type == PowerupType.Movement) Speed += 0.7f;
+            return true;
         }
 
         // Regular hero sprites face right; mirror them when aiming left (small dead zone avoids flicker).

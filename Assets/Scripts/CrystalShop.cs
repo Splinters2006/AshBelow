@@ -5,38 +5,59 @@ namespace Slopgame
 {
     /// <summary>
     /// The crystal shop visited before each boss: a warm, lantern-lit room with a hooded merchant behind a counter.
-    /// Talking to him opens his wares, paid for in the crystals enemies drop: healing, and boons for the guardian's
-    /// arena. Each ware costs half as much again every time it is bought in the same shop.
+    /// Talking to him opens his wares, paid for in the crystals enemies drop: healing, boons for the guardian's arena
+    /// and relics that last the rest of the descent. Each shop stocks a random few of them (the same on every machine
+    /// in a co-op run), and each ware costs half as much again every time it is bought in the same shop.
     /// </summary>
     public sealed class CrystalShop : MonoBehaviour
     {
-        public enum Ware { Draught, Elixir, HeartCrystal, Stoneskin, Whetstone, Quicksilver }
+        public enum Ware
+        {
+            Draught, Elixir, HeartCrystal, Stoneskin, Whetstone, Quicksilver,
+            EmberHone, WindrunnerBoots, QuickfingerGloves, HawkeyeLens, WardingSigil, VampireFang, PhoenixFeather
+        }
+
+        public enum Category { Healing, Arena, Relic }
 
         public sealed class Offer
         {
             public Ware Ware { get; }
+            public Category Category { get; }
             public string Name { get; }
             public string Description { get; }
             public int BaseCost { get; }
             public Color Color { get; }
-            public Offer(Ware ware, string name, string description, int baseCost, Color color)
-            { Ware = ware; Name = name; Description = description; BaseCost = baseCost; Color = color; }
+            /// <summary>The run boon a relic grants, counted in the hero's talents; null for other wares.</summary>
+            public PowerupType? Powerup { get; }
+            public Offer(Ware ware, Category category, string name, string description, int baseCost, Color color, PowerupType? powerup = null)
+            { Ware = ware; Category = category; Name = name; Description = description; BaseCost = baseCost; Color = color; Powerup = powerup; }
         }
 
         public static readonly Color HealColor = new Color(1f, 0.42f, 0.5f);
         public static readonly Offer[] Offers =
         {
-            new Offer(Ware.Draught, "Healing Draught", "Restore 2 HP", 12, HealColor),
-            new Offer(Ware.Elixir, "Grand Elixir", "Restore all of your HP", 30, HealColor),
-            new Offer(Ware.HeartCrystal, "Heart Crystal", "+1 max HP for the rest of the descent", 45, CrystalPouch.CrystalColor),
-            new Offer(Ware.Stoneskin, "Stoneskin Tonic", "+2 wards in the boss arena", 20, AbilityCatalog.Ice),
-            new Offer(Ware.Whetstone, "Whetstone", "+1 damage in the boss arena", 35, AbilityCatalog.Gold),
-            new Offer(Ware.Quicksilver, "Quicksilver", "+20% move speed in the boss arena", 25, DungeonUi.Teal),
+            new Offer(Ware.Draught, Category.Healing, "Healing Draught", "Restore 2 HP", 12, HealColor),
+            new Offer(Ware.Elixir, Category.Healing, "Grand Elixir", "Restore all of your HP", 30, HealColor),
+            new Offer(Ware.Stoneskin, Category.Arena, "Stoneskin Tonic", "+2 wards in the boss arena", 20, AbilityCatalog.Ice),
+            new Offer(Ware.Whetstone, Category.Arena, "Whetstone", "+1 damage in the boss arena", 35, AbilityCatalog.Gold),
+            new Offer(Ware.Quicksilver, Category.Arena, "Quicksilver", "+20% move speed in the boss arena", 25, DungeonUi.Teal),
+            new Offer(Ware.HeartCrystal, Category.Relic, "Heart Crystal", "+1 max HP", 45, CrystalPouch.CrystalColor),
+            new Offer(Ware.EmberHone, Category.Relic, "Ember Hone", "+1 base attack damage", 60, AbilityCatalog.Gold, PowerupType.Damage),
+            new Offer(Ware.WindrunnerBoots, Category.Relic, "Windrunner Boots", "+0.7 move speed", 40, DungeonUi.Teal, PowerupType.Movement),
+            new Offer(Ware.QuickfingerGloves, Category.Relic, "Quickfinger Gloves", "+20% attack and charge speed", 50, new Color(1f, 0.62f, 0.3f), PowerupType.AttackSpeed),
+            new Offer(Ware.HawkeyeLens, Category.Relic, "Hawkeye Lens", "+10% crit and elemental effect chance", 50, new Color(0.55f, 0.8f, 1f), PowerupType.CriticalHits),
+            new Offer(Ware.WardingSigil, Category.Relic, "Warding Sigil", "Block one extra hit on every floor", 55, AbilityCatalog.Ice, PowerupType.Armor),
+            new Offer(Ware.VampireFang, Category.Relic, "Vampire Fang", "Heal 1 HP every few kills (Soul Harvest)", 50, HealColor, PowerupType.LifeSteal),
+            new Offer(Ware.PhoenixFeather, Category.Relic, "Phoenix Feather", "10% shorter dodge cooldown", 35, new Color(1f, 0.45f, 0.25f), PowerupType.DodgeRecovery),
         };
+
+        /// <summary>How many wares of each category a shop stocks, drawn at random from that category.</summary>
+        public const int HealingStock = 1, ArenaStock = 2, RelicStock = 2;
 
         public const float TalkRange = 1.9f;
         public const int StoneskinWards = 2;
         private readonly Dictionary<Ware, int> bought = new Dictionary<Ware, int>();
+        private readonly List<Offer> stock = new List<Offer>();
         private readonly List<SpriteRenderer> glows = new List<SpriteRenderer>();
         private readonly List<float> glowAlpha = new List<float>();
         private readonly List<Transform> floaters = new List<Transform>();
@@ -44,8 +65,11 @@ namespace Slopgame
         private readonly List<Vector2> sparklePoints = new List<Vector2>();
         private DungeonRun run;
         private Transform merchant;
+        private SpriteRenderer merchantHalo, merchantOutline;
         private float nextSparkle;
         public bool IsOpen { get; private set; }
+        /// <summary>The wares on sale in this shop, in display order.</summary>
+        public IReadOnlyList<Offer> Stock => stock;
         public string LastResult { get; private set; }
         /// <summary>Where the hero talks to the merchant: the front of his counter.</summary>
         public Vector2 Counter => new Vector2(DungeonMap.ShopCounter.center.x - 0.5f, DungeonMap.ShopCounter.yMin);
@@ -64,11 +88,37 @@ namespace Slopgame
 
         public void Close() => IsOpen = false;
 
+        /// <summary>Draws this shop's stock: one category at a time, a random few wares each, from <paramref name="seed"/>.</summary>
+        public void Restock(int seed)
+        {
+            var random = new System.Random(seed);
+            stock.Clear();
+            foreach (var (category, count) in new[] { (Category.Healing, HealingStock), (Category.Arena, ArenaStock), (Category.Relic, RelicStock) })
+            {
+                var choices = new List<Offer>(System.Array.FindAll(Offers, offer => offer.Category == category));
+                for (int i = 0; i < count && choices.Count > 0; i++)
+                {
+                    int pick = random.Next(choices.Count);
+                    stock.Add(choices[pick]);
+                    choices.RemoveAt(pick);
+                }
+            }
+        }
+
+        /// <summary>Puts exactly <paramref name="offers"/> on sale (used by tests).</summary>
+        public void SetStock(IEnumerable<Offer> offers)
+        {
+            stock.Clear();
+            stock.AddRange(offers);
+        }
+
         public bool CanBuy(Offer offer)
         {
             var player = run != null ? run.Player : null;
-            if (player == null || !run.IsPlaying || player.Health <= 0 || player.Crystals.Crystals < Cost(offer)) return false;
-            if ((offer.Ware == Ware.Draught || offer.Ware == Ware.Elixir) && player.Health >= player.MaxHealth) return false;
+            if (player == null || !run.IsPlaying || player.Health <= 0 || !stock.Contains(offer) || player.Crystals.Crystals < Cost(offer)) return false;
+            if (offer.Category == Category.Healing && player.Health >= player.MaxHealth) return false;
+            // A relic whose boon is already at its highest rank has nothing left to give.
+            if (offer.Powerup.HasValue && !player.Powerups.CanTake(offer.Powerup.Value)) return false;
             return true;
         }
 
@@ -108,6 +158,11 @@ namespace Slopgame
                     player.Crystals.AddBoon(arena, 0, 0, 1);
                     LastResult = $"Your feet feel light. +{player.Crystals.PendingSwiftness * CrystalPouch.SwiftnessPerBoon:P0} speed in the arena.";
                     break;
+                default:
+                    var powerup = PowerupCatalog.Get(offer.Powerup.Value);
+                    player.GrantPowerup(powerup.Type);
+                    LastResult = $"{offer.Name} is yours. {powerup.Name} rank {player.Powerups.Count(powerup.Type)} for the descent.";
+                    break;
             }
             HeroVfx.Motes(root, at, 0.7f, offer.Color, 12, 0.9f);
             HeroVfx.Pulse(root, at, 0.8f, new Color(offer.Color.r, offer.Color.g, offer.Color.b, 0.6f), 0.3f);
@@ -131,6 +186,16 @@ namespace Slopgame
             for (int i = 0; i < floaters.Count; i++)
                 floaters[i].position = floaterRest[i] + Vector2.up * (0.08f * Mathf.Sin(time * 2f + i * 1.3f));
             if (merchant != null) merchant.localScale = new Vector3(1.1f, 1.1f * (1f + 0.025f * Mathf.Sin(time * 2.2f)), 1f);
+            if (merchantHalo != null)
+            {
+                // The merchant's rim light pulses so he reads as someone to talk to, and flares when he is in reach.
+                float pulse = 0.5f + 0.5f * Mathf.Sin(time * 3f);
+                bool beckoning = IsNear(player) && !IsOpen;
+                float strength = beckoning ? 0.75f + 0.25f * pulse : 0.35f + 0.25f * pulse;
+                merchantHalo.color = new Color(MerchantGlow.r, MerchantGlow.g, MerchantGlow.b, 0.7f * strength);
+                merchantOutline.color = new Color(MerchantGlow.r, MerchantGlow.g, MerchantGlow.b, strength);
+                merchantHalo.transform.localScale = Vector3.one * (beckoning ? 3.1f : 2.7f) * (1f + 0.06f * pulse);
+            }
             if (time >= nextSparkle && sparklePoints.Count > 0 && run.ProjectileRoot != null)
             {
                 nextSparkle = time + 0.35f;
@@ -141,7 +206,8 @@ namespace Slopgame
 
         // ---------------------------------------------------------------- the room
 
-        private static Sprite glowSprite, merchantSprite, bottleSprite;
+        private static Sprite glowSprite, merchantSprite, merchantOutlineSprite, bottleSprite;
+        private static readonly Color MerchantGlow = new Color(0.85f, 0.7f, 1f);
 
         /// <summary>Builds the shop's furnishings inside <paramref name="level"/>; the map and stairs are drawn by the run.</summary>
         public static CrystalShop Create(DungeonRun run, Transform level)
@@ -150,6 +216,7 @@ namespace Slopgame
             root.transform.SetParent(level, false);
             var shop = root.AddComponent<CrystalShop>();
             shop.run = run;
+            shop.Restock(run.Seed + run.Floor * 104729);
             shop.Furnish();
             return shop;
         }
@@ -197,16 +264,22 @@ namespace Slopgame
             float counterX = counter.center.x - 0.5f;
             Part("Alcove", new Vector2(counterX, counter.yMin + 1f), new Vector2(counter.width, 1f), new Color(0.09f, 0.06f, 0.07f));
             Glow(new Vector2(counterX, counter.yMin + 1.2f), 3.4f, CrystalPouch.CrystalColor, 0.18f);
-            merchant = Part("Merchant", new Vector2(counterX, counter.yMin + 1.2f), Vector2.one * 1.1f, Color.white, 3).transform;
+            merchantHalo = Part("Merchant halo", new Vector2(counterX, counter.yMin + 1.25f), Vector2.one * 2.7f, MerchantGlow, 2);
+            merchantHalo.sprite = GlowSprite;
+            merchant = Part("Merchant", new Vector2(counterX, counter.yMin + 1.2f), Vector2.one * 1.1f, Color.white, 4).transform;
             merchant.GetComponent<SpriteRenderer>().sprite = MerchantSprite;
-            Part("Counter front", new Vector2(counterX, counter.yMin), new Vector2(counter.width, 1f), new Color(0.36f, 0.2f, 0.1f), 4);
+            // A slightly larger silhouette just behind him forms a glowing outline that breathes with him.
+            merchantOutline = DungeonVisuals.Create("Merchant outline", merchant, merchant.position, Vector2.one, MerchantGlow, 3);
+            merchantOutline.transform.localScale = Vector3.one * 1.18f;
+            merchantOutline.sprite = MerchantOutlineSprite;
+            Part("Counter front", new Vector2(counterX, counter.yMin), new Vector2(counter.width, 1f), new Color(0.36f, 0.2f, 0.1f), 5);
             for (int i = 0; i < counter.width; i++)
-                Part("Counter panel", new Vector2(counter.xMin + i, counter.yMin - 0.05f), new Vector2(0.7f, 0.6f), new Color(0.29f, 0.16f, 0.08f), 4);
-            Part("Counter top", new Vector2(counterX, counter.yMin + 0.45f), new Vector2(counter.width + 0.2f, 0.22f), new Color(0.6f, 0.38f, 0.18f), 5);
-            Part("Counter trim", new Vector2(counterX, counter.yMin - 0.47f), new Vector2(counter.width + 0.1f, 0.08f), new Color(0.62f, 0.44f, 0.16f), 5);
-            Bottle(new Vector2(counter.xMin + 0.1f, counter.yMin + 0.75f), HealColor, 6);
-            Bottle(new Vector2(counter.xMin + 0.5f, counter.yMin + 0.72f), AbilityCatalog.Ice, 6);
-            Floater(new Vector2(counter.xMax - 1.3f, counter.yMin + 0.85f), 0.45f, 6);
+                Part("Counter panel", new Vector2(counter.xMin + i, counter.yMin - 0.05f), new Vector2(0.7f, 0.6f), new Color(0.29f, 0.16f, 0.08f), 5);
+            Part("Counter top", new Vector2(counterX, counter.yMin + 0.45f), new Vector2(counter.width + 0.2f, 0.22f), new Color(0.6f, 0.38f, 0.18f), 6);
+            Part("Counter trim", new Vector2(counterX, counter.yMin - 0.47f), new Vector2(counter.width + 0.1f, 0.08f), new Color(0.62f, 0.44f, 0.16f), 6);
+            Bottle(new Vector2(counter.xMin + 0.1f, counter.yMin + 0.75f), HealColor, 7);
+            Bottle(new Vector2(counter.xMin + 0.5f, counter.yMin + 0.72f), AbilityCatalog.Ice, 7);
+            Floater(new Vector2(counter.xMax - 1.3f, counter.yMin + 0.85f), 0.45f, 7);
             Glow(new Vector2(counter.xMax - 1.3f, counter.yMin + 0.85f), 1.3f, CrystalPouch.CrystalColor, 0.35f);
             Part("Banner", new Vector2(counterX, top + 0.72f), new Vector2(2.4f, 0.5f), new Color(0.3f, 0.12f, 0.42f), 2);
             Part("Banner trim", new Vector2(counterX, top + 0.45f), new Vector2(2.4f, 0.06f), new Color(0.75f, 0.55f, 0.2f), 3);
@@ -347,12 +420,18 @@ namespace Slopgame
         });
 
         /// <summary>The merchant: a hooded figure in violet robes with glowing eyes, cradling a crystal.</summary>
-        private static Sprite MerchantSprite => merchantSprite != null ? merchantSprite : merchantSprite = DungeonVisuals.PaletteSprite("Crystal merchant", new[]
+        private static readonly string[] MerchantRows =
         {
             ".....HHHHHH.....", "....HHPPPPHH....", "...HHPPPPPPHH...", "...HPDDDDDDPH...", "..HHPDEDDEDPHH..",
             "..HPPDDDDDDPPH..", "..HPPPDDDDPPPH..", ".HPPPGPPPPGPPPH.", ".HPPGGPPPPPGGPH.", ".HPPPSKKKKSPPPH.",
             "HPPPPSKCCKSPPPPH", "HPPPPPKCCKPPPPPH", "HPPPPPPKKPPPPPPH", "HPPPPPPPPPPPPPPH", ".HHHHHHHHHHHHHH."
-        }, key => key switch
+        };
+
+        /// <summary>The merchant's silhouette in plain white, tinted to draw his glowing outline.</summary>
+        private static Sprite MerchantOutlineSprite => merchantOutlineSprite != null ? merchantOutlineSprite
+            : merchantOutlineSprite = DungeonVisuals.PaletteSprite("Crystal merchant outline", MerchantRows, key => key == '.' ? Color.clear : Color.white);
+
+        private static Sprite MerchantSprite => merchantSprite != null ? merchantSprite : merchantSprite = DungeonVisuals.PaletteSprite("Crystal merchant", MerchantRows, key => key switch
         {
             'H' => new Color(0.16f, 0.07f, 0.24f),
             'P' => new Color(0.38f, 0.18f, 0.55f),
