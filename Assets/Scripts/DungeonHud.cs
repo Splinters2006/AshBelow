@@ -78,11 +78,12 @@ namespace Slopgame
             DungeonUi.Label(new Rect(365, 59, 550, 40), Run.Objective, 17, DungeonUi.Text, TextAnchor.UpperCenter);
             if (Run.Boss != null && Run.Boss.Enemy.Health > 0)
             {
-                DungeonUi.Panel(new Rect(390, 104, 500, 74), DungeonUi.PanelColor);
-                DungeonUi.Label(new Rect(406, 113, 468, 24), Run.Boss.Title, 18, AbilityCatalog.Gold, TextAnchor.MiddleCenter);
+                // Kept small so it doesn't crowd the arena: name, a thin bar and the current attack.
+                DungeonUi.Panel(new Rect(500, 100, 280, 36), DungeonUi.PanelColor);
+                DungeonUi.Label(new Rect(506, 102, 268, 16), Run.Boss.Title, 11, AbilityCatalog.Gold, TextAnchor.MiddleCenter);
                 bool untouchable = Run.Boss.IsInvulnerable;
-                DungeonUi.Bar(new Rect(412, 145, 456, 7), displayedBossHealth, untouchable ? AbilityCatalog.Gold : new Color(0.94f, 0.3f, 0.38f));
-                DungeonUi.Label(new Rect(400, 182, 480, 23), Run.Boss.Tell, 13, untouchable || Run.Boss.IsCharging ? AbilityCatalog.Gold : DungeonUi.Muted, TextAnchor.MiddleCenter);
+                DungeonUi.Bar(new Rect(512, 122, 256, 4), displayedBossHealth, untouchable ? AbilityCatalog.Gold : new Color(0.94f, 0.3f, 0.38f));
+                DungeonUi.Label(new Rect(440, 138, 400, 16), Run.Boss.Tell, 11, untouchable || Run.Boss.IsCharging ? AbilityCatalog.Gold : DungeonUi.Muted, TextAnchor.MiddleCenter);
             }
             if (Run.CanSkipRoom && DungeonUi.Button("skipRoom", RestartRect, "Skip room", DebugColor)) Run.DebugSkipRoom();
             if (CanRestartCoop)

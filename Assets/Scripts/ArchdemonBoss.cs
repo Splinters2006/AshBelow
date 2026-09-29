@@ -19,9 +19,9 @@ namespace Slopgame
         public static readonly Color Hellfire = new Color(1f, 0.32f, 0.05f);
         private State state;
         private int rotation;
-        private float stateUntil, readyAt, landAt, nextVolley, nextSpiral, spiralAngle, altitude, eruptAt;
+        private float stateUntil, readyAt, landAt, nextVolley, nextSpiral, spiralAngle, altitude, eruptAt, safeRadius, orbitAngle;
         private bool forcedCataclysm;
-        private Vector2 ground, descendFrom, landing;
+        private Vector2 ground, descendFrom, landing, safeCenter;
         private HellfireAura aura;
 
         public override string Title => "MALPHAS, THE HELLFIRE ARCHDEMON";
@@ -91,10 +91,13 @@ namespace Slopgame
                     break;
                 case State.Ascend:
                     // Flight runs on world time so it stays in step with the inferno (chill can't stretch it).
+                    ground = Vector2.MoveTowards(ground, HoverSpot(), 4.5f * Time.deltaTime);
                     if (Time.time >= stateUntil) { state = State.Bombard; nextVolley = Time.time + 0.3f; nextSpiral = Time.time + 1f; }
                     break;
                 case State.Bombard:
-                    ground = Vector2.MoveTowards(ground, DungeonMap.ClampToArena(target + Vector2.up * 3f, 2f), 2.2f * Time.deltaTime);
+                    // He circles the sanctuary from outside, raining bolts into it.
+                    orbitAngle += 14f * Time.deltaTime;
+                    ground = Vector2.MoveTowards(ground, HoverSpot(), 3f * Time.deltaTime);
                     Bombard(target);
                     if (Time.time >= landAt) BeginDescent(target);
                     break;
@@ -185,11 +188,40 @@ namespace Slopgame
             var arena = DungeonMap.Arena;
             Vector2 safe = DungeonMap.ClampToArena(new Vector2(Random.Range(arena.xMin, arena.xMax), Random.Range(arena.yMin, arena.yMax)), radius + 1.5f);
             Hazard(HazardShape.Inferno, safe, Vector2.up, radius, 0f, InfernoTelegraph, InfernoDuration);
+            safeCenter = safe;
+            safeRadius = radius;
+            Vector2 away = ground - safe;
+            orbitAngle = away.sqrMagnitude > 0.01f ? Mathf.Atan2(away.y, away.x) * Mathf.Rad2Deg : 90f;
             stateUntil = Time.time + 1.1f;
             eruptAt = Time.time + InfernoTelegraph;
             landAt = Time.time + InfernoTelegraph + InfernoDuration;
             CoopFx.Pulse(Run, ground, 5f, Hellfire, 0.9f);
             HeroVfx.Pulse(Run.ProjectileRoot, ground, 5f, Hellfire, 0.9f);
+        }
+
+        /// <summary>
+        /// Where he hovers during Cataclysm: on the orbit angle (or the nearest angle that fits in the arena), far
+        /// enough outside the gold circle that neither his body in the sky nor his shadow overlaps it.
+        /// </summary>
+        private Vector2 HoverSpot()
+        {
+            var arena = DungeonMap.Arena;
+            for (int step = 0; step <= 12; step++)
+                for (int sign = 1; sign >= -1; sign -= 2)
+                {
+                    float angle = orbitAngle + sign * step * 15f;
+                    Vector2 body = safeCenter + FlameMesh.Polar(angle * Mathf.Deg2Rad, safeRadius + 2.4f);
+                    Vector2 shadow = DungeonMap.ClampToArena(body - Vector2.up * FlightHeight, 1.5f);
+                    body = shadow + Vector2.up * FlightHeight;
+                    bool bodyInView = body.y <= arena.yMax - 0.5f && body.x >= arena.xMin && body.x <= arena.xMax - 1f;
+                    if (bodyInView && Vector2.Distance(body, safeCenter) >= safeRadius + 1.6f && Vector2.Distance(shadow, safeCenter) >= safeRadius + 0.8f)
+                    {
+                        orbitAngle = angle;
+                        return shadow;
+                    }
+                    if (step == 0) break;
+                }
+            return ground;
         }
 
         private void Bombard(Vector2 target)
