@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -8,6 +9,8 @@ namespace Slopgame
         public DungeonPlayer Player { get; set; }
         public const int SlotCount = 2;
         public const int MaxRank = 3;
+        public const float ShadowstepDistance = 4f;
+        public const float FrostNovaRadius = 3.1f, FrostNovaExpandTime = 0.75f;
         private readonly AbilityType[] equipped = new AbilityType[SlotCount];
         private readonly float[] readyAt = new float[SlotCount];
         private readonly Dictionary<AbilityType, int> ranks = new Dictionary<AbilityType, int>();
@@ -49,29 +52,32 @@ namespace Slopgame
             switch (definition.Type)
             {
                 case AbilityType.ShieldRush:
-                    Dash(aim, 3.5f, damage + powers.Count(PowerupType.RushPower) * 2); break;
                 case AbilityType.Earthshatter:
-                    AreaAttack(transform.position, 2.6f + powers.Count(PowerupType.ShatterRadius) * 0.4f,
-                        damage, DamageElement.Physical, definition.Color, 2f); break;
                 case AbilityType.Aegis:
-                    Player.Protect(2f + (rank - 1) * 0.3f + powers.Count(PowerupType.AegisDuration) * 0.4f); break;
+                    var knight = Player.GetComponent<KnightRelics>();
+                    if (knight == null || knight.IsRushing) return false;
+                    if (definition.Type == AbilityType.ShieldRush) knight.ShieldRush(aim, damage * 2 + powers.Count(PowerupType.RushPower) * 2);
+                    else if (definition.Type == AbilityType.Earthshatter)
+                        knight.Earthshatter(2.6f + powers.Count(PowerupType.ShatterRadius) * 0.4f, damage, definition.Color, 2f);
+                    else knight.Aegis(2f + (rank - 1) * 0.3f + powers.Count(PowerupType.AegisDuration) * 0.4f);
+                    break;
                 case AbilityType.Volley:
                     Fan(aim, 7 + powers.Count(PowerupType.VolleyCount) * 2, 10f, Player.Damage + rank - 1); break;
                 case AbilityType.PiercingShot:
-                    SpellProjectile.Spawn(Player, aim, damage + powers.Count(PowerupType.PiercingPower) * 2,
-                        DamageElement.Physical, definition.Color, 5f, 0f, 3 + rank); break;
+                    PiercingArrow.Fire(Player, aim, damage + 1 + powers.Count(PowerupType.PiercingPower) * 2); break;
                 case AbilityType.Windstep:
                     Dash(aim, 3.5f + powers.Count(PowerupType.WindstepDistance) * 0.5f);
-                    Fan(aim, 3, 15f, Player.Damage + rank - 1); break;
+                    Fan(aim, 3, BowAttack.SpreadAngle, Player.Damage + rank - 1, BowAttack.HeavyRange); break;
                 case AbilityType.Fireball:
                     SpellProjectile.Spawn(Player, aim, damage, DamageElement.Fire, definition.Color, 7f,
                         1.7f + powers.Count(PowerupType.FireballRadius) * 0.4f); break;
                 case AbilityType.FrostNova:
-                    AreaAttack(transform.position, 3.1f, damage, DamageElement.Ice, definition.Color,
-                        3f + powers.Count(PowerupType.FrostDuration) + (rank - 1) * 0.5f); break;
+                    StartCoroutine(ExpandingNova(transform.position, FrostNovaRadius, FrostNovaExpandTime, damage, definition.Color,
+                        3f + powers.Count(PowerupType.FrostDuration) + (rank - 1) * 0.5f)); break;
                 case AbilityType.Blink:
                     Dash(aim, 4f + powers.Count(PowerupType.BlinkDistance) * 0.5f);
-                    AreaAttack(transform.position, 1.7f, Player.Damage + rank, DamageElement.Ice, definition.Color, 2f); break;
+                    // A harmless icy pulse: it only slows enemies around the landing spot.
+                    FrostPulse(transform.position, 1.7f, definition.Color, 2f + (rank - 1) * 0.5f); break;
                 case AbilityType.FanOfKnives:
                     int knives = 12 + powers.Count(PowerupType.KnifeCount) * 2;
                     for (int i = 0; i < knives; i++)
@@ -86,10 +92,12 @@ namespace Slopgame
                 case AbilityType.HealingLight:
                     ForAllies(SupportKind.Heal, 2 + rank - 1 + powers.Count(PowerupType.HealingPower), 0f); break;
                 case AbilityType.Judgment:
-                    AreaAttack(transform.position, 3f, damage + powers.Count(PowerupType.JudgmentPower) * 2,
-                        DamageElement.Physical, definition.Color, 2f); break;
                 case AbilityType.Sanctuary:
-                    ForAllies(SupportKind.Protect, 0, 2f + (rank - 1) * 0.3f + powers.Count(PowerupType.SanctuaryDuration) * 0.4f); break;
+                    var paladin = Player.GetComponent<PaladinRelics>();
+                    if (paladin == null) return false;
+                    if (definition.Type == AbilityType.Judgment) paladin.Judgment(damage + powers.Count(PowerupType.JudgmentPower) * 2, 2f);
+                    else paladin.Sanctuary(PaladinRelics.SanctuaryDuration + (rank - 1) * 0.5f + powers.Count(PowerupType.SanctuaryDuration) * 0.4f);
+                    break;
                 case AbilityType.Eclipse:
                 case AbilityType.SoulRend:
                 case AbilityType.ShadowReign:
@@ -130,11 +138,11 @@ namespace Slopgame
             CoopFx.Ring(Player.Run, transform.position, 4f, AbilityCatalog.Gold);
         }
 
-        private void Fan(Vector2 aim, int count, float spacing, int damage)
+        private void Fan(Vector2 aim, int count, float spacing, int damage, float range = PlayerProjectile.MaxRange)
         {
             for (int i = 0; i < count; i++)
                 PlayerProjectile.Spawn(Player.Run, transform.position,
-                    Quaternion.Euler(0, 0, (i - (count - 1) * 0.5f) * spacing) * aim, damage);
+                    Quaternion.Euler(0, 0, (i - (count - 1) * 0.5f) * spacing) * aim, damage, range);
         }
 
         public static bool FindShadowstepLanding(DungeonMap map, Vector2 from, Vector2 aim, float distance, out Vector2 landing)
@@ -156,7 +164,7 @@ namespace Slopgame
             return false;
         }
 
-        public bool Shadowstep(Vector2 aim, float distance = 3f)
+        public bool Shadowstep(Vector2 aim, float distance = ShadowstepDistance)
         {
             if (Player.ClassWeapon != WeaponType.Daggers || !Player.Run.IsPlaying) return false;
             Vector2 from = transform.position;
@@ -205,6 +213,53 @@ namespace Slopgame
             CombatVfx.GlowBolt(Player.Run.ProjectileRoot, from, transform.position, AbilityCatalog.Ice);
             CoopFx.Bolt(Player.Run, from, transform.position, AbilityCatalog.Ice, true);
             HeroVfx.Sparks(Player.Run.ProjectileRoot, transform.position, AbilityCatalog.Ice, 8, 3f, 0.3f, (Vector2)transform.position - from, 120f);
+        }
+
+        /// <summary>Frost Nova: a ring of ice that grows outward, striking each enemy once as it reaches them.</summary>
+        private IEnumerator ExpandingNova(Vector2 center, float radius, float duration, int damage, Color color, float slow)
+        {
+            var run = Player.Run;
+            var root = run.ProjectileRoot;
+            var hit = new HashSet<DungeonEnemy>();
+            float nextRing = 0f;
+            for (float t = 0f; ; t += Time.deltaTime)
+            {
+                if (!run.IsPlaying || root != run.ProjectileRoot) yield break;
+                float progress = Mathf.Clamp01(t / duration);
+                float r = Mathf.Lerp(0.3f, radius, progress);
+                if (t >= nextRing || progress >= 1f)
+                {
+                    nextRing = t + 0.08f;
+                    CombatVfx.Ring(root, center, r, color, 0.25f);
+                    CoopFx.Ring(run, center, r, color, 0.25f);
+                    float angle = Random.value * Mathf.PI * 2f;
+                    Vector2 edge = center + new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * r;
+                    HeroVfx.Sparks(root, edge, Color.Lerp(color, Color.white, 0.4f), 3, 2f, 0.25f, edge - center, 70f, 0.8f);
+                }
+                foreach (var enemy in run.Enemies.ToArray())
+                    if (enemy != null && !hit.Contains(enemy) && InArea(enemy, center, r))
+                    {
+                        hit.Add(enemy);
+                        CombatDamage.Apply(Player, enemy, damage, DamageElement.Ice, center);
+                        if (enemy.Health > 0) enemy.Chill(slow);
+                    }
+                if (progress >= 1f)
+                {
+                    HeroVfx.Pulse(root, center, radius, color, 0.3f);
+                    yield break;
+                }
+                yield return null;
+            }
+        }
+
+        private void FrostPulse(Vector2 center, float radius, Color color, float slow)
+        {
+            CombatVfx.Ring(Player.Run.ProjectileRoot, center, radius, color);
+            HeroVfx.Pulse(Player.Run.ProjectileRoot, center, radius, color, 0.4f);
+            CoopFx.Ring(Player.Run, center, radius, color);
+            CoopFx.Pulse(Player.Run, center, radius, color, 0.4f);
+            foreach (var enemy in Player.Run.Enemies.ToArray())
+                if (InArea(enemy, center, radius)) enemy.Chill(slow);
         }
 
         private bool InArea(DungeonEnemy enemy, Vector2 center, float radius) => enemy.Health > 0

@@ -5,7 +5,10 @@ namespace Slopgame
     public sealed class KnightShield : MonoBehaviour
     {
         public const float Duration = 0.8f;
-        public const float Cooldown = 2.8f;
+        /// <summary>The Knight's parry cooldown; the Paladin's shield keeps the slower <see cref="PaladinCooldown"/>.</summary>
+        public const float Cooldown = 1.8f;
+        public const float PaladinCooldown = 2.8f;
+        public static float CooldownFor(WeaponType weapon) => weapon == WeaponType.Hammer ? PaladinCooldown : Cooldown;
         public DungeonPlayer Player { get; set; }
         private float blockingUntil, readyAt;
         public bool IsBlocking => Player.Run.IsPlaying && !Player.IsRolling && Time.time < blockingUntil;
@@ -17,7 +20,7 @@ namespace Slopgame
             if (!Player.Run.IsPlaying || Player.IsRolling || CooldownRemaining > 0f || aim.sqrMagnitude < 0.001f) return false;
             Direction = aim.normalized;
             blockingUntil = Time.time + Duration;
-            readyAt = Time.time + Cooldown;
+            readyAt = Time.time + CooldownFor(Player.ClassWeapon);
             Player.Charge.Cancel();
             HeroVfx.Pulse(Player.transform, Player.transform.position, 0.95f, new Color(0.4f, 0.75f, 1f), 0.25f);
             return true;

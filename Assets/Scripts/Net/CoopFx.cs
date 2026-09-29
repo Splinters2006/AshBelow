@@ -34,6 +34,17 @@ namespace Slopgame
             => Send(run, FxKind.Punch, origin, aim, color, length, halfWidth);
 
         public static void Knife(DungeonRun run, Vector2 position, Vector2 direction, float range) => Send(run, FxKind.Knife, position, direction, null, range);
+        public static void PiercingShot(DungeonRun run, Vector2 origin, Vector2 direction) => Send(run, FxKind.PiercingShot, origin, direction);
+        public static void Aegis(DungeonRun run, float duration) => Send(run, FxKind.Aegis, default, default, null, duration);
+        public static void Holy(DungeonRun run, Vector2 center, float radius, float windup) => Send(run, FxKind.Holy, center, default, null, radius, windup);
+        /// <summary>Sanctuary is more than a picture: every machine plants a real bubble, since each judges its own bolts.</summary>
+        public static void Sanctuary(DungeonRun run, Vector2 center, float radius, float duration) => Send(run, FxKind.Sanctuary, center, default, null, radius, duration);
+
+        private static RemoteHero FindHero(DungeonRun run, ulong id)
+        {
+            foreach (var hero in run.Coop.RemoteHeroes) if (hero != null && hero.Id == id) return hero;
+            return null;
+        }
 
         public static void RearHit(DungeonRun run, Vector2 position, Vector2 facing, float hitRadius)
             => Send(run, FxKind.RearHit, position, facing, null, hitRadius);
@@ -58,10 +69,16 @@ namespace Slopgame
                 case FxKind.RearHit: RearHitMarker.Draw(root, fx.A, fx.B, fx.F1); break;
                 case FxKind.Knife:
                     // The ghost blade flies home to the teammate who threw it.
-                    RemoteHero thrower = null;
-                    foreach (var hero in run.Coop.RemoteHeroes) if (hero != null && hero.Id == fx.Origin) thrower = hero;
+                    var thrower = FindHero(run, fx.Origin);
                     if (thrower != null) ReturningKnife.SpawnGhost(run, thrower.transform, fx.A, fx.B, fx.F1);
                     break;
+                case FxKind.PiercingShot: PiercingArrow.SpawnGhost(run, fx.A, fx.B); break;
+                case FxKind.Aegis:
+                    var knight = FindHero(run, fx.Origin);
+                    if (knight != null) HolyBubble.Wrap(root, knight.transform, fx.F1, AbilityCatalog.Ice);
+                    break;
+                case FxKind.Holy: HolyLightVfx.Play(root, fx.A, fx.F1, fx.F2); break;
+                case FxKind.Sanctuary: HolyBubble.Sanctuary(root, fx.A, fx.F1, fx.F2); break;
             }
         }
     }

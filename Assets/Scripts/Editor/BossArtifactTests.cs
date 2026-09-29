@@ -15,6 +15,24 @@ namespace Slopgame.Editor
         private static readonly List<WeaponType> classes = new List<WeaponType> { WeaponType.Sword, WeaponType.Bow, WeaponType.Staff, WeaponType.Daggers, WeaponType.Hammer, WeaponType.Shadow, WeaponType.Fists };
         private static int classIndex;
         private static int abilityIndex;
+        private static bool activeCast;
+        private static DungeonEnemy activeTarget;
+        private static Vector2 activeOrigin;
+
+        private static bool IsDelayed(AbilityType type) => type == AbilityType.ShieldRush || type == AbilityType.Earthshatter
+            || type == AbilityType.Judgment || type == AbilityType.KnuckleSandwich || type == AbilityType.FrostNova;
+
+        private static void VerifyDelayed(DungeonRun run, AbilityDefinition ability)
+        {
+            if (!IsDelayed(ability.Type)) return;
+            Require(activeTarget != null && activeTarget.Health < 100, ability.Name + " never landed after its windup.");
+            Require(!run.Player.IsBusy, ability.Name + " left the hero stuck.");
+            if (ability.Type == AbilityType.FrostNova)
+                Require(activeTarget.ActionSpeedMultiplier == 0.5f, "Frost Nova did not chill.");
+            if (ability.Type == AbilityType.ShieldRush)
+                Require(Vector2.Distance(activeOrigin, run.Player.transform.position) > 0.5f && run.Map.CanStand(run.Player.transform.position),
+                    "Shield Rush did not carry the Knight forward.");
+        }
         private static DungeonEnemy burnTarget;
         private static DungeonPlayer nearbyAlly, distantAlly, otherRunAlly;
 
@@ -128,8 +146,18 @@ namespace Slopgame.Editor
                 }
                 if (stage == 4)
                 {
-                    FreezeEnemies(run);
-                    TestActive(run, AbilityCatalog.All[abilityIndex]);
+                    var ability = AbilityCatalog.All[abilityIndex];
+                    if (!activeCast)
+                    {
+                        FreezeEnemies(run);
+                        TestActive(run, ability);
+                        activeCast = true;
+                        // Wound-up abilities land a little later; check them once they have.
+                        if (IsDelayed(ability.Type)) { waitUntil = Time.time + 1.2f; return; }
+                    }
+                    else if (Time.time < waitUntil) return;
+                    VerifyDelayed(run, ability);
+                    activeCast = false;
                     abilityIndex++;
                     if (abilityIndex < AbilityCatalog.All.Length)
                     { StartClass(run, AbilityCatalog.All[abilityIndex].ClassWeapon); return; }
@@ -170,7 +198,7 @@ namespace Slopgame.Editor
                 if (stage == 7)
                 {
                     FreezeEnemies(run);
-                    Require(run.Player.Weapon is PaladinAttack && run.Player.Charge.Duration == 3f, "Paladin weapon/long charge missing.");
+                    Require(run.Player.Weapon is PaladinAttack && Mathf.Approximately(run.Player.Charge.Duration, 2f), "Paladin weapon/two-second blessing charge missing.");
                     var target = run.Enemies[0];
                     target.transform.position = run.Player.transform.position + Vector3.right;
                     target.Health = 100;
@@ -202,7 +230,7 @@ namespace Slopgame.Editor
                     if (Time.time < waitUntil) return;
                     run.Player.Charge.Tick(true, true);
                     Require(run.Player.Charge.IsCharging, "Blessing charge did not start.");
-                    waitUntil = Time.time + 3.05f;
+                    waitUntil = Time.time + PaladinAttack.ChargeDuration + 0.05f;
                     stage = 10;
                     return;
                 }
@@ -216,6 +244,8 @@ namespace Slopgame.Editor
                     Require(distantAlly.Blessing.BonusDamage == 0 && otherRunAlly.Blessing.BonusDamage == 0,
                         "Blessing reached a distant ally or another run.");
                     Require(run.Enemies[0].Health == targetHealth, "Full blessing charge still performed a damaging attack.");
+                    Require(run.Player.GetComponentInChildren<BlessingSparkles>() != null && nearbyAlly.GetComponentInChildren<BlessingSparkles>() != null,
+                        "Blessed heroes have no golden sparkles.");
                     run.Player.Upgrade((int)PowerupType.Damage);
                     waitUntil = Time.time + 0.7f;
                     stage = 11;
@@ -427,11 +457,48 @@ namespace Slopgame.Editor
             target.Health = 100;
             if (ability.Type == AbilityType.HealingLight) player.Hit();
             Require(player.Abilities.TryUse(0, Vector2.right), "Ability failed to cast: " + ability.Name);
+            activeTarget = target;
+            activeOrigin = origin;
             foreach (var shot in run.ProjectileRoot.GetComponentsInChildren<SpellProjectile>()) shot.Advance(0.15f);
             foreach (var arrow in run.ProjectileRoot.GetComponentsInChildren<PlayerProjectile>()) arrow.Advance(0.15f);
             foreach (var knife in run.ProjectileRoot.GetComponentsInChildren<ReturningKnife>()) knife.Advance(0.15f);
+            foreach (var piercing in run.ProjectileRoot.GetComponentsInChildren<PiercingArrow>()) piercing.Advance(0.15f);
             switch (ability.Type)
             {
+                case AbilityType.ShieldRush:
+                    Require(player.IsBusy && player.IsInvulnerable && Vector2.Distance(origin, player.transform.position) < 1f,
+                        "Shield Rush was instant instead of a slow charge."); break;
+                case AbilityType.KnuckleSandwich:
+                    Require(player.IsBusy && target.Health == 100, "Knuckle Sandwich landed without a windup."); break;
+                case AbilityType.Judgment:
+                    Require(target.Health == 100 && run.ProjectileRoot.GetComponentInChildren<HolyLightVfx>() != null, "Judgment smote without a holy windup."); break;
+                case AbilityType.Earthshatter:
+                    break;
+                case AbilityType.Sanctuary:
+                    var bubble = run.ProjectileRoot.GetComponentInChildren<HolyBubble>();
+                    Require(bubble != null && bubble.BlocksProjectiles && bubble.Contains(origin), "Sanctuary did not form a bubble around the Paladin.");
+                    var incoming = EnemyProjectile.Spawn(run, run.ProjectileRoot, origin + Vector2.left * (PaladinRelics.SanctuaryRadius + 0.4f), Vector2.right);
+                    incoming.Advance(0.2f);
+                    var outgoing = PlayerProjectile.Spawn(run, origin, Vector2.left, 1);
+                    outgoing.Advance(0.5f);
+                    Require(incoming.IsSpent && outgoing.IsSpent && player.Health == player.MaxHealth, "Sanctuary let a projectile cross its edge.");
+                    break;
+                case AbilityType.Aegis:
+                    Require(player.IsInvulnerable && run.ProjectileRoot.GetComponentInChildren<HolyBubble>() != null, "Aegis showed no bubble."); break;
+                case AbilityType.PiercingShot:
+                    var piercingShot = run.ProjectileRoot.GetComponentInChildren<PiercingArrow>();
+                    Require(target.Health < 100 && piercingShot != null, "Piercing Shot did not strike its target.");
+                    // It keeps flying far past the old 5-unit range when the room allows.
+                    var distant = run.Enemies.Find(enemy => enemy != target);
+                    Vector2 lane = origin + Vector2.right * 9f;
+                    if (distant != null && run.HasLineOfSight(origin, lane))
+                    {
+                        distant.transform.position = lane;
+                        distant.Health = 100;
+                        for (int i = 0; i < 10 && !piercingShot.IsSpent; i++) piercingShot.Advance(0.1f);
+                        Require(distant.Health < 100, "Piercing Shot fell short of its long range.");
+                    }
+                    break;
                 case AbilityType.FanOfKnives:
                     Require(target.Health < 100, "Fan of Knives did not damage its target.");
                     var knives = run.ProjectileRoot.GetComponentsInChildren<ReturningKnife>();
@@ -451,10 +518,8 @@ namespace Slopgame.Editor
                     player.transform.position = origin;
                     break;
                 case AbilityType.FrostNova:
-                    Require(target.Health < 100 && target.ActionSpeedMultiplier == 0.5f, "Frost Nova did not damage and chill."); break;
-                case AbilityType.Aegis:
+                    Require(target.Health == 100, "Frost Nova hit instantly instead of expanding."); break;
                 case AbilityType.ShadowVeil:
-                case AbilityType.Sanctuary:
                     Require(player.IsInvulnerable, "Protection ability did not protect: " + ability.Name); break;
                 case AbilityType.HealingLight:
                     Require(player.Health == player.MaxHealth, "Healing Light did not heal."); break;
@@ -466,7 +531,9 @@ namespace Slopgame.Editor
                         "Primal Rage did not buff damage or started its cooldown before the rage ended."); break;
                 case AbilityType.Blink:
                 case AbilityType.Windstep:
-                    Require(Vector2.Distance(origin, player.transform.position) > 0.5f && run.Map.CanStand(player.transform.position), "Dash failed or passed through walls."); break;
+                    Require(Vector2.Distance(origin, player.transform.position) > 0.5f && run.Map.CanStand(player.transform.position), "Dash failed or passed through walls.");
+                    Require(ability.Type != AbilityType.Blink || target.Health == 100, "Arcane Blink dealt damage.");
+                    break;
                 default:
                     Require(target.Health < 100, "Offensive ability did not damage its target: " + ability.Name); break;
             }

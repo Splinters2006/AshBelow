@@ -16,28 +16,30 @@ namespace Slopgame
     public enum CoopDamageKind : byte { Hit, Burn, Chill }
     public enum CoopBoltEventKind : byte { Reflected, Consumed }
     public enum SupportKind : byte { Heal, Protect, Bless }
-    public enum FxKind : byte { Arrow, Spell, Slash, Bolt, GlowBolt, Ring, Pulse, Rift, Execution, Singularity, Punch, RearHit, Knife }
+    public enum FxKind : byte { Arrow, Spell, Slash, Bolt, GlowBolt, Ring, Pulse, Rift, Execution, Singularity, Punch, RearHit, Knife, PiercingShot, Aegis, Holy, Sanctuary }
 
     public struct PlayerStateMessage
     {
         public const byte Rolling = 1, Blocking = 2, Charging = 4, Dead = 8, Invulnerable = 16, Empowered = 32, Raging = 64, Tired = 128;
+        /// <summary>Bits of <see cref="MoreFlags"/>.</summary>
+        public const byte Blessed = 1;
         public ulong Id;
         public int Floor;
         public Vector2 Position, Aim;
-        public byte Flags;
+        public byte Flags, MoreFlags;
         public short Health, MaxHealth;
 
         public void Write(FastBufferWriter w)
         {
             w.WriteValueSafe(Id); w.WriteValueSafe(Floor); w.WriteValueSafe(Position); w.WriteValueSafe(Aim);
-            w.WriteValueSafe(Flags); w.WriteValueSafe(Health); w.WriteValueSafe(MaxHealth);
+            w.WriteValueSafe(Flags); w.WriteValueSafe(MoreFlags); w.WriteValueSafe(Health); w.WriteValueSafe(MaxHealth);
         }
 
         public static PlayerStateMessage Read(FastBufferReader r)
         {
             var m = new PlayerStateMessage();
             r.ReadValueSafe(out m.Id); r.ReadValueSafe(out m.Floor); r.ReadValueSafe(out m.Position); r.ReadValueSafe(out m.Aim);
-            r.ReadValueSafe(out m.Flags); r.ReadValueSafe(out m.Health); r.ReadValueSafe(out m.MaxHealth);
+            r.ReadValueSafe(out m.Flags); r.ReadValueSafe(out m.MoreFlags); r.ReadValueSafe(out m.Health); r.ReadValueSafe(out m.MaxHealth);
             return m;
         }
     }

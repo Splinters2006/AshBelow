@@ -13,12 +13,13 @@ namespace Slopgame
         public bool IsAlive => Health > 0;
         public bool IsRolling => (flags & PlayerStateMessage.Rolling) != 0;
         public bool IsEmpowered => (flags & PlayerStateMessage.Empowered) != 0;
+        public bool IsBlessed => (moreFlags & PlayerStateMessage.Blessed) != 0;
         public Vector2 Aim { get; private set; } = Vector2.right;
         private DungeonRun run;
         private SpriteRenderer body, details, shield;
         private Renderer[] renderers;
         private Vector2 target;
-        private byte flags;
+        private byte flags, moreFlags;
         private bool facingLeft, visible = true;
 
         public static RemoteHero Create(DungeonRun run, ulong id, string playerName, CharacterDefinition character, Vector2 position)
@@ -35,6 +36,7 @@ namespace Slopgame
             hero.details = DungeonVisuals.DecorateHero(body.transform, character.Weapon, character.Color);
             hero.shield = DungeonVisuals.Create("Teammate shield", body.transform, position, new Vector2(0.14f, 1.3f), new Color(0.45f, 0.78f, 1f, 0.8f), 7);
             hero.shield.enabled = false;
+            BlessingSparkles.Attach(body.transform, () => hero.IsAlive && hero.IsBlessed);
             hero.renderers = body.GetComponentsInChildren<Renderer>(true);
             return hero;
         }
@@ -44,6 +46,7 @@ namespace Slopgame
             target = state.Position;
             if (state.Aim.sqrMagnitude > 0.001f) Aim = state.Aim.normalized;
             flags = state.Flags;
+            moreFlags = state.MoreFlags;
             Health = (flags & PlayerStateMessage.Dead) != 0 ? 0 : Mathf.Max(1, (int)state.Health);
             MaxHealth = Mathf.Max(1, (int)state.MaxHealth);
             // Big jumps (a blink, a new floor) snap instead of sliding through walls.

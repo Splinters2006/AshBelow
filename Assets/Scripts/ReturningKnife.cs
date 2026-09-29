@@ -10,7 +10,7 @@ namespace Slopgame
     /// </summary>
     public sealed class ReturningKnife : MonoBehaviour
     {
-        public const float ReturnDelay = 1f, OutwardSpeed = 12f, ReturnSpeed = 16f, MaxLifetime = 6f;
+        public const float ReturnDelay = 1f, OutwardSpeed = 12f, ReturnSpeed = 26f, MaxLifetime = 6f;
         public static readonly Color Blade = new Color(0.78f, 0.62f, 1f);
         private DungeonRun run;
         private Transform owner;
@@ -79,6 +79,7 @@ namespace Slopgame
             for (int i = 0; i < steps; i++)
             {
                 Vector2 next = (Vector2)transform.position + direction * (distance / steps);
+                if (HolyBubble.Blocks(transform.position, next)) { Consume(); return; }
                 if (!run.Map.CanStand(next, 0.08f))
                 {
                     stuck = true;
@@ -103,7 +104,9 @@ namespace Slopgame
             int steps = Mathf.Max(1, Mathf.CeilToInt(distance / 0.08f));
             for (int i = 0; i < steps; i++)
             {
+                Vector2 previous = position;
                 position += heading * (distance / steps);
+                if (HolyBubble.Blocks(previous, position)) { Consume(); return; }
                 transform.position = position;
                 Strike(position, heading, hitBack);
             }

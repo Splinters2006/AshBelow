@@ -1,4 +1,15 @@
-make a minimap for each floor that shows where enemies are, if they have been spotted before, this shares between players on multiplayer
-make assassins fan of knives return to the assasin after 1 second, no matter where the assassin is, dealing damage to anything in their path,
-add a popup that asks if you really want to replace a relic if you are about to
-
+decrease width of the arrchers right click, increase the range,
+same for archer windstep
+improve the visuals for archer's piercing shot and make it have a lot of range, make it also feel more powerful
+make brawler knuckle sandwich feel more powerfull too, make it feel like a HEAVY punch with some windup
+make brawler wild leap go faster and increase its AOE the farther it travels
+lower knight parry cooldown
+make knight charge faster
+make knight shield rush not instant, but make it powerfull but slow
+make kniught eartshatter 5 rings pulsing outwards instead of one big one, ffirst the small ring, then a bigger then a bigger, to give it that earthquake feeling
+add a bubble vfx to knight when aegis is active
+make paladin blessing require 2/3 of its current charge time,
+give all units, including self affected by paladin blessing have yellow sparks floating around them to signify the blessing
+make paladins judgement have a windup and make it clear that its holy light
+increase paladins healing light to 30seconds cooldown
+rework paladins sanctuary to " form a bubble of holy light that blocks all projectiles from going in and out "

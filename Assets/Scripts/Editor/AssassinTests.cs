@@ -111,8 +111,8 @@ namespace Slopgame.Editor
                 Vector2 origin = player.transform.position;
                 Vector2 aim = Vector2.right;
                 foreach (var direction in new[] { Vector2.right, Vector2.left, Vector2.up, Vector2.down })
-                    if (run.Map.CanStand(origin + direction * 3f)) { aim = direction; break; }
-                Require(run.Map.CanStand(origin + aim * 3f), "No room for sweep test.");
+                    if (run.Map.CanStand(origin + direction * PlayerAbilities.ShadowstepDistance)) { aim = direction; break; }
+                Require(run.Map.CanStand(origin + aim * PlayerAbilities.ShadowstepDistance), "No room for sweep test.");
                 foreach (var enemy in run.Enemies) enemy.transform.position = origin - aim * 4f;
                 var first = run.Enemies[0];
                 var second = run.Enemies[1];
@@ -122,7 +122,7 @@ namespace Slopgame.Editor
                 missed.transform.position = origin + aim * 1.5f + Vector2.Perpendicular(aim) * 1.5f;
                 first.Health = second.Health = missed.Health = 1000;
                 Require(player.Weapon.TryHeavyAttack(aim), "RMB failed to shadowstep.");
-                Require(Vector2.Distance(player.transform.position, origin + aim * 3f) < 0.01f && player.IsInvulnerable,
+                Require(Vector2.Distance(player.transform.position, origin + aim * PlayerAbilities.ShadowstepDistance) < 0.01f && player.IsInvulnerable,
                     "Shadowstep failed to travel or grant brief protection.");
                 Require(first.Health == 1000 - fullBackstab || first.Health == 1000 - fullBackstab * 2,
                     "First swept enemy did not take exactly one fully charged backstab.");

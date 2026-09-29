@@ -63,6 +63,9 @@ namespace Slopgame
                 Shield.Player = this;
             }
             details = DungeonVisuals.DecorateHero(transform, weaponType, characterColor);
+            BlessingSparkles.Attach(transform, () => Health > 0 && Blessing.BonusDamage > 0);
+            if (weaponType == WeaponType.Sword) gameObject.AddComponent<KnightRelics>().Player = this;
+            if (weaponType == WeaponType.Hammer) gameObject.AddComponent<PaladinRelics>().Player = this;
             var afterimage = gameObject.AddComponent<DodgeAfterimage>();
             afterimage.Player = this;
             afterimage.Tint = Color.Lerp(characterColor, new Color(0.4f, 0.65f, 1f), 0.55f);

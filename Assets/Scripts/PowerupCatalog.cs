@@ -64,7 +64,7 @@ namespace Slopgame
             new PowerupDefinition(PowerupType.PaladinWard, "Blessed Guard", "+1 protective ward each floor", 3, WeaponType.Hammer),
             new PowerupDefinition(PowerupType.HealingPower, "Restoration", "+1 HP restored by Healing Light", 3, WeaponType.Hammer, AbilityType.HealingLight),
             new PowerupDefinition(PowerupType.JudgmentPower, "Righteous Fury", "+2 Judgment damage", 3, WeaponType.Hammer, AbilityType.Judgment),
-            new PowerupDefinition(PowerupType.SanctuaryDuration, "Sacred Ground", "+0.4 seconds of Sanctuary protection", 3, WeaponType.Hammer, AbilityType.Sanctuary),
+            new PowerupDefinition(PowerupType.SanctuaryDuration, "Sacred Ground", "+0.4 seconds of Sanctuary's bubble", 3, WeaponType.Hammer, AbilityType.Sanctuary),
             new PowerupDefinition(PowerupType.RiftReach, "Endless Night", "+1.5 shadow rift range", 3, WeaponType.Shadow),
             new PowerupDefinition(PowerupType.AbyssalPower, "Abyssal Power", "+16 shadow rift damage before charge scaling", 3, WeaponType.Shadow),
             new PowerupDefinition(PowerupType.EclipseRadius, "Event Horizon", "+1 Eclipse execution radius", 3, WeaponType.Shadow, AbilityType.Eclipse),

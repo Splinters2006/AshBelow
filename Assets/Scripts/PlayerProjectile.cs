@@ -50,7 +50,7 @@ namespace Slopgame
             for (int i = 0; i < steps; i++)
             {
                 Vector2 next = (Vector2)transform.position + Direction * (distance / steps);
-                if (!run.Map.CanStand(next, 0.08f))
+                if (!run.Map.CanStand(next, 0.08f) || HolyBubble.Blocks(transform.position, next))
                 {
                     HeroVfx.Sparks(run.ProjectileRoot, transform.position, new Color(0.85f, 0.85f, 0.7f), 5, 2.5f, 0.2f, -Direction, 140f, 0.7f);
                     Consume();

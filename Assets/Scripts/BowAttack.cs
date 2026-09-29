@@ -5,7 +5,9 @@ namespace Slopgame
     public sealed class BowAttack : MonoBehaviour, IPlayerWeapon
     {
         public const float HeavyCooldown = 6f;
-        public const float SpreadAngle = 15f;
+        // Triple shot: a tight, long-range spread.
+        public const float SpreadAngle = 6f;
+        public const float HeavyRange = 8.5f;
         public const float ChargedRangeBonus = 1f;
         public static float RangeForCharge(float charge) => PlayerProjectile.MaxRange + ChargedRangeBonus * Mathf.Clamp01(charge);
         public DungeonPlayer Player { get; set; }
@@ -30,7 +32,7 @@ namespace Slopgame
             if (!CanFire(aim) || HeavyCooldownRemaining > 0) return false;
             Player.Charge.Cancel();
             for (int i = -1; i <= 1; i++)
-                Fire(Quaternion.Euler(0, 0, SpreadAngle * i) * aim.normalized, Player.Damage);
+                Fire(Quaternion.Euler(0, 0, SpreadAngle * i) * aim.normalized, Player.Damage, HeavyRange);
             heavyReadyAt = Time.time + HeavyCooldown;
             readyAt = Time.time + 0.35f * Player.Powerups.AttackIntervalMultiplier;
             return true;

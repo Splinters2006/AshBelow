@@ -256,7 +256,7 @@ namespace Slopgame.Editor
                 if (Time.time - heavyStarted < KnightShield.Cooldown + 0.05f) return false;
                 if (!sword.TryHeavyAttack(Vector2.right)) throw new Exception("Shield cooldown did not expire.");
                 if (!player.TryRoll(Vector2.left) || sword.IsHeavyAttacking) throw new Exception("Dodge did not cancel shield.");
-                if (sword.HeavyCooldownRemaining < 2.7f) throw new Exception("Cancel refunded shield cooldown.");
+                if (sword.HeavyCooldownRemaining < KnightShield.Cooldown - 0.1f) throw new Exception("Cancel refunded shield cooldown.");
                 heavyStarted = Time.time;
                 heavyStage = 3;
                 return false;
@@ -310,11 +310,11 @@ namespace Slopgame.Editor
                 var angles = new List<float>();
                 foreach (var arrow in arrows)
                 {
-                    if (Mathf.Abs(arrow.RemainingRange - 5f) > 0.001f) throw new Exception("Triple shot gained charged range.");
+                    if (Mathf.Abs(arrow.RemainingRange - BowAttack.HeavyRange) > 0.001f) throw new Exception("Triple shot range is incorrect.");
                     angles.Add(Vector2.SignedAngle(Vector2.right, arrow.Direction));
                 }
                 angles.Sort();
-                if (Mathf.Abs(angles[0] + 15) > 0.01f || Mathf.Abs(angles[1]) > 0.01f || Mathf.Abs(angles[2] - 15) > 0.01f)
+                if (Mathf.Abs(angles[0] + BowAttack.SpreadAngle) > 0.01f || Mathf.Abs(angles[1]) > 0.01f || Mathf.Abs(angles[2] - BowAttack.SpreadAngle) > 0.01f)
                     throw new Exception("Triple arrow cone spread is incorrect.");
                 if (Mathf.Abs(bow.HeavyCooldownRemaining - 6f) > 0.02f) throw new Exception("Archer cooldown must be six seconds.");
                 archerStarted = Time.time;

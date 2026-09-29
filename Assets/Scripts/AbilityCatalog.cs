@@ -33,26 +33,26 @@ namespace Slopgame
         public static readonly Color Green = new Color(0.57f, 0.93f, 0.55f);
         public static readonly AbilityDefinition[] All =
         {
-            new AbilityDefinition(AbilityType.ShieldRush, WeaponType.Sword, "Shield Rush", "Surge forward, striking enemies in your path. Briefly invulnerable.", ">>", 8f, Ice),
-            new AbilityDefinition(AbilityType.Earthshatter, WeaponType.Sword, "Earthshatter", "A heavy shockwave damages and slows nearby enemies.", "X", 10f, Gold),
-            new AbilityDefinition(AbilityType.Aegis, WeaponType.Sword, "Aegis", "Become invulnerable for 2 seconds. Ranks extend protection.", "O", 14f, Ice),
+            new AbilityDefinition(AbilityType.ShieldRush, WeaponType.Sword, "Shield Rush", "Brace behind your shield and charge slowly forward, smashing through enemies in your path. Unstoppable and invulnerable while charging.", ">>", 8f, Ice),
+            new AbilityDefinition(AbilityType.Earthshatter, WeaponType.Sword, "Earthshatter", "Stomp the ground: five quake rings ripple outward, damaging and slowing enemies.", "X", 10f, Gold),
+            new AbilityDefinition(AbilityType.Aegis, WeaponType.Sword, "Aegis", "A shimmering bubble makes you invulnerable for 2 seconds. Ranks extend protection.", "O", 14f, Ice),
             new AbilityDefinition(AbilityType.Volley, WeaponType.Bow, "Arrow Volley", "Unleash a seven-arrow fan. Arrows keep their 5-unit range.", "///", 8f, Green),
-            new AbilityDefinition(AbilityType.PiercingShot, WeaponType.Bow, "Piercing Shot", "A powerful arrow pierces a line of enemies. Range: 5 units.", "->", 9f, Gold),
-            new AbilityDefinition(AbilityType.Windstep, WeaponType.Bow, "Windstep", "Dash in your aim direction and fire a three-arrow counterattack.", ">>", 10f, Green),
+            new AbilityDefinition(AbilityType.PiercingShot, WeaponType.Bow, "Piercing Shot", "A thundering arrow tears through every enemy in a long line. Range: 18 units.", "->", 9f, Gold),
+            new AbilityDefinition(AbilityType.Windstep, WeaponType.Bow, "Windstep", "Dash in your aim direction and fire a tight, long-range three-arrow counterattack.", ">>", 10f, Green),
             new AbilityDefinition(AbilityType.Fireball, WeaponType.Staff, "Inferno Orb", "Unlock an explosive fireball. Its elemental effect can ignite enemies.", "*", 8f, new Color(1f, 0.43f, 0.23f)),
-            new AbilityDefinition(AbilityType.FrostNova, WeaponType.Staff, "Frost Nova", "Damage nearby enemies with ice, slowing all their actions by 50%.", "+", 10f, Ice),
-            new AbilityDefinition(AbilityType.Blink, WeaponType.Staff, "Arcane Blink", "Blink forward and release an icy pulse at your destination.", "<>", 9f, Violet),
+            new AbilityDefinition(AbilityType.FrostNova, WeaponType.Staff, "Frost Nova", "A ring of ice slowly expands around you, damaging enemies it reaches and slowing all their actions by 50%.", "+", 10f, Ice),
+            new AbilityDefinition(AbilityType.Blink, WeaponType.Staff, "Arcane Blink", "Blink forward and release a harmless icy pulse that slows enemies at your destination.", "<>", 9f, Violet),
             new AbilityDefinition(AbilityType.FanOfKnives, WeaponType.Daggers, "Fan of Knives", "Throw a ring of piercing knives that fly back to you after 1 second, wherever you are, cutting through everything in their path. Each can critically strike.", "X", 8f, Violet),
             new AbilityDefinition(AbilityType.VenomStrike, WeaponType.Daggers, "Venom Strike", "Wound nearby enemies with poison and a heavy physical hit.", "+", 9f, Green),
             new AbilityDefinition(AbilityType.ShadowVeil, WeaponType.Daggers, "Shadow Veil", "Brief invulnerability lets you slip behind enemies safely.", "~", 12f, Violet),
-            new AbilityDefinition(AbilityType.HealingLight, WeaponType.Hammer, "Healing Light", "Restore 2 HP to yourself and nearby allies.", "+", 16f, Gold),
-            new AbilityDefinition(AbilityType.Judgment, WeaponType.Hammer, "Judgment", "Smite and slow enemies around you with a radiant shockwave.", "!", 10f, Gold),
-            new AbilityDefinition(AbilityType.Sanctuary, WeaponType.Hammer, "Sanctuary", "Protect yourself and nearby allies with temporary invulnerability.", "O", 16f, Ice),
+            new AbilityDefinition(AbilityType.HealingLight, WeaponType.Hammer, "Healing Light", "Restore 2 HP to yourself and nearby allies.", "+", 30f, Gold),
+            new AbilityDefinition(AbilityType.Judgment, WeaponType.Hammer, "Judgment", "Call down a column of holy light. After a short windup it smites and slows enemies around the mark.", "!", 10f, Gold),
+            new AbilityDefinition(AbilityType.Sanctuary, WeaponType.Hammer, "Sanctuary", "Form a bubble of holy light that blocks all projectiles from going in or out.", "O", 16f, Ice),
             new AbilityDefinition(AbilityType.Eclipse, WeaponType.Shadow, "Eclipse", "A vast black sun executes every visible enemy within 11 units, including guardians. Ranks widen its reach.", "O", 6f, Violet),
             new AbilityDefinition(AbilityType.SoulRend, WeaponType.Shadow, "Soul Rend", "Tear open a 14-unit shadow corridor for triple fully charged damage. Ranks multiply its damage.", "///", 3f, Ice),
             new AbilityDefinition(AbilityType.ShadowReign, WeaponType.Shadow, "Shadow Reign", "Detonate nearby shadows. Become invulnerable and double rift damage for 3 seconds. Ranks extend the reign.", "*", 8f, Violet),
-            new AbilityDefinition(AbilityType.KnuckleSandwich, WeaponType.Fists, "Knuckle Sandwich", "Empower your fist and deliver a massive punch in a big rectangle ahead. Ranks increase its size and damage.", "[]", 7f, BrawlerAttack.Glove),
-            new AbilityDefinition(AbilityType.WildLeap, WeaponType.Fists, "Wild Leap", "Pounce onto an enemy and slam down for massive damage. Invulnerable while airborne.", "^", 16f, Gold),
+            new AbilityDefinition(AbilityType.KnuckleSandwich, WeaponType.Fists, "Knuckle Sandwich", "Wind up and throw a HEAVY punch that smashes everything in a big rectangle ahead. Ranks increase its size and damage.", "[]", 7f, BrawlerAttack.Glove),
+            new AbilityDefinition(AbilityType.WildLeap, WeaponType.Fists, "Wild Leap", "Pounce onto an enemy and slam down for massive damage. The farther you leap, the wider the slam. Invulnerable while airborne.", "^", 16f, Gold),
             new AbilityDefinition(AbilityType.PrimalRage, WeaponType.Fists, "Primal Rage", "10 seconds of huge damage, charge, movement and dodge buffs, then 5 seconds tired. Cooldown starts once rested.", "!!", 25f, new Color(1f, 0.25f, 0.2f))
         };
 

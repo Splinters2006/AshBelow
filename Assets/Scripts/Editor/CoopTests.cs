@@ -65,10 +65,10 @@ namespace Slopgame.Editor
         private static void TestMessages()
         {
             byte buffFlags = PlayerStateMessage.Rolling | PlayerStateMessage.Dead | PlayerStateMessage.Raging | PlayerStateMessage.Tired;
-            var state = new PlayerStateMessage { Id = 3, Floor = 7, Position = new Vector2(1.5f, -2f), Aim = Vector2.up, Flags = buffFlags, Health = 4, MaxHealth = 8 };
+            var state = new PlayerStateMessage { Id = 3, Floor = 7, Position = new Vector2(1.5f, -2f), Aim = Vector2.up, Flags = buffFlags, MoreFlags = PlayerStateMessage.Blessed, Health = 4, MaxHealth = 8 };
             var stateBack = RoundTrip(state, (m, w) => m.Write(w), PlayerStateMessage.Read);
             Require(stateBack.Id == 3 && stateBack.Floor == 7 && stateBack.Position == state.Position && stateBack.Aim == Vector2.up
-                && stateBack.Flags == buffFlags && stateBack.Health == 4 && stateBack.MaxHealth == 8, "Player state did not round-trip.");
+                && stateBack.Flags == buffFlags && stateBack.MoreFlags == PlayerStateMessage.Blessed && stateBack.Health == 4 && stateBack.MaxHealth == 8, "Player state did not round-trip.");
 
             var enemy = new EnemySnapshot { Id = 12, Position = new Vector2(20f, 9f), Facing = Vector2.left, Health = 31, Flags = EnemySnapshot.Burning | EnemySnapshot.Charging };
             var enemyBack = RoundTrip(enemy, (m, w) => m.Write(w), EnemySnapshot.Read);

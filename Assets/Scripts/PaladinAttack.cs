@@ -4,7 +4,8 @@ namespace Slopgame
 {
     public sealed class PaladinAttack : MonoBehaviour, IPlayerWeapon
     {
-        public const float ChargeDuration = 3f;
+        // Two thirds of the original three seconds.
+        public const float ChargeDuration = 2f;
         public const float BlessingRadius = 4f;
         public const float BlessingDuration = 8f;
         public const int BlessingDamage = 2;

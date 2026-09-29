@@ -114,6 +114,6 @@ namespace Slopgame
             : weapon == WeaponType.Fists ? "Empower" : "Reflect shield";
         public static float SpecialCooldown(WeaponType weapon) => weapon == WeaponType.Bow ? 6f
             : weapon == WeaponType.Shadow ? AdminAttack.NightfallCooldown : weapon == WeaponType.Staff ? 3f : weapon == WeaponType.Daggers ? 4f
-            : weapon == WeaponType.Fists ? BrawlerAttack.EmpowerCooldown : KnightShield.Cooldown;
+            : weapon == WeaponType.Fists ? BrawlerAttack.EmpowerCooldown : KnightShield.CooldownFor(weapon);
     }
 }

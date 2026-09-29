@@ -16,11 +16,15 @@ namespace Slopgame
         public const int BarragePunches = 6;
         public const float EmpowerCooldown = 10f, EmpowerDuration = 5f;
         public const float RageDuration = 10f, TiredDuration = 5f;
-        public const float LeapRange = 7f, LeapDuration = 0.42f;
+        public const float LeapRange = 7f, LeapDuration = 0.26f;
+        public const float SandwichWindup = 0.42f;
+        /// <summary>Wild Leap's slam grows by this much radius per unit travelled.</summary>
+        public const float LeapRadiusPerUnit = 0.3f;
         public static readonly Color Glove = new Color(0.95f, 0.3f, 0.26f);
         public DungeonPlayer Player { get; set; }
         public bool IsBarraging => barrage != null;
         public bool IsLeaping => leap != null;
+        public bool IsWindingUp => sandwich != null;
         // The barrage roots the Brawler like other heavy attacks: slower movement and no new charge.
         public bool IsHeavyAttacking => IsBarraging;
         public float HeavyCooldownRemaining => DebugMode.Cooldown(Mathf.Max(0f, empowerReadyAt - Time.time));
@@ -30,7 +34,8 @@ namespace Slopgame
         private float Interval => Player.Powerups.AttackIntervalMultiplier * Player.Buffs.AttackIntervalMultiplier;
         private Color PunchColor => Player.Buffs.IsRaging ? HeroBuffs.RageColor : Player.Buffs.IsEmpowered ? HeroBuffs.EmpowerColor : Glove;
         private float readyAt, empowerReadyAt;
-        private Coroutine barrage, leap;
+        private Coroutine barrage, leap, sandwich;
+        private GameObject sandwichWindup;
         private Transform previewRoot;
         private SpriteRenderer preview;
 
@@ -116,7 +121,7 @@ namespace Slopgame
             aim.Normalize();
             switch (type)
             {
-                case AbilityType.KnuckleSandwich: KnuckleSandwich(aim, rank); return true;
+                case AbilityType.KnuckleSandwich: sandwich = StartCoroutine(KnuckleSandwich(aim, rank)); return true;
                 case AbilityType.WildLeap:
                     var target = FindLeapTarget(aim);
                     if (target == null) return false;
@@ -127,19 +132,71 @@ namespace Slopgame
             }
         }
 
-        private void KnuckleSandwich(Vector2 aim, int rank)
+        /// <summary>
+        /// A HEAVY punch: she plants her feet and draws the fist back (the hit area glows as it charges),
+        /// then lunges into a crushing blow with a shockwave, camera shake and a flash.
+        /// </summary>
+        private IEnumerator KnuckleSandwich(Vector2 aim, int rank)
         {
+            var run = Player.Run;
+            var root = run.ProjectileRoot;
             float bonus = Player.Powerups.Count(PowerupType.ExtraFilling) * 0.4f;
             float length = (3.2f + (rank - 1) * 0.6f + bonus) * Size;
             float halfWidth = (1.1f + (rank - 1) * 0.25f + bonus * 0.5f) * Size;
-            Vector2 origin = transform.position;
-            Strike(origin, aim, length, halfWidth, Player.Damage * (3 + rank), 3f);
             Color color = Color.Lerp(PunchColor, AbilityCatalog.Gold, 0.35f);
-            DrawPunch(origin, aim, length, halfWidth, color, 0.35f);
-            var root = Player.Run.ProjectileRoot;
-            HeroVfx.Pulse(root, origin + aim * length, halfWidth * 1.2f, color, 0.4f);
-            HeroVfx.Sparks(root, origin + aim * length, color, 16, 5.5f, 0.4f, aim, 90f, 1.3f);
-            CoopFx.Pulse(Player.Run, origin + aim * length, halfWidth * 1.2f, color, 0.4f);
+            Player.Occupy(SandwichWindup + 0.12f);
+            Player.Charge.Cancel();
+            sandwichWindup = new GameObject("Knuckle Sandwich windup");
+            sandwichWindup.transform.SetParent(root, false);
+            var area = DungeonVisuals.Create("Windup area", sandwichWindup.transform, transform.position, Vector2.one, color, 5);
+            var edge = DungeonVisuals.Create("Windup edge", sandwichWindup.transform, transform.position, Vector2.one, Color.white, 6);
+            var fist = DungeonVisuals.Create("Drawn fist", sandwichWindup.transform, transform.position, Vector2.one * 0.3f, Glove, 7);
+            float angle = Mathf.Atan2(aim.y, aim.x) * Mathf.Rad2Deg;
+            for (float t = 0f; t < SandwichWindup; t += Time.deltaTime)
+            {
+                if (!run.IsPlaying || root != run.ProjectileRoot || Player.Health <= 0) { EndSandwich(); yield break; }
+                float progress = t / SandwichWindup;
+                Vector2 origin = transform.position;
+                float reach = length * Mathf.Lerp(0.25f, 1f, progress);
+                area.transform.SetPositionAndRotation(origin + aim * reach * 0.5f, Quaternion.Euler(0, 0, angle));
+                area.transform.localScale = new Vector3(reach, halfWidth * 2f, 1f);
+                area.color = new Color(color.r, color.g, color.b, Mathf.Lerp(0.08f, 0.3f, progress) + 0.06f * Mathf.Sin(t * 40f));
+                edge.transform.SetPositionAndRotation(origin + aim * reach, Quaternion.Euler(0, 0, angle));
+                edge.transform.localScale = new Vector3(0.06f, halfWidth * 2f, 1f);
+                edge.color = new Color(1f, 1f, 1f, 0.3f + 0.5f * progress);
+                // The fist is drawn back behind her and swells with power.
+                fist.transform.position = origin - aim * Mathf.Lerp(0.2f, 0.55f, progress) + Vector2.Perpendicular(aim) * 0.15f;
+                fist.transform.localScale = Vector2.one * Mathf.Lerp(0.3f, 0.6f, progress);
+                fist.color = Color.Lerp(Glove, Color.white, 0.5f * progress + 0.2f * Mathf.Sin(t * 50f));
+                if (Random.value < 0.35f)
+                    HeroVfx.Sparks(root, fist.transform.position, color, 2, 1.6f, 0.2f, aim, 120f, 0.7f);
+                yield return null;
+            }
+            EndSandwich();
+            Vector2 start = transform.position;
+            // A short lunge into the blow.
+            transform.position = run.Map.Move(start, aim * 0.4f);
+            Vector2 from = transform.position, impact = from + aim * length;
+            Strike(from, aim, length, halfWidth, Player.Damage * (4 + rank), 4f);
+            DrawPunch(from, aim, length, halfWidth, color, 0.4f);
+            HeroVfx.Pulse(root, impact, halfWidth * 1.6f, color, 0.45f);
+            HeroVfx.Pulse(root, from + aim * length * 0.5f, length * 0.6f, Color.white, 0.2f);
+            CombatVfx.Ring(root, impact, halfWidth * 1.4f, Color.white, 0.35f);
+            HeroVfx.Sparks(root, impact, color, 30, 8f, 0.5f, aim, 100f, 1.6f);
+            for (int i = 1; i <= 3; i++)
+                HeroVfx.Sparks(root, from + aim * length * i / 4f, new Color(0.75f, 0.68f, 0.58f), 4, 3f, 0.35f, Vector2.Perpendicular(aim), 360f, 0.9f);
+            CoopFx.Pulse(run, impact, halfWidth * 1.6f, color, 0.45f);
+            CoopFx.Ring(run, impact, halfWidth * 1.4f, Color.white, 0.35f);
+            ScreenFx.Shake(0.4f, 0.35f);
+            ScreenFx.Flash(new Color(1f, 0.95f, 0.85f, 0.18f), 0.15f);
+            sandwich = null;
+        }
+
+        private void EndSandwich()
+        {
+            if (sandwichWindup != null) Destroy(sandwichWindup);
+            sandwichWindup = null;
+            sandwich = null;
         }
 
         private void PrimalRage(int rank)
@@ -199,13 +256,16 @@ namespace Slopgame
                 yield return null;
             }
             transform.position = landing;
-            Slam(landing, rank);
+            Slam(landing, rank, Vector2.Distance(from, landing));
             leap = null;
         }
 
-        private void Slam(Vector2 center, int rank)
+        public static float SlamRadius(float travelled, int craterMakers) => 1.8f + craterMakers * 0.5f + Mathf.Max(0f, travelled) * LeapRadiusPerUnit;
+
+        private void Slam(Vector2 center, int rank, float travelled)
         {
-            float radius = 1.8f + Player.Powerups.Count(PowerupType.CraterMaker) * 0.5f;
+            float radius = SlamRadius(travelled, Player.Powerups.Count(PowerupType.CraterMaker));
+            ScreenFx.Shake(0.12f + travelled * 0.025f, 0.25f);
             int damage = Player.Damage * (4 + rank);
             var root = Player.Run.ProjectileRoot;
             Color color = AbilityCatalog.Gold;
