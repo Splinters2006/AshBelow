@@ -13,6 +13,7 @@ namespace Slopgame
         public bool IsHeavyAttacking => false;
         public bool CanAttack => Player != null && Player.Run.IsPlaying && !Player.IsRolling && Time.time >= readyAt;
         public float HeavyCooldownRemaining => DebugMode.Cooldown(Mathf.Max(0f, nightfallReadyAt - Time.time));
+        public void ReduceHeavyCooldown(float seconds) => nightfallReadyAt = Cooldowns.Shorten(nightfallReadyAt, seconds);
         public bool IsReigning => Time.time < reignUntil && reignFloor == Player.Run.ProjectileRoot;
         public float RiftRange(float charge) => Mathf.Lerp(8f, 12f, Mathf.Clamp01(charge))
             + Player.Powerups.Count(PowerupType.RiftReach) * 1.5f;

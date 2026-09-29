@@ -18,6 +18,7 @@ namespace Slopgame
         public DungeonPlayer Player { get; set; }
         public bool IsHeavyAttacking => false;
         public float HeavyCooldownRemaining => DebugMode.Cooldown(Mathf.Max(0f, swordReadyAt - Time.time));
+        public void ReduceHeavyCooldown(float seconds) => swordReadyAt = Cooldowns.Shorten(swordReadyAt, seconds);
         public bool CanAttack => swipe.CanAttack && Time.time >= readyAt && !InSanctuary;
         private bool InSanctuary => relics != null && relics.IsSanctuaryActive;
         private SwordAttack swipe;

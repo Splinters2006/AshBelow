@@ -10,6 +10,7 @@ namespace Slopgame
         public bool IsHeavyAttacking => false;
         public bool CanAttack => Player.Run.IsPlaying && !Player.IsRolling && Time.time >= readyAt;
         public float HeavyCooldownRemaining => DebugMode.Cooldown(Mathf.Max(0f, lightningReadyAt - Time.time));
+        public void ReduceHeavyCooldown(float seconds) => lightningReadyAt = Cooldowns.Shorten(lightningReadyAt, seconds);
         public float LightningRange => 6f + Player.Powerups.Count(PowerupType.LightningRange);
         public float JumpRange => 2.5f + Player.Powerups.Count(PowerupType.LightningRange) * 0.5f;
 

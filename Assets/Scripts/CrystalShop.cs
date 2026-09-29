@@ -7,14 +7,16 @@ namespace Slopgame
     /// The crystal shop visited before each boss: a warm, lantern-lit room with a hooded merchant behind a counter.
     /// Talking to him opens his wares, paid for in the crystals enemies drop: healing, boons for the guardian's arena
     /// and relics that last the rest of the descent. Each shop stocks a random few of them (the same on every machine
-    /// in a co-op run), and each ware costs half as much again every time it is bought in the same shop.
+    /// in a co-op run), and each ware costs half as much again every time it is bought in the same shop. Haggler
+    /// lowers his prices, and Merchant's Favor lets a hero have him lay out fresh wares.
     /// </summary>
     public sealed class CrystalShop : MonoBehaviour
     {
         public enum Ware
         {
             Draught, Elixir, HeartCrystal, Stoneskin, Whetstone, Quicksilver,
-            EmberHone, WindrunnerBoots, QuickfingerGloves, HawkeyeLens, WardingSigil, VampireFang, PhoenixFeather
+            EmberHone, WindrunnerBoots, QuickfingerGloves, HawkeyeLens, WardingSigil, VampireFang, PhoenixFeather,
+            NerveNeedle, PyreUrn, KindlingFlint, ReapersSigil, RunnersBand, BloodChalice, StillwaterCharm, DowsingRod, SilverTongue, MerchantsToken
         }
 
         public enum Category { Healing, Arena, Relic }
@@ -49,6 +51,16 @@ namespace Slopgame
             new Offer(Ware.WardingSigil, Category.Relic, "Warding Sigil", "Block one extra hit on every floor", 55, AbilityCatalog.Ice, PowerupType.Armor),
             new Offer(Ware.VampireFang, Category.Relic, "Vampire Fang", "Heal 1 HP every few kills (Soul Harvest)", 50, HealColor, PowerupType.LifeSteal),
             new Offer(Ware.PhoenixFeather, Category.Relic, "Phoenix Feather", "10% shorter dodge cooldown", 35, new Color(1f, 0.45f, 0.25f), PowerupType.DodgeRecovery),
+            new Offer(Ware.NerveNeedle, Category.Relic, "Nerve Needle", "Killing a paralysed or frozen enemy resets your class skill", 45, DemonessAttack.Violet, PowerupType.NerveSnap),
+            new Offer(Ware.PyreUrn, Category.Relic, "Pyre Urn", "Burning enemies explode when they die", 50, new Color(1f, 0.5f, 0.15f), PowerupType.PyreBurst),
+            new Offer(Ware.KindlingFlint, Category.Relic, "Kindling Flint", "Elemental effects also set enemies burning", 45, new Color(1f, 0.62f, 0.3f), PowerupType.Kindling),
+            new Offer(Ware.ReapersSigil, Category.Relic, "Reaper's Sigil", "5 kills within 1 second reset your class skill", 40, new Color(0.9f, 0.3f, 0.35f), PowerupType.Massacre),
+            new Offer(Ware.RunnersBand, Category.Relic, "Runner's Band", "2 kills within 1 second reset your dodge", 40, DungeonUi.Teal, PowerupType.Momentum),
+            new Offer(Ware.BloodChalice, Category.Relic, "Blood Chalice", "Every kill takes 0.5s off all your cooldowns", 60, HealColor, PowerupType.Bloodrush),
+            new Offer(Ware.StillwaterCharm, Category.Relic, "Stillwater Charm", "Paralysed or frozen kills take 0.5s off all cooldowns", 45, AbilityCatalog.Ice, PowerupType.StillHunter),
+            new Offer(Ware.DowsingRod, Category.Relic, "Dowsing Rod", "50% chance per rank for kills to drop extra crystals", 35, CrystalPouch.CrystalColor, PowerupType.Prospector),
+            new Offer(Ware.SilverTongue, Category.Relic, "Silver Tongue", "Shop prices 25% lower per rank", 35, AbilityCatalog.Gold, PowerupType.Haggler),
+            new Offer(Ware.MerchantsToken, Category.Relic, "Merchant's Token", "One free reroll of every shop's wares", 25, new Color(0.85f, 0.7f, 1f), PowerupType.MerchantsFavor),
         };
 
         /// <summary>How many wares of each category a shop stocks, drawn at random from that category.</summary>
@@ -64,6 +76,7 @@ namespace Slopgame
         private readonly List<Vector2> floaterRest = new List<Vector2>();
         private readonly List<Vector2> sparklePoints = new List<Vector2>();
         private DungeonRun run;
+        private int seed, rerolls;
         private Transform merchant;
         private SpriteRenderer merchantHalo, merchantOutline;
         private float nextSparkle;
@@ -77,7 +90,14 @@ namespace Slopgame
         public bool IsNear(DungeonPlayer player) => player != null && player.Health > 0
             && Vector2.Distance(player.transform.position, Counter) <= TalkRange;
 
-        public int Cost(Offer offer) => offer.BaseCost + offer.BaseCost * Bought(offer.Ware) / 2;
+        public int Cost(Offer offer)
+        {
+            int cost = offer.BaseCost + offer.BaseCost * Bought(offer.Ware) / 2;
+            return run != null && run.Player != null ? Mathf.Max(1, Mathf.RoundToInt(cost * run.Player.Powerups.ShopPriceMultiplier)) : cost;
+        }
+
+        /// <summary>Merchant's Favor rerolls the hero has left in this shop.</summary>
+        public int RerollsLeft => run != null && run.Player != null ? Mathf.Max(0, run.Player.Powerups.ShopRerolls - rerolls) : 0;
         public int Bought(Ware ware) => bought.TryGetValue(ware, out int count) ? count : 0;
 
         public void Toggle()
@@ -87,6 +107,17 @@ namespace Slopgame
         }
 
         public void Close() => IsOpen = false;
+
+        /// <summary>Merchant's Favor: the merchant sweeps his wares away and lays out a fresh selection (for this hero only).</summary>
+        public bool Reroll()
+        {
+            if (RerollsLeft <= 0 || !run.IsPlaying || run.Player.Health <= 0) return false;
+            rerolls++;
+            Restock(seed + rerolls * 7919);
+            LastResult = "The merchant sweeps his wares away and lays out new ones.";
+            HeroVfx.Sparks(run.ProjectileRoot, Counter + Vector2.up * 0.6f, MerchantGlow, 12, 3f, 0.4f, Vector2.up, 160f, 0.8f);
+            return true;
+        }
 
         /// <summary>Draws this shop's stock: one category at a time, a random few wares each, from <paramref name="seed"/>.</summary>
         public void Restock(int seed)
@@ -216,7 +247,8 @@ namespace Slopgame
             root.transform.SetParent(level, false);
             var shop = root.AddComponent<CrystalShop>();
             shop.run = run;
-            shop.Restock(run.Seed + run.Floor * 104729);
+            shop.seed = run.Seed + run.Floor * 104729;
+            shop.Restock(shop.seed);
             shop.Furnish();
             return shop;
         }

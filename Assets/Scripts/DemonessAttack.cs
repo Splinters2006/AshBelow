@@ -26,6 +26,7 @@ namespace Slopgame
         public DungeonPlayer Player { get; set; }
         public bool IsHeavyAttacking => false;
         public float HeavyCooldownRemaining => DebugMode.Cooldown(Mathf.Max(0f, sweepReadyAt - Time.time));
+        public void ReduceHeavyCooldown(float seconds) => sweepReadyAt = Cooldowns.Shorten(sweepReadyAt, seconds);
         public bool CanAttack => Player.Run.IsPlaying && !Player.IsRolling && !Player.IsBusy && Time.time >= readyAt;
         /// <summary>How long a vital stab (or Archdemon's tail whip) holds its victims.</summary>
         public float ParalysisDuration => VitalParalysis + Player.Powerups.Count(PowerupType.NerveStrike) * 0.25f;

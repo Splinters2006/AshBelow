@@ -1,5 +1,12 @@
-Wizard storm procs its effects guaranteed
-a shop before each boss, with enemies dropping crystals
-enemies drop crystals on death, these can be used in the shop
-make the shop room look pretty and let it sell heals, and some other buffs
-reduce gamblers extra coin on pickuip to 5% per rank instead of 100%
+add univeral powereups aquirable through room rewards or through the crystal merchant
+killing a paralysed enemy resets your right click
+killing killing a burning enemy makes them explode in an aoe
+applying an elemental effect to enemies applies burn to them too
+killing 5 or more enemies with within one second resets your right click cooldown
+killing 2 or more enemies with within one second resets your roll cooldown
+every enemy you kill reduces all your cooldowns by 0.5 seconds
+killing paralyzed enemies resets lowers all your cooldowns by 0.5 seconds
+killing enemies has a 50%/100% (on second aquire) to drop extra crystals
+shop prices reduced by 25%/50% (on second aquire)
+add one reroll to shop inventory
+

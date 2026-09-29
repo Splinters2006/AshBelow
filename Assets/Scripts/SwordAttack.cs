@@ -11,6 +11,11 @@ namespace Slopgame
         public bool ShowChargePreview { get; set; } = true;
         public bool IsHeavyAttacking => Player.Shield != null && Player.Shield.IsBlocking;
         public float HeavyCooldownRemaining => Player.Shield != null ? Player.Shield.CooldownRemaining : DebugMode.Cooldown(Mathf.Max(0f, shadowReadyAt - Time.time));
+        public void ReduceHeavyCooldown(float seconds)
+        {
+            if (Player.Shield != null) Player.Shield.ReduceCooldown(seconds);
+            else shadowReadyAt = Cooldowns.Shorten(shadowReadyAt, seconds);
+        }
         public bool CanAttack => Player.Run.IsPlaying && !Player.IsRolling && !IsHeavyAttacking && Time.time >= readyAt;
         public DungeonPlayer Player { get; set; }
         private float readyAt, visibleUntil;

@@ -13,6 +13,7 @@ namespace Slopgame
         public DungeonPlayer Player { get; set; }
         public bool IsHeavyAttacking => false;
         public float HeavyCooldownRemaining => DebugMode.Cooldown(Mathf.Max(0, heavyReadyAt - Time.time));
+        public void ReduceHeavyCooldown(float seconds) => heavyReadyAt = Cooldowns.Shorten(heavyReadyAt, seconds);
         private float readyAt, heavyReadyAt;
         public bool CanAttack => Player.Run.IsPlaying && !Player.IsRolling && Time.time >= readyAt;
 

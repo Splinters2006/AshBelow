@@ -98,10 +98,12 @@ namespace Slopgame
         {
             if (enemy == null || element == DamageElement.Physical) return;
             player.Mechanic?.OnElementalEffect();
-            if (element == DamageElement.Lightning) { Shock(player, enemy.transform.position, enemy, hit); return; }
+            // Kindling: freezes and shocks set the target alight as well.
+            bool kindle = element != DamageElement.Fire && player.Powerups.Count(PowerupType.Kindling) > 0;
+            if (element == DamageElement.Lightning) Shock(player, enemy.transform.position, enemy, hit);
             if (enemy.Health <= 0) return;
-            if (element == DamageElement.Fire) enemy.Burn(BurnTicks, BurnTickDamage(hit));
-            else if (element == DamageElement.Ice) enemy.Freeze(FreezeDuration);
+            if (element == DamageElement.Fire || kindle) enemy.Burn(BurnTicks, BurnTickDamage(hit));
+            if (element == DamageElement.Ice) enemy.Freeze(FreezeDuration);
         }
 
         /// <summary>Lightning bolts leap from <paramref name="center"/> to every other enemy in range. The shock does not chain further.</summary>

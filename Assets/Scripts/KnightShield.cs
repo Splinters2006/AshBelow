@@ -11,6 +11,7 @@ namespace Slopgame
         private float blockingUntil, readyAt;
         public bool IsBlocking => Player.Run.IsPlaying && !Player.IsRolling && Time.time < blockingUntil;
         public float CooldownRemaining => DebugMode.Cooldown(Mathf.Max(0f, readyAt - Time.time));
+        public void ReduceCooldown(float seconds) => readyAt = Cooldowns.Shorten(readyAt, seconds);
         public Vector2 Direction { get; private set; }
 
         public bool Raise(Vector2 aim)

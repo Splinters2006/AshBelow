@@ -25,6 +25,8 @@ namespace Slopgame
         public virtual void OnParalyzed() { }
         public virtual void OnBlessedHit(int bonus) { }
         public virtual void OnElementalEffect() { }
+        /// <summary>Kill talents shorten a mechanic that runs on a cooldown; charged mechanics ignore it.</summary>
+        public virtual void ReduceCooldown(float seconds) { }
 
         protected bool CanAct => Player.Run.IsPlaying && Player.Health > 0 && !Player.IsRolling && !Player.IsBusy;
 

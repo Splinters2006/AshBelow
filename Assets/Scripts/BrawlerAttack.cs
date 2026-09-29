@@ -29,6 +29,7 @@ namespace Slopgame
         // The barrage roots the Brawler like other heavy attacks: slower movement and no new charge.
         public bool IsHeavyAttacking => IsBarraging;
         public float HeavyCooldownRemaining => DebugMode.Cooldown(Mathf.Max(0f, empowerReadyAt - Time.time));
+        public void ReduceHeavyCooldown(float seconds) => empowerReadyAt = Cooldowns.Shorten(empowerReadyAt, seconds);
         public bool CanAttack => Player.Run.IsPlaying && !Player.IsRolling && !Player.IsBusy && !IsBarraging && Time.time >= readyAt;
         public int BarrageCount => BarragePunches + Player.Powerups.Count(PowerupType.Flurry) + Player.Permanent.BarragePunches;
         private float Size => Player.Buffs.AttackSizeMultiplier;

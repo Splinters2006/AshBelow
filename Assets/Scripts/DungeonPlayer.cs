@@ -178,6 +178,18 @@ namespace Slopgame
         /// </summary>
         public Vector2 MobilityAim(Vector2 toCursor) => MoveInput.sqrMagnitude > 0.01f ? MoveInput.normalized * 1000f : toCursor;
 
+        public void ResetDodge() => rollReady = Mathf.Min(rollReady, Time.time);
+        public void ResetClassSkill() => Weapon?.ReduceHeavyCooldown(float.PositiveInfinity);
+
+        /// <summary>Kill talents: takes time off the dodge, class skill, relic abilities and a cooldown-based class mechanic.</summary>
+        public void ReduceCooldowns(float seconds)
+        {
+            rollReady = Cooldowns.Shorten(rollReady, seconds);
+            Weapon?.ReduceHeavyCooldown(seconds);
+            Abilities?.ReduceCooldowns(seconds);
+            Mechanic?.ReduceCooldown(seconds);
+        }
+
         public bool TryRoll(Vector2 direction)
         {
             if (!Run.IsPlaying || IsRolling || IsBusy || DodgeCooldownRemaining > 0f || direction.sqrMagnitude < 0.001f) return false;

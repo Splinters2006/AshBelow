@@ -15,6 +15,7 @@ namespace Slopgame
         public override string Name => "Shield Taunt";
         public override Color Color => ShieldColor;
         public float CooldownRemaining => DebugMode.Cooldown(Mathf.Max(0f, readyAt - Time.time));
+        public override void ReduceCooldown(float seconds) => readyAt = Cooldowns.Shorten(readyAt, seconds);
         public override float Readiness => IsTaunting ? 0f : 1f - CooldownRemaining / Cooldown;
         public override string Status => IsTaunting ? "HOLDING" : CooldownRemaining > 0f ? Seconds(CooldownRemaining) : "READY";
         public bool IsTaunting => Player.Run.IsPlaying && Player.Health > 0 && Time.time < until;

@@ -269,6 +269,9 @@ namespace Slopgame
                 string description = offer.Category == CrystalShop.Category.Relic ? "Relic: " + offer.Description : offer.Description;
                 DungeonUi.Label(new Rect(row.x + 6, row.y + 34, row.width - 12, 18), description, 12, DungeonUi.Muted);
             }
+            if (shop.RerollsLeft > 0 && DungeonUi.Button("shopReroll", new Rect(rect.x + 16, rect.y + 52 + shop.Stock.Count * 58, rect.width - 32, 28),
+                    $"Reroll wares  /  {shop.RerollsLeft} free", new Color(0.85f, 0.7f, 1f), Run.IsPlaying))
+                shop.Reroll();
             var boons = new System.Collections.Generic.List<string>();
             if (pouch.PendingWards > 0) boons.Add($"+{pouch.PendingWards} wards");
             if (pouch.PendingDamage > 0) boons.Add($"+{pouch.PendingDamage} damage");

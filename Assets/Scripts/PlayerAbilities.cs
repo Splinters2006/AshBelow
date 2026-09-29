@@ -22,6 +22,12 @@ namespace Slopgame
         public AbilityType Equipped(int slot) => slot >= 0 && slot < SlotCount ? equipped[slot] : AbilityType.None;
         public int Rank(AbilityType type) => ranks.TryGetValue(type, out int value) ? value : 0;
         public bool IsEquipped(AbilityType type) => type != AbilityType.None && (equipped[0] == type || equipped[1] == type);
+        /// <summary>Kill talents: takes time off every relic ability's cooldown.</summary>
+        public void ReduceCooldowns(float seconds)
+        {
+            for (int slot = 0; slot < SlotCount; slot++) readyAt[slot] = Cooldowns.Shorten(readyAt[slot], seconds);
+        }
+
         // Capped at the ability's own cooldown, so a delayed start (Primal Rage, Archdemon's Technique) reads as a paused timer.
         public float CooldownRemaining(int slot) => DebugMode.Cooldown(Mathf.Min(Mathf.Max(0f, readyAt[slot] - Time.time),
             AbilityCatalog.Get(equipped[slot])?.Cooldown ?? float.MaxValue));

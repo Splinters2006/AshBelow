@@ -21,6 +21,12 @@ namespace Slopgame
         public override float Readiness => IsActive ? 0f : 1f - CooldownRemaining / Cooldown;
         public override string Status => IsActive ? $"+{bonus}  {Seconds(Remaining)}" : CooldownRemaining > 0f ? Seconds(CooldownRemaining) : "READY";
 
+        public override void ReduceCooldown(float seconds)
+        {
+            // The cooldown runs from when the edge dulls; while it is sharp there is nothing to shorten.
+            if (!IsActive) until = Cooldowns.Shorten(until + Cooldown, seconds) - Cooldown;
+        }
+
         public override bool TryActivate(Vector2 aim)
         {
             if (!CanAct || IsActive || CooldownRemaining > 0f) return false;

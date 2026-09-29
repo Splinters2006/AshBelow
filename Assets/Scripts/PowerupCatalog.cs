@@ -11,7 +11,8 @@ namespace Slopgame
         RiftReach, AbyssalPower, EclipseRadius, SoulRendPower, ReignDuration,
         Flurry, Adrenaline, ExtraFilling, CraterMaker, Bloodlust,
         NerveStrike, LongTail, Bloodline, BigPaws, HexMastery,
-        LooseChange, LongToss, MintCondition, RiggedOdds, HighRoller
+        LooseChange, LongToss, MintCondition, RiggedOdds, HighRoller,
+        NerveSnap, PyreBurst, Kindling, Massacre, Momentum, Bloodrush, StillHunter, Prospector, Haggler, MerchantsFavor
     }
 
     public sealed class PowerupDefinition
@@ -86,7 +87,18 @@ namespace Slopgame
             new PowerupDefinition(PowerupType.LongToss, "Gambler: Long Toss", "+1 coin throw and volley range", 3, WeaponType.Coins),
             new PowerupDefinition(PowerupType.MintCondition, "Mint Condition", "+2 coins from Windfall", 3, WeaponType.Coins, AbilityType.Windfall),
             new PowerupDefinition(PowerupType.RiggedOdds, "Rigged Odds", "+5% odds on All In", 3, WeaponType.Coins, AbilityType.AllIn),
-            new PowerupDefinition(PowerupType.HighRoller, "High Roller", "+2 seconds of Jackpot buffs", 3, WeaponType.Coins, AbilityType.Jackpot)
+            new PowerupDefinition(PowerupType.HighRoller, "High Roller", "+2 seconds of Jackpot buffs", 3, WeaponType.Coins, AbilityType.Jackpot),
+            // Universal boons: any class can find them as room rewards or buy them as crystal shop relics.
+            new PowerupDefinition(PowerupType.NerveSnap, "Nerve Snap", "Killing a paralysed or frozen enemy resets your class skill", 1),
+            new PowerupDefinition(PowerupType.PyreBurst, "Pyre Burst", "Burning enemies explode when they die, hurting everything nearby", 1),
+            new PowerupDefinition(PowerupType.Kindling, "Kindling", "Every elemental effect you set off also sets the enemy burning", 1),
+            new PowerupDefinition(PowerupType.Massacre, "Massacre", "Killing 5 enemies within 1 second resets your class skill", 1),
+            new PowerupDefinition(PowerupType.Momentum, "Momentum", "Killing 2 enemies within 1 second resets your dodge", 1),
+            new PowerupDefinition(PowerupType.Bloodrush, "Bloodrush", "Every kill takes 0.5 seconds off all your cooldowns", 1),
+            new PowerupDefinition(PowerupType.StillHunter, "Still Hunter", "Killing a paralysed or frozen enemy takes 0.5 seconds off all your cooldowns", 1),
+            new PowerupDefinition(PowerupType.Prospector, "Prospector", "Kills have a 50% / 100% chance by rank to drop extra crystals", 2),
+            new PowerupDefinition(PowerupType.Haggler, "Haggler", "Crystal shop prices 25% / 50% lower by rank", 2),
+            new PowerupDefinition(PowerupType.MerchantsFavor, "Merchant's Favor", "One free reroll of every crystal shop's wares", 1)
         };
 
         public static PowerupDefinition Get(PowerupType type) => All[(int)type];

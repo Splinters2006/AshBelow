@@ -46,13 +46,49 @@ namespace Slopgame
             return true;
         }
 
-        public void OnKill(DungeonPlayer player)
+        public const float KillStreakWindow = 1f, KillCooldownCut = 0.5f, PyreRadius = 2f;
+        public const int MassacreKills = 5, MomentumKills = 2;
+        private readonly Queue<float> recentKills = new Queue<float>();
+
+        /// <summary>Kill talents, applied only on the killer's machine (<paramref name="enemy"/> is still in place, statuses intact).</summary>
+        public void OnKill(DungeonPlayer player, DungeonEnemy enemy)
         {
             int rank = Count(PowerupType.LifeSteal);
-            if (rank == 0) return;
-            harvestKills++;
-            if (harvestKills >= 6 - rank) { harvestKills = 0; player.Heal(1); }
+            if (rank > 0 && ++harvestKills >= 6 - rank) { harvestKills = 0; player.Heal(1); }
+
+            while (recentKills.Count > 0 && Time.time - recentKills.Peek() > KillStreakWindow) recentKills.Dequeue();
+            recentKills.Enqueue(Time.time);
+            // Each streak pays out once, when it reaches its count, rather than on every kill after that.
+            if (recentKills.Count == MomentumKills && Count(PowerupType.Momentum) > 0) player.ResetDodge();
+            if (recentKills.Count == MassacreKills && Count(PowerupType.Massacre) > 0) player.ResetClassSkill();
+
+            bool held = enemy != null && enemy.IsHeld;
+            if (held && Count(PowerupType.NerveSnap) > 0) player.ResetClassSkill();
+            float cut = (Count(PowerupType.Bloodrush) > 0 ? KillCooldownCut : 0f) + (held && Count(PowerupType.StillHunter) > 0 ? KillCooldownCut : 0f);
+            if (cut > 0f) player.ReduceCooldowns(cut);
+
+            if (enemy != null && enemy.IsBurning && Count(PowerupType.PyreBurst) > 0) PyreBurst(player, enemy);
         }
+
+        /// <summary>A burning enemy bursts into flame: fire damage to everything around it, which may light them too.</summary>
+        private static void PyreBurst(DungeonPlayer player, DungeonEnemy dead)
+        {
+            var run = player.Run;
+            Vector2 center = dead.transform.position;
+            var color = CombatDamage.ElementColor(DamageElement.Fire);
+            HeroVfx.Pulse(run.ProjectileRoot, center, PyreRadius, color, 0.35f);
+            HeroVfx.Sparks(run.ProjectileRoot, center, color, 14, 5f, 0.4f, null, 360f, 1.2f);
+            CoopFx.Pulse(run, center, PyreRadius, color, 0.35f);
+            foreach (var enemy in run.Enemies.ToArray())
+                if (enemy != null && enemy != dead && enemy.Health > 0 && Vector2.Distance(center, enemy.transform.position) <= PyreRadius + enemy.HitRadius)
+                    CombatDamage.Apply(player, enemy, player.Damage, DamageElement.Fire, center, 0.6f);
+        }
+
+        /// <summary>Prospector: whether a fallen enemy leaves a second helping of crystals.</summary>
+        public bool RollExtraCrystals() => Count(PowerupType.Prospector) > 0 && Random.value <= 0.5f * Count(PowerupType.Prospector);
+        /// <summary>Haggler: what the crystal merchant charges as a fraction of his price.</summary>
+        public float ShopPriceMultiplier => 1f - 0.25f * Count(PowerupType.Haggler);
+        public int ShopRerolls => Count(PowerupType.MerchantsFavor);
 
         public string Summary
         {

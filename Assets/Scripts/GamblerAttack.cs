@@ -27,6 +27,7 @@ namespace Slopgame
         public int Coins => Mathf.Max(1, coins);
         public bool IsHeavyAttacking => false;
         public float HeavyCooldownRemaining => DebugMode.Cooldown(Mathf.Max(0f, volleyReadyAt - Time.time));
+        public void ReduceHeavyCooldown(float seconds) => volleyReadyAt = Cooldowns.Shorten(volleyReadyAt, seconds);
         public const float LooseChangeChancePerRank = 0.05f;
         /// <summary>Loose Change: the chance that a gold coin picked up is worth a second coin.</summary>
         public float LooseChangeChance => LooseChangeChancePerRank * Player.Powerups.Count(PowerupType.LooseChange);
