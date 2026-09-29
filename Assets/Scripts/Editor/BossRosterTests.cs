@@ -69,6 +69,7 @@ namespace Slopgame.Editor
                 {
                     case 0:
                         run.Restart();
+                        TestMinimap(run);
                         DebugMode.Set(false);
                         Require(!run.CanSkipRoom, "Skip room was offered outside debug mode.");
                         run.DebugSkipRoom();
@@ -128,11 +129,37 @@ namespace Slopgame.Editor
                         run.Boss.Enemy.Hit(100000);
                         Require(run.Artifact != null && run.Enemies.Count == 0, "The Archdemon dropped no artifact.");
                         Require(run.ProjectileRoot.GetComponentsInChildren<HellfireZone>().Length == 0, "Hellfire outlived the Archdemon.");
-                        Finish(!failed, "Warden/Duelist/Archdemon rotation, Duelist dashes, Cataclysm inferno and invulnerable flight, stagger kill, debug skip room");
+                        Finish(!failed, "Warden/Duelist/Archdemon rotation, Duelist dashes, Cataclysm inferno and invulnerable flight, stagger kill, debug skip room, minimap reveal/spotting/reset");
                         break;
                 }
             }
             catch (Exception error) { Debug.LogException(error); Finish(false, error.Message); }
+        }
+
+        private static void TestMinimap(DungeonRun run)
+        {
+            var minimap = run.Minimap;
+            minimap.Scan();
+            Require(minimap.IsExplored(Vector2Int.RoundToInt(run.Player.transform.position)), "The minimap did not reveal the hero's surroundings.");
+            var far = run.Enemies.Find(enemy => Vector2.Distance(enemy.transform.position, run.Player.transform.position) > FloorMinimap.SpotRadius + 1f);
+            Require(far != null && !minimap.IsSpotted(far), "A distant enemy was marked before anyone saw it.");
+            Vector2 start = run.Player.transform.position;
+            run.Player.transform.position = far.transform.position + Vector3.left * 0.4f;
+            minimap.Scan();
+            Require(minimap.IsSpotted(far), "An enemy in plain sight was not marked on the minimap.");
+            run.Player.transform.position = start;
+            minimap.Scan();
+            Require(minimap.IsSpotted(far), "A spotted enemy vanished from the minimap.");
+            DebugMode.Set(true);
+            run.DebugSkipRoom();
+            DebugMode.Set(false);
+            minimap.Scan();
+            // On a fresh floor only what the hero can see right now is revealed.
+            for (int x = 0; x < DungeonMap.Width; x++)
+                for (int y = 0; y < DungeonMap.Height; y++)
+                    if (minimap.IsExplored(new Vector2Int(x, y)))
+                        Require(Vector2.Distance(new Vector2(x, y), run.Player.transform.position) <= FloorMinimap.SightRadius, "The minimap carried over to the next floor.");
+            run.Restart();
         }
 
         private static void Finish(bool success, string message)

@@ -30,6 +30,7 @@ namespace Slopgame
         private CharacterDefinition[] characters;
         private MainMenu menu;
         private DungeonHud hud;
+        public FloorMinimap Minimap { get; private set; }
         public bool IsPointerOverHud => hud != null && hud.BlocksPointer(PlayerInput.CursorPosition);
         private Transform level;
         private Camera view;
@@ -75,6 +76,8 @@ namespace Slopgame
             view.backgroundColor = new Color(0.035f, 0.055f, 0.08f);
             hud = gameObject.AddComponent<DungeonHud>();
             hud.Run = this;
+            Minimap = gameObject.AddComponent<FloorMinimap>();
+            Minimap.Run = this;
             characters = Resources.LoadAll<CharacterDefinition>("Characters");
             System.Array.Sort(characters, (a, b) => string.CompareOrdinal(a.DisplayName, b.DisplayName));
             if (characters.Length == 0)

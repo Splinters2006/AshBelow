@@ -8,6 +8,9 @@ namespace Slopgame
         public DungeonRun Run { get; set; }
         private float displayedHealth = 1f, displayedBossHealth = 1f, modalFade;
         private bool showTalents;
+        // A relic waiting for the player to confirm it should overwrite an equipped one.
+        private AbilityType pendingRelic = AbilityType.None;
+        private int pendingSlot = -1;
         private Vector2 talentScroll;
 
         public bool BlocksPointer(Vector2 screenPosition)
@@ -27,6 +30,7 @@ namespace Slopgame
             displayedHealth = Mathf.Lerp(displayedHealth, Run.Player.Health / (float)Run.Player.MaxHealth, smooth);
             if (Run.Boss != null) displayedBossHealth = Mathf.Lerp(displayedBossHealth, Run.Boss.Enemy.Health / (float)Run.Boss.MaxHealth, smooth);
             else displayedBossHealth = 1f;
+            if (!Run.ChoosingArtifact) pendingRelic = AbilityType.None;
             modalFade = Mathf.MoveTowards(modalFade, Run.IsPlaying ? 0f : 1f, Time.unscaledDeltaTime * 5f);
         }
 
@@ -43,6 +47,7 @@ namespace Slopgame
                 if (Run.IsNetworked) DrawTeam();
                 DrawHotbar();
                 if (showTalents && Run.IsPlaying) DrawTalents();
+                else if (Run.IsPlaying && Run.Minimap != null) Run.Minimap.Draw(new Rect(1026, 84, 224, 159));
                 if (Run.IsPlaying) return;
                 DungeonUi.Panel(new Rect(0, 0, 1280, 720), new Color(0.01f, 0.018f, 0.035f, 0.88f * modalFade));
                 if (Run.ChoosingArtifact) DrawArtifacts();
@@ -226,7 +231,8 @@ namespace Slopgame
 
         private void DrawArtifacts()
         {
-            if (DrawWaiting()) return;
+            if (DrawWaiting()) { pendingRelic = AbilityType.None; return; }
+            if (pendingRelic != AbilityType.None) { DrawReplaceConfirmation(); return; }
             ModalTitle("GUARDIAN DEFEATED", "An artifact awakens", "Choose an active ability for your class. Q and E hold two abilities. Choosing an equipped ability raises its rank.");
             int index = 0;
             foreach (var ability in AbilityCatalog.All)
@@ -247,13 +253,42 @@ namespace Slopgame
                 {
                     for (int slot = 0; slot < PlayerAbilities.SlotCount; slot++)
                     {
-                        string action = Run.Player.Abilities.Equipped(slot) == AbilityType.None ? "Bind to" : "Replace";
-                        if (DungeonUi.Button("bind" + ability.Type + slot, new Rect(rect.x + 24 + slot * 140, rect.yMax - 60, 128, 40), $"{action} {(slot == 0 ? "Q" : "E")}", ability.Color))
-                        { Run.ChooseArtifact(ability.Type, slot); return; }
+                        bool occupied = Run.Player.Abilities.Equipped(slot) != AbilityType.None;
+                        if (!DungeonUi.Button("bind" + ability.Type + slot, new Rect(rect.x + 24 + slot * 140, rect.yMax - 60, 128, 40),
+                            $"{(occupied ? "Replace" : "Bind to")} {(slot == 0 ? "Q" : "E")}", ability.Color)) continue;
+                        // Overwriting an equipped relic unequips it, so ask first.
+                        if (occupied) { pendingRelic = ability.Type; pendingSlot = slot; }
+                        else Run.ChooseArtifact(ability.Type, slot);
+                        return;
                     }
                 }
             }
             if (DungeonUi.Button("leaveArtifact", new Rect(500, 661, 280, 35), "Leave this artifact", DungeonUi.Muted)) Run.FinishArtifactChoice();
+        }
+
+        private void DrawReplaceConfirmation()
+        {
+            var incoming = AbilityCatalog.Get(pendingRelic);
+            var current = AbilityCatalog.Get(Run.Player.Abilities.Equipped(pendingSlot));
+            if (incoming == null || current == null) { pendingRelic = AbilityType.None; return; }
+            string key = pendingSlot == 0 ? "Q" : "E";
+            ModalTitle("REPLACE RELIC?", $"Replace {current.Name}?", $"{incoming.Name} will take the {key} slot and {current.Name} will be unequipped.");
+            var panel = new Rect(390, 300, 500, 250);
+            DungeonUi.Panel(panel, DungeonUi.PanelColor);
+            DungeonUi.Label(new Rect(panel.x + 24, panel.y + 28, 200, 24), $"{key}  NOW", 13, DungeonUi.Muted);
+            DungeonUi.Label(new Rect(panel.x + 24, panel.y + 52, 210, 60), current.Name, 22, current.Color);
+            DungeonUi.Label(new Rect(panel.x + 250, panel.y + 28, 230, 24), "BECOMES", 13, DungeonUi.Muted);
+            DungeonUi.Label(new Rect(panel.x + 250, panel.y + 52, 230, 60), incoming.Name, 22, incoming.Color);
+            DungeonUi.Label(new Rect(panel.x + 24, panel.y + 120, 452, 40), "Its rank is kept if a later relic lets you equip it again.", 15, DungeonUi.Muted);
+            if (DungeonUi.Button("confirmReplace", new Rect(panel.x + 24, panel.yMax - 64, 214, 44), $"Replace {key}", incoming.Color))
+            {
+                AbilityType type = pendingRelic;
+                int slot = pendingSlot;
+                pendingRelic = AbilityType.None;
+                Run.ChooseArtifact(type, slot);
+            }
+            else if (DungeonUi.Button("cancelReplace", new Rect(panel.xMax - 238, panel.yMax - 64, 214, 44), "Keep " + current.Name, DungeonUi.Muted))
+                pendingRelic = AbilityType.None;
         }
 
         private void DrawDeath()

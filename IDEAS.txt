@@ -1,4 +1,4 @@
-add a "skip room" button when in debug mode
-add a seperate second and third boss, make the third boss an archdemon, using hellfire attacks with very over the top vfx so he is memorable also it should have special attacks that arent just projectiles or melee, make the second boss a decently squishy but very agile boss with dashes
-the third boss should have crazy attacks for example, cover part of the arena in hellfire so players have only a small circle to work with, and then he flies above, invulnerable and shoots projectiles
+make a minimap for each floor that shows where enemies are, if they have been spotted before, this shares between players on multiplayer
+make assassins fan of knives return to the assasin after 1 second, no matter where the assassin is, dealing damage to anything in their path,
+add a popup that asks if you really want to replace a relic if you are about to
 

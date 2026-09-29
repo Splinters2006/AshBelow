@@ -42,7 +42,7 @@ namespace Slopgame
             new AbilityDefinition(AbilityType.Fireball, WeaponType.Staff, "Inferno Orb", "Unlock an explosive fireball. Its elemental effect can ignite enemies.", "*", 8f, new Color(1f, 0.43f, 0.23f)),
             new AbilityDefinition(AbilityType.FrostNova, WeaponType.Staff, "Frost Nova", "Damage nearby enemies with ice, slowing all their actions by 50%.", "+", 10f, Ice),
             new AbilityDefinition(AbilityType.Blink, WeaponType.Staff, "Arcane Blink", "Blink forward and release an icy pulse at your destination.", "<>", 9f, Violet),
-            new AbilityDefinition(AbilityType.FanOfKnives, WeaponType.Daggers, "Fan of Knives", "Throw a ring of short-range knives. Each can critically strike.", "X", 8f, Violet),
+            new AbilityDefinition(AbilityType.FanOfKnives, WeaponType.Daggers, "Fan of Knives", "Throw a ring of piercing knives that fly back to you after 1 second, wherever you are, cutting through everything in their path. Each can critically strike.", "X", 8f, Violet),
             new AbilityDefinition(AbilityType.VenomStrike, WeaponType.Daggers, "Venom Strike", "Wound nearby enemies with poison and a heavy physical hit.", "+", 9f, Green),
             new AbilityDefinition(AbilityType.ShadowVeil, WeaponType.Daggers, "Shadow Veil", "Brief invulnerability lets you slip behind enemies safely.", "~", 12f, Violet),
             new AbilityDefinition(AbilityType.HealingLight, WeaponType.Hammer, "Healing Light", "Restore 2 HP to yourself and nearby allies.", "+", 16f, Gold),

@@ -429,8 +429,27 @@ namespace Slopgame.Editor
             Require(player.Abilities.TryUse(0, Vector2.right), "Ability failed to cast: " + ability.Name);
             foreach (var shot in run.ProjectileRoot.GetComponentsInChildren<SpellProjectile>()) shot.Advance(0.15f);
             foreach (var arrow in run.ProjectileRoot.GetComponentsInChildren<PlayerProjectile>()) arrow.Advance(0.15f);
+            foreach (var knife in run.ProjectileRoot.GetComponentsInChildren<ReturningKnife>()) knife.Advance(0.15f);
             switch (ability.Type)
             {
+                case AbilityType.FanOfKnives:
+                    Require(target.Health < 100, "Fan of Knives did not damage its target.");
+                    var knives = run.ProjectileRoot.GetComponentsInChildren<ReturningKnife>();
+                    Require(knives.Length >= 12, "Fan of Knives threw too few knives.");
+                    int afterThrow = target.Health;
+                    foreach (var knife in knives) knife.Advance(0.9f);
+                    Require(System.Array.TrueForAll(knives, knife => knife.IsReturning || knife.IsSpent), "Knives did not turn back after one second.");
+                    for (int step = 0; step < 40; step++)
+                        foreach (var knife in knives) if (knife != null && !knife.IsSpent) knife.Advance(0.1f);
+                    Require(target.Health < afterThrow, "Returning knives did not cut enemies on the way back.");
+                    Require(System.Array.TrueForAll(knives, knife => knife.ReturnedHome), "Knives never made it back to the Assassin.");
+                    // A knife always finds its thrower, even across the floor and through walls.
+                    var far = ReturningKnife.Throw(player, Vector2.left, 0);
+                    player.transform.position = (Vector2)run.Map.Centers[run.Map.Centers.Count - 1];
+                    for (int step = 0; step < 80 && !far.IsSpent; step++) far.Advance(0.1f);
+                    Require(far.ReturnedHome, "A knife did not return to a distant Assassin.");
+                    player.transform.position = origin;
+                    break;
                 case AbilityType.FrostNova:
                     Require(target.Health < 100 && target.ActionSpeedMultiplier == 0.5f, "Frost Nova did not damage and chill."); break;
                 case AbilityType.Aegis:

@@ -33,6 +33,8 @@ namespace Slopgame
         public static void Punch(DungeonRun run, Vector2 origin, Vector2 aim, float length, float halfWidth, Color color)
             => Send(run, FxKind.Punch, origin, aim, color, length, halfWidth);
 
+        public static void Knife(DungeonRun run, Vector2 position, Vector2 direction, float range) => Send(run, FxKind.Knife, position, direction, null, range);
+
         public static void RearHit(DungeonRun run, Vector2 position, Vector2 facing, float hitRadius)
             => Send(run, FxKind.RearHit, position, facing, null, hitRadius);
 
@@ -54,6 +56,12 @@ namespace Slopgame
                 case FxKind.Singularity: ShadowVfx.Singularity(root, fx.A, fx.F1, fx.F2); break;
                 case FxKind.Punch: BrawlerVfx.Punch(root, fx.A, fx.B, fx.F1, fx.F2, color); break;
                 case FxKind.RearHit: RearHitMarker.Draw(root, fx.A, fx.B, fx.F1); break;
+                case FxKind.Knife:
+                    // The ghost blade flies home to the teammate who threw it.
+                    RemoteHero thrower = null;
+                    foreach (var hero in run.Coop.RemoteHeroes) if (hero != null && hero.Id == fx.Origin) thrower = hero;
+                    if (thrower != null) ReturningKnife.SpawnGhost(run, thrower.transform, fx.A, fx.B, fx.F1);
+                    break;
             }
         }
     }

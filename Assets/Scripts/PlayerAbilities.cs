@@ -73,7 +73,10 @@ namespace Slopgame
                     Dash(aim, 4f + powers.Count(PowerupType.BlinkDistance) * 0.5f);
                     AreaAttack(transform.position, 1.7f, Player.Damage + rank, DamageElement.Ice, definition.Color, 2f); break;
                 case AbilityType.FanOfKnives:
-                    Fan(aim, 12 + powers.Count(PowerupType.KnifeCount) * 2, 360f / (12 + powers.Count(PowerupType.KnifeCount) * 2), Player.Damage + rank); break;
+                    int knives = 12 + powers.Count(PowerupType.KnifeCount) * 2;
+                    for (int i = 0; i < knives; i++)
+                        ReturningKnife.Throw(Player, Quaternion.Euler(0, 0, i * 360f / knives) * aim, Player.Damage + rank);
+                    break;
                 case AbilityType.VenomStrike:
                     foreach (var enemy in Player.Run.Enemies.ToArray())
                         if (InArea(enemy, transform.position, 2.5f)) enemy.Burn(4 + powers.Count(PowerupType.VenomDuration), rank, AbilityCatalog.Green);
