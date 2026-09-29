@@ -5,7 +5,7 @@ namespace Slopgame
     public static class DungeonVisuals
     {
         private static Sprite square;
-        private static Sprite emberBolt;
+        private static Sprite emberBolt, frostBolt;
         private static Sprite thrownBlade;
 
         private static readonly Sprite[] enemySprites = new Sprite[3];
@@ -126,46 +126,55 @@ namespace Slopgame
         public static SpriteRenderer CreateEmberBolt(Transform parent, Vector2 position)
         {
             if (emberBolt == null)
-            {
-                const int width = 32, height = 16;
-                var texture = new Texture2D(width, height, TextureFormat.RGBA32, false)
-                {
-                    name = "Ember bolt sprite",
-                    filterMode = FilterMode.Point,
-                    wrapMode = TextureWrapMode.Clamp
-                };
-                var pixels = new Color[width * height];
-                for (int y = 0; y < height; y++)
-                    for (int x = 0; x < width; x++)
-                    {
-                        // The hot head sits at the collision position; the tail trails behind it.
-                        float dx = x + 0.5f - 23f;
-                        float dy = Mathf.Abs(y + 0.5f - 8f);
-                        float head = Mathf.Sqrt(dx * dx + dy * dy);
-                        float tail = Mathf.Clamp01((x + 0.5f - 2f) / 21f);
-                        Color color = Color.clear;
-                        if (head < 7f)
-                            color = new Color(1f, 0.28f, 0.04f, 0.28f * (1f - head / 7f));
-                        if (dx < 0f && dy < tail * 4f)
-                            color = new Color(1f, 0.32f, 0.04f, tail * 0.75f);
-                        if (head < 4.5f)
-                            color = new Color(1f, 0.42f, 0.06f);
-                        if (dx < 0f && dy < tail * 1.8f)
-                            color = new Color(1f, 0.66f, 0.12f, tail);
-                        if (head < 3f)
-                            color = new Color(1f, 0.8f, 0.3f);
-                        if (head < 1.8f)
-                            color = new Color(1f, 0.97f, 0.78f);
-                        pixels[y * width + x] = color;
-                    }
-                texture.SetPixels(pixels);
-                texture.Apply(false, true);
-                emberBolt = Sprite.Create(texture, new Rect(0, 0, width, height),
-                    new Vector2(23f / width, 0.5f), 40f);
-            }
+                emberBolt = BoltSprite("Ember bolt sprite", new Color(1f, 0.28f, 0.04f), new Color(1f, 0.32f, 0.04f), new Color(1f, 0.42f, 0.06f),
+                    new Color(1f, 0.66f, 0.12f), new Color(1f, 0.8f, 0.3f), new Color(1f, 0.97f, 0.78f));
             var renderer = Create("Ember bolt", parent, position, Vector2.one, Color.white, 6);
             renderer.sprite = emberBolt;
             return renderer;
+        }
+
+        /// <summary>The Rime Warden's icicle: the ember bolt's shape in pale blue ice.</summary>
+        public static SpriteRenderer CreateFrostBolt(Transform parent, Vector2 position)
+        {
+            if (frostBolt == null)
+                frostBolt = BoltSprite("Frost bolt sprite", new Color(0.3f, 0.6f, 1f), new Color(0.35f, 0.65f, 1f), new Color(0.4f, 0.72f, 1f),
+                    new Color(0.65f, 0.88f, 1f), new Color(0.8f, 0.94f, 1f), new Color(0.96f, 0.99f, 1f));
+            var renderer = Create("Frost bolt", parent, position, Vector2.one, Color.white, 6);
+            renderer.sprite = frostBolt;
+            return renderer;
+        }
+
+        /// <summary>A glowing bolt, hottest (or brightest) at the head, colours listed from the outer glow inward.</summary>
+        private static Sprite BoltSprite(string name, Color glow, Color outerTail, Color body, Color innerTail, Color rim, Color core)
+        {
+            const int width = 32, height = 16;
+            var texture = new Texture2D(width, height, TextureFormat.RGBA32, false)
+            {
+                name = name,
+                filterMode = FilterMode.Point,
+                wrapMode = TextureWrapMode.Clamp
+            };
+            var pixels = new Color[width * height];
+            for (int y = 0; y < height; y++)
+                for (int x = 0; x < width; x++)
+                {
+                    // The head sits at the collision position; the tail trails behind it.
+                    float dx = x + 0.5f - 23f;
+                    float dy = Mathf.Abs(y + 0.5f - 8f);
+                    float head = Mathf.Sqrt(dx * dx + dy * dy);
+                    float tail = Mathf.Clamp01((x + 0.5f - 2f) / 21f);
+                    Color color = Color.clear;
+                    if (head < 7f) color = FlameMesh.Alpha(glow, 0.28f * (1f - head / 7f));
+                    if (dx < 0f && dy < tail * 4f) color = FlameMesh.Alpha(outerTail, tail * 0.75f);
+                    if (head < 4.5f) color = body;
+                    if (dx < 0f && dy < tail * 1.8f) color = FlameMesh.Alpha(innerTail, tail);
+                    if (head < 3f) color = rim;
+                    if (head < 1.8f) color = core;
+                    pixels[y * width + x] = color;
+                }
+            texture.SetPixels(pixels);
+            texture.Apply(false, true);
+            return Sprite.Create(texture, new Rect(0, 0, width, height), new Vector2(23f / width, 0.5f), 40f);
         }
 
         /// <summary>A thrown steel blade: the point sits at the collision position, the hilt trails behind.</summary>
@@ -279,9 +288,9 @@ namespace Slopgame
         public static Sprite BossSprite(BossKind kind)
         {
             if (kind == BossKind.AshWarden)
-                return wardenSprite != null ? wardenSprite : wardenSprite = MirroredSprite("Ash warden", WardenGrid, false, WardenDetailColor);
+                return wardenSprite != null ? wardenSprite : wardenSprite = MirroredSprite("Rime warden", WardenGrid, false, WardenDetailColor);
             if (kind == BossKind.Duelist)
-                return duelistSprite != null ? duelistSprite : duelistSprite = PixelSprite("Ashen duelist", new[]
+                return duelistSprite != null ? duelistSprite : duelistSprite = PixelSprite("Steel duelist", new[]
                 {
                     "......WWWW......", ".....WWWWWW.....", "....WWDDDDWW....", "....WDDDDDDW....",
                     "....WDDDDDDW....", ".....WWWWWW.....", "W...WWWWWWWW...W", ".W.WWWDWWDWWW.W.",
@@ -325,8 +334,8 @@ namespace Slopgame
         public static Sprite ArchdemonDetails => archdemonDetails != null ? archdemonDetails
             : archdemonDetails = MirroredSprite("Hellfire archdemon details", ArchdemonGrid, true, ArchdemonDetailColor);
 
-        // Left half of the 32x32 Ash Warden, a hooded, crowned caster cradling an ember. Body layer (tinted): L highlight,
-        // W base, M shade, D outline. Detail layer (fixed): G gold, g dark gold, E eyes, K hood void, O ember, Y ember core.
+        // Left half of the 32x32 Rime Warden, a hooded, crowned caster cradling a frost crystal. Body layer (tinted): L highlight,
+        // W base, M shade, D outline. Detail layer (fixed): G gold, g dark gold, E eyes, K hood void, O crystal, Y crystal core.
         private static readonly string[] WardenGrid =
         {
             "...............G", "..........G....G", "..........GG..GG", "..........GGGGGG",
@@ -339,9 +348,9 @@ namespace Slopgame
             ".....DWWMWWWMWWG", "....DLWMWWWMWWWG", "....DWMWWWMWWWMG", "....DDDDDDDDDDDD",
         };
 
-        /// <summary>The Ash Warden's fixed-colour layer: crown, gold mask, burning eyes and the ember in its hands.</summary>
+        /// <summary>The Rime Warden's fixed-colour layer: crown, gold mask, frost-lit eyes and the crystal in its hands.</summary>
         public static Sprite WardenDetails => wardenDetails != null ? wardenDetails
-            : wardenDetails = MirroredSprite("Ash warden details", WardenGrid, true, WardenDetailColor);
+            : wardenDetails = MirroredSprite("Rime warden details", WardenGrid, true, WardenDetailColor);
 
         private static Color WardenDetailColor(char c)
         {
@@ -349,10 +358,10 @@ namespace Slopgame
             {
                 case 'G': return new Color(0.98f, 0.78f, 0.32f);
                 case 'g': return new Color(0.62f, 0.44f, 0.16f);
-                case 'E': return new Color(1f, 0.97f, 0.75f);
-                case 'K': return new Color(0.04f, 0.01f, 0.07f);
-                case 'O': return new Color(1f, 0.45f, 0.1f);
-                case 'Y': return new Color(1f, 0.9f, 0.5f);
+                case 'E': return new Color(0.85f, 0.97f, 1f);
+                case 'K': return new Color(0.02f, 0.03f, 0.08f);
+                case 'O': return new Color(0.4f, 0.75f, 1f);
+                case 'Y': return new Color(0.85f, 0.97f, 1f);
                 default: return Color.clear;
             }
         }

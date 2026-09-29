@@ -28,7 +28,10 @@ namespace Slopgame
         private FlameMesh marks;
         private GameObject markObject;
 
-        public override string Title => "THE ASHEN DUELIST";
+        public override string Title => "THE STEEL DUELIST";
+        // Pure steel: thrown blades and cuts of blade light, never fire.
+        protected override BoltKind Bolts => BoltKind.Blade;
+        protected override HazardStyle Hazards => HazardStyle.Steel;
         public override string Tell => state switch
         {
             State.Aim => "DASH STRIKE - STEP OFF THE LINE",
@@ -194,7 +197,7 @@ namespace Slopgame
             if (dashesLeft > 0) { BeginAim(toHero, 0.32f); return; }
             if (IsEnraged)
                 // The final cut of a bloodied chain scatters a ring of blade shards.
-                for (int i = 0; i < 10; i++) Fire(transform.position, Quaternion.Euler(0, 0, i * 36f) * dashDirection, EnemyProjectile.DefaultSpeed, true);
+                for (int i = 0; i < 10; i++) Fire(transform.position, Quaternion.Euler(0, 0, i * 36f) * dashDirection);
             Recover(IsEnraged ? 1.1f : 1.5f);
         }
 
@@ -204,10 +207,10 @@ namespace Slopgame
             Vector2 aim = toHero.sqrMagnitude > 0.01f ? toHero.normalized : Enemy.Facing.Direction;
             int count = IsEnraged ? 7 : 5;
             for (int i = 0; i < count; i++)
-                Fire(transform.position, Quaternion.Euler(0, 0, (i - (count - 1) * 0.5f) * 14f) * aim, BladeSpeed, true);
+                Fire(transform.position, Quaternion.Euler(0, 0, (i - (count - 1) * 0.5f) * 14f) * aim, BladeSpeed);
             if (IsEnraged)
                 for (int i = 0; i < count - 1; i++)
-                    Fire(transform.position, Quaternion.Euler(0, 0, (i - (count - 2) * 0.5f) * 14f) * aim, BladeSpeed * 0.7f, true);
+                    Fire(transform.position, Quaternion.Euler(0, 0, (i - (count - 2) * 0.5f) * 14f) * aim, BladeSpeed * 0.7f);
             HeroVfx.Slash(Run.ProjectileRoot, transform.position, aim, 1.2f, 120f, Blade, 0.2f);
             CoopFx.Slash(Run, transform.position, aim, 1.2f, 120f, Blade);
             state = State.Stalk;

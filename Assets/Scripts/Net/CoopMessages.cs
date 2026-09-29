@@ -161,6 +161,7 @@ namespace Slopgame
         {
             w.WriteValueSafe(Floor); w.WriteValueSafe(Spec.Shape); w.WriteValueSafe(Spec.Center); w.WriteValueSafe(Spec.Direction);
             w.WriteValueSafe(Spec.Radius); w.WriteValueSafe(Spec.Width); w.WriteValueSafe(Spec.Telegraph); w.WriteValueSafe(Spec.Duration);
+            w.WriteValueSafe(Spec.Style);
         }
 
         public static HazardMessage Read(FastBufferReader r)
@@ -168,6 +169,7 @@ namespace Slopgame
             var m = new HazardMessage();
             r.ReadValueSafe(out m.Floor); r.ReadValueSafe(out m.Spec.Shape); r.ReadValueSafe(out m.Spec.Center); r.ReadValueSafe(out m.Spec.Direction);
             r.ReadValueSafe(out m.Spec.Radius); r.ReadValueSafe(out m.Spec.Width); r.ReadValueSafe(out m.Spec.Telegraph); r.ReadValueSafe(out m.Spec.Duration);
+            r.ReadValueSafe(out m.Spec.Style);
             return m;
         }
     }

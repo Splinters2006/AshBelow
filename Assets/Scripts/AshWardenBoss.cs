@@ -4,37 +4,38 @@ using UnityEngine;
 namespace Slopgame
 {
     /// <summary>
-    /// The first guardian: a slow, crowned caster drawing, in a shuffled order, an aimed Ember Fan, a full Nova, a
-    /// rotating Ash Spiral, Cinderfall (embers crash onto every hero) and Ash Cage (a ring of embers closes in on
-    /// every hero). Once bloodied it blinks across the arena before Cinderfall.
+    /// The first guardian, the Rime Warden: a slow, crowned frost caster drawing, in a shuffled order, an aimed Icicle
+    /// Fan, a full Frost Nova, a rotating Blizzard Spiral, Hailfall (hailstones crash onto every hero) and Ice Cage (a
+    /// ring of icicles closes in on every hero). Once bloodied it blinks across the arena before Hailfall.
+    /// (The class keeps its original Ash Warden name so the boss roster and asset references stay put.)
     /// </summary>
     public sealed class AshWardenBoss : BossBehaviour
     {
         private const int Patterns = 5;
-        private const int Fan = 0, Nova = 1, Spiral = 2, Cinderfall = 3, Cage = 4;
-        // Cage embers start this far out and creep in slowly enough to find the gap.
+        private const int Fan = 0, Nova = 1, Spiral = 2, Hailfall = 3, Cage = 4;
+        // Cage icicles start this far out and creep in slowly enough to find the gap.
         private const float CageRadius = 5.5f, CageBoltSpeed = 3.4f;
         // Spiral bolts drift slower than aimed ones so the rotating arms can be read and walked around.
         private const float SpiralBoltSpeed = 5f, SpiralDuration = 2.2f;
         public const float Size = 1.8f;
-        public static readonly Color Ember = new Color(1f, 0.55f, 0.2f);
-        public static readonly Color Violet = new Color(0.7f, 0.35f, 0.95f);
+        public static readonly Color Frost = new Color(0.55f, 0.85f, 1f);
+        public static readonly Color Glacier = new Color(0.3f, 0.5f, 1f);
         private float readyAt, fireAt, spiralUntil, nextSpiralShot, spiralAngle;
         private bool charging;
         private int pattern;
         private readonly List<Vector2> cageCenters = new List<Vector2>();
-        private readonly AttackDeck<int> deck = new AttackDeck<int>(Fan, Nova, Spiral, Cinderfall, Cage);
+        private readonly AttackDeck<int> deck = new AttackDeck<int>(Fan, Nova, Spiral, Hailfall, Cage);
         private Vector2 lockedAim;
         private WardenAura aura;
 
-        public override string Title => "THE ASH WARDEN";
+        public override string Title => "THE RIME WARDEN";
         public override string Tell => IsCharging ? (pattern % Patterns) switch
         {
-            Fan => "EMBER FAN - SIDESTEP",
-            Nova => "NOVA - KEEP MOVING",
-            Spiral => "ASH SPIRAL - CIRCLE WITH THE ARMS",
-            Cage => "ASH CAGE - SLIP THROUGH THE GAP",
-            _ => "CINDERFALL - LEAVE THE MARKS"
+            Fan => "ICICLE FAN - SIDESTEP",
+            Nova => "FROST NOVA - KEEP MOVING",
+            Spiral => "BLIZZARD SPIRAL - CIRCLE WITH THE ARMS",
+            Cage => "ICE CAGE - SLIP THROUGH THE GAP",
+            _ => "HAILFALL - LEAVE THE MARKS"
         } : IsEnraged ? "ENRAGED" : "GUARDIAN OF THE RELIC";
         public override int BaseHealth(int floor) => 24 + floor * 3;
         public override bool IsCharging => charging || Spiraling;
@@ -43,20 +44,22 @@ namespace Slopgame
         public override byte NetState => (byte)(pattern % Patterns);
         public int Pattern => pattern % Patterns;
         public bool Spiraling => spiralUntil > Enemy.ActionTime;
+        protected override BoltKind Bolts => BoltKind.Frost;
+        protected override HazardStyle Hazards => HazardStyle.Frost;
 
         protected override void OnSetup()
         {
             Enemy.Speed = 1.5f;
             transform.localScale = Vector2.one * Size;
             readyAt = Enemy.ActionTime + 2f;
-            // Always opens with the Ember Fan so the fight starts with something readable.
+            // Always opens with the Icicle Fan so the fight starts with something readable.
             pattern = deck.Open(Fan);
             DungeonVisuals.DecorateWarden(transform);
             aura = WardenAura.Attach(this);
-            HeroVfx.Pulse(Run.ProjectileRoot, transform.position, 3f, Violet, 0.8f);
+            HeroVfx.Pulse(Run.ProjectileRoot, transform.position, 3f, Frost, 0.8f);
         }
 
-        public override Color BodyColor() => Flashing(IsEnraged ? new Color(1f, 0.4f, 0.42f) : new Color(0.72f, 0.5f, 0.9f), AbilityCatalog.Gold, charging);
+        public override Color BodyColor() => Flashing(IsEnraged ? new Color(0.35f, 0.55f, 1f) : new Color(0.62f, 0.8f, 0.98f), Color.white, charging);
 
         public override void HostTick(Vector2 offset)
         {
@@ -76,19 +79,19 @@ namespace Slopgame
 
         private void BeginWindup(Vector2 offset)
         {
-            if (pattern % Patterns == Cinderfall && IsEnraged) Blink(offset);
+            if (pattern % Patterns == Hailfall && IsEnraged) Blink(offset);
             charging = true;
             lockedAim = offset.sqrMagnitude > 0.01f ? offset.normalized : Vector2.down;
             fireAt = Enemy.ActionTime + 0.85f;
-            CombatVfx.Ring(Run.ProjectileRoot, transform.position, 1.5f, AbilityCatalog.Gold, 0.85f);
-            CoopFx.Pulse(Run, transform.position, 1.8f, Violet, 0.5f);
+            CombatVfx.Ring(Run.ProjectileRoot, transform.position, 1.5f, Frost, 0.85f);
+            CoopFx.Pulse(Run, transform.position, 1.8f, Glacier, 0.5f);
             cageCenters.Clear();
             if (pattern % Patterns == Cage)
                 foreach (var hero in LivingHeroPositions())
                 {
                     cageCenters.Add(hero);
-                    CombatVfx.Ring(Run.ProjectileRoot, hero, CageRadius, Ember, 0.85f);
-                    CoopFx.Ring(Run, hero, CageRadius, Ember, 0.85f);
+                    CombatVfx.Ring(Run.ProjectileRoot, hero, CageRadius, Frost, 0.85f);
+                    CoopFx.Ring(Run, hero, CageRadius, Frost, 0.85f);
                 }
         }
 
@@ -104,7 +107,7 @@ namespace Slopgame
                         float angle = pattern % Patterns == Fan ? (i - (shots - 1) * 0.5f) * 14f : i * 360f / shots;
                         Fire(transform.position, Quaternion.Euler(0, 0, angle) * lockedAim);
                     }
-                    HeroVfx.Pulse(Run.ProjectileRoot, transform.position, 1.6f, Ember, 0.35f);
+                    HeroVfx.Pulse(Run.ProjectileRoot, transform.position, 1.6f, Frost, 0.35f);
                     Finish();
                     break;
                 case Spiral:
@@ -114,11 +117,11 @@ namespace Slopgame
                     break;
                 case Cage:
                     foreach (var center in cageCenters) CastCage(center);
-                    HeroVfx.Pulse(Run.ProjectileRoot, transform.position, 1.6f, Ember, 0.35f);
+                    HeroVfx.Pulse(Run.ProjectileRoot, transform.position, 1.6f, Frost, 0.35f);
                     Finish();
                     break;
                 default:
-                    CastCinderfall();
+                    CastHailfall();
                     Finish();
                     break;
             }
@@ -130,7 +133,7 @@ namespace Slopgame
             readyAt = Enemy.ActionTime + (IsEnraged ? 1.1f : 1.65f);
         }
 
-        /// <summary>Two (bloodied: three) arms of embers sweep around the Warden.</summary>
+        /// <summary>Two (bloodied: three) arms of icicles sweep around the Warden.</summary>
         private void SpiralTick()
         {
             while (Enemy.ActionTime >= nextSpiralShot && Spiraling)
@@ -148,26 +151,23 @@ namespace Slopgame
             }
         }
 
-        /// <summary>Embers crash onto every hero plus a few loose spots, each leaving a short-lived patch of burning ash.</summary>
-        private void CastCinderfall()
+        /// <summary>Hailstones crash onto every hero plus a few loose spots, each leaving a short-lived patch of biting frost.</summary>
+        private void CastHailfall()
         {
-            float telegraph = 1.1f, burn = IsEnraged ? 2.2f : 1.6f;
-            if (Run.Player.Health > 0) Hazard(HazardShape.Pool, Run.Player.transform.position, Vector2.up, 1.2f, 0f, telegraph, burn);
-            if (Run.IsNetworked)
-                foreach (var hero in Run.Coop.RemoteHeroes)
-                    if (hero != null && hero.IsAlive) Hazard(HazardShape.Pool, hero.transform.position, Vector2.up, 1.2f, 0f, telegraph, burn);
+            float telegraph = 1.1f, linger = IsEnraged ? 2.2f : 1.6f;
+            foreach (var hero in LivingHeroPositions()) Hazard(HazardShape.Pool, hero, Vector2.up, 1.2f, 0f, telegraph, linger);
             var arena = DungeonMap.Arena;
             int extra = IsEnraged ? 5 : 3;
             for (int i = 0; i < extra; i++)
             {
                 var spot = new Vector2(Random.Range(arena.xMin + 1f, arena.xMax - 2f), Random.Range(arena.yMin + 1f, arena.yMax - 2f));
-                Hazard(HazardShape.Pool, spot, Vector2.up, 1.2f, 0f, telegraph + 0.2f + i * 0.15f, burn);
+                Hazard(HazardShape.Pool, spot, Vector2.up, 1.2f, 0f, telegraph + 0.2f + i * 0.15f, linger);
             }
         }
 
         /// <summary>
-        /// Embers appear in the ring marked around a hero at the windup and drift inward. A gap of missing embers (narrower
-        /// once bloodied) is the way out; stepping out of the ring before it closes works too.
+        /// Icicles appear in the ring marked around a hero at the windup and drift inward. A gap of missing icicles
+        /// (narrower once bloodied) is the way out; stepping out of the ring before it closes works too.
         /// </summary>
         private void CastCage(Vector2 center)
         {
@@ -183,7 +183,7 @@ namespace Slopgame
             }
         }
 
-        /// <summary>Bloodied: vanishes in a burst of ash and reappears elsewhere in the arena, away from the heroes.</summary>
+        /// <summary>Bloodied: shatters into a flurry of snow and reforms elsewhere in the arena, away from the heroes.</summary>
         private void Blink(Vector2 offset)
         {
             Vector2 hero = (Vector2)transform.position + offset, from = transform.position, best = from;
@@ -199,9 +199,9 @@ namespace Slopgame
             transform.position = best;
             foreach (var point in new[] { from, best })
             {
-                HeroVfx.Pulse(Run.ProjectileRoot, point, 1.8f, Violet, 0.45f);
-                HeroVfx.Sparks(Run.ProjectileRoot, point, Violet, 14, 4f, 0.45f, null, 360f, 1.2f);
-                CoopFx.Pulse(Run, point, 1.8f, Violet, 0.45f);
+                HeroVfx.Pulse(Run.ProjectileRoot, point, 1.8f, Glacier, 0.45f);
+                HeroVfx.Sparks(Run.ProjectileRoot, point, Frost, 14, 4f, 0.45f, null, 360f, 1.2f);
+                CoopFx.Pulse(Run, point, 1.8f, Glacier, 0.45f);
             }
         }
 
@@ -215,8 +215,8 @@ namespace Slopgame
         {
             ScreenFx.Shake(0.4f, 0.7f);
             for (int i = 0; i < 3; i++)
-                HeroVfx.Pulse(Run.ProjectileRoot, transform.position, 1.8f + i * 1.4f, i == 1 ? AbilityCatalog.Gold : Violet, 0.5f + i * 0.25f);
-            HeroVfx.Sparks(Run.ProjectileRoot, transform.position, Ember, 30, 7f, 0.8f, null, 360f, 1.5f);
+                HeroVfx.Pulse(Run.ProjectileRoot, transform.position, 1.8f + i * 1.4f, i == 1 ? AbilityCatalog.Gold : Glacier, 0.5f + i * 0.25f);
+            HeroVfx.Sparks(Run.ProjectileRoot, transform.position, Frost, 30, 7f, 0.8f, null, 360f, 1.5f);
             if (aura != null) Destroy(aura.gameObject);
         }
     }

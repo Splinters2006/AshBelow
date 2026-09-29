@@ -106,12 +106,16 @@ namespace Slopgame
         {
             if (Player.Shield != null) return Player.Shield.Raise(aim);
             if (!CanAttack || HeavyCooldownRemaining > 0f || aim.sqrMagnitude < 0.001f) return false;
-            aim = Player.MobilityAim(aim);
             if (Player.ClassWeapon == WeaponType.Daggers)
             {
+                // Shadowstep always heads for the cursor (stopping on it when it is in range), even while walking.
                 if (!Player.Abilities.Shadowstep(aim, Mathf.Min(PlayerAbilities.ShadowstepDistance, aim.magnitude))) return false;
             }
-            else Player.Abilities.Dash(aim, Mathf.Min(3f, aim.magnitude));
+            else
+            {
+                aim = Player.MobilityAim(aim);
+                Player.Abilities.Dash(aim, Mathf.Min(3f, aim.magnitude));
+            }
             Player.Charge.Cancel();
             shadowReadyAt = Time.time + 4f;
             return true;

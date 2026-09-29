@@ -6,7 +6,7 @@ namespace Slopgame
 
     /// <summary>
     /// The arena guardian's shared state (health, title, invulnerability, co-op state). Its fighting style lives in
-    /// a <see cref="BossBehaviour"/> component chosen by floor: the Ash Warden, the Ashen Duelist, then the Archdemon.
+    /// a <see cref="BossBehaviour"/> component chosen by floor: the Rime Warden, the Steel Duelist, then the Archdemon.
     /// </summary>
     [RequireComponent(typeof(DungeonEnemy))]
     public sealed class DungeonBoss : MonoBehaviour

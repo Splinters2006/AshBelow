@@ -2,6 +2,9 @@ using UnityEngine;
 
 namespace Slopgame
 {
+    /// <summary>What an enemy bolt looks like; every kind behaves identically.</summary>
+    public enum BoltKind : byte { Ember, Blade, Frost }
+
     public sealed class EnemyProjectile : MonoBehaviour
     {
         public const float DefaultSpeed = 7.5f;
@@ -18,23 +21,25 @@ namespace Slopgame
         public bool IsReflected { get; private set; }
         private int reflectedDamage;
         public bool IsSpent => spent;
-        /// <summary>A thrown steel blade rather than an ember bolt; behaves identically.</summary>
-        public bool IsBlade { get; private set; }
+        /// <summary>An ember bolt, a thrown steel blade or an icicle.</summary>
+        public BoltKind Kind { get; private set; }
 
         public static EnemyProjectile Spawn(DungeonRun run, Transform parent, Vector2 position, Vector2 direction) => Spawn(run, parent, position, direction, true);
 
         /// <summary>Every machine flies its own copy; a copy only ever strikes that machine's hero.</summary>
         public static EnemyProjectile Spawn(DungeonRun run, Transform parent, Vector2 position, Vector2 direction, bool announce,
-            float speed = DefaultSpeed, bool blade = false)
+            float speed = DefaultSpeed, BoltKind kind = BoltKind.Ember)
         {
-            var sprite = blade ? DungeonVisuals.CreateThrownBlade(parent, position) : DungeonVisuals.CreateEmberBolt(parent, position);
+            var sprite = kind == BoltKind.Blade ? DungeonVisuals.CreateThrownBlade(parent, position)
+                : kind == BoltKind.Frost ? DungeonVisuals.CreateFrostBolt(parent, position) : DungeonVisuals.CreateEmberBolt(parent, position);
             var projectile = sprite.gameObject.AddComponent<EnemyProjectile>();
             projectile.run = run;
             projectile.direction = direction.normalized;
             projectile.speed = speed;
-            projectile.IsBlade = blade;
+            projectile.Kind = kind;
             projectile.transform.rotation = Quaternion.Euler(0, 0, Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg);
-            if (blade) CombatVfx.Trail(projectile.gameObject, new Color(0.45f, 0.95f, 1f, 0.6f), 0.07f, 0.12f);
+            if (kind == BoltKind.Blade) CombatVfx.Trail(projectile.gameObject, new Color(0.45f, 0.95f, 1f, 0.6f), 0.07f, 0.12f);
+            else if (kind == BoltKind.Frost) CombatVfx.Trail(projectile.gameObject, new Color(0.7f, 0.92f, 1f, 0.55f), 0.08f, 0.14f);
             if (announce && run.IsNetworked && run.Coop.IsHost) run.Coop.AnnounceBolt(projectile, position, projectile.direction);
             return projectile;
         }

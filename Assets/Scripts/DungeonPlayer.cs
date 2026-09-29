@@ -39,7 +39,12 @@ namespace Slopgame
         public AttackCharge Charge { get; private set; }
         public KnightShield Shield { get; private set; }
         public PlayerAbilities Abilities { get; private set; }
-        private float invulnerableUntil, rollUntil, rollReady, busyUntil, veiledUntil, nextBurnAt;
+        /// <summary>How long the hero blinks red after losing health.</summary>
+        public const float HurtBlink = 0.35f;
+        public static readonly Color HurtColor = new Color(1f, 0.25f, 0.25f);
+        /// <summary>True just after losing health, while the hero blinks red.</summary>
+        public bool IsHurt => Time.time < hurtUntil;
+        private float invulnerableUntil, rollUntil, rollReady, busyUntil, veiledUntil, nextBurnAt, hurtUntil;
         private Vector2 rollDirection;
         private SpriteRenderer body, details;
         private bool facingLeft;
@@ -145,7 +150,8 @@ namespace Slopgame
         {
             // Safety net: a hero with health must never stay hidden, however that health came back.
             if (Health > 0 && hiddenRenderers.Count > 0) SetVisible(true);
-            body.color = IsRolling ? new Color(0.4f, 0.65f, 1f) : IsInvulnerable ? Color.white : Buffs.Tint(characterColor);
+            body.color = IsHurt ? (Mathf.Repeat(Time.time * 16f, 1f) < 0.5f ? HurtColor : Color.white)
+                : IsRolling ? new Color(0.4f, 0.65f, 1f) : IsInvulnerable ? Color.white : Buffs.Tint(characterColor);
             SetVeiledLook(IsVeiled);
             if (!Run.IsPlaying || Health <= 0 || IsBusy) { MoveInput = Vector2.zero; Charge.Tick(PlayerInput.Attack, false); return; }
             Vector2 cursor = Run.View.ScreenToWorldPoint(new Vector3(PlayerInput.CursorPosition.x,
@@ -227,8 +233,16 @@ namespace Slopgame
             if (Run.ProjectileRoot != null)
             {
                 if (warded) HeroVfx.Pulse(transform, transform.position, 0.95f, AbilityCatalog.Ice, 0.3f);
-                else HeroVfx.Sparks(Run.ProjectileRoot, transform.position, new Color(1f, 0.3f, 0.3f), 10, 3.6f, 0.35f);
+                else
+                {
+                    HeroVfx.Sparks(Run.ProjectileRoot, transform.position, HurtColor, 14, 4.2f, 0.4f);
+                    HeroVfx.Pulse(transform, transform.position, 1.2f, HurtColor, 0.3f);
+                }
             }
+            // Make every hit unmistakable: a red flash and a jolt (a blocked hit flashes ice blue), then the hero blinks red.
+            ScreenFx.Flash(warded ? new Color(0.4f, 0.75f, 1f, 0.22f) : new Color(1f, 0.08f, 0.08f, 0.38f), warded ? 0.25f : 0.4f);
+            ScreenFx.Shake(warded ? 0.08f : 0.2f, warded ? 0.12f : 0.25f);
+            if (!warded) hurtUntil = Time.time + HurtBlink;
             invulnerableUntil = Time.time + 1f;
             if (Health > 0) return true;
             if (!Run.IsNetworked) { Run.EndRun(); return true; }

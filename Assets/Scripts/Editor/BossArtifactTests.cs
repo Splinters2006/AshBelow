@@ -159,7 +159,7 @@ namespace Slopgame.Editor
                     Require(run.Player.Crystals.BonusDamage == 0 && run.Player.Crystals.SpeedMultiplier == 1f, "Crystal shop boons outlasted the boss arena.");
                     while (run.Floor < 10) ClearFloor(run);
                     Require(run.IsBossFloor && run.Boss != null, "Floor ten has no boss.");
-                    Require(run.Boss.Kind == BossKind.Duelist && run.Boss.Behaviour is DuelistBoss, "Floor ten did not summon the Ashen Duelist.");
+                    Require(run.Boss.Kind == BossKind.Duelist && run.Boss.Behaviour is DuelistBoss, "Floor ten did not summon the Steel Duelist.");
                     run.Boss.Enemy.Hit(100000);
                     run.BeginArtifactChoice();
                     Require(run.ChooseArtifact(AbilityType.FrostNova, 1), "Second artifact did not fill E.");

@@ -78,7 +78,7 @@ namespace Slopgame.Editor
                         DebugMode.Set(true);
                         Require(run.CanSkipRoom, "Skip room was not offered in solo debug mode.");
                         SkipTo(run, 5);
-                        Require(run.Boss != null && run.Boss.Kind == BossKind.AshWarden, "Floor five is not the Ash Warden.");
+                        Require(run.Boss != null && run.Boss.Kind == BossKind.AshWarden, "Floor five is not the Rime Warden.");
                         SkipTo(run, 10);
                         Require(run.Boss != null && run.Boss.Behaviour is DuelistBoss, "Floor ten is not the Duelist.");
                         Require(run.Boss.MaxHealth < DungeonBoss.ScaledHealth(24 + 10 * 3, 1), "The Duelist is not squishier than the Warden.");

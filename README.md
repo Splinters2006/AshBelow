@@ -38,8 +38,8 @@ You can rebind every action under **Controls** in the main menu. Each action get
 
   Each ware costs 50% more every time you buy it in the same shop. In co-op, everyone sees the same stock. The shop's stairs lead to the guardian.
 - **Beat the guardians.** Every fifth floor is a boss arena. Three guardians take turns, and each gets more dangerous below half health:
-  - **The Ash Warden**, a caster who fills the arena with ember fans, novas, spirals and falling fire.
-  - **The Ashen Duelist**, a fast, fragile swordsman who dashes, throws blade fans and teleports behind you.
+  - **The Rime Warden**, a frost caster who fills the arena with icicle fans, frost novas, blizzard spirals, hailstorms and closing rings of ice.
+  - **The Steel Duelist**, a fast, fragile swordsman who dashes, throws blade fans, teleports behind you and cuts crosses of blade light.
   - **Malphas, the Hellfire Archdemon**. Watch for **Cataclysm**: the floor turns red, then everything except one golden circle erupts in fire. A gold arrow at your feet points to the circle.
 - **Claim an artifact.** A beaten guardian drops an artifact that unlocks an active ability for your class. Put it on **Q** or **E**. You can hold two at a time, and later artifacts can upgrade one (up to rank 3) or replace it. You can also leave an artifact for 40 crystals.
 - **Death ends the run.** Boons and abilities reset, but your **Ash** and Ash shop upgrades are kept.
