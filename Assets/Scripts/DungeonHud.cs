@@ -406,8 +406,8 @@ namespace Slopgame
                 }
             }
             if (index == 0)
-                DungeonUi.Label(new Rect(240, 380, 800, 60), "No relic answers to your class yet. Leave the artifact and descend.", 20, DungeonUi.Muted, TextAnchor.MiddleCenter);
-            if (DungeonUi.Button("leaveArtifact", new Rect(500, 661, 280, 35), "Leave this artifact", DungeonUi.Muted)) Run.FinishArtifactChoice();
+                DungeonUi.Label(new Rect(240, 380, 800, 60), $"No relic answers to your class yet. Leave the artifact for {DungeonRun.LeftArtifactCrystals} crystals and descend.", 20, DungeonUi.Muted, TextAnchor.MiddleCenter);
+            if (DungeonUi.Button("leaveArtifact", new Rect(470, 661, 340, 35), $"Leave it  /  +{DungeonRun.LeftArtifactCrystals} crystals", CrystalPouch.CrystalColor)) Run.LeaveArtifact();
         }
 
         private void DrawReplaceConfirmation()

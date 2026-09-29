@@ -41,14 +41,14 @@ You can rebind every action under **Controls** in the main menu. Each action get
   - **The Ash Warden**, a caster who fills the arena with ember fans, novas, spirals and falling fire.
   - **The Ashen Duelist**, a fast, fragile swordsman who dashes, throws blade fans and teleports behind you.
   - **Malphas, the Hellfire Archdemon**. Watch for **Cataclysm**: the floor turns red, then everything except one golden circle erupts in fire. A gold arrow at your feet points to the circle.
-- **Claim an artifact.** A beaten guardian drops an artifact that unlocks an active ability for your class. Put it on **Q** or **E**. You can hold two at a time, and later artifacts can upgrade one (up to rank 3) or replace it.
+- **Claim an artifact.** A beaten guardian drops an artifact that unlocks an active ability for your class. Put it on **Q** or **E**. You can hold two at a time, and later artifacts can upgrade one (up to rank 3) or replace it. You can also leave an artifact for 40 crystals.
 - **Death ends the run.** Boons and abilities reset, but your **Ash** and Ash shop upgrades are kept.
 
 Enemies get tougher every floor. The **minimap** in the top-right corner fills in as you explore.
 
 ### Combat tips
 
-- **Enemies:** red ashlings chase you, armoured brutes are slow but tough, and hooded casters keep their distance and flash white just before they fire.
+- **Enemies:** red ashlings chase you, armoured brutes are slow but tough, and hooded casters keep their distance and flash white just before they fire. From floor 2, small amber **ash skitters** rush you fast but die to a single hit. From floor 3, glowing **cinder husks** are slow and hardy. When one dies, its core flashes a warning ring and then bursts, hurting you and any other enemies nearby. Get clear, or kill husks next to their friends. Husks drop 2 crystals.
 - **Rear hits:** hitting an enemy from behind shows a pink double chevron. The Assassin deals double damage from behind.
 - **Critical hits:** every hero starts with a 5% chance of a physical critical hit, which deals double damage.
 - **Elemental effects:** fire sets enemies burning (three ticks, each half the hit's damage), ice freezes them solid, and lightning shocks every other enemy within 2 units for a quarter of the hit. Guardians thaw and shrug off freezes faster.

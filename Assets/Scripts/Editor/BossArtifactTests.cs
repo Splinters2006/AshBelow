@@ -98,6 +98,7 @@ namespace Slopgame.Editor
                     TestWizard(run);
                     TestCrystalDrops(run);
                     TestEnemyVariants(run);
+                    TestCurseOverWalls(run);
                     variantsTested = true;
                     // The cinder burst hit the hero; wait out the hit protection before the shop wounds them again.
                     waitUntil = Time.time + 1.1f;
@@ -163,6 +164,7 @@ namespace Slopgame.Editor
                     run.BeginArtifactChoice();
                     Require(run.ChooseArtifact(AbilityType.FrostNova, 1), "Second artifact did not fill E.");
                     TestSlots(run);
+                    TestLeaveArtifact(run);
                     StartClass(run, classes[0]);
                     stage = 3;
                     return;
@@ -363,6 +365,43 @@ namespace Slopgame.Editor
             normal.Hit(100000);
             var dropped = run.ProjectileRoot.GetComponentsInChildren<Crystal>();
             Require(dropped.Length == before + 1 && Array.Exists(dropped, crystal => crystal.Value == 1), "A slain enemy dropped no crystal.");
+        }
+
+        /// <summary>Demon Curse can be branded on open floor beyond a wall, where a ground landing would stop at the wall.</summary>
+        private static void TestCurseOverWalls(DungeonRun run)
+        {
+            var map = run.Map;
+            for (int x = 1; x < DungeonMap.Width - 4; x++)
+                for (int y = 1; y < DungeonMap.Height - 1; y++)
+                {
+                    if (!map.IsFloor(x, y) || map.IsFloor(x + 1, y) || map.IsFloor(x + 2, y) || !map.IsFloor(x + 3, y)
+                        || !map.IsFloor(x, y + 1) && !map.IsFloor(x, y - 1)) continue;
+                    Vector2 from = new Vector2(x, y), beyond = new Vector2(x + 3, y);
+                    if (!map.CanStand(from) || !map.CanStand(beyond)) continue;
+                    Vector2 blocked = PlayerAbilities.FindGroundLanding(map, from, Vector2.right, 3f);
+                    Vector2 brand = DemonessAttack.CursePoint(map, from, Vector2.right, 3f);
+                    Require(blocked.x < x + 1 && Vector2.Distance(brand, beyond) < 0.01f, "Demon Curse could not be placed beyond a wall.");
+                    Require(map.CanStand(DemonessAttack.CursePoint(map, from, Vector2.right, 2f)), "Demon Curse was branded inside a wall.");
+                    return;
+                }
+            throw new Exception("No wall two tiles thick between floor tiles to test Demon Curse over.");
+        }
+
+        /// <summary>Leaving a guardian's artifact pays a pile of crystals and changes no abilities.</summary>
+        private static void TestLeaveArtifact(DungeonRun run)
+        {
+            run.BeginUpgradeChoice();
+            while (run.Floor < 15) ClearFloor(run);
+            Require(run.IsBossFloor && run.Boss != null, "Floor fifteen has no boss.");
+            run.Boss.Enemy.Hit(100000);
+            run.BeginArtifactChoice();
+            var abilities = run.Player.Abilities;
+            AbilityType q = abilities.Equipped(0), e = abilities.Equipped(1);
+            int crystals = run.Player.Crystals.Crystals;
+            Require(run.LeaveArtifact() && run.Player.Crystals.Crystals == crystals + DungeonRun.LeftArtifactCrystals
+                && !run.ChoosingArtifact && run.IsPlaying && abilities.Equipped(0) == q && abilities.Equipped(1) == e,
+                "Leaving the artifact did not pay crystals and resume play unchanged.");
+            Require(!run.LeaveArtifact() && run.Player.Crystals.Crystals == crystals + DungeonRun.LeftArtifactCrystals, "A left artifact paid out twice.");
         }
 
         private static void TestEnemyVariants(DungeonRun run)

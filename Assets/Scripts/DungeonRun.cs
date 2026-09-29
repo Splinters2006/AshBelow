@@ -409,6 +409,20 @@ namespace Slopgame
             FinishArtifactChoice();
             return true;
         }
+        /// <summary>Crystals the merchant's rivals pay for an artifact left unclaimed.</summary>
+        public const int LeftArtifactCrystals = 40;
+
+        /// <summary>Leaves the guardian's artifact behind for a pile of crystals instead of an ability.</summary>
+        public bool LeaveArtifact()
+        {
+            if (!ChoosingArtifact || (IsNetworked && Coop.WaitingForTeam)) return false;
+            Player.Crystals.Add(LeftArtifactCrystals);
+            if (ProjectileRoot != null)
+                HeroVfx.Motes(ProjectileRoot, Player.transform.position, 0.9f, CrystalPouch.CrystalColor, 20, 1.1f);
+            FinishArtifactChoice();
+            return true;
+        }
+
         public void FinishArtifactChoice()
         {
             if (!ChoosingArtifact) return;

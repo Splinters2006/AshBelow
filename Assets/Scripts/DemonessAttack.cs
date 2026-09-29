@@ -184,12 +184,18 @@ namespace Slopgame
                     StartCoroutine(PawSlam(target, rank));
                     return true;
                 case AbilityType.DemonCurse:
-                    Vector2 center = PlayerAbilities.FindGroundLanding(Player.Run.Map, transform.position, aim, Mathf.Min(CurseRange, cursorDistance));
-                    StartCoroutine(CurseMark(center, rank));
+                    StartCoroutine(CurseMark(CursePoint(Player.Run.Map, transform.position, aim, cursorDistance), rank));
                     return true;
                 default: return false;
             }
         }
+
+        /// <summary>
+        /// Where Demon Curse brands its pentagram: at the cursor (within range), even past walls. Only the centre needs open
+        /// floor; over a wall it slides back toward the Demoness to the nearest open spot, or lands at her feet.
+        /// </summary>
+        public static Vector2 CursePoint(DungeonMap map, Vector2 from, Vector2 aim, float cursorDistance)
+            => PlayerAbilities.FindShadowstepLanding(map, from, aim, Mathf.Min(CurseRange, cursorDistance), out Vector2 spot) ? spot : from;
 
         public float AscendTime(int rank) => AscendDuration + (rank - 1) + Player.Powerups.Count(PowerupType.Bloodline);
 
