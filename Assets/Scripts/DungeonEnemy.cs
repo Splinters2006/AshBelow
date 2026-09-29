@@ -119,7 +119,7 @@ namespace Slopgame
             }
             float distance = Vector2.Distance(position, target);
             bool visible = Run.HasLineOfSight(position, target);
-            if (distance < 10f)
+            if (distance < 14f)
             {
                 if (!IsRanged || !shooter.IsCharging) Facing.TurnToward(target - position, Time.deltaTime * ActionSpeedMultiplier);
                 Vector2 direction = tactics.Direction(target, visible, IsRanged && shooter.IsCharging);

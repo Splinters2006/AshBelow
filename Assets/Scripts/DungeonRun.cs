@@ -242,7 +242,7 @@ namespace Slopgame
                         World.BasicTint, 3).gameObject.AddComponent<DungeonEnemy>();
                     enemy.Run = this;
                     enemy.Health = EnemyHealthScaled(EnemyHealthForFloor(Floor));
-                    enemy.Speed = Mathf.Min(3.6f, 1.8f + Floor * 0.12f);
+                    enemy.Speed = Mathf.Min(4.3f, 2.25f + Floor * 0.15f);
                     if (i == 1) enemy.gameObject.AddComponent<EnemyShooter>();
                     else if (i == 0 && room % 2 == 0)
                     {

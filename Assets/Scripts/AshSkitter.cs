@@ -5,7 +5,7 @@ namespace Slopgame
     /// <summary>A small, fragile ember spider that scuttles in much faster than an ashling (a scuttle bot in the Neon Arcology).</summary>
     public sealed class AshSkitter : EnemyVariant
     {
-        public const float SpeedMultiplier = 1.6f, MaxSpeed = 4.6f;
+        public const float SpeedMultiplier = 1.6f, MaxSpeed = 5.4f;
         private static Sprite sprite;
 
         public override string DisplayName => World.HighTech ? "Scuttle bot" : "Ash skitter";

@@ -72,13 +72,13 @@ namespace Slopgame
 
         protected override void OnSetup()
         {
-            Enemy.Speed = 1.3f;
+            Enemy.Speed = 1.8f;
             transform.localScale = Vector2.one * Size;
             ground = transform.position;
             GetComponent<SpriteRenderer>().sprite = DungeonVisuals.BossSprite(BossKind.Archdemon);
             DungeonVisuals.DecorateArchdemon(transform, HighTech);
             aura = HellfireAura.Attach(this);
-            readyAt = Enemy.ActionTime + 2.5f;
+            readyAt = Enemy.ActionTime + 1.5f;
             HeroVfx.Pulse(Run.ProjectileRoot, transform.position, 4f, Glow, 1f);
         }
 
@@ -138,7 +138,7 @@ namespace Slopgame
         private void Idle(float delay)
         {
             state = State.Idle;
-            readyAt = Enemy.ActionTime + delay / Tempo;
+            readyAt = Enemy.ActionTime + delay * 0.6f / Tempo;
         }
 
         private void BeginAttack(Vector2 target)

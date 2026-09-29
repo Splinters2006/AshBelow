@@ -14,9 +14,9 @@ namespace Slopgame
             Vector2 offset = target - position;
             float distance = offset.magnitude;
             Vector2 desired = visible ? offset.normalized : enemy.Run.DirectionToPlayer(position);
-            bool retreat = enemy.IsRanged && visible && distance < 3f;
+            bool retreat = enemy.IsRanged && visible && distance < 2.2f;
             if (enemy.IsRanged && visible)
-                desired = retreat ? -desired : distance < 5.5f ? Vector2.zero : desired;
+                desired = retreat ? -desired : distance < 4.2f ? Vector2.zero : desired;
 
             Vector2 separation = Vector2.zero;
             int nearby = 0, order = 0;
@@ -41,11 +41,11 @@ namespace Slopgame
             if (!enemy.IsRanged && visible && distance > 1.2f && distance < 6f && nearby > 0 && leader != enemy)
             {
                 float angle = order * Mathf.PI * 2f / (nearby + 1);
-                Vector2 flank = target + new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * 1.1f;
+                Vector2 flank = target + new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * 0.8f;
                 if (enemy.Run.Map.CanStand(flank, enemy.MoveRadius) && enemy.Run.HasLineOfSight(position, flank))
                     desired = (flank - position).normalized;
             }
-            desired = Vector2.ClampMagnitude(desired + separation * 1.5f, 1f);
+            desired = Vector2.ClampMagnitude(desired + separation * 1.1f, 1f);
             if (desired.sqrMagnitude < 0.001f) return Vector2.zero;
 
             // Look ahead in several directions so retreating casters slide along walls toward open space.

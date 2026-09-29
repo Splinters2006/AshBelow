@@ -50,9 +50,9 @@ namespace Slopgame
 
         protected override void OnSetup()
         {
-            Enemy.Speed = 1.5f;
+            Enemy.Speed = 2f;
             transform.localScale = Vector2.one * Size;
-            readyAt = Enemy.ActionTime + 2f;
+            readyAt = Enemy.ActionTime + 1.2f;
             // Always opens with the Icicle Fan so the fight starts with something readable.
             pattern = deck.Open(Fan);
             DungeonVisuals.DecorateWarden(transform, HighTech);
@@ -132,7 +132,7 @@ namespace Slopgame
         private void Finish()
         {
             pattern = deck.Draw();
-            readyAt = Enemy.ActionTime + (IsEnraged ? 1.1f : 1.65f);
+            readyAt = Enemy.ActionTime + (IsEnraged ? 0.65f : 1f);
         }
 
         /// <summary>Two (bloodied: three) arms of icicles sweep around the Warden.</summary>

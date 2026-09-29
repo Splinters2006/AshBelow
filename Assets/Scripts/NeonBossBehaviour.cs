@@ -28,8 +28,8 @@ namespace Slopgame
         {
             transform.localScale = Vector3.one * Scale;
             GetComponent<SpriteRenderer>().sprite = Chassis;
-            Enemy.Speed = 1.8f;
-            until = Enemy.ActionTime + 1.8f;
+            Enemy.Speed = 2.4f;
+            until = Enemy.ActionTime + 1.1f;
             effectObject = new GameObject(Title + " circuitry");
             effectObject.transform.SetParent(Run.ProjectileRoot, false);
             effect = new FlameMesh(effectObject, 5);
@@ -39,7 +39,7 @@ namespace Slopgame
         public override void HostTick(Vector2 toHero)
         {
             Enemy.Facing.TurnToward(toHero, Time.deltaTime * Enemy.ActionSpeedMultiplier * 3f);
-            if (state == 0 && toHero.magnitude > 6f)
+            if (state == 0 && toHero.magnitude > 4.5f)
                 transform.position = Run.Map.Move(transform.position, toHero.normalized * Enemy.Speed * Time.deltaTime * Enemy.ActionSpeedMultiplier, Enemy.MoveRadius);
             if (state >= 1 && state <= 3) AttackTick();
             if (Enemy.ActionTime < until) return;
@@ -49,8 +49,8 @@ namespace Slopgame
                 state = (byte)(attack + 1);
                 until = Enemy.ActionTime + Attack(attack, toHero.sqrMagnitude > 0.01f ? toHero.normalized : Vector2.up);
             }
-            else if (state == 4) { state = 0; until = Enemy.ActionTime + (IsEnraged ? 0.8f : 1.4f); }
-            else { state = 4; until = Enemy.ActionTime + 1.5f; }
+            else if (state == 4) { state = 0; until = Enemy.ActionTime + (IsEnraged ? 0.4f : 0.7f); }
+            else { state = 4; until = Enemy.ActionTime + 1.1f; }
         }
 
         public override void ApplyNetState(bool charging, byte value) { if (value <= 4) state = value; }

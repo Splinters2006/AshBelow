@@ -13,7 +13,7 @@ namespace Slopgame
         private void Start()
         {
             enemy = GetComponent<DungeonEnemy>();
-            readyAt = enemy.ActionTime + 1f;
+            readyAt = enemy.ActionTime + 0.6f;
         }
 
         /// <summary>Co-op guest: the host decides when casters wind up and fire.</summary>
@@ -30,7 +30,7 @@ namespace Slopgame
                 if (enemy.ActionTime < fireAt) return;
                 EnemyProjectile.Spawn(enemy.Run, transform.parent, transform.position, lockedDirection, true, EnemyProjectile.DefaultSpeed, enemy.Run.World.Bolts);
                 IsCharging = false;
-                readyAt = enemy.ActionTime + 1.5f;
+                readyAt = enemy.ActionTime + 0.9f;
             }
             else if (enemy.ActionTime >= readyAt && offset.sqrMagnitude < 64f && offset.sqrMagnitude > 0.01f
                 && Vector2.Dot(enemy.Facing.Direction, offset.normalized) >= 0.98f

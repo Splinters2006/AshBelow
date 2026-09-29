@@ -55,7 +55,7 @@ namespace Slopgame
 
         protected override void OnSetup()
         {
-            Enemy.Speed = 3.8f;
+            Enemy.Speed = 4.5f;
             transform.localScale = Vector2.one * 1.15f;
             body = GetComponent<SpriteRenderer>();
             body.sprite = DungeonVisuals.BossSprite(BossKind.Duelist);
@@ -65,7 +65,7 @@ namespace Slopgame
             markObject = new GameObject("Phantom strike telegraph");
             markObject.transform.SetParent(Run.ProjectileRoot, false);
             marks = new FlameMesh(markObject, 2);
-            readyAt = Enemy.ActionTime + 1.6f;
+            readyAt = Enemy.ActionTime + 1f;
             Enemy.HitReceived += OnHit;
         }
 
@@ -123,7 +123,7 @@ namespace Slopgame
                     if (Enemy.ActionTime >= stateUntil)
                     {
                         state = State.Stalk;
-                        readyAt = Enemy.ActionTime + 2.1f / Tempo;
+                        readyAt = Enemy.ActionTime + 0.9f / Tempo;
                     }
                     break;
             }
@@ -163,7 +163,7 @@ namespace Slopgame
                 strafeFlipAt = Enemy.ActionTime + Random.Range(0.8f, 1.8f);
             }
             Vector2 radial = toHero / distance;
-            Vector2 move = Vector2.Perpendicular(radial) * strafeSign + radial * Mathf.Clamp(distance - 4f, -1f, 1f);
+            Vector2 move = Vector2.Perpendicular(radial) * strafeSign + radial * Mathf.Clamp(distance - 3f, -1f, 1f);
             Vector2 before = transform.position;
             transform.position = Run.Map.Move(before, move.normalized * Enemy.Speed * Tempo * dt, Enemy.MoveRadius);
             if (Vector2.Distance(before, transform.position) < Enemy.Speed * dt * 0.2f) strafeSign = -strafeSign;
@@ -214,7 +214,7 @@ namespace Slopgame
             HeroVfx.Slash(Run.ProjectileRoot, transform.position, aim, 1.2f, 120f, Blade, 0.2f);
             CoopFx.Slash(Run, transform.position, aim, 1.2f, 120f, Blade);
             state = State.Stalk;
-            readyAt = Enemy.ActionTime + 1.4f / Tempo;
+            readyAt = Enemy.ActionTime + 0.85f / Tempo;
         }
 
         /// <summary>
