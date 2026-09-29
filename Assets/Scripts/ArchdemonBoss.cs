@@ -3,15 +3,17 @@ using UnityEngine;
 namespace Slopgame
 {
     /// <summary>
-    /// The third guardian, an archdemon of hellfire. Cycles Infernal Cross, Brimstone Rain and Hellfire Nova, and
-    /// periodically casts Cataclysm: the whole arena erupts except one small circle while he takes to the sky,
+    /// The third guardian, an archdemon of hellfire. Draws Infernal Cross, Brimstone Rain, Hellfire Nova and
+    /// Serpent's Wake (eruptions racing toward every hero) in a shuffled order, and every fourth attack casts Cataclysm: the whole arena erupts except one small circle while he takes to the sky,
     /// invulnerable, and bombards the party. He crashes down afterwards and is briefly staggered.
     /// </summary>
     public sealed class ArchdemonBoss : BossBehaviour
     {
-        private enum State : byte { Idle, Cross, Meteors, Nova, Ascend, Bombard, Descend, Staggered }
-        private enum Attack { Cross, Meteors, Nova, Cataclysm }
-        private static readonly Attack[] Rotation = { Attack.Meteors, Attack.Cross, Attack.Nova, Attack.Cataclysm, Attack.Cross, Attack.Meteors, Attack.Nova, Attack.Cataclysm };
+        private enum State : byte { Idle, Cross, Meteors, Nova, Ascend, Bombard, Descend, Staggered, Wake }
+        private enum Attack { Cross, Meteors, Nova, Cataclysm, Wake }
+        private const int CataclysmEvery = 4;
+        private const float WakeStep = 1.25f, WakeLength = 19f;
+        private readonly AttackDeck<Attack> deck = new AttackDeck<Attack>(Attack.Cross, Attack.Meteors, Attack.Nova, Attack.Wake);
         private const float FlightHeight = 2.6f, InfernoTelegraph = 4.6f, InfernoDuration = 6.5f;
         // The Cataclysm barrage is much slower than a regular bolt so it can be read and weaved through.
         private const float BombardBoltSpeed = 3.6f;
@@ -30,6 +32,7 @@ namespace Slopgame
             State.Cross => "INFERNAL CROSS - GET OFF THE LINES",
             State.Meteors => "BRIMSTONE RAIN - LEAVE THE MARKS",
             State.Nova => "HELLFIRE NOVA - ROLL THROUGH THE FLAMES",
+            State.Wake => "SERPENT'S WAKE - STEP OFF THE PATH",
             State.Ascend or State.Bombard when Time.time < eruptAt => $"CATACLYSM IN {eruptAt - Time.time:0.0}s - GET INTO THE GOLD CIRCLE",
             State.Ascend or State.Bombard => "CATACLYSM - STAY IN THE CIRCLE  /  HE IS UNTOUCHABLE",
             State.Descend => "HE FALLS - MOVE",
@@ -38,7 +41,7 @@ namespace Slopgame
         };
         public override int BaseHealth(int floor) => 30 + floor * 4;
         public override byte NetState => (byte)state;
-        public override bool IsCharging => state == State.Cross || state == State.Meteors || state == State.Nova || state == State.Descend;
+        public override bool IsCharging => state == State.Cross || state == State.Meteors || state == State.Nova || state == State.Wake || state == State.Descend;
         public override bool IsInvulnerable => state == State.Ascend || state == State.Bombard;
         public override bool DealsContactDamage => altitude < 0.4f;
         public override float HitRadius => 1f;
@@ -87,6 +90,7 @@ namespace Slopgame
                 case State.Cross:
                 case State.Meteors:
                 case State.Nova:
+                case State.Wake:
                     if (Enemy.ActionTime >= stateUntil) Idle(1.6f);
                     break;
                 case State.Ascend:
@@ -121,14 +125,16 @@ namespace Slopgame
 
         private void BeginAttack(Vector2 target)
         {
-            Attack attack = Rotation[rotation++ % Rotation.Length];
-            // The first time he is bloodied, the sky splits immediately.
-            if (!forcedCataclysm && IsEnraged) { forcedCataclysm = true; attack = Attack.Cataclysm; }
+            // The first time he is bloodied, the sky splits immediately, and the count to the next one starts over.
+            bool forced = !forcedCataclysm && IsEnraged;
+            if (forced) { forcedCataclysm = true; rotation = 0; }
+            Attack attack = forced || ++rotation % CataclysmEvery == 0 ? Attack.Cataclysm : deck.Draw();
             switch (attack)
             {
                 case Attack.Cross: InfernalCross(target); break;
                 case Attack.Meteors: BrimstoneRain(); break;
                 case Attack.Nova: HellfireNova(); break;
+                case Attack.Wake: SerpentsWake(); break;
                 default: Cataclysm(); break;
             }
             CoopFx.Pulse(Run, ground, 2.2f, Hellfire, 0.5f);
@@ -178,6 +184,36 @@ namespace Slopgame
             for (int i = 0; i < rings; i++)
                 Hazard(HazardShape.Ring, ground, Vector2.up, 17f, 0.9f, 0.9f + i * 0.85f, 2.4f);
             stateUntil = Enemy.ActionTime + 1.4f;
+        }
+
+        /// <summary>
+        /// A serpent of eruptions bursts out of the ground from him toward every hero, one crater after another, too
+        /// fast to outrun along its path. Bloodied, two more serpents fan out to either side.
+        /// </summary>
+        private void SerpentsWake()
+        {
+            state = State.Wake;
+            foreach (var hero in LivingHeroPositions())
+            {
+                Vector2 aim = (hero - ground).sqrMagnitude > 0.01f ? (hero - ground).normalized : Vector2.down;
+                SerpentLine(aim);
+                if (IsEnraged)
+                {
+                    SerpentLine(Quaternion.Euler(0, 0, 28f) * aim);
+                    SerpentLine(Quaternion.Euler(0, 0, -28f) * aim);
+                }
+            }
+            stateUntil = Enemy.ActionTime + 1.8f;
+        }
+
+        private void SerpentLine(Vector2 aim)
+        {
+            for (int i = 1; i * WakeStep <= WakeLength; i++)
+            {
+                Vector2 at = ground + aim * (i * WakeStep);
+                if (!Run.Map.CanStand(at, 0.3f)) break;
+                Hazard(HazardShape.Pool, at, Vector2.up, 1.05f, 0f, 0.75f + i * 0.08f, 0.6f);
+            }
         }
 
         /// <summary>The whole arena erupts except one small sanctuary while he flies above, untouchable.</summary>
@@ -271,7 +307,7 @@ namespace Slopgame
 
         public override void ApplyNetState(bool charging, byte netState)
         {
-            if (netState > (byte)State.Staggered) return;
+            if (netState > (byte)State.Wake) return;
             var next = (State)netState;
             // Guests start their countdown when the host announces the Cataclysm.
             if (next == State.Ascend && state != State.Ascend) eruptAt = Time.time + InfernoTelegraph;

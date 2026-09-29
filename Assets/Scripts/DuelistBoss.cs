@@ -3,22 +3,26 @@ using UnityEngine;
 namespace Slopgame
 {
     /// <summary>
-    /// The second guardian: fragile but relentlessly mobile. Circles the party and rotates between chained dash
-    /// strikes, a fan of thrown blades, and a Phantom Strike (vanishes, reappears behind a hero and whirls).
-    /// Sidesteps out of combos when struck. Punish the recovery after each dash chain or whirl.
+    /// The second guardian: fragile but relentlessly mobile. Circles the party and draws, in a shuffled order,
+    /// chained dash strikes, a fan of thrown blades, a Phantom Strike (vanishes, reappears behind a hero and whirls)
+    /// and Crosscut (an X of blade light slashes through every hero). Sidesteps out of combos when struck.
+    /// Punish the recovery after each dash chain, whirl or Crosscut.
     /// </summary>
     public sealed class DuelistBoss : BossBehaviour
     {
-        private enum State : byte { Stalk, Aim, Dash, Evade, Recover, Throw, Vanish, Whirl }
-        private enum Attack { Dashes, BladeFan, Phantom }
-        private static readonly Attack[] Rotation = { Attack.Dashes, Attack.BladeFan, Attack.Dashes, Attack.Phantom };
+        private enum State : byte { Stalk, Aim, Dash, Evade, Recover, Throw, Vanish, Whirl, Crosscut }
+        private enum Attack { Dashes, BladeFan, Phantom, Crosscut }
         private const float DashLength = 8f, DashSpeed = 26f, EvadeLength = 3.4f, EvadeSpeed = 20f;
         private const float ThrowWindup = 0.55f, BladeSpeed = 9f, VanishTime = 0.75f, WhirlTime = 0.45f, WhirlRadius = 2f;
+        private const float CrosscutLength = 9f, CrosscutWidth = 1.1f, CrosscutTelegraph = 0.9f;
         private static readonly Color Steel = new Color(0.78f, 0.84f, 0.95f);
         private static readonly Color Blade = new Color(0.45f, 0.95f, 1f);
         private State state;
         private float stateUntil, readyAt, evadeReadyAt, nextGhost, dashTravelled, strafeSign = 1f, strafeFlipAt;
-        private int dashesLeft, phantomsLeft, rotation;
+        private int dashesLeft, phantomsLeft;
+        // He always opens with a dash chain; after that the order is shuffled.
+        private bool opened;
+        private readonly AttackDeck<Attack> deck = new AttackDeck<Attack>(Attack.Dashes, Attack.BladeFan, Attack.Phantom, Attack.Crosscut);
         private Vector2 dashDirection;
         private SpriteRenderer telegraph, body;
         private FlameMesh marks;
@@ -34,11 +38,12 @@ namespace Slopgame
             State.Throw => "BLADE FAN - SLIP BETWEEN THE BLADES",
             State.Vanish => "PHANTOM STRIKE - LEAVE THE RING",
             State.Whirl => "WHIRLWIND",
+            State.Crosscut => "CROSSCUT - GET OUT OF THE X",
             _ => IsEnraged ? "BLOODIED - FASTER CHAINS" : "A BLUR OF STEEL"
         };
         // Squishy: roughly half the Warden's health at the same depth.
         public override int BaseHealth(int floor) => 12 + floor * 2;
-        public override bool IsCharging => state == State.Aim || state == State.Throw || state == State.Vanish;
+        public override bool IsCharging => state == State.Aim || state == State.Throw || state == State.Vanish || state == State.Crosscut;
         public override bool IsInvulnerable => state == State.Vanish;
         public override bool DealsContactDamage => state != State.Vanish;
         public override byte NetState => (byte)state;
@@ -107,6 +112,10 @@ namespace Slopgame
                 case State.Whirl:
                     if (Enemy.ActionTime >= stateUntil) EndWhirl(toHero);
                     break;
+                case State.Crosscut:
+                    Enemy.Facing.TurnToward(toHero, dt * 3f);
+                    if (Enemy.ActionTime >= stateUntil) Recover(IsEnraged ? 0.9f : 1.2f);
+                    break;
                 case State.Recover:
                     if (Enemy.ActionTime >= stateUntil)
                     {
@@ -119,8 +128,13 @@ namespace Slopgame
 
         private void BeginAttack(Vector2 toHero)
         {
-            switch (Rotation[rotation++ % Rotation.Length])
+            Attack attack = opened ? deck.Draw() : Attack.Dashes;
+            opened = true;
+            switch (attack)
             {
+                case Attack.Crosscut:
+                    BeginCrosscut();
+                    break;
                 case Attack.BladeFan:
                     state = State.Throw;
                     stateUntil = Enemy.ActionTime + ThrowWindup / Tempo;
@@ -198,6 +212,34 @@ namespace Slopgame
             CoopFx.Slash(Run, transform.position, aim, 1.2f, 120f, Blade);
             state = State.Stalk;
             readyAt = Enemy.ActionTime + 1.4f / Tempo;
+        }
+
+        /// <summary>
+        /// Draws an X of blade lines through every hero, then slashes them. Bloodied, a second X turned 45 degrees
+        /// follows a beat later, so stepping out of the first cross is not enough.
+        /// </summary>
+        private void BeginCrosscut()
+        {
+            state = State.Crosscut;
+            float telegraph = CrosscutTelegraph / Tempo, second = telegraph + 0.55f;
+            float twist = Random.Range(0f, 90f);
+            foreach (var hero in LivingHeroPositions())
+            {
+                Crosses(hero, twist, telegraph);
+                if (IsEnraged) Crosses(hero, twist + 45f, second);
+            }
+            HeroVfx.Slash(Run.ProjectileRoot, transform.position, Enemy.Facing.Direction, 1.4f, 300f, Blade, 0.3f);
+            CoopFx.Slash(Run, transform.position, Enemy.Facing.Direction, 1.4f, 300f, Blade);
+            stateUntil = Enemy.ActionTime + (IsEnraged ? second : telegraph) + 0.4f;
+        }
+
+        private void Crosses(Vector2 center, float angle, float telegraph)
+        {
+            for (int i = 0; i < 2; i++)
+            {
+                Vector2 direction = Quaternion.Euler(0, 0, angle + i * 90f) * Vector2.right;
+                Hazard(HazardShape.Beam, center - direction * CrosscutLength * 0.5f, direction, CrosscutLength, CrosscutWidth, telegraph, 0.35f);
+            }
         }
 
         /// <summary>Fades out and reappears just behind the nearest hero, marking the ring he is about to whirl through.</summary>
@@ -315,7 +357,7 @@ namespace Slopgame
 
         public override void ApplyNetState(bool charging, byte netState)
         {
-            if (netState <= (byte)State.Whirl) state = (State)netState;
+            if (netState <= (byte)State.Crosscut) state = (State)netState;
         }
 
         public override void OnDefeated() => ClearTelegraphs();

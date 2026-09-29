@@ -1,15 +1,19 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Slopgame
 {
     /// <summary>
-    /// The first guardian: a slow, crowned caster cycling an aimed Ember Fan, a full Nova, a rotating Ash Spiral and
-    /// Cinderfall (embers crash onto every hero). Once bloodied it blinks across the arena before Cinderfall.
+    /// The first guardian: a slow, crowned caster drawing, in a shuffled order, an aimed Ember Fan, a full Nova, a
+    /// rotating Ash Spiral, Cinderfall (embers crash onto every hero) and Ash Cage (a ring of embers closes in on
+    /// every hero). Once bloodied it blinks across the arena before Cinderfall.
     /// </summary>
     public sealed class AshWardenBoss : BossBehaviour
     {
-        private const int Patterns = 4;
-        private const int Fan = 0, Nova = 1, Spiral = 2, Cinderfall = 3;
+        private const int Patterns = 5;
+        private const int Fan = 0, Nova = 1, Spiral = 2, Cinderfall = 3, Cage = 4;
+        // Cage embers start this far out and creep in slowly enough to find the gap.
+        private const float CageRadius = 5.5f, CageBoltSpeed = 3.4f;
         // Spiral bolts drift slower than aimed ones so the rotating arms can be read and walked around.
         private const float SpiralBoltSpeed = 5f, SpiralDuration = 2.2f;
         public const float Size = 1.8f;
@@ -18,6 +22,8 @@ namespace Slopgame
         private float readyAt, fireAt, spiralUntil, nextSpiralShot, spiralAngle;
         private bool charging;
         private int pattern;
+        private readonly List<Vector2> cageCenters = new List<Vector2>();
+        private readonly AttackDeck<int> deck = new AttackDeck<int>(Fan, Nova, Spiral, Cinderfall, Cage);
         private Vector2 lockedAim;
         private WardenAura aura;
 
@@ -27,6 +33,7 @@ namespace Slopgame
             Fan => "EMBER FAN - SIDESTEP",
             Nova => "NOVA - KEEP MOVING",
             Spiral => "ASH SPIRAL - CIRCLE WITH THE ARMS",
+            Cage => "ASH CAGE - SLIP THROUGH THE GAP",
             _ => "CINDERFALL - LEAVE THE MARKS"
         } : IsEnraged ? "ENRAGED" : "GUARDIAN OF THE RELIC";
         public override int BaseHealth(int floor) => 24 + floor * 3;
@@ -42,6 +49,7 @@ namespace Slopgame
             Enemy.Speed = 1.5f;
             transform.localScale = Vector2.one * Size;
             readyAt = Enemy.ActionTime + 2f;
+            pattern = deck.Draw();
             DungeonVisuals.DecorateWarden(transform);
             aura = WardenAura.Attach(this);
             HeroVfx.Pulse(Run.ProjectileRoot, transform.position, 3f, Violet, 0.8f);
@@ -73,6 +81,14 @@ namespace Slopgame
             fireAt = Enemy.ActionTime + 0.85f;
             CombatVfx.Ring(Run.ProjectileRoot, transform.position, 1.5f, AbilityCatalog.Gold, 0.85f);
             CoopFx.Pulse(Run, transform.position, 1.8f, Violet, 0.5f);
+            cageCenters.Clear();
+            if (pattern % Patterns == Cage)
+                foreach (var hero in LivingHeroPositions())
+                {
+                    cageCenters.Add(hero);
+                    CombatVfx.Ring(Run.ProjectileRoot, hero, CageRadius, Ember, 0.85f);
+                    CoopFx.Ring(Run, hero, CageRadius, Ember, 0.85f);
+                }
         }
 
         private void Release(Vector2 offset)
@@ -95,6 +111,11 @@ namespace Slopgame
                     spiralAngle = Vector2.SignedAngle(Vector2.up, lockedAim);
                     nextSpiralShot = Enemy.ActionTime;
                     break;
+                case Cage:
+                    foreach (var center in cageCenters) CastCage(center);
+                    HeroVfx.Pulse(Run.ProjectileRoot, transform.position, 1.6f, Ember, 0.35f);
+                    Finish();
+                    break;
                 default:
                     CastCinderfall();
                     Finish();
@@ -104,7 +125,7 @@ namespace Slopgame
 
         private void Finish()
         {
-            pattern++;
+            pattern = deck.Draw();
             readyAt = Enemy.ActionTime + (IsEnraged ? 1.1f : 1.65f);
         }
 
@@ -140,6 +161,24 @@ namespace Slopgame
             {
                 var spot = new Vector2(Random.Range(arena.xMin + 1f, arena.xMax - 2f), Random.Range(arena.yMin + 1f, arena.yMax - 2f));
                 Hazard(HazardShape.Pool, spot, Vector2.up, 1.2f, 0f, telegraph + 0.2f + i * 0.15f, burn);
+            }
+        }
+
+        /// <summary>
+        /// Embers appear in the ring marked around a hero at the windup and drift inward. A gap of missing embers (narrower
+        /// once bloodied) is the way out; stepping out of the ring before it closes works too.
+        /// </summary>
+        private void CastCage(Vector2 center)
+        {
+            int count = IsEnraged ? 22 : 18, gap = IsEnraged ? 2 : 3;
+            int gapStart = Random.Range(0, count);
+            for (int i = 0; i < count; i++)
+            {
+                if ((i - gapStart + count) % count < gap) continue;
+                Vector2 outward = FlameMesh.Polar(i * 2f * Mathf.PI / count, 1f);
+                Vector2 spot = center + outward * CageRadius;
+                // Fire() launches half a unit ahead of its origin, so back the origin off to keep the ring true.
+                if (Run.Map.CanStand(spot, 0.11f)) Fire(spot + outward * 0.5f, -outward, CageBoltSpeed);
             }
         }
 

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Slopgame
@@ -42,6 +43,15 @@ namespace Slopgame
         /// <summary>Spawns an aimed enemy bolt (announced to co-op guests by the bolt itself).</summary>
         protected void Fire(Vector2 from, Vector2 direction, float speed = EnemyProjectile.DefaultSpeed, bool blade = false)
             => EnemyProjectile.Spawn(Run, Run.ProjectileRoot, from + direction.normalized * 0.5f, direction, true, speed, blade);
+
+        /// <summary>Where every living hero stands: the local one plus any co-op teammates.</summary>
+        protected IEnumerable<Vector2> LivingHeroPositions()
+        {
+            if (Run.Player.Health > 0) yield return Run.Player.transform.position;
+            if (!Run.IsNetworked) yield break;
+            foreach (var hero in Run.Coop.RemoteHeroes)
+                if (hero != null && hero.IsAlive) yield return hero.transform.position;
+        }
 
         protected void Hazard(HazardShape shape, Vector2 center, Vector2 direction, float radius, float width, float telegraph, float duration)
             => HellfireZone.Spawn(Run, new HazardSpec
