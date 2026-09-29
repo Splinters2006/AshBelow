@@ -156,14 +156,7 @@ namespace Slopgame
         private void LateUpdate()
         {
             if (!Player.Run.IsPlaying || Player.IsRolling) { Hide(); return; }
-            var taunt = Player.Mechanic as ShieldTaunt;
-            bool taunting = taunt != null && taunt.IsTaunting;
-            if (taunting)
-            {
-                FaceArc(taunt.Direction);
-                SetArc(ShieldTaunt.Reach, ShieldTaunt.Cone, new Color(0.4f, 0.75f, 1f, 0.55f + 0.15f * Mathf.Sin(Time.time * 16f)));
-            }
-            else if (IsHeavyAttacking)
+            if (IsHeavyAttacking)
             {
                 FaceArc(Player.Shield.Direction);
                 SetArc(0.9f, 120f, new Color(0.4f, 0.75f, 1f, 0.65f));
@@ -176,7 +169,7 @@ namespace Slopgame
                         ? Color.Lerp(new Color(0.6f, 0.3f, 1f, 0.12f), new Color(0.9f, 0.65f, 1f, 0.5f), Player.Charge.Amount)
                         : Color.Lerp(new Color(0.4f, 1f, 0.85f, 0.12f), new Color(1f, 0.8f, 0.25f, 0.3f), Player.Charge.Amount));
             }
-            arc.enabled = taunting || IsHeavyAttacking || (ShowChargePreview && Player.Charge.IsCharging) || Time.time < visibleUntil;
+            arc.enabled = IsHeavyAttacking || (ShowChargePreview && Player.Charge.IsCharging) || Time.time < visibleUntil;
         }
         private void OnDestroy() { if (mesh != null) Destroy(mesh); if (material != null) Destroy(material); }
     }

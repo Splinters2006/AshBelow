@@ -38,7 +38,7 @@ namespace Slopgame
             new AbilityDefinition(AbilityType.Earthshatter, WeaponType.Sword, "Earthshatter", "Stomp the ground: five quake rings crack the earth and ripple outward, damaging and slowing enemies.", "X", 10f, Gold),
             new AbilityDefinition(AbilityType.Aegis, WeaponType.Sword, "Aegis", "A shimmering bubble makes you invulnerable for 2 seconds. Ranks extend protection.", "O", 14f, Ice),
             new AbilityDefinition(AbilityType.Volley, WeaponType.Bow, "Arrow Volley", "Call down a rain of 16 arrows from the sky onto the area around your cursor.", "///", 8f, Green),
-            new AbilityDefinition(AbilityType.PiercingShot, WeaponType.Bow, "Piercing Shot", "A thundering arrow tears through every enemy in a long line. Range: 18 units.", "->", 9f, Gold),
+            new AbilityDefinition(AbilityType.PiercingShot, WeaponType.Bow, "Piercing Shot", "A thundering arrow tears through every enemy in a long line, carrying the element in your Elemental Quiver. Range: 18 units.", "->", 9f, Gold),
             new AbilityDefinition(AbilityType.Windstep, WeaponType.Bow, "Windstep", "Dash in your aim direction and fire a tight, long-range three-arrow counterattack.", ">>", 10f, Green),
             new AbilityDefinition(AbilityType.Fireball, WeaponType.Staff, "Inferno Orb", "Unlock an explosive fireball that always ignites the enemies it hits.", "*", 8f, new Color(1f, 0.43f, 0.23f)),
             new AbilityDefinition(AbilityType.FrostNova, WeaponType.Staff, "Frost Nova", "A ring of ice slowly expands around you, damaging the enemies it reaches and freezing them solid for 2 seconds.", "+", 10f, Ice),
@@ -60,7 +60,7 @@ namespace Slopgame
             new AbilityDefinition(AbilityType.DemonCurse, WeaponType.Tail, "Demon Curse", "Brand a pentagram at the cursor, even past walls: enemies on it are paralysed for 3 seconds and take 50% more damage for 6.", "*", 14f, DemonessAttack.Pale),
             new AbilityDefinition(AbilityType.Windfall, WeaponType.Coins, "Windfall", "Your purse coughs up 5 coins at once. Ranks add one more coin.", "$", 12f, GamblerAttack.Gold),
             new AbilityDefinition(AbilityType.AllIn, WeaponType.Coins, "All In", "Double or nothing on every coin you carry: a 50% chance to double them, or lose them all. Ranks tilt the odds 5% your way.", "x2", 10f, new Color(0.35f, 0.9f, 0.5f)),
-            new AbilityDefinition(AbilityType.Jackpot, WeaponType.Coins, "Jackpot", "Feed every coin you carry into the machine. Half the time nothing happens. Otherwise you win a random speed buff, damage buff or heal that grows with every coin spent. Ranks lengthen the buffs.", "777", 18f, new Color(1f, 0.4f, 0.55f))
+            new AbilityDefinition(AbilityType.Jackpot, WeaponType.Coins, "Jackpot", "Feed every coin you carry into the machine and always win a random speed buff, damage buff or heal that grows with every coin spent. Ranks lengthen the buffs.", "777", 18f, new Color(1f, 0.4f, 0.55f))
         };
 
         public static AbilityDefinition Get(AbilityType type)

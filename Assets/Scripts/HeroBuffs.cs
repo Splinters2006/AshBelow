@@ -14,6 +14,7 @@ namespace Slopgame
         public static readonly Color TiredColor = new Color(0.55f, 0.58f, 0.66f);
         public static readonly Color AscendColor = new Color(0.62f, 0.2f, 1f);
         public static readonly Color FuryColor = new Color(1f, 0.45f, 0.1f);
+        public static readonly Color TauntColor = new Color(0.95f, 0.08f, 0.05f);
         public DungeonPlayer Player { get; set; }
         private float empoweredUntil, ragingUntil, tiredUntil, ascendedUntil, furiousUntil, jackpotSpeedUntil, jackpotDamageUntil, nextFx;
         private float jackpotSpeed = 1f;
@@ -80,6 +81,10 @@ namespace Slopgame
         /// <summary>The hero's body colour with a hint of the strongest active buff.</summary>
         public Color Tint(Color baseColor) => Tint(baseColor, IsEmpowered, IsRaging, IsTired, IsAscended, IsFurious);
 
+        /// <summary>Shield Taunt: the Knight goes red in the face with rage, throbbing fast.</summary>
+        public static Color AngryTint(Color baseColor)
+            => Color.Lerp(baseColor, TauntColor, 0.6f + 0.25f * (0.5f + 0.5f * Mathf.Sin(Time.time * 18f)));
+
         /// <summary>Shared with co-op teammates' heroes, which only know the buff flags.</summary>
         public static Color Tint(Color baseColor, bool empowered, bool raging, bool tired, bool ascended = false, bool furious = false)
         {
@@ -122,6 +127,13 @@ namespace Slopgame
             {
                 nextFx = Time.time + 0.5f;
                 HeroVfx.Motes(root, position + Vector2.up * 0.55f, 0.2f, TiredColor, 2, 0.8f);
+            }
+            else if (JackpotDamage > 0 || JackpotSpeed > 1f)
+            {
+                // Jackpot winnings glitter in the prize's colour until they run out.
+                nextFx = Time.time + 0.2f;
+                if (JackpotDamage > 0) HeroVfx.Motes(root, position, 0.45f, JackpotVfx.DamageColor, 2, 0.5f);
+                if (JackpotSpeed > 1f) HeroVfx.Sparks(root, position + Vector2.down * 0.35f, JackpotVfx.SpeedColor, 2, 1.6f, 0.3f, Vector2.up, 70f, 0.8f);
             }
         }
     }

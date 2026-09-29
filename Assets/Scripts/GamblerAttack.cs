@@ -86,7 +86,7 @@ namespace Slopgame
 
         public const int WindfallCoins = 5;
         public const float JackpotDuration = 8f;
-        public enum JackpotPrize { Nothing, Speed, Damage, Heal }
+        public enum JackpotPrize { Speed, Damage, Heal }
 
         public bool CastArtifact(AbilityType type, int rank)
         {
@@ -96,7 +96,7 @@ namespace Slopgame
             {
                 case AbilityType.Windfall: Windfall(rank); return true;
                 case AbilityType.AllIn: AllIn(rank, Random.value); return true;
-                case AbilityType.Jackpot: Jackpot(rank, Random.value, Random.value); return true;
+                case AbilityType.Jackpot: Jackpot(rank, Random.value); return true;
                 default: return false;
             }
         }
@@ -138,40 +138,45 @@ namespace Slopgame
         }
 
         /// <summary>
-        /// Spends every coin. With <paramref name="roll"/> at or above one half (plus Lady Luck) nothing happens; otherwise
-        /// <paramref name="pick"/> chooses speed, damage or a heal, each growing with the coins spent.
+        /// Spends every coin and always pays out: <paramref name="pick"/> chooses speed, damage or a heal, each growing
+        /// with the coins spent. A slot reel over the Gambler's head shows which one.
         /// </summary>
-        public JackpotPrize Jackpot(int rank, float roll, float pick)
+        public JackpotPrize Jackpot(int rank, float pick)
         {
             int spent = Coins;
             Spend(spent);
             var root = Player.Run.ProjectileRoot;
-            if (roll >= 0.5f + Luck)
-            {
-                HeroVfx.Sparks(root, transform.position, new Color(0.5f, 0.45f, 0.4f), 10, 2.5f, 0.35f);
-                return JackpotPrize.Nothing;
-            }
-            float duration = JackpotTime(rank);
             var prize = pick < 1f / 3f ? JackpotPrize.Speed : pick < 2f / 3f ? JackpotPrize.Damage : JackpotPrize.Heal;
-            if (prize == JackpotPrize.Speed) Player.Buffs.JackpotHaste(JackpotSpeedFor(spent), duration);
-            else if (prize == JackpotPrize.Damage) Player.Buffs.JackpotMight(JackpotDamageFor(spent), duration);
+            if (prize == JackpotPrize.Speed) Player.Buffs.JackpotHaste(JackpotSpeedFor(spent), JackpotTime(rank));
+            else if (prize == JackpotPrize.Damage) Player.Buffs.JackpotMight(JackpotDamageFor(spent), JackpotTime(rank));
             else Player.Heal(JackpotHealFor(spent));
+            Color color = JackpotVfx.PrizeColor(prize);
             HeroVfx.Pulse(root, transform.position, 1.6f, Gold, 0.45f);
-            HeroVfx.Sparks(root, transform.position, Gold, 24, 5f, 0.45f);
+            HeroVfx.Sparks(root, transform.position, Gold, 16, 5f, 0.45f);
+            HeroVfx.Sparks(root, transform.position, color, 12, 4f, 0.5f);
             CoopFx.Pulse(Player.Run, transform.position, 1.6f, Gold, 0.45f);
-            ScreenFx.Flash(new Color(1f, 0.85f, 0.3f, 0.2f), 0.2f);
+            JackpotVfx.Play(root, transform, prize);
+            CoopFx.Jackpot(Player.Run, prize);
+            ScreenFx.Flash(FlameMesh.Alpha(Color.Lerp(Gold, color, 0.5f), 0.2f), 0.2f);
             return prize;
         }
 
         /// <summary>How long a Jackpot buff lasts: ranks add a second, High Roller two per stack.</summary>
         public float JackpotTime(int rank) => JackpotDuration + (rank - 1) + Player.Powerups.Count(PowerupType.HighRoller) * 2f;
 
-        /// <summary>+10% movement per coin, up to two and a half times as fast.</summary>
-        public static float JackpotSpeedFor(int coins) => Mathf.Min(2.5f, 1f + 0.1f * coins);
-        /// <summary>+1 damage for every 3 coins (at least +1).</summary>
-        public static int JackpotDamageFor(int coins) => Mathf.Max(1, coins / 3);
-        /// <summary>1 HP for every 2 coins (at least 1).</summary>
-        public static int JackpotHealFor(int coins) => Mathf.Max(1, (coins + 1) / 2);
+        /// <summary>
+        /// Jackpot prizes have no cap but grow as coins to the power of <see cref="JackpotGrowth"/>, so each extra coin adds a
+        /// little less. <paramref name="atReference"/> is what <paramref name="reference"/> coins pay.
+        /// </summary>
+        public const float JackpotGrowth = 0.7f;
+        private static float JackpotCurve(int coins, float reference, float atReference)
+            => atReference * Mathf.Pow(Mathf.Max(0, coins) / reference, JackpotGrowth);
+        /// <summary>Movement multiplier: x2 at 10 coins, about x3.2 at 30 and x6 at 100.</summary>
+        public static float JackpotSpeedFor(int coins) => 1f + JackpotCurve(coins, 10f, 1f);
+        /// <summary>Bonus damage: +3 at 9 coins, +7 at 30 (at least +1).</summary>
+        public static int JackpotDamageFor(int coins) => Mathf.Max(1, Mathf.RoundToInt(JackpotCurve(coins, 9f, 3f)));
+        /// <summary>HP healed: 2 at 4 coins, 6 at 20 (at least 1).</summary>
+        public static int JackpotHealFor(int coins) => Mathf.Max(1, Mathf.RoundToInt(JackpotCurve(coins, 4f, 2f)));
 
         public void Hide() { Player.Charge.Cancel(); }
     }

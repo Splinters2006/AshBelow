@@ -617,24 +617,25 @@ namespace Slopgame.Editor
                 return;
             }
             Require(coins.Coins == 1, "Jackpot did not consume the coins.");
-            // The random cast above may have won a buff already.
+            Require(player.Buffs.JackpotSpeed > 1f || player.Buffs.JackpotDamage > 0 || player.Health == player.MaxHealth,
+                "Jackpot did not pay out.");
+            Require(player.Run.ProjectileRoot.GetComponentInChildren<JackpotVfx>() != null, "Jackpot did not show which prize it paid.");
             player.Buffs.Clear();
             coins.AddCoins(9);
-            Require(coins.Jackpot(1, 0.6f, 0f) == GamblerAttack.JackpotPrize.Nothing && coins.Coins == 1 && player.Buffs.JackpotSpeed == 1f,
-                "A losing Jackpot still paid out or kept the coins.");
-            coins.AddCoins(9);
             float move = player.Buffs.MoveMultiplier;
-            Require(coins.Jackpot(1, 0.1f, 0.1f) == GamblerAttack.JackpotPrize.Speed && coins.Coins == 1
+            Require(coins.Jackpot(1, 0.1f) == GamblerAttack.JackpotPrize.Speed && coins.Coins == 1
                 && Mathf.Abs(player.Buffs.MoveMultiplier - move * 2f) < 0.001f, "A 10-coin speed Jackpot did not double movement.");
             coins.AddCoins(8);
             int damage = player.Damage;
-            Require(coins.Jackpot(1, 0.1f, 0.5f) == GamblerAttack.JackpotPrize.Damage && player.Damage == damage + 3, "A 9-coin damage Jackpot did not add +3 damage.");
+            Require(coins.Jackpot(1, 0.5f) == GamblerAttack.JackpotPrize.Damage && player.Damage == damage + 3, "A 9-coin damage Jackpot did not add +3 damage.");
             player.Buffs.Clear();
             player.Hit();
             coins.AddCoins(3);
-            Require(coins.Jackpot(1, 0.1f, 0.9f) == GamblerAttack.JackpotPrize.Heal && player.Health == player.MaxHealth, "A heal Jackpot did not heal.");
+            Require(coins.Jackpot(1, 0.9f) == GamblerAttack.JackpotPrize.Heal && player.Health == player.MaxHealth, "A heal Jackpot did not heal.");
             Require(GamblerAttack.JackpotHealFor(4) == 2 && GamblerAttack.JackpotHealFor(1) == 1 && GamblerAttack.JackpotDamageFor(1) == 1
-                && GamblerAttack.JackpotSpeedFor(100) == 2.5f, "Jackpot prizes do not scale with coins as intended.");
+                && GamblerAttack.JackpotSpeedFor(100) > 5f && GamblerAttack.JackpotDamageFor(90) > GamblerAttack.JackpotDamageFor(45)
+                && GamblerAttack.JackpotSpeedFor(20) - GamblerAttack.JackpotSpeedFor(10) < GamblerAttack.JackpotSpeedFor(10) - GamblerAttack.JackpotSpeedFor(0),
+                "Jackpot prizes should keep growing with coins, each coin adding a little less.");
             Require(player.Powerups.Add(PowerupType.HighRoller) && Mathf.Abs(coins.JackpotTime(1) - GamblerAttack.JackpotDuration - 2f) < 0.001f,
                 "High Roller did not lengthen the Jackpot buffs.");
             float toss = coins.ThrowRange, volley = coins.VolleyReach;

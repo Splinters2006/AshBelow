@@ -153,7 +153,7 @@ namespace Slopgame
             // Safety net: a hero with health must never stay hidden, however that health came back.
             if (Health > 0 && hiddenRenderers.Count > 0) SetVisible(true);
             body.color = IsHurt ? (Mathf.Repeat(Time.time * 16f, 1f) < 0.5f ? HurtColor : Color.white)
-                : IsRolling ? new Color(0.4f, 0.65f, 1f) : IsInvulnerable ? Color.white : Buffs.Tint(characterColor);
+                : IsRolling ? new Color(0.4f, 0.65f, 1f) : IsHoldingShield ? HeroBuffs.AngryTint(characterColor) : IsInvulnerable ? Color.white : Buffs.Tint(characterColor);
             SetVeiledLook(IsVeiled);
             if (!Run.IsPlaying || Health <= 0 || IsBusy) { MoveInput = Vector2.zero; Charge.Tick(PlayerInput.Attack, false); return; }
             Vector2 cursor = Run.View.ScreenToWorldPoint(new Vector3(PlayerInput.CursorPosition.x,
@@ -164,6 +164,8 @@ namespace Slopgame
             Vector2 movement = MoveInput = PlayerInput.Movement;
             bool holdingShield = IsHoldingShield;
             if (PlayerInput.Dodge && !holdingShield) TryRoll(MobilityAim(AimDirection));
+            // A roll can be steered: it keeps its speed and length but follows the movement keys.
+            if (IsRolling && movement.sqrMagnitude > 0.01f) rollDirection = movement.normalized;
             Vector2 velocity = IsRolling ? rollDirection * Speed * 2.6f * Buffs.DodgeSpeedMultiplier
                 : movement * Speed * Buffs.MoveMultiplier * Crystals.SpeedMultiplier * (Weapon.IsHeavyAttacking ? 0.55f : Charge.IsCharging ? 0.7f : 1f);
             if (DebugMode.Enabled) velocity *= DebugMode.SpeedMultiplier;

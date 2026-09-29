@@ -19,7 +19,7 @@ The game starts in a resizable 1280×720 window.
 | Aim | Mouse cursor |
 | Attack | **Left click**. Tap for a quick attack, hold to charge and release for a stronger one. |
 | Class skill | **Right click** |
-| Dodge roll | **Space** (you can't be hit during the roll) |
+| Dodge roll | **Space** (you can't be hit during the roll, and you can steer it with the movement keys) |
 | Relic abilities | **Q** and **E** |
 | Class mechanic | **R** (bought in the Ash shop; the Gambler's purse is free) |
 | Use stairs / claim artifact | **F** |
@@ -79,7 +79,7 @@ Enemies get tougher every floor. The **minimap** in the top-right corner fills i
 **Gambler artifacts:**
 - **Windfall:** instantly gain 5 coins.
 - **All In:** double or nothing on every coin you carry.
-- **Jackpot:** spend every coin. Half the time nothing happens; otherwise you win a random speed buff, damage buff or heal that grows with each coin spent.
+- **Jackpot:** spend every coin. It always pays out: a slot reel over your head shows whether you won a speed buff, damage buff or heal that grows with each coin spent.
 
 ## Class mechanics (R)
 
@@ -87,7 +87,7 @@ Once you have beaten the third guardian (floor 15) in a single descent, the Ash 
 
 | Hero | Mechanic |
 | --- | --- |
-| **Knight** | **Shield Taunt:** raise a great shield all around you for 2.25 s (you can walk, but nothing else). It blocks bolts from every side within 2 units and gives a ward for each one, and enemies go for you first. |
+| **Knight** | **Shield Taunt:** turn red with rage for 2.25 s (you can walk, but nothing else). It blocks bolts from every side within 2 units and gives a ward for each one, and enemies go for you first. |
 | **Archer** | **Elemental Quiver:** cycle between fire, freeze and shock arrows. Arrows still crit, and a critical hit also sets off the arrow's element. |
 | **Wizard** | **Wild Storm:** after 8 elemental effects, summon a storm over you that takes turns hurling fireballs, lightning and ice bolts for 10 s. Every storm strike is sure to burn, shock or freeze. |
 | **Assassin** | **Sharpened Dagger:** +1 damage for 7.5 s. Every hit on an enemy's back adds +1 more and refreshes it. |

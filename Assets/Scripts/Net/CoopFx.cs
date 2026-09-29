@@ -35,7 +35,8 @@ namespace Slopgame
             => Send(run, FxKind.Punch, origin, aim, color, length, halfWidth);
 
         public static void Knife(DungeonRun run, Vector2 position, Vector2 direction, float range) => Send(run, FxKind.Knife, position, direction, null, range);
-        public static void PiercingShot(DungeonRun run, Vector2 origin, Vector2 direction) => Send(run, FxKind.PiercingShot, origin, direction);
+        public static void PiercingShot(DungeonRun run, Vector2 origin, Vector2 direction, DamageElement infusion)
+            => Send(run, FxKind.PiercingShot, origin, direction, null, 0f, 0f, (int)infusion);
         public static void Aegis(DungeonRun run, float duration) => Send(run, FxKind.Aegis, default, default, null, duration);
         public static void Holy(DungeonRun run, Vector2 center, float radius, float windup) => Send(run, FxKind.Holy, center, default, null, radius, windup);
         /// <summary>
@@ -73,6 +74,7 @@ namespace Slopgame
         public static void CoinFlip(DungeonRun run, bool won) => Send(run, FxKind.CoinFlip, default, default, null, 0f, 0f, won ? 1 : 0);
         public static void CoinRain(DungeonRun run, Vector2 center) => Send(run, FxKind.CoinRain, center);
         public static void Angel(DungeonRun run, Vector2 target) => Send(run, FxKind.Angel, target);
+        public static void Jackpot(DungeonRun run, GamblerAttack.JackpotPrize prize) => Send(run, FxKind.Jackpot, default, default, null, 0f, 0f, (int)prize);
 
         private static RemoteHero FindHero(DungeonRun run, ulong id)
         {
@@ -107,7 +109,7 @@ namespace Slopgame
                     var thrower = FindHero(run, fx.Origin);
                     if (thrower != null) ReturningKnife.SpawnGhost(run, thrower.transform, fx.A, fx.B, fx.F1);
                     break;
-                case FxKind.PiercingShot: PiercingArrow.SpawnGhost(run, fx.A, fx.B); break;
+                case FxKind.PiercingShot: PiercingArrow.SpawnGhost(run, fx.A, fx.B, (DamageElement)fx.N); break;
                 case FxKind.Aegis:
                     var knight = FindHero(run, fx.Origin);
                     if (knight != null) HolyBubble.Wrap(root, knight.transform, fx.F1, AbilityCatalog.Ice);
@@ -136,6 +138,10 @@ namespace Slopgame
                     break;
                 case FxKind.CoinRain: CoinRainVfx.Play(root, fx.A); break;
                 case FxKind.Angel: AngelVfx.Play(root, fx.A); break;
+                case FxKind.Jackpot:
+                    var winner = FindHero(run, fx.Origin);
+                    if (winner != null) JackpotVfx.Play(root, winner.transform, (GamblerAttack.JackpotPrize)fx.N);
+                    break;
                 case FxKind.Sharpen:
                     var assassin = FindHero(run, fx.Origin);
                     if (assassin != null)

@@ -78,6 +78,7 @@ namespace Slopgame
             if (!IsAlive) return;
             bool blocking = (flags & PlayerStateMessage.Blocking) != 0;
             body.color = IsRolling ? new Color(0.4f, 0.65f, 1f)
+                : IsTaunting ? HeroBuffs.AngryTint(Character.Color)
                 : (flags & PlayerStateMessage.Invulnerable) != 0 && Mathf.Repeat(Time.time * 8f, 1f) > 0.5f ? Color.white
                 : HeroBuffs.Tint(Character.Color, (flags & PlayerStateMessage.Empowered) != 0,
                     (flags & PlayerStateMessage.Raging) != 0, (flags & PlayerStateMessage.Tired) != 0,
@@ -94,14 +95,14 @@ namespace Slopgame
                 if (details != null) details.color = new Color(details.color.r, details.color.g, details.color.b, alpha);
             }
             else if (details != null && details.color.a < 1f) details.color = new Color(details.color.r, details.color.g, details.color.b, 1f);
+            // A taunting Knight shows no shield, just his fury (see the body tint above).
+            blocking &= !IsTaunting;
             shield.enabled = blocking;
             if (blocking)
             {
                 // Parent scale is 0.65, so offsets are in the hero's local units.
-                // A taunting Knight's great shield stands further out and taller.
-                bool taunting = IsTaunting;
-                shield.transform.localPosition = Aim * (taunting ? 1.6f : 0.95f);
-                shield.transform.localScale = new Vector3(0.14f, taunting ? 2.4f : 1.3f, 1f);
+                shield.transform.localPosition = Aim * 0.95f;
+                shield.transform.localScale = new Vector3(0.14f, 1.3f, 1f);
                 shield.transform.localRotation = Quaternion.Euler(0, 0, Mathf.Atan2(Aim.y, Aim.x) * Mathf.Rad2Deg);
             }
         }
