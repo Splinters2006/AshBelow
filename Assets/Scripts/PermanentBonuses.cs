@@ -16,7 +16,8 @@ namespace Slopgame
         public float BlessingDuration { get; }
         public int BarragePunches { get; }
         public int ParalyzedDamage { get; }
-        public int StartingCoins { get; }
+        /// <summary>Deep Pockets: added to the coins the Gambler's purse never lets him drop below.</summary>
+        public int PurseFloor { get; }
         /// <summary>Added to the Gambler's odds of winning a gamble.</summary>
         public float GambleLuck { get; }
         /// <summary>The class mechanic on R, bought in the Ash shop.</summary>
@@ -55,7 +56,7 @@ namespace Slopgame
                     Health += progress.Rank("demoness_health");
                     ParalyzedDamage = progress.Rank("demoness_paralysis"); break;
                 case WeaponType.Coins:
-                    StartingCoins = progress.Rank("gambler_pockets") * 2;
+                    PurseFloor = progress.Rank("gambler_pockets");
                     GambleLuck = progress.Rank("gambler_luck") * 0.04f; break;
             }
         }

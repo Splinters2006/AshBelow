@@ -177,7 +177,7 @@ namespace Slopgame.Editor
                             Require(player.Weapon is DemonessAttack tail && tail.ParalyzedBonusDamage == 1
                                 && Mathf.Abs(tail.ParalysisDuration - DemonessAttack.VitalParalysis) < 0.001f, "Demoness Pressure Points upgrade missing."); break;
                         case WeaponType.Coins:
-                            Require(player.Weapon is GamblerAttack purse && purse.Coins == 3 && Mathf.Abs(purse.Luck - 0.04f) < 0.001f
+                            Require(player.Weapon is GamblerAttack purse && purse.Coins == 2 && purse.Spend(2) && purse.Coins == 2 && Mathf.Abs(purse.Luck - 0.04f) < 0.001f
                                 && purse.DoubleOrNothing(0.52f), "Gambler Deep Pockets or Lady Luck upgrade missing."); break;
                     }
                     hero++;

@@ -45,7 +45,7 @@ namespace Slopgame
             new PermanentUpgradeDefinition("brawler_health", "Thick Fur", "+1 Brawler maximum HP per rank", 3, 35, 25, WeaponType.Fists),
             new PermanentUpgradeDefinition("demoness_paralysis", "Pressure Points", "+1 damage to paralysed enemies per rank", 3, 45, 35, WeaponType.Tail),
             new PermanentUpgradeDefinition("demoness_health", "Infernal Blood", "+1 Demoness maximum HP per rank", 3, 35, 25, WeaponType.Tail),
-            new PermanentUpgradeDefinition("gambler_pockets", "Deep Pockets", "The Gambler starts every descent with +2 coins per rank", 3, 35, 25, WeaponType.Coins),
+            new PermanentUpgradeDefinition("gambler_pockets", "Deep Pockets", "The Gambler's purse never lets him drop below +1 more coin per rank", 3, 35, 25, WeaponType.Coins),
             new PermanentUpgradeDefinition("gambler_luck", "Lady Luck", "+4% odds on Double or Nothing, All In and Jackpot per rank", 3, 50, 40, WeaponType.Coins),
             Mechanic(WeaponType.Sword, "Shield Taunt", "R: raise a great shield for 1.5s. It blocks bolts in front (+1 ward each) and draws the enemies' attention"),
             Mechanic(WeaponType.Bow, "Elemental Quiver", "R: cycle fire, freeze and shock arrows. Critical hits set off the arrow's element"),

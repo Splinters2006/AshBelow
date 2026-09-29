@@ -13,18 +13,20 @@ namespace Slopgame
         public const int MaxVolley = 40;
         public static readonly Color Gold = new Color(1f, 0.82f, 0.3f);
         private DungeonPlayer player;
-        /// <summary>Setting the hero fills the purse with the starting coins (Deep Pockets adds more).</summary>
+        /// <summary>Setting the hero fills the purse to its floor.</summary>
         public DungeonPlayer Player
         {
             get => player;
-            set { player = value; coins = 1 + (value != null && value.Permanent != null ? value.Permanent.StartingCoins : 0); }
+            set { player = value; coins = MinCoins; }
         }
         private int coins = 1;
         /// <summary>Lady Luck: added to the odds of every gamble.</summary>
         public float Luck => Player != null && Player.Permanent != null ? Player.Permanent.GambleLuck : 0f;
         private float readyAt, volleyReadyAt;
-        /// <summary>Never below one: the magical purse refills an empty pocket.</summary>
-        public int Coins => Mathf.Max(1, coins);
+        /// <summary>The fewest coins he can hold: one, plus one per rank of Deep Pockets.</summary>
+        public int MinCoins => 1 + (player != null && player.Permanent != null ? player.Permanent.PurseFloor : 0);
+        /// <summary>Never below <see cref="MinCoins"/>: the magical purse tops up an emptied pocket.</summary>
+        public int Coins => Mathf.Max(MinCoins, coins);
         public bool IsHeavyAttacking => false;
         public float HeavyCooldownRemaining => DebugMode.Cooldown(Mathf.Max(0f, volleyReadyAt - Time.time));
         public void ReduceHeavyCooldown(float seconds) => volleyReadyAt = Cooldowns.Shorten(volleyReadyAt, seconds);
@@ -42,14 +44,14 @@ namespace Slopgame
         public const int MaxCoins = 999999;
         public void AddCoins(int amount) { if (amount > 0) coins = (int)System.Math.Min(MaxCoins, (long)Coins + amount); }
 
-        /// <summary>Spends coins if he has enough. The purse tops an empty pocket back up to one.</summary>
+        /// <summary>Spends coins if he has enough. The purse tops an emptied pocket back up to <see cref="MinCoins"/>.</summary>
         public bool Spend(int amount)
         {
             if (amount <= 0 || Coins < amount) return false;
             coins = Coins - amount;
-            if (coins <= 0)
+            if (coins < MinCoins)
             {
-                coins = 1;
+                coins = MinCoins;
                 HeroVfx.Motes(Player.Run.ProjectileRoot, transform.position, 0.4f, Gold, 6, 0.6f);
             }
             return true;
