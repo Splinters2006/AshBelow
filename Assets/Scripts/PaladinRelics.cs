@@ -6,17 +6,16 @@ namespace Slopgame
     /// <summary>The Paladin's timed relic abilities: Judgment's holy smite after a windup, and Sanctuary's moving bubble.</summary>
     public sealed class PaladinRelics : MonoBehaviour
     {
-        public const float JudgmentRadius = 3f, JudgmentWindup = 0.7f;
+        public const float JudgmentRadius = 3f, JudgmentWindup = 0.7f, JudgmentRange = 7f;
         public const float SanctuaryRadius = 3f, SanctuaryDuration = 4f;
         public DungeonPlayer Player { get; set; }
         private HolyBubble sanctuary;
         /// <summary>The Paladin cannot attack while holding up their Sanctuary.</summary>
         public bool IsSanctuaryActive => sanctuary != null && sanctuary.IsActive;
 
-        /// <summary>Marks the ground where the Paladin stands; holy light smites it once the windup ends.</summary>
-        public void Judgment(int damage, float slow)
+        /// <summary>Marks the ground at <paramref name="center"/> (the aimed spot); holy light smites it once the windup ends.</summary>
+        public void Judgment(Vector2 center, int damage, float slow)
         {
-            Vector2 center = transform.position;
             HolyLightVfx.Play(Player.Run.ProjectileRoot, center, JudgmentRadius, JudgmentWindup);
             CoopFx.Holy(Player.Run, center, JudgmentRadius, JudgmentWindup);
             StartCoroutine(Smite(center, damage, slow));

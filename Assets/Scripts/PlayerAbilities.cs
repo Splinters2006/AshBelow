@@ -9,7 +9,7 @@ namespace Slopgame
         public DungeonPlayer Player { get; set; }
         public const int SlotCount = 2;
         public const int MaxRank = 3;
-        public const float ShadowstepDistance = 4f;
+        public const float ShadowstepDistance = 5f;
         public const float FrostNovaRadius = 3.1f, FrostNovaExpandTime = 0.75f;
         public const float BlinkDistance = 6f;
         /// <summary>Earthshatter is 25% bigger than its original 2.6-unit reach.</summary>
@@ -57,7 +57,7 @@ namespace Slopgame
             // Checked before anything is spent: Arcane Blink needs somewhere to land.
             Vector2 blinkLanding = default;
             if (definition.Type == AbilityType.Blink && !FindShadowstepLanding(Player.Run.Map, transform.position, aim,
-                    BlinkDistance + Player.Powerups.Count(PowerupType.BlinkDistance) * 0.5f, out blinkLanding)) return false;
+                    Mathf.Min(BlinkDistance + Player.Powerups.Count(PowerupType.BlinkDistance) * 0.5f, cursorDistance), out blinkLanding)) return false;
             Player.Weapon?.Hide();
             int rank = Rank(definition.Type);
             int damage = Player.Damage * 3 + rank - 1;
@@ -69,7 +69,7 @@ namespace Slopgame
                 case AbilityType.Aegis:
                     var knight = Player.GetComponent<KnightRelics>();
                     if (knight == null || knight.IsRushing) return false;
-                    if (definition.Type == AbilityType.ShieldRush) knight.ShieldRush(aim, damage * 2 + powers.Count(PowerupType.RushPower) * 2);
+                    if (definition.Type == AbilityType.ShieldRush) knight.ShieldRush(aim, damage * 2 + powers.Count(PowerupType.RushPower) * 2, cursorDistance);
                     else if (definition.Type == AbilityType.Earthshatter)
                         knight.Earthshatter(EarthshatterRadius + powers.Count(PowerupType.ShatterRadius) * 0.5f, damage, definition.Color, 2f);
                     else knight.Aegis(2f + (rank - 1) * 0.3f + powers.Count(PowerupType.AegisDuration) * 0.4f);
@@ -79,7 +79,7 @@ namespace Slopgame
                 case AbilityType.PiercingShot:
                     PiercingArrow.Fire(Player, aim, damage + 1 + powers.Count(PowerupType.PiercingPower) * 2); break;
                 case AbilityType.Windstep:
-                    Dash(aim, 3.5f + powers.Count(PowerupType.WindstepDistance) * 0.5f, 0, true);
+                    Dash(aim, Mathf.Min(3.5f + powers.Count(PowerupType.WindstepDistance) * 0.5f, cursorDistance), 0, true);
                     Fan(aim, 3, BowAttack.SpreadAngle, Player.Damage + rank - 1, BowAttack.HeavyRange); break;
                 case AbilityType.Fireball:
                     SpellProjectile.Spawn(Player, aim, damage, DamageElement.Fire, definition.Color, 7f,
@@ -110,7 +110,9 @@ namespace Slopgame
                 case AbilityType.Sanctuary:
                     var paladin = Player.GetComponent<PaladinRelics>();
                     if (paladin == null) return false;
-                    if (definition.Type == AbilityType.Judgment) paladin.Judgment(damage + powers.Count(PowerupType.JudgmentPower) * 2, 2f);
+                    if (definition.Type == AbilityType.Judgment)
+                        paladin.Judgment(FindGroundLanding(Player.Run.Map, transform.position, aim, Mathf.Min(PaladinRelics.JudgmentRange, cursorDistance)),
+                            damage + powers.Count(PowerupType.JudgmentPower) * 2, 2f);
                     else paladin.Sanctuary(PaladinRelics.SanctuaryDuration + (rank - 1) * 0.5f + powers.Count(PowerupType.SanctuaryDuration) * 0.4f);
                     break;
                 case AbilityType.Eclipse:
@@ -158,6 +160,21 @@ namespace Slopgame
             for (int i = 0; i < count; i++)
                 PlayerProjectile.Spawn(Player.Run, transform.position,
                     Quaternion.Euler(0, 0, (i - (count - 1) * 0.5f) * spacing) * aim, damage, range);
+        }
+
+        /// <summary>The farthest point up to <paramref name="distance"/> along <paramref name="aim"/> before the first wall.</summary>
+        public static Vector2 FindGroundLanding(DungeonMap map, Vector2 from, Vector2 aim, float distance)
+        {
+            if (aim.sqrMagnitude < 0.0001f) return from;
+            aim.Normalize();
+            Vector2 landing = from;
+            for (float travel = 0.1f; travel <= distance + 0.001f; travel += 0.1f)
+            {
+                Vector2 next = from + aim * Mathf.Min(travel, distance);
+                if (!map.CanStand(next, 0.1f)) break;
+                landing = next;
+            }
+            return landing;
         }
 
         public static bool FindShadowstepLanding(DungeonMap map, Vector2 from, Vector2 aim, float distance, out Vector2 landing)

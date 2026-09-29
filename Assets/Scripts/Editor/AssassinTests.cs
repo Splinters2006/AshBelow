@@ -121,7 +121,7 @@ namespace Slopgame.Editor
                 second.transform.position = origin + aim * 2f;
                 missed.transform.position = origin + aim * 1.5f + Vector2.Perpendicular(aim) * 1.5f;
                 first.Health = second.Health = missed.Health = 1000;
-                Require(player.Weapon.TryHeavyAttack(aim), "RMB failed to shadowstep.");
+                Require(player.Weapon.TryHeavyAttack(aim * PlayerAbilities.ShadowstepDistance), "RMB failed to shadowstep.");
                 Require(Vector2.Distance(player.transform.position, origin + aim * PlayerAbilities.ShadowstepDistance) < 0.01f && player.IsInvulnerable,
                     "Shadowstep failed to travel or grant brief protection.");
                 Require(first.Health == 1000 - fullBackstab || first.Health == 1000 - fullBackstab * 2,

@@ -10,8 +10,8 @@ namespace Slopgame
     /// </summary>
     public sealed class KnightRelics : MonoBehaviour
     {
-        // 50% faster than the original 4.5 units over the same 0.8 seconds, so it also goes 50% farther.
-        public const float RushDistance = 6.75f, RushDuration = 0.8f, RushWidth = 1f;
+        // Covers 6.75 units 50% faster than before (0.8s -> 0.53s). It stops early at the cursor.
+        public const float RushDistance = 6.75f, RushDuration = 0.8f / 1.5f, RushWidth = 1f;
         public const int QuakeRings = 5;
         public const float QuakeInterval = 0.13f;
         private static readonly Color Dust = new Color(0.72f, 0.62f, 0.48f);
@@ -19,14 +19,16 @@ namespace Slopgame
         public bool IsRushing => rush != null;
         private Coroutine rush;
 
-        public void ShieldRush(Vector2 aim, int damage) => rush = StartCoroutine(Rush(aim.normalized, damage));
+        public void ShieldRush(Vector2 aim, int damage, float maxDistance = RushDistance)
+            => rush = StartCoroutine(Rush(aim.normalized, damage, Mathf.Clamp(maxDistance, 0.5f, RushDistance)));
 
-        private IEnumerator Rush(Vector2 aim, int damage)
+        private IEnumerator Rush(Vector2 aim, int damage, float distance)
         {
             var run = Player.Run;
             var root = run.ProjectileRoot;
-            Player.Occupy(RushDuration);
-            Player.Protect(RushDuration + 0.2f);
+            float speed = RushDistance / RushDuration, duration = distance / speed, nextDust = 0f;
+            Player.Occupy(duration);
+            Player.Protect(duration + 0.2f);
             Player.Charge.Cancel();
             Vector2 from = transform.position;
             var hit = new HashSet<DungeonEnemy>();
@@ -34,12 +36,11 @@ namespace Slopgame
             var glow = DungeonVisuals.Create("Rush glow", shield.transform, from, new Vector2(2.4f, 1.3f), new Color(0.6f, 0.9f, 1f, 0.35f), 6);
             glow.transform.localPosition = Vector2.zero;
             HeroVfx.Pulse(root, from, 1.2f, AbilityCatalog.Ice, 0.3f);
-            float speed = RushDistance / RushDuration, nextDust = 0f;
-            for (float t = 0f; t < RushDuration; t += Time.deltaTime)
+            for (float t = 0f; t < duration; t += Time.deltaTime)
             {
                 if (!run.IsPlaying || root != run.ProjectileRoot || Player.Health <= 0) break;
                 Vector2 before = transform.position;
-                transform.position = run.Map.Move(before, aim * speed * Time.deltaTime);
+                transform.position = run.Map.Move(before, aim * speed * Mathf.Min(Time.deltaTime, duration - t));
                 Vector2 now = transform.position;
                 shield.transform.position = now + aim * 0.55f;
                 shield.transform.rotation = Quaternion.Euler(0, 0, Mathf.Atan2(aim.y, aim.x) * Mathf.Rad2Deg);

@@ -131,11 +131,12 @@ namespace Slopgame
                 : movement * Speed * Buffs.MoveMultiplier * (Weapon.IsHeavyAttacking ? 0.55f : Charge.IsCharging ? 0.7f : 1f);
             if (DebugMode.Enabled) velocity *= DebugMode.SpeedMultiplier;
             transform.position = Run.Map.Move(transform.position, velocity * Time.deltaTime);
-            // Abilities get the full offset to the cursor so targeted ones (Venom Vial) know how far to throw.
+            // Abilities and heavy attacks get the full offset to the cursor, so targeted and mobility moves
+            // (Venom Vial, Judgment, Shadowstep, Blink...) stop at the cursor when it is within their range.
             Vector2 toCursor = aim.sqrMagnitude > 0.001f ? aim : AimDirection;
             bool usedAbility = PlayerInput.ActiveQ && Abilities.TryUse(0, toCursor);
             if (!usedAbility && PlayerInput.ActiveE) usedAbility = Abilities.TryUse(1, toCursor);
-            if (!usedAbility && !Run.IsPointerOverHud && PlayerInput.HeavyAttack && !IsRolling) Weapon.TryHeavyAttack(AimDirection);
+            if (!usedAbility && !Run.IsPointerOverHud && PlayerInput.HeavyAttack && !IsRolling) Weapon.TryHeavyAttack(toCursor);
             Charge.Tick(PlayerInput.Attack, !Run.IsPointerOverHud && !usedAbility && !IsRolling && !Weapon.IsHeavyAttacking && !PlayerInput.HeavyAttack);
         }
 

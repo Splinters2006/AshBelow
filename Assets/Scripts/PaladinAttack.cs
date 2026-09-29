@@ -12,7 +12,7 @@ namespace Slopgame
         public const float BlessingDuration = 8f;
         public const int BlessingDamage = 2;
         /// <summary>Right click: holy swords fall from the sky onto every enemy within this radius.</summary>
-        public const float HolySwordRadius = 4.5f, HolySwordCooldown = 12f;
+        public const float HolySwordRadius = 3f, HolySwordCooldown = 12f;
         public const int HolySwordTargets = 8;
         private const float HolySwordStagger = 0.07f, HolySwordReach = 1.2f;
         public DungeonPlayer Player { get; set; }

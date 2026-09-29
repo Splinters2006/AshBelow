@@ -1,18 +1,6 @@
-make paladins sanctuary follow paladins movement, make paladin unable to attack during sanctuary
-replace paladins rightclick: make paladins right click call down a holy sword from the sky on any enemies in a medium radius, give it a decently long cooldown
-make archer windstep visuals less like a lightning blink and more like a windstep
-switch the keep and the replace options in the artifact menu keep should be left and replace should be right
-make assasin base attack a stab instead of sweep
-make assasin shadowstep look like a shadow step instead of a lightning blink
-make assasin shadow veil make the assasin invisible and stop enemies from turning towards him
-rework venom strike to venom vial, make it throw a potion that applies damage over time to enemies standing in the zone, throws on cursor, not too much range, doesnt go past walls
-make brawler barrage a LOT better looking, speed up the charging by 15%
-brawler shows their rectangle for punches when dodging, remove that
-make the knuckle sandwich also a lot better looking
-make wild leap able to go past, and over walls, tone down it's aoe a little bit
-tone down knight parry/reflect window to 0.25 seconds
-remove the lightning bolt on knight shield rush, make it 50% faster and keep the duration, the distance would thus be increased by 50% too
-update earthshatter vfx, make earthshatter 25% bigger overall
-make wizard inferno orb slighty more powerfull feeling]
-increase wizard arcane blink range by 2 units, let it go past walls, remove the circle aoe at the end of blink
-
+make paladin judgement aimable
+make all mobilty moves not restricted to just their maximum distance, if cursor is closer to the character than max distance, go to that point if its reachable
+increase assasin shadow step by 1 unit
+make assassin fan of knives fly way faster on the way back
+increase knight shield rush speed by 50%, keep the total distance the same
+make the holy sword aoe 33% smaller

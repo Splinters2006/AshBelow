@@ -27,17 +27,7 @@ namespace Slopgame
         /// </summary>
         public static Vector2 FindLanding(DungeonMap map, Vector2 from, Vector2 aim, float distance)
         {
-            if (aim.sqrMagnitude < 0.0001f) return from;
-            aim.Normalize();
-            distance = Mathf.Clamp(distance, MinThrow, Range);
-            Vector2 landing = from;
-            for (float travel = 0.1f; travel <= distance + 0.001f; travel += 0.1f)
-            {
-                Vector2 next = from + aim * Mathf.Min(travel, distance);
-                if (!map.CanStand(next, 0.1f)) break;
-                landing = next;
-            }
-            return landing;
+            return PlayerAbilities.FindGroundLanding(map, from, aim, Mathf.Clamp(distance, MinThrow, Range));
         }
 
         public static VenomVial Throw(DungeonPlayer player, Vector2 landing, float radius, float duration, int splashDamage, int poisonDamage)

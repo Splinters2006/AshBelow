@@ -103,9 +103,9 @@ namespace Slopgame
             if (!CanAttack || HeavyCooldownRemaining > 0f || aim.sqrMagnitude < 0.001f) return false;
             if (Player.ClassWeapon == WeaponType.Daggers)
             {
-                if (!Player.Abilities.Shadowstep(aim)) return false;
+                if (!Player.Abilities.Shadowstep(aim, Mathf.Min(PlayerAbilities.ShadowstepDistance, aim.magnitude))) return false;
             }
-            else Player.Abilities.Dash(aim, 3f);
+            else Player.Abilities.Dash(aim, Mathf.Min(3f, aim.magnitude));
             Player.Charge.Cancel();
             shadowReadyAt = Time.time + 4f;
             return true;

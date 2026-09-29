@@ -10,7 +10,7 @@ namespace Slopgame
     /// </summary>
     public sealed class ReturningKnife : MonoBehaviour
     {
-        public const float ReturnDelay = 1f, OutwardSpeed = 12f, ReturnSpeed = 26f, MaxLifetime = 6f;
+        public const float ReturnDelay = 1f, OutwardSpeed = 12f, ReturnSpeed = 50f, MaxLifetime = 6f;
         public static readonly Color Blade = new Color(0.78f, 0.62f, 1f);
         private DungeonRun run;
         private Transform owner;
