@@ -175,7 +175,7 @@ namespace Slopgame
             WaitingForTeam = false;
             choicesDone.Clear();
             openChoice = null;
-            if (Run.Player != null && Run.Player.Health <= 0) Run.Player.Revive();
+            if (Run.Player != null && Run.Player.Health <= 0) Run.Player.Revive(true);
             if (IsHost) dead.Clear();
             foreach (var hero in remoteHeroes) hero.Teleport(Run.Player.transform.position);
         }
@@ -642,7 +642,7 @@ namespace Slopgame
         private void ReviveLocal()
         {
             if (Run.Player.Health > 0) return;
-            Run.Player.Revive();
+            Run.Player.Revive(false);
             if (Run.ProjectileRoot != null) HeroVfx.Motes(Run.ProjectileRoot, Run.Player.transform.position, 1f, AbilityCatalog.Gold, 24, 1.2f);
             if (IsHost) { dead.Remove(LocalId); return; }
             using var writer = NetSession.Writer(8);

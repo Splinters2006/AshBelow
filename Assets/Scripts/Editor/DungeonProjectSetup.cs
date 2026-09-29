@@ -577,7 +577,7 @@ namespace Slopgame.Editor
                 AssetDatabase.CreateAsset(archer, archerPath);
             }
             EnsureHero("Wizard", WeaponType.Staff, 4, 4.8f, new Color(0.65f, 0.45f, 1f),
-                "A fire-and-storm caster. Charge fireballs that burst on impact, and cast lightning that can chain from foe to foe.");
+                "A fire-and-storm caster. Charge fireballs that burst on impact, and cast lightning that can chain from foe to foe.", 2);
             EnsureHero("Assassin", WeaponType.Daggers, 4, 5.6f, new Color(0.78f, 0.4f, 0.65f),
                 "A shadow-cloaked killer. Charge into a narrow, deadly stab, hit from behind for double damage, and Shadowstep through walls to backstab everything in your path.");
             EnsureHero("Paladin", WeaponType.Hammer, 7, 4.5f, new Color(0.95f, 0.78f, 0.4f),

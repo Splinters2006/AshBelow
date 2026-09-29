@@ -237,10 +237,13 @@ namespace Slopgame
             return true;
         }
 
-        /// <summary>Co-op: a fallen hero rises at the start of the next floor with half health.</summary>
-        public void Revive()
+        /// <summary>
+        /// Co-op: a fallen hero rises. At the start of the next floor they come back at full health; a teammate's
+        /// Heavenly Host raising them mid-fight brings them back with half.
+        /// </summary>
+        public void Revive(bool fullHealth)
         {
-            Health = Mathf.Max(1, MaxHealth / 2);
+            Health = fullHealth ? MaxHealth : Mathf.Max(1, MaxHealth / 2);
             invulnerableUntil = Time.time + 1.5f;
             SetVisible(true);
         }

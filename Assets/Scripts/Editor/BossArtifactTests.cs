@@ -523,14 +523,15 @@ namespace Slopgame.Editor
         {
             var wizard = run.Player.Weapon as WizardAttack;
             Require(wizard != null && run.Player.Health == 4, "Wizard failed to initialize.");
-            Require(Mathf.Abs(run.Player.Powerups.CritChance - 0.05f) < 0.001f, "Baseline proc chance must be 5%.");
+            Require(Mathf.Abs(run.Player.Powerups.CritChance - 0.15f) < 0.001f, "The Wizard's baseline proc chance must be 15%.");
+            Require(run.Player.Damage == 2 && run.Player.Charge.Damage(1f) == 8, "The Wizard must start at 2 damage with a 4x full charge.");
             Require(!run.Player.Powerups.CanTake(PowerupType.FireballRadius), "Artifact talent appeared before unlock.");
             Vector2 origin = run.Player.transform.position;
             var offsets = new[] { Vector2.right, new Vector2(1, 1), Vector2.up };
             for (int i = 0; i < 3; i++) { run.Enemies[i].Health = 100; run.Enemies[i].transform.position = origin + offsets[i]; }
             Require(wizard.TryHeavyAttack(Vector2.right), "Lightning did not cast.");
             // A strike may also shock (1 damage) the other enemies within 2 units; that is not a chain.
-            Require(run.Enemies[0].Health == 98 && run.Enemies[1].Health >= 99 && run.Enemies[2].Health >= 99,
+            Require(run.Enemies[0].Health == 97 && run.Enemies[1].Health >= 99 && run.Enemies[2].Health >= 99,
                 "Unupgraded lightning chained or dealt incorrect damage.");
             Require(!wizard.TryHeavyAttack(Vector2.right), "Lightning bypassed cooldown.");
             run.Player.Powerups.Add(PowerupType.LightningChains);
@@ -539,7 +540,7 @@ namespace Slopgame.Editor
                 typeof(WizardAttack).GetField(field, System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic).SetValue(wizard, 0f);
             for (int i = 0; i < 3; i++) { run.Enemies[i].Health = 100; run.Enemies[i].transform.position = origin + offsets[i]; }
             Require(wizard.TryHeavyAttack(Vector2.right), "Upgraded lightning did not cast.");
-            for (int i = 0; i < 3; i++) Require(run.Enemies[i].Health <= 98 && run.Enemies[i].Health >= 96, "Conductivity failed to unlock chain targets.");
+            for (int i = 0; i < 3; i++) Require(run.Enemies[i].Health <= 97 && run.Enemies[i].Health >= 95, "Conductivity failed to unlock chain targets.");
             float oldRange = wizard.LightningRange;
             run.Player.Upgrade((int)PowerupType.LightningRange);
             Require(wizard.LightningRange == oldRange + 1f, "Lightning range talent has no effect.");

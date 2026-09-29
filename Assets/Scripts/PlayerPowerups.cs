@@ -15,7 +15,8 @@ namespace Slopgame
         public int ReflectionDamage => 2 + Count(PowerupType.Riposte) + Permanent.ReflectionDamage;
         public int ArmorCharges { get; private set; }
         public float AttackIntervalMultiplier => 1f / (1f + 0.2f * Count(PowerupType.AttackSpeed) + Permanent.AttackSpeed);
-        public float CritChance => 0.05f + Count(PowerupType.CriticalHits) * 0.1f;
+        /// <summary>The Wizard starts with a 15% base chance (crits and elemental effects); everyone else with 5%.</summary>
+        public float CritChance => (ClassWeapon == WeaponType.Staff ? 0.15f : 0.05f) + Count(PowerupType.CriticalHits) * 0.1f;
         public float ElementalEffectChance => Mathf.Min(0.9f, CritChance + Permanent.EffectChance);
         public float PhysicalCritChance => Mathf.Min(0.9f, CritChance + Permanent.PhysicalCritChance
             + (ClassWeapon == WeaponType.Daggers ? 0.1f + Count(PowerupType.AssassinCrit) * 0.05f : 0f));

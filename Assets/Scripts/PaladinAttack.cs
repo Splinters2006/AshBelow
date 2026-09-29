@@ -13,7 +13,7 @@ namespace Slopgame
         public const int BlessingDamage = 2;
         /// <summary>Right click: holy swords fall from the sky onto every enemy within this radius.</summary>
         public const float HolySwordRadius = 3f, HolySwordCooldown = 12f;
-        public const int HolySwordTargets = 8;
+        public const int HolySwordTargets = 8, HolySwordDamageMultiplier = 2;
         private const float HolySwordStagger = 0.07f, HolySwordReach = 1.2f;
         public DungeonPlayer Player { get; set; }
         public bool IsHeavyAttacking => false;
@@ -74,7 +74,7 @@ namespace Slopgame
             if (targets.Count > HolySwordTargets) targets.RemoveRange(HolySwordTargets, targets.Count - HolySwordTargets);
             swordReadyAt = Time.time + HolySwordCooldown;
             Player.Charge.Cancel();
-            int damage = Player.Damage * 3;
+            int damage = Player.Damage * HolySwordDamageMultiplier;
             for (int i = 0; i < targets.Count; i++) StartCoroutine(HolySword(targets[i], i * HolySwordStagger, damage));
             var root = Player.Run.ProjectileRoot;
             HeroVfx.Pulse(root, origin, 1.2f, AbilityCatalog.Gold, 0.35f);

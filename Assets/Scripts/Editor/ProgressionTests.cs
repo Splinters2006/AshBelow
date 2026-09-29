@@ -167,7 +167,7 @@ namespace Slopgame.Editor
                     {
                         case WeaponType.Sword: Require(player.Powerups.ReflectionDamage == 3, "Knight reflection upgrade missing."); break;
                         case WeaponType.Bow: Require(Mathf.Abs(player.Charge.Duration - 0.95f / 1.05f) < 0.001f, "Archer draw upgrade missing."); break;
-                        case WeaponType.Staff: Require(player.Permanent.LightningDamage == 1 && Mathf.Abs(player.Powerups.ElementalEffectChance - 0.08f) < 0.001f, "Wizard upgrades missing."); break;
+                        case WeaponType.Staff: Require(player.Permanent.LightningDamage == 1 && Mathf.Abs(player.Powerups.ElementalEffectChance - 0.18f) < 0.001f, "Wizard upgrades missing."); break;
                         case WeaponType.Daggers: Require(Mathf.Abs(player.Powerups.PhysicalCritChance - 0.18f) < 0.001f && Mathf.Abs(player.Speed - character.MoveSpeed - 0.35f) < 0.001f, "Assassin upgrades missing."); break;
                         case WeaponType.Hammer:
                             Require(player.Weapon.TryAttack(Vector2.right, 1f) && player.Blessing.Remaining > 8.9f, "Paladin permanent blessing upgrade missing."); break;

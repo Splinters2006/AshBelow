@@ -16,6 +16,6 @@ MonoBehaviour:
   description: A fire-and-storm caster. Charge fireballs that burst on impact, and cast lightning that can chain from foe to foe.
   color: {r: 0.65, g: 0.45, b: 1, a: 1}
   startingHealth: 4
-  startingDamage: 1
+  startingDamage: 2
   moveSpeed: 4.8
   weapon: 2
