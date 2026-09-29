@@ -9,7 +9,7 @@ namespace Slopgame
     /// </summary>
     public sealed class GamblerPurse : ClassMechanic
     {
-        public enum Ware { Draught, Charm, Dice, DoubleOrNothing }
+        public enum Ware { Draught, Charm, Dice }
 
         public sealed class Offer
         {
@@ -25,7 +25,6 @@ namespace Slopgame
             new Offer(Ware.Draught, "Healing Draught", "Restore 2 HP", 40),
             new Offer(Ware.Charm, "Lucky Charm", "+1 ward for this floor", 50),
             new Offer(Ware.Dice, "Loaded Dice", "+1 damage until the next floor", 80),
-            new Offer(Ware.DoubleOrNothing, "Double or Nothing", "Bet every coin: double them, or lose them all", 0),
         };
 
         private int diceFloor = -1, dice;
@@ -57,15 +56,11 @@ namespace Slopgame
         {
             var coins = Coins;
             if (coins == null || !Player.Run.IsPlaying || Player.Health <= 0) return false;
-            if (offer.Ware == Ware.DoubleOrNothing) return coins.Coins >= 2;
             if (offer.Ware == Ware.Draught && Player.Health >= Player.MaxHealth) return false;
             return coins.Coins >= offer.Cost;
         }
 
-        public bool Buy(Offer offer) => Buy(offer, Random.value);
-
-        /// <param name="roll">0-1; below one half wins Double or Nothing.</param>
-        public bool Buy(Offer offer, float roll)
+        public bool Buy(Offer offer)
         {
             if (!CanBuy(offer)) return false;
             var coins = Coins;
@@ -90,11 +85,6 @@ namespace Slopgame
                     diceFloor = Player.Run.Floor;
                     dice++;
                     LastResult = $"Loaded. +{dice} damage this floor.";
-                    break;
-                case Ware.DoubleOrNothing:
-                    int stake = coins.Coins;
-                    LastResult = coins.DoubleOrNothing(roll) ? $"WIN! {stake:N0} coins become {coins.Coins:N0}."
-                        : $"Bust. {stake:N0} coins gone; the purse spits one back.";
                     break;
             }
             return true;

@@ -15,7 +15,7 @@ namespace Slopgame
         // Co-op restart asks for a second click so a stray press does not throw away the party's run.
         private float restartConfirmUntil;
         private static readonly Rect RestartRect = new Rect(896, 24, 112, 40);
-        private static readonly Rect PurseRect = new Rect(900, 262, 356, 318);
+        private static readonly Rect PurseRect = new Rect(900, 262, 356, 260);
         private static readonly Rect ShopRect = new Rect(876, 84, 380, 476);
         private bool ShopOpen => Run.Shop != null && Run.Shop.IsOpen;
         private bool CanRestartCoop => Run.IsNetworked && Run.IsPlaying;
@@ -252,8 +252,7 @@ namespace Slopgame
                 var offer = GamblerPurse.Offers[i];
                 var row = new Rect(rect.x + 16, rect.y + 52 + i * 58, rect.width - 32, 52);
                 bool affordable = purse.CanBuy(offer);
-                string label = offer.Ware == GamblerPurse.Ware.DoubleOrNothing ? $"{offer.Name}  /  bet all" : $"{offer.Name}  /  {offer.Cost}c";
-                if (DungeonUi.Button("purse" + i, new Rect(row.x, row.y, row.width, 32), label, GamblerAttack.Gold, affordable)) purse.Buy(offer);
+                if (DungeonUi.Button("purse" + i, new Rect(row.x, row.y, row.width, 32), $"{offer.Name}  /  {offer.Cost}c", GamblerAttack.Gold, affordable)) purse.Buy(offer);
                 DungeonUi.Label(new Rect(row.x + 6, row.y + 34, row.width - 12, 18), offer.Description, 12, DungeonUi.Muted);
             }
             DungeonUi.Label(new Rect(rect.x + 20, rect.yMax - 36, rect.width - 40, 30),

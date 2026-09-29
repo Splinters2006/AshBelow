@@ -315,13 +315,10 @@ namespace Slopgame.Editor
             int before = run.ProjectileRoot.GetComponentsInChildren<PlayerProjectile>().Length;
             Require(player.Weapon.TryHeavyAttack(Vector2.right) && coins.Coins == 2
                 && run.ProjectileRoot.GetComponentsInChildren<PlayerProjectile>().Length == before + 2, "The volley did not throw one coin per coin carried.");
-            var bet = GamblerPurse.Offers[(int)GamblerPurse.Ware.DoubleOrNothing];
             Require(purse.TryActivate(Vector2.right) && purse.IsOpen, "R did not open the purse.");
-            Require(purse.Buy(bet, 0.1f) && coins.Coins == 4, "Winning Double or Nothing did not double the coins.");
-            Require(purse.Buy(bet, 0.9f) && coins.Coins == 1, "Losing Double or Nothing did not empty the purse to its last coin.");
             var dice = GamblerPurse.Offers[(int)GamblerPurse.Ware.Dice];
-            // One coin left from the lost bet: one short of the price, then one over it.
-            coins.AddCoins(dice.Cost - 2);
+            // Two coins carried: one short of the price, then two over it.
+            coins.AddCoins(dice.Cost - 3);
             Require(!purse.Buy(dice), "Loaded Dice sold without enough coins.");
             coins.AddCoins(3);
             int damage = player.Damage;
