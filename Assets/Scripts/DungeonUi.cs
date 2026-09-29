@@ -80,13 +80,15 @@ namespace Slopgame
         public static void ScrollingText(string id, Rect rect, string value, int size, Color color)
         {
             var style = LabelStyle(size, TextAnchor.UpperLeft);
-            const float scrollbar = 14f;
             float height = style.CalcHeight(new GUIContent(value), rect.width);
             if (height <= rect.height) { Label(rect, value, size, color); return; }
-            float innerWidth = rect.width - scrollbar;
+            // Wrap inside the skin's real scrollbar width so nothing spills sideways; text only ever scrolls vertically.
+            var bar = GUI.skin.verticalScrollbar;
+            float innerWidth = rect.width - Mathf.Max(14f, bar.fixedWidth + bar.margin.horizontal);
             height = style.CalcHeight(new GUIContent(value), innerWidth) + 4f;
             scrolls.TryGetValue(id, out var scroll);
-            scroll = GUI.BeginScrollView(rect, scroll, new Rect(0, 0, innerWidth, height), false, true);
+            scroll.x = 0f;
+            scroll = GUI.BeginScrollView(rect, scroll, new Rect(0, 0, innerWidth, height), false, true, GUIStyle.none, bar);
             Label(new Rect(0, 0, innerWidth, height), value, size, color);
             GUI.EndScrollView();
             scrolls[id] = scroll;
