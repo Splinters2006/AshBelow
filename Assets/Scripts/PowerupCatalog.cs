@@ -55,7 +55,7 @@ namespace Slopgame
             new PowerupDefinition(PowerupType.PiercingPower, "Armor Breaker", "+2 Piercing Shot damage", 3, WeaponType.Bow, AbilityType.PiercingShot),
             new PowerupDefinition(PowerupType.WindstepDistance, "Tailwind", "+0.5 Windstep distance", 3, WeaponType.Bow, AbilityType.Windstep),
             new PowerupDefinition(PowerupType.FireballRadius, "Wildfire", "+0.4 Inferno Orb explosion radius", 3, WeaponType.Staff, AbilityType.Fireball),
-            new PowerupDefinition(PowerupType.FrostDuration, "Deep Freeze", "+1 second of Frost Nova chill", 3, WeaponType.Staff, AbilityType.FrostNova),
+            new PowerupDefinition(PowerupType.FrostDuration, "Deep Freeze", "+0.5 seconds of Frost Nova freeze", 3, WeaponType.Staff, AbilityType.FrostNova),
             new PowerupDefinition(PowerupType.BlinkDistance, "Phasewalker", "+0.5 Arcane Blink distance", 3, WeaponType.Staff, AbilityType.Blink),
             new PowerupDefinition(PowerupType.Backstab, "Hidden Blade", "+1 damage on physical rear hits", 3, WeaponType.Daggers),
             new PowerupDefinition(PowerupType.AssassinCrit, "Killer Instinct", "+5% physical critical chance", 3, WeaponType.Daggers),

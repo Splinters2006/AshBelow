@@ -15,6 +15,7 @@ namespace Slopgame
         // Co-op restart asks for a second click so a stray press does not throw away the party's run.
         private float restartConfirmUntil;
         private static readonly Rect RestartRect = new Rect(896, 24, 112, 40);
+        private static readonly Rect PurseRect = new Rect(900, 262, 356, 318);
         private bool CanRestartCoop => Run.IsNetworked && Run.IsPlaying;
 
         public bool BlocksPointer(Vector2 screenPosition)
@@ -24,7 +25,8 @@ namespace Slopgame
                 Screen.height - screenPosition.y - (Screen.height - DungeonUi.Height * scale) / 2f) / scale;
             return !Run.IsPlaying || new Rect(1020, 24, 236, 40).Contains(point)
                 || ((Run.CanSkipRoom || CanRestartCoop) && RestartRect.Contains(point))
-                || (showTalents && new Rect(922, 82, 334, 470).Contains(point));
+                || (showTalents && new Rect(922, 82, 334, 470).Contains(point))
+                || (Run.Player != null && Run.Player.Mechanic is GamblerPurse purse && purse.IsOpen && PurseRect.Contains(point));
         }
 
         private void Update()
@@ -50,6 +52,8 @@ namespace Slopgame
                 if (Run.Player == null) return;
                 if (Run.IsNetworked) DrawTeam();
                 DrawHotbar();
+                var mechanic = Run.Player.Mechanic;
+                if (Run.IsPlaying && mechanic is GamblerPurse purse && purse.IsOpen) DrawPurse(purse);
                 if (showTalents && Run.IsPlaying) DrawTalents();
                 else if (Run.IsPlaying && Run.Minimap != null) Run.Minimap.Draw(new Rect(1026, 84, 224, 159));
                 if (Run.IsPlaying) return;
@@ -67,7 +71,8 @@ namespace Slopgame
             DungeonUi.Panel(new Rect(24, 24, 292, 100), DungeonUi.PanelColor);
             DungeonUi.Label(new Rect(42, 37, 250, 28), Run.SelectedCharacter.DisplayName.ToUpperInvariant(), 22, Run.SelectedCharacter.Color);
             DungeonUi.Label(new Rect(42, 73, 130, 22), DebugMode.Enabled ? "INFINITE HP" : $"{player.Health} / {player.MaxHealth} HP", 16, DebugMode.Enabled ? DebugColor : (Color?)null);
-            DungeonUi.Label(new Rect(176, 73, 120, 22), $"WARD  {player.Powerups.ArmorCharges}", 14, DungeonUi.Muted, TextAnchor.UpperRight);
+            DungeonUi.Label(new Rect(176, 73, 120, 22), player.Weapon is GamblerAttack gambler
+                ? $"WARD  {player.Powerups.ArmorCharges}   COINS  {gambler.Coins}" : $"WARD  {player.Powerups.ArmorCharges}", 14, DungeonUi.Muted, TextAnchor.UpperRight);
             DungeonUi.Label(new Rect(24, 135, 300, 26), $"ASH  {Run.Progress.Ash}   /   +{Run.RunAshEarned} this run", 16, AbilityCatalog.Gold);
             if (!string.IsNullOrEmpty(Run.Progress.LastError))
                 DungeonUi.Label(new Rect(24, 165, 310, 70), Run.Progress.LastError, 14, AbilityCatalog.Gold);
@@ -106,20 +111,25 @@ namespace Slopgame
         private void DrawHotbar()
         {
             var player = Run.Player;
-            Slot(new Rect(260, 596, 180, 78), KeyBindings.Label(GameAction.Special), DungeonUi.SpecialName(player.ClassWeapon), player.Weapon?.HeavyCooldownRemaining ?? 0f,
+            // Every class but the Admin has a class mechanic slot, locked until it is bought in the Ash shop.
+            bool mechanicSlot = player.ClassWeapon != WeaponType.Shadow;
+            float left = mechanicSlot ? 164 : 260;
+            Slot(new Rect(left, 596, 180, 78), KeyBindings.Label(GameAction.Special), DungeonUi.SpecialName(player.ClassWeapon), player.Weapon?.HeavyCooldownRemaining ?? 0f,
                 DungeonUi.SpecialCooldown(player.ClassWeapon), Run.SelectedCharacter.Color);
             for (int i = 0; i < PlayerAbilities.SlotCount; i++)
             {
                 var ability = AbilityCatalog.Get(player.Abilities.Equipped(i));
-                Slot(new Rect(452 + i * 192, 596, 180, 78), SlotKey(i), ability == null ? "Boss relic required" : ability.Name,
+                Slot(new Rect(left + 192 + i * 192, 596, 180, 78), SlotKey(i), ability == null ? "Boss relic required" : ability.Name,
                     player.Abilities.CooldownRemaining(i), ability?.Cooldown ?? 1f, ability?.Color ?? DungeonUi.Muted, ability == null);
             }
-            Slot(new Rect(836, 596, 180, 78), KeyBindings.Label(GameAction.Dodge), "Dodge", player.DodgeCooldownRemaining, DungeonPlayer.RollCooldown, DungeonUi.Teal);
+            if (mechanicSlot) MechanicSlot(new Rect(left + 576, 596, 180, 78), player.Mechanic);
+            Slot(new Rect(left + (mechanicSlot ? 768 : 576), 596, 180, 78), KeyBindings.Label(GameAction.Dodge), "Dodge", player.DodgeCooldownRemaining, DungeonPlayer.RollCooldown, DungeonUi.Teal);
             if (player.Blessing.BonusDamage > 0)
                 DungeonUi.Label(new Rect(440, 505, 400, 24), $"BLESSED  +{player.Blessing.BonusDamage} DAMAGE  /  {player.Blessing.Remaining:0.0}s", 14, AbilityCatalog.Gold, TextAnchor.MiddleCenter);
             string buff = BuffStatus(player.Buffs);
             if (buff != null)
-                DungeonUi.Label(new Rect(440, 475, 400, 24), buff, 14, player.Buffs.IsAscended ? HeroBuffs.AscendColor : player.Buffs.IsRaging ? HeroBuffs.RageColor
+                DungeonUi.Label(new Rect(440, 475, 400, 24), buff, 14, player.Buffs.IsFurious ? HeroBuffs.FuryColor
+                    : player.Buffs.IsAscended ? HeroBuffs.AscendColor : player.Buffs.IsRaging ? HeroBuffs.RageColor
                     : player.Buffs.IsTired ? HeroBuffs.TiredColor : HeroBuffs.EmpowerColor, TextAnchor.MiddleCenter);
             if (player.Charge.IsCharging)
             {
@@ -139,6 +149,8 @@ namespace Slopgame
                 ? $"{attack}  weak swipe     HOLD / RELEASE {attack}  bless allies     {interact}  interact"
                 : player.ClassWeapon == WeaponType.Fists
                 ? $"{attack}  jab     HOLD / RELEASE {attack}  punch barrage     {KeyBindings.Label(GameAction.Special)}  empower     {interact}  interact"
+                : player.ClassWeapon == WeaponType.Coins
+                ? $"{attack}  throw a coin     HOLD / RELEASE {attack}  charged throw     {KeyBindings.Label(GameAction.Special)}  coin volley     {KeyBindings.Label(GameAction.Mechanic)}  purse     {interact}  interact"
                 : player.ClassWeapon == WeaponType.Tail
                 ? $"{attack}  tail stab     HOLD / RELEASE {attack}  paralysing vital stab     {KeyBindings.Label(GameAction.Special)}  tail sweep     {interact}  interact"
                 : $"{KeyBindings.MovementLabel()}  move     HOLD / RELEASE {attack}  charge attack     {interact}  interact", 13, DungeonUi.Muted, TextAnchor.UpperCenter);
@@ -155,6 +167,9 @@ namespace Slopgame
             if (buffs.IsTired) parts.Add($"TIRED  {buffs.TiredRemaining:0.0}s");
             if (buffs.IsEmpowered) parts.Add($"EMPOWERED  {buffs.EmpowerRemaining:0.0}s");
             if (buffs.IsAscended) parts.Add($"ARCHDEMON'S TECHNIQUE  {buffs.AscendRemaining:0.0}s");
+            if (buffs.IsFurious) parts.Add($"SUPER ANGRY  {buffs.FuryRemaining:0.0}s");
+            if (buffs.JackpotDamage > 0) parts.Add($"JACKPOT  +{buffs.JackpotDamage} DAMAGE  {buffs.JackpotDamageRemaining:0.0}s");
+            if (buffs.JackpotSpeed > 1f) parts.Add($"JACKPOT  x{buffs.JackpotSpeed:0.0} SPEED  {buffs.JackpotSpeedRemaining:0.0}s");
             return parts.Count == 0 ? null : string.Join("  /  ", parts);
         }
 
@@ -166,6 +181,47 @@ namespace Slopgame
                 cooldown > 0 ? DungeonUi.Muted : accent, TextAnchor.UpperRight);
             DungeonUi.Label(new Rect(rect.x + 14, rect.y + 37, rect.width - 28, 28), name, locked ? 13 : 16, locked ? DungeonUi.Muted : DungeonUi.Text);
             DungeonUi.Bar(new Rect(rect.x + 12, rect.yMax - 7, rect.width - 24, 3), locked ? 0f : 1f - cooldown / total, accent);
+        }
+
+        /// <summary>The class mechanic's slot: its charge or cooldown, or a lock until it is bought.</summary>
+        private static void MechanicSlot(Rect rect, ClassMechanic mechanic)
+        {
+            string key = KeyBindings.Label(GameAction.Mechanic);
+            DungeonUi.Panel(rect, DungeonUi.PanelColor);
+            if (mechanic == null)
+            {
+                DungeonUi.Label(new Rect(rect.x + 14, rect.y + 10, 66, 22), key, 14, DungeonUi.Muted);
+                DungeonUi.Label(new Rect(rect.x + 88, rect.y + 10, 76, 22), "LOCKED", 13, DungeonUi.Muted, TextAnchor.UpperRight);
+                DungeonUi.Label(new Rect(rect.x + 14, rect.y + 37, rect.width - 28, 28), "Class mechanic: Ash shop", 13, DungeonUi.Muted);
+                DungeonUi.Bar(new Rect(rect.x + 12, rect.yMax - 7, rect.width - 24, 3), 0f, DungeonUi.Muted);
+                return;
+            }
+            bool ready = mechanic.Readiness >= 1f;
+            DungeonUi.Label(new Rect(rect.x + 14, rect.y + 10, 50, 22), key, 14, mechanic.Color);
+            DungeonUi.Label(new Rect(rect.x + 60, rect.y + 10, 106, 22), mechanic.Status, 13, ready ? mechanic.Color : DungeonUi.Muted, TextAnchor.UpperRight);
+            DungeonUi.Label(new Rect(rect.x + 14, rect.y + 37, rect.width - 28, 28), mechanic.Name, 16, DungeonUi.Text);
+            DungeonUi.Bar(new Rect(rect.x + 12, rect.yMax - 7, rect.width - 24, 3), mechanic.Readiness, mechanic.Color);
+        }
+
+        /// <summary>The Gambler's purse shop. Play goes on while it is open.</summary>
+        private void DrawPurse(GamblerPurse purse)
+        {
+            var rect = PurseRect;
+            DungeonUi.Panel(rect, DungeonUi.Background);
+            DungeonUi.Label(new Rect(rect.x + 20, rect.y + 14, 220, 28), "THE PURSE", 22, GamblerAttack.Gold);
+            DungeonUi.Label(new Rect(rect.x + 190, rect.y + 18, 146, 24), $"{purse.Coins?.Coins ?? 1} COINS", 16, GamblerAttack.Gold, TextAnchor.UpperRight);
+            for (int i = 0; i < GamblerPurse.Offers.Length; i++)
+            {
+                var offer = GamblerPurse.Offers[i];
+                var row = new Rect(rect.x + 16, rect.y + 52 + i * 58, rect.width - 32, 52);
+                bool affordable = purse.CanBuy(offer);
+                string label = offer.Ware == GamblerPurse.Ware.DoubleOrNothing ? $"{offer.Name}  /  bet all" : $"{offer.Name}  /  {offer.Cost}c";
+                if (DungeonUi.Button("purse" + i, new Rect(row.x, row.y, row.width, 32), label, GamblerAttack.Gold, affordable)) purse.Buy(offer);
+                DungeonUi.Label(new Rect(row.x + 6, row.y + 34, row.width - 12, 18), offer.Description, 12, DungeonUi.Muted);
+            }
+            DungeonUi.Label(new Rect(rect.x + 20, rect.yMax - 36, rect.width - 40, 30),
+                purse.LastResult ?? $"{KeyBindings.Label(GameAction.Mechanic)} closes the purse. Coins spent here leave your volley.", 13,
+                purse.LastResult != null ? GamblerAttack.Gold : DungeonUi.Muted);
         }
 
         private void DrawTalents()
@@ -293,6 +349,8 @@ namespace Slopgame
                     }
                 }
             }
+            if (index == 0)
+                DungeonUi.Label(new Rect(240, 380, 800, 60), "No relic answers to your class yet. Leave the artifact and descend.", 20, DungeonUi.Muted, TextAnchor.MiddleCenter);
             if (DungeonUi.Button("leaveArtifact", new Rect(500, 661, 280, 35), "Leave this artifact", DungeonUi.Muted)) Run.FinishArtifactChoice();
         }
 

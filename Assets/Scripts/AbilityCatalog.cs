@@ -6,7 +6,8 @@ namespace Slopgame
     {
         None, ShieldRush, Earthshatter, Aegis, Volley, PiercingShot, Windstep,
         Fireball, FrostNova, Blink, FanOfKnives, VenomVial, ShadowVeil, HealingLight, Judgment, Sanctuary,
-        Eclipse, SoulRend, ShadowReign, KnuckleSandwich, WildLeap, PrimalRage, ArchdemonTechnique, DemonPaw, DemonCurse
+        Eclipse, SoulRend, ShadowReign, KnuckleSandwich, WildLeap, PrimalRage, ArchdemonTechnique, DemonPaw, DemonCurse,
+        Windfall, AllIn, Jackpot
     }
 
     public sealed class AbilityDefinition
@@ -40,7 +41,7 @@ namespace Slopgame
             new AbilityDefinition(AbilityType.PiercingShot, WeaponType.Bow, "Piercing Shot", "A thundering arrow tears through every enemy in a long line. Range: 18 units.", "->", 9f, Gold),
             new AbilityDefinition(AbilityType.Windstep, WeaponType.Bow, "Windstep", "Dash in your aim direction and fire a tight, long-range three-arrow counterattack.", ">>", 10f, Green),
             new AbilityDefinition(AbilityType.Fireball, WeaponType.Staff, "Inferno Orb", "Unlock an explosive fireball. Its elemental effect can ignite enemies.", "*", 8f, new Color(1f, 0.43f, 0.23f)),
-            new AbilityDefinition(AbilityType.FrostNova, WeaponType.Staff, "Frost Nova", "A ring of ice slowly expands around you, damaging enemies it reaches and slowing all their actions by 50%.", "+", 10f, Ice),
+            new AbilityDefinition(AbilityType.FrostNova, WeaponType.Staff, "Frost Nova", "A ring of ice slowly expands around you, damaging the enemies it reaches and freezing them solid for 2 seconds.", "+", 10f, Ice),
             new AbilityDefinition(AbilityType.Blink, WeaponType.Staff, "Arcane Blink", "Blink up to 6 units toward your aim, straight through walls.", "<>", 9f, Violet),
             new AbilityDefinition(AbilityType.FanOfKnives, WeaponType.Daggers, "Fan of Knives", "Throw a ring of piercing knives that fly back to you after 1 second, wherever you are, cutting through everything in their path. Each can critically strike.", "X", 8f, Violet),
             new AbilityDefinition(AbilityType.VenomVial, WeaponType.Daggers, "Venom Vial", "Throw a vial at the cursor (up to 5 units, stopped by walls). It shatters into a toxic pool that poisons enemies standing in it.", "+", 9f, Green),
@@ -56,7 +57,10 @@ namespace Slopgame
             new AbilityDefinition(AbilityType.PrimalRage, WeaponType.Fists, "Primal Rage", "10 seconds of huge damage, charge, movement and dodge buffs, then 5 seconds tired. Cooldown starts once rested.", "!!", 25f, new Color(1f, 0.25f, 0.2f)),
             new AbilityDefinition(AbilityType.ArchdemonTechnique, WeaponType.Tail, "Archdemon's Technique", "Channel your father, the Demon Lord, for 8 seconds: every click is a fully charged vital stab, and charging winds up a devastating paralysing tail whip. Cooldown starts once it ends.", "W", 16f, HeroBuffs.AscendColor),
             new AbilityDefinition(AbilityType.DemonPaw, WeaponType.Tail, "HEEEELP", "Open a portal over a nearby enemy, even beyond walls: your giant demonic pet slams a huge clawed paw down on it, stunning everything underneath.", "!", 12f, DemonessAttack.Violet),
-            new AbilityDefinition(AbilityType.DemonCurse, WeaponType.Tail, "Demon Curse", "Brand a pentagram at the cursor: enemies on it are paralysed for 3 seconds and take 50% more damage for 6.", "*", 14f, DemonessAttack.Pale)
+            new AbilityDefinition(AbilityType.DemonCurse, WeaponType.Tail, "Demon Curse", "Brand a pentagram at the cursor: enemies on it are paralysed for 3 seconds and take 50% more damage for 6.", "*", 14f, DemonessAttack.Pale),
+            new AbilityDefinition(AbilityType.Windfall, WeaponType.Coins, "Windfall", "Your purse coughs up 5 coins at once. Ranks add one more coin.", "$", 12f, GamblerAttack.Gold),
+            new AbilityDefinition(AbilityType.AllIn, WeaponType.Coins, "All In", "Double or nothing on every coin you carry: a 50% chance to double them, or lose them all. Ranks tilt the odds 5% your way.", "x2", 10f, new Color(0.35f, 0.9f, 0.5f)),
+            new AbilityDefinition(AbilityType.Jackpot, WeaponType.Coins, "Jackpot", "Feed every coin you carry into the machine. Half the time nothing happens. Otherwise you win a random speed buff, damage buff or heal that grows with every coin spent. Ranks lengthen the buffs.", "777", 18f, new Color(1f, 0.4f, 0.55f))
         };
 
         public static AbilityDefinition Get(AbilityType type)

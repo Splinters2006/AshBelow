@@ -16,6 +16,10 @@ namespace Slopgame
         public bool IsBlessed => (moreFlags & PlayerStateMessage.Blessed) != 0;
         public bool IsVeiled => (moreFlags & PlayerStateMessage.Veiled) != 0;
         public bool IsCharging => (flags & PlayerStateMessage.Charging) != 0;
+        /// <summary>Shield Taunt: enemies target this teammate first.</summary>
+        public bool IsTaunting => IsAlive && (moreFlags & PlayerStateMessage.Taunting) != 0;
+        /// <summary>When this teammate last fell (Heavenly Host revives whoever has been down longest).</summary>
+        public float DiedAt { get; private set; }
         public float ChargeAmount { get; private set; }
         public Vector2 Aim { get; private set; } = Vector2.right;
         private DungeonRun run;
@@ -53,7 +57,9 @@ namespace Slopgame
             flags = state.Flags;
             moreFlags = state.MoreFlags;
             ChargeAmount = state.Charge / 255f;
+            bool wasAlive = IsAlive;
             Health = (flags & PlayerStateMessage.Dead) != 0 ? 0 : Mathf.Max(1, (int)state.Health);
+            if (wasAlive && !IsAlive) DiedAt = Time.time;
             MaxHealth = Mathf.Max(1, (int)state.MaxHealth);
             // Big jumps (a blink, a new floor) snap instead of sliding through walls.
             if (Vector2.Distance(transform.position, target) > 4f) transform.position = target;
@@ -75,7 +81,7 @@ namespace Slopgame
                 : (flags & PlayerStateMessage.Invulnerable) != 0 && Mathf.Repeat(Time.time * 8f, 1f) > 0.5f ? Color.white
                 : HeroBuffs.Tint(Character.Color, (flags & PlayerStateMessage.Empowered) != 0,
                     (flags & PlayerStateMessage.Raging) != 0, (flags & PlayerStateMessage.Tired) != 0,
-                    (moreFlags & PlayerStateMessage.Ascended) != 0);
+                    (moreFlags & PlayerStateMessage.Ascended) != 0, (moreFlags & PlayerStateMessage.Furious) != 0);
             if (Aim.x < -0.15f) facingLeft = true;
             else if (Aim.x > 0.15f) facingLeft = false;
             body.flipX = facingLeft;
@@ -92,7 +98,10 @@ namespace Slopgame
             if (blocking)
             {
                 // Parent scale is 0.65, so offsets are in the hero's local units.
-                shield.transform.localPosition = Aim * 0.95f;
+                // A taunting Knight's great shield stands further out and taller.
+                bool taunting = IsTaunting;
+                shield.transform.localPosition = Aim * (taunting ? 1.6f : 0.95f);
+                shield.transform.localScale = new Vector3(0.14f, taunting ? 2.4f : 1.3f, 1f);
                 shield.transform.localRotation = Quaternion.Euler(0, 0, Mathf.Atan2(Aim.y, Aim.x) * Mathf.Rad2Deg);
             }
         }

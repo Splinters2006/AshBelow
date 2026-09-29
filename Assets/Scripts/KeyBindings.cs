@@ -6,7 +6,7 @@ using UnityEngine.InputSystem;
 
 namespace Slopgame
 {
-    public enum GameAction { MoveUp, MoveDown, MoveLeft, MoveRight, Attack, Special, Dodge, AbilityQ, AbilityE, Interact }
+    public enum GameAction { MoveUp, MoveDown, MoveLeft, MoveRight, Attack, Special, Dodge, AbilityQ, AbilityE, Interact, Mechanic }
 
     /// <summary>
     /// Rebindable controls. Every action has a primary and an alternate binding, each a keyboard key or mouse button
@@ -31,6 +31,7 @@ namespace Slopgame
             { KeyCode.Q, KeyCode.None },
             { KeyCode.E, KeyCode.None },
             { KeyCode.F, KeyCode.None },
+            { KeyCode.R, KeyCode.None },
         };
 
         public static string ActionName(GameAction action) => action switch
@@ -44,6 +45,7 @@ namespace Slopgame
             GameAction.Dodge => "Dodge",
             GameAction.AbilityQ => "Relic ability 1",
             GameAction.AbilityE => "Relic ability 2",
+            GameAction.Mechanic => "Class mechanic",
             _ => "Interact"
         };
 

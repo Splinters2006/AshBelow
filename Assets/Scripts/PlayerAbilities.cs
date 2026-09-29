@@ -10,7 +10,7 @@ namespace Slopgame
         public const int SlotCount = 2;
         public const int MaxRank = 3;
         public const float ShadowstepDistance = 5f;
-        public const float FrostNovaRadius = 3.1f, FrostNovaExpandTime = 0.75f;
+        public const float FrostNovaRadius = 3.1f, FrostNovaExpandTime = 0.75f, FrostNovaFreeze = 2f;
         public const float BlinkDistance = 6f;
         /// <summary>Earthshatter is 25% bigger than its original 2.6-unit reach.</summary>
         public const float EarthshatterRadius = 3.25f;
@@ -93,7 +93,7 @@ namespace Slopgame
                         1.7f + powers.Count(PowerupType.FireballRadius) * 0.4f); break;
                 case AbilityType.FrostNova:
                     StartCoroutine(ExpandingNova(transform.position, FrostNovaRadius, FrostNovaExpandTime, damage, definition.Color,
-                        3f + powers.Count(PowerupType.FrostDuration) + (rank - 1) * 0.5f)); break;
+                        FrostNovaFreeze + powers.Count(PowerupType.FrostDuration) * 0.5f + (rank - 1) * 0.25f)); break;
                 case AbilityType.Blink:
                     Blink(blinkLanding, definition.Color); break;
                 case AbilityType.FanOfKnives:
@@ -140,6 +140,12 @@ namespace Slopgame
                 case AbilityType.DemonCurse:
                     var demoness = Player.GetComponent<DemonessAttack>();
                     if (demoness == null || !demoness.CastArtifact(definition.Type, aim, rank, cursorDistance)) return false;
+                    break;
+                case AbilityType.Windfall:
+                case AbilityType.AllIn:
+                case AbilityType.Jackpot:
+                    var gambler = Player.GetComponent<GamblerAttack>();
+                    if (gambler == null || !gambler.CastArtifact(definition.Type, rank)) return false;
                     break;
             }
             CombatVfx.Ring(Player.Run.ProjectileRoot, transform.position, 0.65f, definition.Color);
@@ -280,8 +286,8 @@ namespace Slopgame
             HeroVfx.Sparks(Player.Run.ProjectileRoot, landing, color, 8, 3f, 0.3f, landing - from, 120f);
         }
 
-        /// <summary>Frost Nova: a ring of ice that grows outward, striking each enemy once as it reaches them.</summary>
-        private IEnumerator ExpandingNova(Vector2 center, float radius, float duration, int damage, Color color, float slow)
+        /// <summary>Frost Nova: a ring of ice that grows outward, striking and freezing each enemy once as it reaches them.</summary>
+        private IEnumerator ExpandingNova(Vector2 center, float radius, float duration, int damage, Color color, float freeze)
         {
             var run = Player.Run;
             var root = run.ProjectileRoot;
@@ -306,7 +312,7 @@ namespace Slopgame
                     {
                         hit.Add(enemy);
                         CombatDamage.Apply(Player, enemy, damage, DamageElement.Ice, center);
-                        if (enemy.Health > 0) enemy.Chill(slow);
+                        if (enemy.Health > 0) enemy.Freeze(freeze);
                     }
                 if (progress >= 1f)
                 {

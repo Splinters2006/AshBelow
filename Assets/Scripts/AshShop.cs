@@ -27,12 +27,20 @@ namespace Slopgame
                 float y = row++ * 112;
                 int rank = progress.Rank(item.Id);
                 bool maxed = rank >= item.MaxRank;
+                bool available = progress.IsAvailable(item);
                 int cost = item.Cost(rank);
                 DungeonUi.Panel(new Rect(0, y, 1100, 100), DungeonUi.PanelColor);
                 DungeonUi.Label(new Rect(20, y + 12, 620, 28), item.Name, 23, AbilityCatalog.Gold);
                 DungeonUi.Label(new Rect(20, y + 50, 680, 40), item.Description, 17, DungeonUi.Muted);
-                DungeonUi.Label(new Rect(710, y + 16, 160, 28), $"RANK {rank} / {item.MaxRank}", 16);
-                if (DungeonUi.Button("buy_" + item.Id, new Rect(884, y + 20, 196, 60), maxed ? "Maxed" : $"Buy  /  {cost} Ash", AbilityCatalog.Gold,
+                DungeonUi.Label(new Rect(710, y + 16, 160, 28), item.RequiredGuardians > 0 ? "CLASS MECHANIC" : $"RANK {rank} / {item.MaxRank}", 16,
+                    item.RequiredGuardians > 0 ? AbilityCatalog.Gold : (Color?)null);
+                if (!available)
+                {
+                    DungeonUi.Label(new Rect(884, y + 20, 196, 60), item.RequiredGuardians == 3 ? "Defeat the third guardian to unlock" : $"Defeat {item.RequiredGuardians} guardians in one descent to unlock", 14,
+                        DungeonUi.Muted, TextAnchor.MiddleCenter);
+                    continue;
+                }
+                if (DungeonUi.Button("buy_" + item.Id, new Rect(884, y + 20, 196, 60), maxed ? (item.MaxRank == 1 ? "Owned" : "Maxed") : $"Buy  /  {cost} Ash", AbilityCatalog.Gold,
                     !maxed && !progress.IsReadOnly && progress.Ash >= cost))
                 {
                     notice = run.TryBuyUpgrade(item.Id) ? item.Name + " purchased. Applies on your next descent." : progress.LastError ?? "Purchase unavailable.";

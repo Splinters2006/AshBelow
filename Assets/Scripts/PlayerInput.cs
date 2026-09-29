@@ -17,6 +17,7 @@ namespace Slopgame
         public static bool HeavyAttack => KeyBindings.WasPressed(GameAction.Special);
         public static bool Dodge => KeyBindings.WasPressed(GameAction.Dodge);
         public static bool Interact => KeyBindings.WasPressed(GameAction.Interact);
+        public static bool Mechanic => KeyBindings.WasPressed(GameAction.Mechanic);
         // Debug mode stays on F1 so it cannot be lost to a rebind.
         public static bool DebugToggle => KeyBindings.WasPressed(KeyCode.F1);
         public static Vector2 CursorPosition

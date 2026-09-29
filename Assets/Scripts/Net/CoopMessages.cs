@@ -9,22 +9,26 @@ namespace Slopgame
         public const string Start = "ab.start", Lobby = "ab.lobby", State = "ab.state", Enemies = "ab.enemies",
             Damage = "ab.damage", Kill = "ab.kill", Bolt = "ab.bolt", BoltEvent = "ab.boltevent", Fx = "ab.fx",
             Support = "ab.support", Interact = "ab.interact", Choice = "ab.choice", ChoiceDone = "ab.done",
-            Advance = "ab.advance", Died = "ab.died", Over = "ab.over", Hazard = "ab.hazard",
+            Advance = "ab.advance", Died = "ab.died", Revived = "ab.revived", Over = "ab.over", Hazard = "ab.hazard",
             RestartVote = "ab.restartvote", RestartVotes = "ab.restartvotes";
     }
 
     public enum CoopChoice : byte { Upgrade, Artifact }
-    public enum CoopDamageKind : byte { Hit, Burn, Chill, Paralyze, Curse }
+    public enum CoopDamageKind : byte { Hit, Burn, Chill, Paralyze, Curse, Freeze, Fear }
     public enum CoopBoltEventKind : byte { Reflected, Consumed }
-    public enum SupportKind : byte { Heal, Protect, Bless }
+    /// <summary>
+    /// Heal, Protect and Bless help a teammate. BlessingCredit tells a Paladin how much bonus damage their blessing
+    /// dealt (it charges their angels); Revive raises a fallen teammate with half health.
+    /// </summary>
+    public enum SupportKind : byte { Heal, Protect, Bless, BlessingCredit, Revive }
     public enum FxKind : byte { Arrow, Spell, Slash, Bolt, GlowBolt, Ring, Pulse, Rift, Execution, Singularity, Punch, RearHit, Knife, PiercingShot, Aegis, Holy, Sanctuary,
-        Windstep, Shadowstep, Stab, Quake, HolySword, Venom, HeavyPunch, Flurry, SanctuaryEnd, TailStab, TailSweep, Pentagram, DemonPaw }
+        Windstep, Shadowstep, Stab, Quake, HolySword, Venom, HeavyPunch, Flurry, SanctuaryEnd, TailStab, TailSweep, Pentagram, DemonPaw, Coin }
 
     public struct PlayerStateMessage
     {
         public const byte Rolling = 1, Blocking = 2, Charging = 4, Dead = 8, Invulnerable = 16, Empowered = 32, Raging = 64, Tired = 128;
         /// <summary>Bits of <see cref="MoreFlags"/>.</summary>
-        public const byte Blessed = 1, Veiled = 2, Ascended = 4;
+        public const byte Blessed = 1, Veiled = 2, Ascended = 4, Taunting = 8, Furious = 16;
         public ulong Id;
         public int Floor;
         public Vector2 Position, Aim;
@@ -56,7 +60,7 @@ namespace Slopgame
         /// <summary>The top four bits carry the boss's attack state (see <see cref="DungeonBoss.NetState"/>).</summary>
         public const int BossStateShift = 4;
         /// <summary>Bits of <see cref="MoreFlags"/>.</summary>
-        public const byte Paralyzed = 1, Cursed = 2;
+        public const byte Paralyzed = 1, Cursed = 2, Frozen = 4;
         public ushort Id;
         public Vector2 Position, Facing;
         public int Health;

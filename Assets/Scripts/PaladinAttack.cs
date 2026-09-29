@@ -44,7 +44,7 @@ namespace Slopgame
             {
                 if (ally.Run != Player.Run || ally.Health <= 0
                     || Vector2.Distance(transform.position, ally.transform.position) > BlessingRadius) continue;
-                ally.Blessing.Apply(BlessingDamage, BlessingDuration + Player.Permanent.BlessingDuration);
+                ally.Blessing.Apply(BlessingDamage, BlessingDuration + Player.Permanent.BlessingDuration, Player);
                 CombatVfx.Ring(Player.Run.ProjectileRoot, ally.transform.position, 0.6f, AbilityCatalog.Gold);
                 HeroVfx.Motes(Player.Run.ProjectileRoot, ally.transform.position, 0.6f, AbilityCatalog.Gold, 14, 1f);
             }

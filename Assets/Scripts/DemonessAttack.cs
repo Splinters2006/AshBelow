@@ -94,7 +94,7 @@ namespace Slopgame
             Vector2 hitPoint = victim.transform.position;
             CombatDamage.Apply(Player, victim, WithPressurePoints(victim, damage), DamageElement.Physical, origin, vital ? 0.2f : 0.5f);
             if (!vital) return;
-            if (victim.Health > 0) victim.Paralyze(paralysis);
+            if (victim.Health > 0) ParalyzeCounted(victim, paralysis);
             var root = Player.Run.ProjectileRoot;
             HeroVfx.Sparks(root, hitPoint, Pale, 10, 4f, 0.3f, aim, 80f, 0.9f);
             HeroVfx.Pulse(root, hitPoint, 0.6f, Violet, 0.3f);
@@ -117,7 +117,7 @@ namespace Slopgame
             {
                 if (!InCone(enemy, origin, aim, WhipRadius, WhipCone)) continue;
                 CombatDamage.Apply(Player, enemy, WithPressurePoints(enemy, damage), DamageElement.Physical, origin, 1.2f);
-                if (enemy.Health > 0) enemy.Paralyze(ParalysisDuration);
+                if (enemy.Health > 0) ParalyzeCounted(enemy, ParalysisDuration);
                 HeroVfx.Sparks(root, enemy.transform.position, Pale, 8, 4.5f, 0.3f, aim, 100f);
             }
         }
@@ -147,6 +147,12 @@ namespace Slopgame
             sweepReadyAt = Time.time + SweepCooldown;
             Player.Charge.Cancel();
             return true;
+        }
+
+        /// <summary>Paralyses the enemy; every paralysis that takes hold charges Demonic Power.</summary>
+        private void ParalyzeCounted(DungeonEnemy enemy, float duration)
+        {
+            if (enemy.Paralyze(duration)) Player.Mechanic?.OnParalyzed();
         }
 
         private int WithPressurePoints(DungeonEnemy enemy, int damage) => enemy.IsParalyzed ? damage + ParalyzedBonusDamage : damage;
@@ -252,7 +258,7 @@ namespace Slopgame
                 if (enemy == null || enemy.Health <= 0 || Vector2.Distance(center, enemy.transform.position) > radius + enemy.HitRadius
                     || !run.HasLineOfSight(center, enemy.transform.position)) continue;
                 CombatDamage.Apply(Player, enemy, WithPressurePoints(enemy, damage), DamageElement.Physical, center + Vector2.up, 1.5f);
-                if (enemy.Health > 0) enemy.Paralyze(PawStun);
+                if (enemy.Health > 0) ParalyzeCounted(enemy, PawStun);
             }
         }
 
@@ -276,7 +282,7 @@ namespace Slopgame
                     || !run.HasLineOfSight(center, enemy.transform.position)) continue;
                 // The brand deals no damage itself; it sets enemies up for her other attacks.
                 enemy.Curse(CurseDuration);
-                enemy.Paralyze(hold);
+                ParalyzeCounted(enemy, hold);
             }
         }
 

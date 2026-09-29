@@ -16,11 +16,13 @@ namespace Slopgame
         private readonly HashSet<DungeonEnemy> hits = new HashSet<DungeonEnemy>();
         public bool IsSpent { get; private set; }
 
+        /// <param name="origin">Where the spell starts; the caster's position by default (Wild Storm casts from its cloud).</param>
         public static SpellProjectile Spawn(DungeonPlayer player, Vector2 direction, int damage,
-            DamageElement element, Color color, float range = 6f, float radius = 0f, int pierces = 0)
+            DamageElement element, Color color, float range = 6f, float radius = 0f, int pierces = 0, Vector2? origin = null)
         {
-            CoopFx.Spell(player.Run, player.transform.position, direction, color, range, radius, pierces);
-            var shot = Create(player.Run, player.transform.position, direction, color, range, radius, pierces);
+            Vector2 from = origin ?? (Vector2)player.transform.position;
+            CoopFx.Spell(player.Run, from, direction, color, range, radius, pierces);
+            var shot = Create(player.Run, from, direction, color, range, radius, pierces);
             shot.player = player;
             shot.damage = damage;
             shot.element = element;

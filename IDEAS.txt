@@ -1,8 +1,28 @@
+rework: ice slowing action speed now freezes enemies instead
+        shock shocks everything in a circle with radius 2 units witha  conecting lightning bolt, this deals 25% of the damage of the hit that caused shock
+	burn burn deals damage over time, 3 times each dealing half of the initial hits damage
+
+ADD a new keybinds (default R) character mechanic not unlocked by default, needs to be purchased for a hefty sum of ash, only purchasable after third boss has been killed
+knight: shield taunt, larger, doesnt reflect but lasts 1.5 seconds, no actions able to be performed during this
+blocks any projectiles in a 90 degree cone in the front and gives the knight one ward for each projectile blocked, also increases the knights aggro value in co op so they get targeted by a lot of mobs
+
+Archer: Elemental quiver, cycles between 3 types of arrows, these arrows apply elemental effects on crit but CAN still deal critical damage
+the arrows are fire, freeze and shock
+
+
+assasin: sharpened dagger: activating this gives you +1 damage for 7.5 seconds this increases by one and refreshes its duration on hitting an enemies back
+
+brawler: super angry: (charges on taking damage) after taking 5 damage this is activatable, giving you a massive speed range, aoe, charging speed, and damage buff
+
+demoness: demonic power: paralyzing enemies charges this, on 7 succesfull paralyzes this is activatable: harness the power of the demon lord himself and fear everything around you, turning their backs to you and instantly paralyzing them
+
+paladin: on increasing 50 damage with blessing (so 25 damaging hits) (this requirement is increased in coop) from you or allies, this is activatable, call out to the angels from heaven, they revive the ally that has been dead the longest with 50% hp, or heals the lowest percentage health ally back to full
+
+
+
 add new character
-demoness: main attack, stab enemies with your pointy tail end
-charge: charge up to stab the enemy's vitals and leave them paralyzed for 1.5 seconds
-right click, sweep your tail in a half circle, slashing and dealing increased damage to paralyzed targets
-artifact 1: archdemons technique: gain the powers of your father, the demon lord and change your main attack, clicking acts as if previously fully charged, charging lets you charge up a devastatin tail whip that is a small cone and has the same properties as the charged one but more damage
-artifact 2: HEEEELP: open a portal and call your Demonic pet (giant beast) to slam one of its huge claws/paws down on an enemy
-artifact 3: demon curse: cast a curse (pentagram) on enemies that paralyzes them for 3 seconds and makes them take 50% more damage for 6
-theme: purple white and black, casting demonic spells
+gambler: a travelling merchant thyats addicted to gambling
+you have a magical purse that gives you one coin whenever you are out of money
+leftclick: throw your coin at an enemy, killing an enemy drops a golden coin which you can pick up
+right click throws a volley in a 90 degree cone with the amount of coins that you currently have but does not consume them 
+new keybind, character mechanic, R opens up a menu to buy things

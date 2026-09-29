@@ -37,6 +37,8 @@ namespace Slopgame
         public int DamageForRoll(int damage, float roll) => roll < PhysicalCritChance ? damage * 2 : damage;
         public int RollDamage(int damage) => DamageForRoll(damage, Random.value);
         public void BeginFloor() { ArmorCharges = Count(PowerupType.Armor) + Count(PowerupType.PaladinWard); }
+        /// <summary>An extra ward for the rest of this floor (Shield Taunt blocks, the Gambler's Lucky Charm).</summary>
+        public void AddWard() => ArmorCharges++;
         public bool AbsorbHit()
         {
             if (ArmorCharges <= 0) return false;

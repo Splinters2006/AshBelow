@@ -20,6 +20,7 @@ The game starts in a resizable 1280×720 window.
 | Class skill | **Right click** |
 | Dodge roll | **Space** (you can't be hit during the roll) |
 | Relic abilities | **Q** and **E** |
+| Class mechanic | **R** (bought in the Ash shop; the Gambler's purse is free) |
 | Use stairs / claim artifact | **F** |
 
 You can rebind every action under **Controls** in the main menu. Each action gets a main and an alternate key or mouse button. The HUD always shows your current keys.
@@ -42,7 +43,7 @@ Enemies get tougher every floor. The **minimap** in the top-right corner fills i
 - **Enemies:** red ashlings chase you, armoured brutes are slow but tough, and hooded casters keep their distance and flash white just before they fire.
 - **Rear hits:** hitting an enemy from behind shows a pink double chevron. The Assassin deals double damage from behind.
 - **Critical hits:** every hero starts with a 5% chance of a physical critical hit, which deals double damage.
-- **Elemental effects:** fire can set enemies burning, ice slows them, and lightning can chain between enemies.
+- **Elemental effects:** fire sets enemies burning (three ticks, each half the hit's damage), ice freezes them solid, and lightning shocks every other enemy within 2 units for a quarter of the hit. Guardians thaw and shrug off freezes faster.
 
 ## Heroes
 
@@ -55,6 +56,7 @@ Enemies get tougher every floor. The **minimap** in the top-right corner fills i
 | **Paladin** | Quick sword swipe (hold to bless nearby allies with bonus damage) / Holy Sword strikes | Healing Light, Judgment, Sanctuary |
 | **Brawler** | Fast jab (charge for a punch barrage) / Empower | Knuckle Sandwich, Wild Leap, Primal Rage |
 | **Demoness** | Tail stab (charge to strike the vitals and paralyse) / tail sweep that hits paralysed foes twice as hard | Archdemon's Technique, HEEEELP, Demon Curse |
+| **Gambler** | Throw a coin / a volley of one coin per coin you carry across a 90° cone | Windfall, All In, Jackpot |
 | **Admin** | Shadow rifts / Nightfall, which executes every nearby enemy | Eclipse, Soul Rend, Shadow Reign |
 
 **Admin** is deliberately overpowered, for when you just want to wreck things.
@@ -63,6 +65,27 @@ Enemies get tougher every floor. The **minimap** in the top-right corner fills i
 - **Archdemon's Technique:** for 8 seconds every click is a vital stab, and a full charge becomes a paralysing tail whip.
 - **HEEEELP:** her giant demonic pet slams its paw down through a portal.
 - **Demon Curse:** a pentagram paralyses enemies for 3 seconds, and they take 50% more damage for 6.
+
+**Gambler:** throwing coins doesn't spend them. Every enemy that dies drops a gold coin to pick up, and his magical purse gives him a coin whenever he runs out. Press **R** to open the purse and spend coins on a healing draught, a lucky charm (+1 ward), loaded dice (+1 damage this floor) or Double or Nothing. Every coin spent is one fewer in the volley.
+
+**Gambler artifacts:**
+- **Windfall:** instantly gain 5 coins.
+- **All In:** double or nothing on every coin you carry.
+- **Jackpot:** spend every coin. Half the time nothing happens; otherwise you win a random speed buff, damage buff or heal that grows with each coin spent.
+
+## Class mechanics (R)
+
+Once you have beaten the third guardian (floor 15) in a single descent, the Ash shop sells each hero's class mechanic for 600 Ash:
+
+| Hero | Mechanic |
+| --- | --- |
+| **Knight** | **Shield Taunt:** plant a great shield for 1.5 s (no other actions). It blocks bolts in a 90° cone ahead and gives a ward for each one, and enemies go for you first. |
+| **Archer** | **Elemental Quiver:** cycle between fire, freeze and shock arrows. Arrows still crit, and a critical hit also sets off the arrow's element. |
+| **Wizard** | **Wild Storm:** after 10 elemental effects, summon a storm over you that takes turns hurling fireballs, lightning and ice bolts for 8 s. |
+| **Assassin** | **Sharpened Dagger:** +1 damage for 7.5 s. Every hit on an enemy's back adds +1 more and refreshes it. |
+| **Paladin** | **Heavenly Host:** after your blessings add 50 bonus damage (more in co-op), angels revive the ally who has been down longest with half health, or heal the weakest ally to full. |
+| **Brawler** | **Super Angry:** after taking 5 damage, go berserk with huge speed, reach, area, charge speed and damage for 8 s. |
+| **Demoness** | **Demonic Power:** after 7 paralyses, terrify every enemy around you: they turn their backs and are paralysed. |
 
 ## Ash and the Ash shop
 

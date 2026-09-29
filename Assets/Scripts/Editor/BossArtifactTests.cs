@@ -12,7 +12,7 @@ namespace Slopgame.Editor
         private static int stage;
         private static float waitUntil;
         private static bool failed, checkedChilledBoss;
-        private static readonly List<WeaponType> classes = new List<WeaponType> { WeaponType.Sword, WeaponType.Bow, WeaponType.Staff, WeaponType.Daggers, WeaponType.Hammer, WeaponType.Shadow, WeaponType.Fists, WeaponType.Tail };
+        private static readonly List<WeaponType> classes = new List<WeaponType> { WeaponType.Sword, WeaponType.Bow, WeaponType.Staff, WeaponType.Daggers, WeaponType.Hammer, WeaponType.Shadow, WeaponType.Fists, WeaponType.Tail, WeaponType.Coins };
         private static int classIndex;
         private static int abilityIndex;
         private static bool activeCast;
@@ -31,7 +31,7 @@ namespace Slopgame.Editor
                 ability.Name + " never landed after its windup.");
             Require(!run.Player.IsBusy, ability.Name + " left the hero stuck.");
             if (ability.Type == AbilityType.FrostNova)
-                Require(activeTarget.ActionSpeedMultiplier == 0.5f, "Frost Nova did not chill.");
+                Require(activeTarget.IsFrozen && activeTarget.ActionSpeedMultiplier == 0f, "Frost Nova did not freeze.");
             if (ability.Type == AbilityType.DemonCurse)
                 Require(activeTarget.IsCursed && activeTarget.IsParalyzed && activeTarget.ActionSpeedMultiplier == 0f && activeTarget.Health == 100,
                     "Demon Curse did not paralyse and curse the enemy on its pentagram, or it dealt damage.");
@@ -82,7 +82,7 @@ namespace Slopgame.Editor
             {
                 if (stage == 0)
                 {
-                    Require(run.Characters.Count == 8, "Eight class assets must load.");
+                    Require(run.Characters.Count == 9, "Nine class assets must load.");
                     StartClass(run, WeaponType.Staff);
                     stage = 1;
                     return;
@@ -362,7 +362,8 @@ namespace Slopgame.Editor
             var offsets = new[] { Vector2.right, new Vector2(1, 1), Vector2.up };
             for (int i = 0; i < 3; i++) { run.Enemies[i].Health = 100; run.Enemies[i].transform.position = origin + offsets[i]; }
             Require(wizard.TryHeavyAttack(Vector2.right), "Lightning did not cast.");
-            Require(run.Enemies[0].Health == 98 && run.Enemies[1].Health == 100 && run.Enemies[2].Health == 100,
+            // A strike may also shock (1 damage) the other enemies within 2 units; that is not a chain.
+            Require(run.Enemies[0].Health == 98 && run.Enemies[1].Health >= 99 && run.Enemies[2].Health >= 99,
                 "Unupgraded lightning chained or dealt incorrect damage.");
             Require(!wizard.TryHeavyAttack(Vector2.right), "Lightning bypassed cooldown.");
             run.Player.Powerups.Add(PowerupType.LightningChains);
@@ -371,7 +372,7 @@ namespace Slopgame.Editor
                 typeof(WizardAttack).GetField(field, System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic).SetValue(wizard, 0f);
             for (int i = 0; i < 3; i++) { run.Enemies[i].Health = 100; run.Enemies[i].transform.position = origin + offsets[i]; }
             Require(wizard.TryHeavyAttack(Vector2.right), "Upgraded lightning did not cast.");
-            for (int i = 0; i < 3; i++) Require(run.Enemies[i].Health == 98, "Conductivity failed to unlock chain targets.");
+            for (int i = 0; i < 3; i++) Require(run.Enemies[i].Health <= 98 && run.Enemies[i].Health >= 96, "Conductivity failed to unlock chain targets.");
             float oldRange = wizard.LightningRange;
             run.Player.Upgrade((int)PowerupType.LightningRange);
             Require(wizard.LightningRange == oldRange + 1f, "Lightning range talent has no effect.");
@@ -421,6 +422,47 @@ namespace Slopgame.Editor
             }
             if (type == WeaponType.Hammer)
                 Require(run.Player.Shield == null && run.Player.Weapon is PaladinAttack && run.Player.MaxHealth == 7, "Paladin weapon/stats wrong.");
+        }
+
+        /// <summary>The cast above used a random roll; this checks its coins and then every outcome with fixed rolls.</summary>
+        private static void TestGamblerArtifact(DungeonPlayer player, AbilityType type)
+        {
+            var coins = (GamblerAttack)player.Weapon;
+            if (type == AbilityType.Windfall)
+            {
+                Require(coins.Coins == 1 + GamblerAttack.WindfallCoins, "Windfall did not add 5 coins.");
+                coins.Windfall(2);
+                Require(coins.Coins == 1 + GamblerAttack.WindfallCoins * 2 + 1, "Windfall rank did not add a coin.");
+                return;
+            }
+            if (type == AbilityType.AllIn)
+            {
+                Require(coins.Coins == 1 || coins.Coins == 2, "All In neither doubled nor lost the starting coin.");
+                coins.AddCoins(6 - coins.Coins);
+                Require(coins.AllIn(1, 0.49f) && coins.Coins == 12, "Winning All In did not double the coins.");
+                Require(!coins.AllIn(1, 0.51f) && coins.Coins == 1, "Losing All In did not take every coin.");
+                Require(coins.AllIn(3, 0.55f), "All In ranks did not improve the odds.");
+                return;
+            }
+            Require(coins.Coins == 1, "Jackpot did not consume the coins.");
+            // The random cast above may have won a buff already.
+            player.Buffs.Clear();
+            coins.AddCoins(9);
+            Require(coins.Jackpot(1, 0.6f, 0f) == GamblerAttack.JackpotPrize.Nothing && coins.Coins == 1 && player.Buffs.JackpotSpeed == 1f,
+                "A losing Jackpot still paid out or kept the coins.");
+            coins.AddCoins(9);
+            float move = player.Buffs.MoveMultiplier;
+            Require(coins.Jackpot(1, 0.1f, 0.1f) == GamblerAttack.JackpotPrize.Speed && coins.Coins == 1
+                && Mathf.Abs(player.Buffs.MoveMultiplier - move * 2f) < 0.001f, "A 10-coin speed Jackpot did not double movement.");
+            coins.AddCoins(8);
+            int damage = player.Damage;
+            Require(coins.Jackpot(1, 0.1f, 0.5f) == GamblerAttack.JackpotPrize.Damage && player.Damage == damage + 3, "A 9-coin damage Jackpot did not add +3 damage.");
+            player.Buffs.Clear();
+            player.Hit();
+            coins.AddCoins(3);
+            Require(coins.Jackpot(1, 0.1f, 0.9f) == GamblerAttack.JackpotPrize.Heal && player.Health == player.MaxHealth, "A heal Jackpot did not heal.");
+            Require(GamblerAttack.JackpotHealFor(4) == 2 && GamblerAttack.JackpotHealFor(1) == 1 && GamblerAttack.JackpotDamageFor(1) == 1
+                && GamblerAttack.JackpotSpeedFor(100) == 2.5f, "Jackpot prizes do not scale with coins as intended.");
         }
 
         private static void TestBrawler(DungeonRun run)
@@ -488,11 +530,28 @@ namespace Slopgame.Editor
             EditorApplication.Exit(success ? 0 : 1);
         }
 
+        private static Vector2 OpenSpot(DungeonRun run, Vector2 start)
+        {
+            for (int radius = 0; radius <= 6; radius++)
+                for (int x = -radius; x <= radius; x++)
+                    for (int y = -radius; y <= radius; y++)
+                    {
+                        Vector2 spot = start + new Vector2(x, y);
+                        bool open = true;
+                        for (float step = -PaladinRelics.SanctuaryRadius - 0.6f; step <= 3f && open; step += 0.25f)
+                            open = run.Map.CanStand(spot + Vector2.right * step);
+                        if (open) return spot;
+                    }
+            return start;
+        }
+
         private static void TestActive(DungeonRun run, AbilityDefinition ability)
         {
             var player = run.Player;
             Require(player.Abilities.Claim(ability.Type, 0), "Ability failed to equip: " + ability.Name);
             var target = run.Enemies[0];
+            // Casts aim right, so stand where the ground is open on both sides whatever the floor's layout.
+            player.transform.position = OpenSpot(run, player.transform.position);
             Vector2 origin = player.transform.position;
             target.transform.position = origin + Vector2.right;
             target.Health = 100;
@@ -585,6 +644,10 @@ namespace Slopgame.Editor
                     Require(target.Health == 100 && run.ProjectileRoot.GetComponentInChildren<DemonPawVfx>() != null, "HEEEELP slammed without a portal windup."); break;
                 case AbilityType.DemonCurse:
                     Require(target.Health == 100 && run.ProjectileRoot.GetComponentInChildren<PentagramVfx>() != null, "Demon Curse struck without a pentagram."); break;
+                case AbilityType.Windfall:
+                case AbilityType.AllIn:
+                case AbilityType.Jackpot:
+                    TestGamblerArtifact(player, ability.Type); break;
                 case AbilityType.PrimalRage:
                     Require(player.Buffs.IsRaging && player.Damage == player.BaseDamage * 2
                         && Mathf.Abs(player.Abilities.CooldownRemaining(0) - ability.Cooldown) < 0.01f,

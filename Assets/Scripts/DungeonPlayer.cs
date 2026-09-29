@@ -8,8 +8,12 @@ namespace Slopgame
         public int MaxHealth { get; private set; } = 6;
         public int Health { get; private set; } = 6;
         public int BaseDamage { get; private set; } = 1;
-        public int Damage => Mathf.Max(1, Mathf.RoundToInt((BaseDamage + (Blessing != null ? Blessing.BonusDamage : 0))
-            * (Buffs != null ? Buffs.DamageMultiplier : 1f)));
+        public int Damage => Mathf.Max(1, Mathf.RoundToInt((BaseDamage + (Blessing != null ? Blessing.BonusDamage : 0)
+            + (Mechanic != null ? Mechanic.BonusDamage : 0) + (Buffs != null ? Buffs.JackpotDamage : 0)) * (Buffs != null ? Buffs.DamageMultiplier : 1f)));
+        /// <summary>The class mechanic on R, or null if this hero has not bought it.</summary>
+        public ClassMechanic Mechanic { get; private set; }
+        /// <summary>Shield Taunt: enemies go for this Knight first.</summary>
+        public bool DrawsAggro => Mechanic is ShieldTaunt taunt && taunt.DrawsAggro;
         public DamageBlessing Blessing { get; private set; }
         public HeroBuffs Buffs { get; private set; }
         /// <summary>True while a scripted move (such as Wild Leap) controls the hero; input is ignored.</summary>
@@ -72,6 +76,7 @@ namespace Slopgame
             BlessingSparkles.Attach(transform, () => Health > 0 && Blessing.BonusDamage > 0);
             if (weaponType == WeaponType.Sword) gameObject.AddComponent<KnightRelics>().Player = this;
             if (weaponType == WeaponType.Hammer) gameObject.AddComponent<PaladinRelics>().Player = this;
+            Mechanic = ClassMechanic.Attach(this);
             var afterimage = gameObject.AddComponent<DodgeAfterimage>();
             afterimage.Player = this;
             afterimage.Tint = Color.Lerp(characterColor, new Color(0.4f, 0.65f, 1f), 0.55f);
@@ -104,6 +109,12 @@ namespace Slopgame
                 var tail = gameObject.AddComponent<DemonessAttack>();
                 tail.Player = this;
                 Weapon = tail;
+            }
+            else if (weaponType == WeaponType.Coins)
+            {
+                var coins = gameObject.AddComponent<GamblerAttack>();
+                coins.Player = this;
+                Weapon = coins;
             }
             else if (weaponType == WeaponType.Staff)
             {
@@ -146,6 +157,8 @@ namespace Slopgame
             Vector2 toCursor = aim.sqrMagnitude > 0.001f ? aim : AimDirection;
             bool usedAbility = PlayerInput.ActiveQ && Abilities.TryUse(0, toCursor);
             if (!usedAbility && PlayerInput.ActiveE) usedAbility = Abilities.TryUse(1, toCursor);
+            if (!usedAbility && Mechanic != null && PlayerInput.Mechanic) usedAbility = Mechanic.TryActivate(toCursor);
+            if (IsBusy) { Charge.Cancel(); return; }
             if (!usedAbility && !Run.IsPointerOverHud && PlayerInput.HeavyAttack && !IsRolling) Weapon.TryHeavyAttack(toCursor);
             Charge.Tick(PlayerInput.Attack, !Run.IsPointerOverHud && !usedAbility && !IsRolling && !Weapon.IsHeavyAttacking && !PlayerInput.HeavyAttack);
         }
@@ -180,7 +193,11 @@ namespace Slopgame
             if (!Run.IsPlaying || IsInvulnerable || Health <= 0) return false;
             if (DebugMode.Enabled) { Health = MaxHealth; return false; }
             bool warded = Powerups.AbsorbHit();
-            if (!warded) Health--;
+            if (!warded)
+            {
+                Health--;
+                Mechanic?.OnDamaged();
+            }
             if (Run.ProjectileRoot != null)
             {
                 if (warded) HeroVfx.Pulse(transform, transform.position, 0.95f, AbilityCatalog.Ice, 0.3f);
@@ -218,11 +235,16 @@ namespace Slopgame
         }
 
         /// <summary>Heals, shields or blesses this hero; used by local allies and by teammates over the network.</summary>
-        public void ApplySupport(SupportKind kind, int amount, float duration)
+        /// <param name="teammate">The co-op teammate who sent it; blessings remember them so blessed hits charge their angels.</param>
+        public void ApplySupport(SupportKind kind, int amount, float duration, ulong? teammate = null)
         {
             if (kind == SupportKind.Heal) Heal(amount);
             else if (kind == SupportKind.Protect) Protect(duration);
-            else Blessing.Apply(amount, duration);
+            else if (kind == SupportKind.Bless)
+            {
+                if (teammate.HasValue) Blessing.ApplyFromTeammate(amount, duration, teammate.Value);
+                else Blessing.Apply(amount, duration);
+            }
         }
 
         public void Upgrade(int choice)

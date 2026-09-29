@@ -68,6 +68,13 @@ namespace Slopgame
                     continue;
                 }
                 if (run.Player.Health <= 0) continue;
+                // Shield Taunt stops bolts outright (no reflection); teammates see the bolt vanish too.
+                if (run.Player.Mechanic is ShieldTaunt taunt && taunt.TryBlock(next, direction))
+                {
+                    if (run.IsNetworked) run.Coop.ReportBolt(this, CoopBoltEventKind.Consumed);
+                    Consume();
+                    return;
+                }
                 var shield = run.Player.Shield;
                 if (shield != null && shield.CanReflect(next, direction))
                 {

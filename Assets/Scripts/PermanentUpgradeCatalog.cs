@@ -11,8 +11,14 @@ namespace Slopgame
         public int BaseCost { get; }
         public int CostStep { get; }
         public WeaponType? ClassWeapon { get; }
-        public PermanentUpgradeDefinition(string id, string name, string description, int maxRank, int cost, int step, WeaponType? weapon = null)
-        { Id = id; Name = name; Description = description; MaxRank = maxRank; BaseCost = cost; CostStep = step; ClassWeapon = weapon; }
+        /// <summary>How many guardians must have fallen in one descent before this can be bought.</summary>
+        public int RequiredGuardians { get; }
+        public PermanentUpgradeDefinition(string id, string name, string description, int maxRank, int cost, int step, WeaponType? weapon = null,
+            int requiredGuardians = 0)
+        {
+            Id = id; Name = name; Description = description; MaxRank = maxRank; BaseCost = cost; CostStep = step; ClassWeapon = weapon;
+            RequiredGuardians = requiredGuardians;
+        }
         public int Cost(int currentRank) => BaseCost + CostStep * currentRank;
     }
 
@@ -38,8 +44,22 @@ namespace Slopgame
             new PermanentUpgradeDefinition("brawler_barrage", "Heavy Bag Drills", "+1 punch per charged barrage per rank", 2, 60, 50, WeaponType.Fists),
             new PermanentUpgradeDefinition("brawler_health", "Thick Fur", "+1 Brawler maximum HP per rank", 3, 35, 25, WeaponType.Fists),
             new PermanentUpgradeDefinition("demoness_paralysis", "Pressure Points", "+1 damage to paralysed enemies per rank", 3, 45, 35, WeaponType.Tail),
-            new PermanentUpgradeDefinition("demoness_health", "Infernal Blood", "+1 Demoness maximum HP per rank", 3, 35, 25, WeaponType.Tail)
+            new PermanentUpgradeDefinition("demoness_health", "Infernal Blood", "+1 Demoness maximum HP per rank", 3, 35, 25, WeaponType.Tail),
+            Mechanic(WeaponType.Sword, "Shield Taunt", "R: raise a great shield for 1.5s. It blocks bolts in front (+1 ward each) and draws the enemies' attention"),
+            Mechanic(WeaponType.Bow, "Elemental Quiver", "R: cycle fire, freeze and shock arrows. Critical hits set off the arrow's element"),
+            Mechanic(WeaponType.Staff, "Wild Storm", "R: after 10 elemental effects, summon a storm that hurls fire, lightning and ice"),
+            Mechanic(WeaponType.Daggers, "Sharpened Dagger", "R: +1 damage for 7.5s; every backstab adds +1 more and refreshes it"),
+            Mechanic(WeaponType.Hammer, "Heavenly Host", "R: after 50 blessed bonus damage, angels revive the longest-fallen ally or fully heal the weakest"),
+            Mechanic(WeaponType.Fists, "Super Angry", "R: after taking 5 damage, erupt with huge speed, reach, charge speed and damage"),
+            Mechanic(WeaponType.Tail, "Demonic Power", "R: after 7 paralyses, terrify everything nearby: they turn their backs and freeze in place")
         };
+
+        /// <summary>The Ash shop's hefty class mechanic (R), sold only once the third guardian has fallen.</summary>
+        public const int MechanicCost = 600, MechanicGuardians = 3;
+        public static string MechanicId(WeaponType weapon) => "mechanic_" + weapon.ToString().ToLowerInvariant();
+
+        private static PermanentUpgradeDefinition Mechanic(WeaponType weapon, string name, string description)
+            => new PermanentUpgradeDefinition(MechanicId(weapon), name, description, 1, MechanicCost, 0, weapon, MechanicGuardians);
 
         public static PermanentUpgradeDefinition Get(string id)
         {

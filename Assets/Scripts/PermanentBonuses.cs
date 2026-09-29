@@ -16,10 +16,14 @@ namespace Slopgame
         public float BlessingDuration { get; }
         public int BarragePunches { get; }
         public int ParalyzedDamage { get; }
+        /// <summary>The class mechanic on R, bought in the Ash shop. The Gambler's purse shop comes free.</summary>
+        public bool MechanicUnlocked { get; }
 
         public PermanentBonuses(PermanentProgress progress, WeaponType weapon)
         {
+            MechanicUnlocked = weapon == WeaponType.Coins;
             if (progress == null) return;
+            MechanicUnlocked |= progress.Rank(PermanentUpgradeCatalog.MechanicId(weapon)) > 0;
             Health = progress.Rank("health");
             Damage = progress.Rank("damage");
             Speed = progress.Rank("speed") * 0.2f;

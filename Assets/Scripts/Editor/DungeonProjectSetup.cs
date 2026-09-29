@@ -494,11 +494,13 @@ namespace Slopgame.Editor
                 "An unbound shadow sovereign. Tear through enemies with shadow rifts, while Nightfall executes every nearby enemy, even guardians. Intentionally overpowered.", 32);
             EnsureHero("Brawler", WeaponType.Fists, 6, 5.3f, new Color(0.98f, 0.62f, 0.42f), BrawlerDescription);
             EnsureHero("Demoness", WeaponType.Tail, 5, 5.2f, new Color(0.6f, 0.36f, 0.9f), DemonessDescription);
+            EnsureHero("Gambler", WeaponType.Coins, 5, 5.1f, new Color(0.35f, 0.72f, 0.45f), GamblerDescription);
             AssetDatabase.SaveAssets();
-            Debug.Log("CHARACTER_ASSETS_OK: Eight classes ready.");
+            Debug.Log("CHARACTER_ASSETS_OK: Nine classes ready.");
         }
 
         private const string DemonessDescription = "The pale, ram-horned daughter of the Demon Lord. Stab with her pointed tail, charge to strike the vitals and paralyse, then sweep her tail through paralysed foes for double damage.";
+        private const string GamblerDescription = "A travelling merchant hopelessly addicted to gambling. Throw coins and scoop up the gold every fallen foe drops, fling a volley of every coin you carry, and open your purse to spend or bet it all.";
         private const string BrawlerDescription = "A scrappy puppygirl pit-fighter in big red gloves. Jab fast, charge a hammering barrage of punches, and Empower to hit harder, faster and wider.";
 
         private static void EnsureHero(string name, WeaponType weapon, int health, float speed, Color color, string description, int damage = 1)

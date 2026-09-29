@@ -15,6 +15,7 @@ namespace Slopgame
         }
 
         public static void Arrow(DungeonRun run, Vector2 position, Vector2 direction, float range) => Send(run, FxKind.Arrow, position, direction, null, range);
+        public static void Coin(DungeonRun run, Vector2 position, Vector2 direction, float range) => Send(run, FxKind.Coin, position, direction, null, range);
         public static void Spell(DungeonRun run, Vector2 position, Vector2 direction, Color color, float range, float radius, int pierces)
             => Send(run, FxKind.Spell, position, direction, color, range, radius, pierces);
         public static void Slash(DungeonRun run, Vector2 center, Vector2 aim, float reach, float cone, Color color)
@@ -83,6 +84,7 @@ namespace Slopgame
             switch (fx.Kind)
             {
                 case FxKind.Arrow: PlayerProjectile.SpawnGhost(run, fx.A, fx.B, fx.F1); break;
+                case FxKind.Coin: PlayerProjectile.SpawnGhost(run, fx.A, fx.B, fx.F1, ProjectileStyle.Coin); break;
                 case FxKind.Spell: SpellProjectile.SpawnGhost(run, fx.A, fx.B, color, fx.F1, fx.F2, fx.N); break;
                 case FxKind.Slash: HeroVfx.Slash(root, fx.A, fx.B, fx.F1, fx.F2, color); break;
                 case FxKind.Bolt: CombatVfx.Bolt(root, fx.A, fx.B, color); break;

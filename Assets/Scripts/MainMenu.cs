@@ -30,7 +30,7 @@ namespace Slopgame
                 DungeonUi.Label(new Rect(70, 188, 1100, 42), shopping ? "Spend the ash you carry home. Grow stronger with every descent."
                     : controls ? "Rebind every action to the keys and mouse buttons you like. Changes save instantly."
                     : coop ? "Descend with up to three friends. Fallen heroes rise again on the next floor."
-                    : selecting ? "Choose your hero. Shape your build. Claim the relics below." : "Eight heroes. Two relic abilities. One life in the ash.", 20, DungeonUi.Muted);
+                    : selecting ? "Choose your hero. Shape your build. Claim the relics below." : "Nine heroes. Two relic abilities. One life in the ash.", 20, DungeonUi.Muted);
                 DungeonUi.Label(new Rect(930, 55, 280, 32), Run.Progress.IsReadOnly ? "SAVE UNAVAILABLE" : $"{Run.Progress.Ash} ASH", 23, AbilityCatalog.Gold, TextAnchor.UpperRight);
                 if (shopping)
                 {
@@ -100,7 +100,7 @@ namespace Slopgame
             var permanent = new PermanentBonuses(Run.Progress, character.Weapon);
             DungeonUi.Panel(new Rect(368, 268, 842, 312), DungeonUi.PanelColor);
             DungeonUi.Panel(new Rect(402, 302, 104, 104), new Color(character.Color.r * 0.25f, character.Color.g * 0.25f, character.Color.b * 0.25f));
-            string glyph = character.Weapon == WeaponType.Shadow ? "///" : character.Weapon == WeaponType.Staff ? "*" : character.Weapon == WeaponType.Bow ? ">" : character.Weapon == WeaponType.Daggers ? "//" : character.Weapon == WeaponType.Fists ? "[]" : character.Weapon == WeaponType.Tail ? "~>" : "+";
+            string glyph = character.Weapon == WeaponType.Shadow ? "///" : character.Weapon == WeaponType.Staff ? "*" : character.Weapon == WeaponType.Bow ? ">" : character.Weapon == WeaponType.Daggers ? "//" : character.Weapon == WeaponType.Fists ? "[]" : character.Weapon == WeaponType.Tail ? "~>" : character.Weapon == WeaponType.Coins ? "$" : "+";
             var portrait = character.Weapon == WeaponType.Shadow ? DungeonVisuals.ShadowHeroSprite : HeroSprites.Body(character.Weapon);
             if (portrait != null)
             {

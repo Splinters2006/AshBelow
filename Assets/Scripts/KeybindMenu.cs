@@ -8,7 +8,7 @@ namespace Slopgame
     /// </summary>
     public sealed class KeybindMenu
     {
-        private const float Top = 256, RowStep = 62, ColumnStep = 580;
+        private const float Top = 256, RowStep = 52, ColumnStep = 580;
         private int capturingAction = -1, capturingSlot;
 
         public bool IsCapturing => capturingAction >= 0;
@@ -17,12 +17,12 @@ namespace Slopgame
         private static int PerColumn => (KeyBindings.Actions.Length + 1) / 2;
 
         private static Rect RowRect(int index) =>
-            new Rect(70 + index / PerColumn * ColumnStep, Top + index % PerColumn * RowStep, 560, 52);
+            new Rect(70 + index / PerColumn * ColumnStep, Top + index % PerColumn * RowStep, 560, 46);
 
         private static Rect SlotRect(int index, int slot)
         {
             Rect row = RowRect(index);
-            return new Rect(row.x + 220 + slot * 168, row.y + 6, 158, 40);
+            return new Rect(row.x + 220 + slot * 168, row.y + 5, 158, 36);
         }
 
         public void Draw()

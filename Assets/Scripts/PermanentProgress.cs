@@ -14,12 +14,15 @@ namespace Slopgame
         {
             public int version;
             public int ash;
+            /// <summary>The most guardians beaten in a single descent (the third falls on floor 15).</summary>
+            public int guardians;
             public List<RankEntry> upgrades;
         }
         private SaveData data = Fresh();
         private bool dirty, recoveredBackup;
         public string SavePath { get; }
         public int Ash => data.ash;
+        public int GuardiansDefeated => data.guardians;
         public bool IsReadOnly { get; private set; }
         public string LastError { get; private set; }
         public bool HasUnsavedChanges => dirty;
@@ -41,7 +44,7 @@ namespace Slopgame
         private static SaveData Read(string path)
         {
             var loaded = JsonUtility.FromJson<SaveData>(File.ReadAllText(path));
-            if (loaded == null || loaded.version != 1 || loaded.ash < 0 || loaded.upgrades == null)
+            if (loaded == null || loaded.version != 1 || loaded.ash < 0 || loaded.guardians < 0 || loaded.upgrades == null)
                 throw new InvalidDataException("Unsupported or damaged progress file.");
             var ids = new HashSet<string>();
             foreach (var entry in loaded.upgrades)
@@ -90,10 +93,22 @@ namespace Slopgame
             Changed?.Invoke();
         }
 
+        /// <summary>Records that the <paramref name="ordinal"/>-th guardian of a descent fell (1 = floor 5).</summary>
+        public void RecordGuardian(int ordinal)
+        {
+            if (IsReadOnly || ordinal <= data.guardians) return;
+            data.guardians = ordinal;
+            dirty = true;
+            Save();
+            Changed?.Invoke();
+        }
+
+        public bool IsAvailable(PermanentUpgradeDefinition upgrade) => upgrade != null && data.guardians >= upgrade.RequiredGuardians;
+
         public bool TryPurchase(string id)
         {
             var upgrade = PermanentUpgradeCatalog.Get(id);
-            if (IsReadOnly || upgrade == null || Rank(id) >= upgrade.MaxRank || Ash < upgrade.Cost(Rank(id))) return false;
+            if (IsReadOnly || upgrade == null || !IsAvailable(upgrade) || Rank(id) >= upgrade.MaxRank || Ash < upgrade.Cost(Rank(id))) return false;
             var next = JsonUtility.FromJson<SaveData>(JsonUtility.ToJson(data));
             next.ash -= upgrade.Cost(Rank(id));
             var entry = next.upgrades.Find(value => value.id == id);

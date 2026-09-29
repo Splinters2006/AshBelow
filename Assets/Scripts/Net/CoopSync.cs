@@ -56,6 +56,7 @@ namespace Slopgame
             Session.Handle(CoopMessages.ChoiceDone, OnChoiceDone);
             Session.Handle(CoopMessages.Advance, OnAdvance);
             Session.Handle(CoopMessages.Died, OnDied);
+            Session.Handle(CoopMessages.Revived, OnRevived);
             Session.Handle(CoopMessages.Hazard, OnHazard);
             Session.Handle(CoopMessages.RestartVote, OnRestartVote);
             Session.Handle(CoopMessages.RestartVotes, OnRestartVotes);
@@ -213,7 +214,9 @@ namespace Slopgame
             var player = Run.Player;
             byte flags = 0;
             if (player.IsRolling) flags |= PlayerStateMessage.Rolling;
-            if (player.Shield != null && player.Shield.IsBlocking) flags |= PlayerStateMessage.Blocking;
+            var taunt = player.Mechanic as ShieldTaunt;
+            bool taunting = taunt != null && taunt.IsTaunting;
+            if ((player.Shield != null && player.Shield.IsBlocking) || taunting) flags |= PlayerStateMessage.Blocking;
             if (player.Charge != null && player.Charge.IsCharging) flags |= PlayerStateMessage.Charging;
             if (player.Health <= 0) flags |= PlayerStateMessage.Dead;
             if (player.IsInvulnerable) flags |= PlayerStateMessage.Invulnerable;
@@ -226,10 +229,12 @@ namespace Slopgame
             var message = new PlayerStateMessage
             {
                 Id = LocalId, Floor = Run.Floor, Position = player.transform.position,
-                Aim = player.Shield != null && player.Shield.IsBlocking ? player.Shield.Direction : player.AimDirection,
+                Aim = taunting ? taunt.Direction : player.Shield != null && player.Shield.IsBlocking ? player.Shield.Direction : player.AimDirection,
                 Flags = flags, MoreFlags = (byte)((player.Blessing != null && player.Blessing.BonusDamage > 0 ? PlayerStateMessage.Blessed : 0)
                     | (player.IsVeiled ? PlayerStateMessage.Veiled : 0)
-                    | (player.Buffs != null && player.Buffs.IsAscended ? PlayerStateMessage.Ascended : 0)),
+                    | (player.Buffs != null && player.Buffs.IsAscended ? PlayerStateMessage.Ascended : 0)
+                    | (player.DrawsAggro ? PlayerStateMessage.Taunting : 0)
+                    | (player.Buffs != null && player.Buffs.IsFurious ? PlayerStateMessage.Furious : 0)),
                 Health = (short)player.Health, MaxHealth = (short)player.MaxHealth,
                 Charge = (byte)Mathf.RoundToInt((player.Charge != null ? player.Charge.Amount : 0f) * 255f)
             };
@@ -266,7 +271,8 @@ namespace Slopgame
                 var shooter = enemy.GetComponent<EnemyShooter>();
                 if ((shooter != null && shooter.IsCharging) || (enemy.Boss != null && enemy.Boss.IsCharging)) flags |= EnemySnapshot.Charging;
                 if (enemy.Boss != null) flags |= (byte)(enemy.Boss.NetState << EnemySnapshot.BossStateShift);
-                byte more = (byte)((enemy.IsParalyzed ? EnemySnapshot.Paralyzed : 0) | (enemy.IsCursed ? EnemySnapshot.Cursed : 0));
+                byte more = (byte)((enemy.IsParalyzed ? EnemySnapshot.Paralyzed : 0) | (enemy.IsCursed ? EnemySnapshot.Cursed : 0)
+                    | (enemy.IsFrozen ? EnemySnapshot.Frozen : 0));
                 new EnemySnapshot { Id = enemy.NetId, Position = enemy.transform.position, Facing = enemy.Facing.Direction, Health = enemy.Health,
                     Flags = flags, MoreFlags = more }.Write(writer);
             }
@@ -314,6 +320,8 @@ namespace Slopgame
                 else if (message.Kind == CoopDamageKind.Burn) enemy.Burn(message.Ticks, message.Amount, message.Color);
                 else if (message.Kind == CoopDamageKind.Paralyze) enemy.Paralyze(message.Duration);
                 else if (message.Kind == CoopDamageKind.Curse) enemy.Curse(message.Duration);
+                else if (message.Kind == CoopDamageKind.Freeze) enemy.Freeze(message.Duration);
+                else if (message.Kind == CoopDamageKind.Fear) enemy.Fear(message.Source, message.Duration);
                 else enemy.Chill(message.Duration);
             }
             finally { Attacker = LocalId; }
@@ -450,12 +458,19 @@ namespace Slopgame
             {
                 if (!hero.IsAlive || Vector2.Distance(center, hero.transform.position) > radius) continue;
                 HeroVfx.Motes(Run.ProjectileRoot, hero.transform.position, 0.7f, AbilityCatalog.Gold, 14, 1f);
-                var message = new SupportMessage { Origin = LocalId, Target = hero.Id, Kind = kind, Amount = amount, Duration = duration };
-                using var writer = NetSession.Writer(48);
-                message.Write(writer);
-                if (IsHost) Session.SendTo(hero.Id, CoopMessages.Support, writer);
-                else Session.Send(CoopMessages.Support, writer);
+                SendSupport(hero.Id, kind, amount, duration);
             }
+        }
+
+        /// <summary>Sends support to one teammate (through the host when this machine is a guest).</summary>
+        public void SendSupport(ulong target, SupportKind kind, int amount, float duration)
+        {
+            if (!Active || target == LocalId) return;
+            var message = new SupportMessage { Origin = LocalId, Target = target, Kind = kind, Amount = amount, Duration = duration };
+            using var writer = NetSession.Writer(48);
+            message.Write(writer);
+            if (IsHost) Session.SendTo(target, CoopMessages.Support, writer);
+            else Session.Send(CoopMessages.Support, writer);
         }
 
         private void OnSupport(ulong sender, FastBufferReader reader)
@@ -469,8 +484,11 @@ namespace Slopgame
                 Session.SendTo(message.Target, CoopMessages.Support, writer);
                 return;
             }
-            if (message.Target != LocalId || Run.Player == null || Run.Player.Health <= 0 || !Run.IsPlaying) return;
-            Run.Player.ApplySupport(message.Kind, message.Amount, message.Duration);
+            if (message.Target != LocalId || Run.Player == null || !Run.IsPlaying) return;
+            if (message.Kind == SupportKind.BlessingCredit) { Run.Player.Mechanic?.OnBlessedHit(message.Amount); return; }
+            if (message.Kind == SupportKind.Revive) { ReviveLocal(); return; }
+            if (Run.Player.Health <= 0) return;
+            Run.Player.ApplySupport(message.Kind, message.Amount, message.Duration, message.Origin);
             if (Run.ProjectileRoot != null) HeroVfx.Motes(Run.ProjectileRoot, Run.Player.transform.position, 0.7f, AbilityCatalog.Gold, 14, 1f);
         }
 
@@ -604,6 +622,25 @@ namespace Slopgame
             using var writer = NetSession.Writer(8);
             writer.WriteValueSafe(Run.Floor);
             Session.Send(CoopMessages.Died, writer);
+        }
+
+        /// <summary>A teammate's Heavenly Host raised the fallen local hero; the host stops counting them as dead.</summary>
+        private void ReviveLocal()
+        {
+            if (Run.Player.Health > 0) return;
+            Run.Player.Revive();
+            if (Run.ProjectileRoot != null) HeroVfx.Motes(Run.ProjectileRoot, Run.Player.transform.position, 1f, AbilityCatalog.Gold, 24, 1.2f);
+            if (IsHost) { dead.Remove(LocalId); return; }
+            using var writer = NetSession.Writer(8);
+            writer.WriteValueSafe(Run.Floor);
+            Session.Send(CoopMessages.Revived, writer);
+        }
+
+        private void OnRevived(ulong sender, FastBufferReader reader)
+        {
+            if (!IsHost) return;
+            reader.ReadValueSafe(out int floor);
+            if (floor == Run.Floor) dead.Remove(sender);
         }
 
         private void OnDied(ulong sender, FastBufferReader reader)

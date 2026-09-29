@@ -31,11 +31,8 @@ namespace Slopgame
             Player.Charge.Cancel();
             HeroVfx.Pulse(Player.Run.ProjectileRoot, origin, 0.7f, AbilityCatalog.Ice, 0.25f);
             CoopFx.Pulse(Player.Run, origin, 0.7f, AbilityCatalog.Ice, 0.25f);
-            int chains = Player.Powerups.Count(PowerupType.LightningChains);
-            int count = 1 + chains;
-            // Conductivity unlocks chaining; overload only extends an unlocked chain.
-            bool overload = chains > 0 && Random.value < Player.Powerups.ElementalEffectChance;
-            if (overload) count += 2;
+            // Conductivity unlocks chaining. Each strike can also shock the enemies around its target.
+            int count = 1 + Player.Powerups.Count(PowerupType.LightningChains);
             for (int i = 0; i < count && target != null; i++)
             {
                 Vector2 destination = target.transform.position;
@@ -46,7 +43,7 @@ namespace Slopgame
                 CombatDamage.Apply(Player, target, Player.Damage + 1 + Player.Powerups.Count(PowerupType.LightningPower) + Player.Permanent.LightningDamage,
                     DamageElement.Lightning, origin);
                 origin = destination;
-                target = FindTarget(origin, aim, i >= count - 3 && overload ? 1.75f : JumpRange, struck, false);
+                target = FindTarget(origin, aim, JumpRange, struck, false);
             }
             lightningReadyAt = Time.time + 3f;
             readyAt = Time.time + 0.25f;

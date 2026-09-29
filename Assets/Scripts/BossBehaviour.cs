@@ -52,6 +52,7 @@ namespace Slopgame
         protected Color Flashing(Color normal, Color flash, bool active)
             => Enemy.IsFlashing || active ? Color.Lerp(flash, Color.white, 0.5f + Mathf.Sin(Time.time * 18f) * 0.5f)
                 : Enemy.IsParalyzed ? DemonessAttack.ParalyzedTint(Time.time)
+                : Enemy.IsFrozen ? DungeonEnemy.FrozenTint
                 : Enemy.IsChilled ? AbilityCatalog.Ice : normal;
     }
 }

@@ -279,6 +279,7 @@ namespace Slopgame
             if (!Enemies.Remove(enemy)) return;
             Kills++;
             int reward = enemy.Boss != null ? 50 : 1;
+            if (enemy.Boss != null) Progress.RecordGuardian(Floor / 5);
             if (Enemies.Count == 0 && !floorRewardGranted)
             { reward += 10; floorRewardGranted = true; }
             RunAshEarned += reward;
@@ -307,16 +308,23 @@ namespace Slopgame
             Coop.LocalDied();
         }
 
+        /// <summary>A taunting Knight counts as this many times closer when enemies pick a target.</summary>
+        public const float AggroPull = 3f;
+
+        /// <summary>Squared distance for targeting, shrunk for a hero drawing aggro with Shield Taunt.</summary>
+        private static float TargetDistance(Vector2 hero, Vector2 from, bool aggro)
+            => Vector2.SqrMagnitude(hero - from) / (aggro ? AggroPull * AggroPull : 1f);
+
         /// <summary>The living heroes enemies can target: the local hero plus teammates.</summary>
         public Vector2 NearestHero(Vector2 from)
         {
             Vector2 best = Player.transform.position;
-            float bestDistance = Player.Health > 0 ? Vector2.SqrMagnitude(best - from) : float.PositiveInfinity;
+            float bestDistance = Player.Health > 0 ? TargetDistance(best, from, Player.DrawsAggro) : float.PositiveInfinity;
             if (IsNetworked)
                 foreach (var hero in Coop.RemoteHeroes)
                 {
                     if (hero == null || !hero.IsAlive) continue;
-                    float distance = Vector2.SqrMagnitude((Vector2)hero.transform.position - from);
+                    float distance = TargetDistance(hero.transform.position, from, hero.IsTaunting);
                     if (distance < bestDistance) { bestDistance = distance; best = hero.transform.position; }
                 }
             return best;
@@ -333,13 +341,13 @@ namespace Slopgame
             if (Player.Health > 0 && !Player.IsVeiled)
             {
                 best = Player.transform.position;
-                bestDistance = Vector2.SqrMagnitude(best - from);
+                bestDistance = TargetDistance(best, from, Player.DrawsAggro);
             }
             if (IsNetworked)
                 foreach (var hero in Coop.RemoteHeroes)
                 {
                     if (hero == null || !hero.IsAlive || hero.IsVeiled) continue;
-                    float distance = Vector2.SqrMagnitude((Vector2)hero.transform.position - from);
+                    float distance = TargetDistance(hero.transform.position, from, hero.IsTaunting);
                     if (distance < bestDistance) { bestDistance = distance; best = hero.transform.position; }
                 }
             return !float.IsPositiveInfinity(bestDistance);
@@ -442,10 +450,15 @@ namespace Slopgame
         private void UpdatePaths()
         {
             heroCells.Clear();
-            if (Player.Health > 0) AddHeroCell(Player.transform.position);
+            // While a Knight taunts, every enemy's path leads to him.
+            bool taunted = Player.Health > 0 && Player.DrawsAggro;
             if (IsNetworked)
                 foreach (var hero in Coop.RemoteHeroes)
-                    if (hero != null && hero.IsAlive) AddHeroCell(hero.transform.position);
+                    taunted |= hero != null && hero.IsAlive && hero.IsTaunting;
+            if (Player.Health > 0 && (!taunted || Player.DrawsAggro)) AddHeroCell(Player.transform.position);
+            if (IsNetworked)
+                foreach (var hero in Coop.RemoteHeroes)
+                    if (hero != null && hero.IsAlive && (!taunted || hero.IsTaunting)) AddHeroCell(hero.transform.position);
             if (heroCells.Count == 0) AddHeroCell(Player.transform.position);
             if (heroCells.Count == lastHeroCells.Count && heroCells.TrueForAll(lastHeroCells.Contains)) return;
             lastHeroCells.Clear();

@@ -17,6 +17,7 @@ namespace Slopgame
         // A floppy-ear / tail fur, R boxing glove, r glove shade, P pink tongue.
         // N demon horn / tail black, n horn sheen, V dark violet hair, U hair highlight, v glowing violet eyes,
         // T glowing tail tip, C pale skin, c pale skin shade.
+        // The Gambler reuses G / g for his gold tooth, coins and purse.
         private static readonly Dictionary<WeaponType, string[]> Grids = new Dictionary<WeaponType, string[]>
         {
             { WeaponType.Sword, new[] // Knight
@@ -67,6 +68,13 @@ namespace Slopgame
                 "NnNVUVVVVVVVVNnN", ".NNVVVVVCCVVVNN.", "..DVVVCCCCCCVD..", "..DVVCCEvCCEvD..",
                 "..DVVCCCCCCCcD..", ".DVVVcCCCPCcD...", "TDVVVVDcCCcD....", "TTDVVDLWWWWWD...",
                 ".TNDVDLWFFWMCD..", "..NDDWWWMWWMcD..", "..NDWWWWWWWWWD..", "...NDDCcDDCcD...",
+            } },
+            { WeaponType.Coins, new[] // Gambler: a travelling merchant in a wide-brimmed hat, gold-toothed grin, fat coin purse and a flipped coin
+            {
+                "................", ".....DDDDDD.....", "....DMWWWWMD....", "....DWbbbbWD....",
+                "..DDDDDDDDDDDD..", "....DHSSSSHD....", "....DSESSESD....", "....DSSSGSsD....",
+                "...DDsSSSSsDD...", "..DLWWFFFFWMD...", ".DLWWWFGFWWMD.G.", ".DWWWWFFFWMMDGgG",
+                ".DSDDbBBBbDSD.G.", "..DgGGgDMWMD....", "....DbbDbbD.....", "...DDDD.DDDD....",
             } },
         };
         // Drawn about 1.45 units tall before the hero's 0.65 scale, matching the old hero footprint.

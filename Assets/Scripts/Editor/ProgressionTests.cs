@@ -44,6 +44,14 @@ namespace Slopgame.Editor
             var save = new PermanentProgress(root);
             Require(save.Ash == 0 && !save.TryPurchase("health"), "Empty wallet could buy an upgrade.");
             save.AwardAsh(20000);
+            string mechanic = PermanentUpgradeCatalog.MechanicId(WeaponType.Sword);
+            Require(!save.IsAvailable(PermanentUpgradeCatalog.Get(mechanic)) && !save.TryPurchase(mechanic) && save.Ash == 20000,
+                "A class mechanic was sold before the third guardian fell.");
+            save.RecordGuardian(2);
+            Require(!save.TryPurchase(mechanic), "A class mechanic was sold after only two guardians.");
+            save.RecordGuardian(3);
+            save.RecordGuardian(1);
+            Require(save.GuardiansDefeated == 3, "A shallower descent lowered the guardian record.");
             foreach (var upgrade in PermanentUpgradeCatalog.All)
             {
                 int before = save.Ash;
@@ -55,7 +63,9 @@ namespace Slopgame.Editor
             int balance = save.Ash;
             Require(!save.TryPurchase("health") && !save.TryPurchase("unknown") && save.Ash == balance, "Invalid purchase consumed Ash.");
             var loaded = new PermanentProgress(root);
-            Require(loaded.Ash == save.Ash && loaded.Rank("health") == healthRanks, "Purchases failed to survive reload.");
+            Require(loaded.Ash == save.Ash && loaded.Rank("health") == healthRanks && loaded.GuardiansDefeated == 3, "Purchases failed to survive reload.");
+            Require(PermanentUpgradeCatalog.Get(mechanic).Cost(0) == PermanentUpgradeCatalog.MechanicCost && !save.TryPurchase(mechanic),
+                "Class mechanic price or single rank is wrong.");
             save.AwardAsh(1);
             File.WriteAllText(save.SavePath, "invalid json");
             var recovered = new PermanentProgress(root);
@@ -124,10 +134,13 @@ namespace Slopgame.Editor
                     boss.Hit(100000);
                     Require(run.Progress.Ash == before + 60, "Boss reward duplicated.");
                     Require(!run.TryBuyUpgrade("health"), "Shop purchases allowed during a run.");
+                    Require(run.Progress.GuardiansDefeated == 1 && run.Player.Mechanic == null, "The first guardian was not recorded, or a mechanic came free.");
                     run.EndRun();
                     run.ShowMainMenu();
                     Require(new PermanentProgress(Path.GetDirectoryName(run.Progress.SavePath)).Ash == run.Progress.Ash, "Death/menu lost saved Ash.");
                     run.Progress.AwardAsh(10000);
+                    Require(!run.TryBuyUpgrade(PermanentUpgradeCatalog.MechanicId(WeaponType.Bow)), "Mechanic sold before the third guardian.");
+                    run.Progress.RecordGuardian(3);
                     foreach (var upgrade in PermanentUpgradeCatalog.All) Require(run.TryBuyUpgrade(upgrade.Id), "Shop failed to buy " + upgrade.Id);
                     StartHero(run);
                     stage = 2;
@@ -143,6 +156,7 @@ namespace Slopgame.Editor
                     Require(player.BaseDamage == character.StartingDamage + 1 + (Classes[hero] == WeaponType.Bow ? 1 : 0), "Permanent damage did not apply or leaked.");
                     Require(Mathf.Abs(player.Powerups.AttackIntervalMultiplier - 1f / 1.05f) < 0.001f, "Permanent attack speed missing.");
                     Require(Mathf.Abs(player.Powerups.DodgeCooldownMultiplier - 0.97f) < 0.001f, "Permanent dodge reduction missing.");
+                    Require((player.Mechanic != null) == (Classes[hero] != WeaponType.Shadow), "Bought class mechanic missing on R.");
                     switch (Classes[hero])
                     {
                         case WeaponType.Sword: Require(player.Powerups.ReflectionDamage == 3, "Knight reflection upgrade missing."); break;
