@@ -1,0 +1,61 @@
+name: Build Linux
+
+# Manual-only until a Unity .ulf license is stored in the UNITY_LICENSE secret; then restore:
+#   push: { branches: [main], tags: ["v*"] }
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-linux-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      # The Unity build image needs more disk than a default runner leaves free.
+      - uses: jlumbroso/free-disk-space@v1.3.1
+        with:
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: false
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/cache@v4
+        with:
+          path: Library
+          key: Library-StandaloneLinux64-${{ hashFiles('Packages/packages-lock.json', 'ProjectSettings/ProjectVersion.txt') }}
+          restore-keys: Library-StandaloneLinux64-
+
+      # Reuses the editor build method so CI output matches the local menu build (x86_64, updater, START-HERE, ZIP).
+      - uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          targetPlatform: StandaloneLinux64
+          buildMethod: Slopgame.Editor.LinuxBuild.Build
+          versioning: None
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AshBelow-Linux
+          path: |
+            Builds/Linux
+            !Builds/Linux/*.zip
+          if-no-files-found: error
+
+      # Tagged builds become the latest release; Update.sh installs the single AshBelow-Linux-*.zip it finds there.
+      - if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: Builds/Linux/AshBelow-Linux-*.zip
+          fail_on_unmatched_files: true
+          generate_release_notes: true

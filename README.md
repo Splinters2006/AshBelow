@@ -6,6 +6,7 @@ An action roguelike. Pick a hero, fight through connected dungeon rooms, beat a 
 
 1. Download the latest Windows release ZIP.
 2. Extract it anywhere and run **`AshBelow.exe`**. Keep the other files and folders from the ZIP next to it.
+   On Linux, download the `AshBelow-Linux-*.zip` release instead and run **`./AshBelow.x86_64`** (after `chmod +x AshBelow.x86_64` the first time).
 3. In the main menu, pick **Choose your hero → a class → Begin descent**.
 
 The game starts in a resizable 1280×720 window.
@@ -117,6 +118,8 @@ Close the game and run **`Update.cmd`** from the game folder. It downloads the l
 
 `Update.cmd` needs Python. If Python isn't installed, it downloads a portable copy into `%LOCALAPPDATA%\AshBelow\python` without needing admin rights. Delete that folder to remove it.
 
+On Linux, run **`sh Update.sh`** instead. It works the same way and installs the latest Linux build. It needs Python 3.10 or newer, which most distributions already include. If yours doesn't, install `python3` with your package manager.
+
 ## Your save
 
 Your progress is saved automatically after every reward and purchase, at:
@@ -124,5 +127,7 @@ Your progress is saved automatically after every reward and purchase, at:
 ```
 %USERPROFILE%\AppData\LocalLow\DefaultCompany\Ash Below\progress.json
 ```
+
+On Linux it's at `~/.config/unity3d/DefaultCompany/Ash Below/progress.json`.
 
 A backup (`progress.json.bak`) is kept next to it, and the game recovers from it automatically if the main save is damaged. Deleting or moving the game folder does not touch your save.

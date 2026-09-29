@@ -19,6 +19,15 @@ import zipfile
 DEFAULT_REPO = "Splinters2006/AshBelow"
 MAX_ARCHIVE_BYTES = 2 * 1024**3
 MAX_EXTRACTED_BYTES = 8 * 1024**3
+# Each build ZIP is recognised by its asset name prefix, its launcher and the Unity runtime next to it.
+PLATFORMS = {
+    "windows": {"label": "Windows", "prefix": "AshBelow-", "executable": "AshBelow.exe", "runtime": "UnityPlayer.dll"},
+    "linux": {"label": "Linux", "prefix": "AshBelow-Linux-", "executable": "AshBelow.x86_64", "runtime": "UnityPlayer.so"},
+}
+
+
+def default_platform():
+    return "linux" if sys.platform.startswith("linux") else "windows"
 
 
 def require_separate_save_directory(install_directory, save_directory):
@@ -59,19 +68,23 @@ def request_json(url):
             return json.load(response)
     except urllib.error.HTTPError as error:
         if error.code == 404:
-            raise RuntimeError("No published release found. Publish a Windows build ZIP on GitHub, or use --mode source for a checkout.") from error
+            raise RuntimeError("No published release found. Publish a build ZIP on GitHub, or use --mode source for a checkout.") from error
         raise RuntimeError(f"GitHub request failed (HTTP {error.code}). No installed files were changed.") from error
 
 
-def select_asset(release, asset_name=None):
+def select_asset(release, asset_name=None, platform="windows"):
     assets = [asset for asset in release.get("assets", []) if asset.get("name", "").lower().endswith(".zip")]
     if asset_name:
         assets = [asset for asset in assets if asset["name"] == asset_name]
     else:
-        assets = [asset for asset in assets if asset["name"].startswith("AshBelow-")]
+        # The Windows prefix also matches other platforms' ZIPs, so pick the most specific prefix for each name.
+        def owner(name):
+            matches = [key for key, info in PLATFORMS.items() if name.startswith(info["prefix"])]
+            return max(matches, key=lambda key: len(PLATFORMS[key]["prefix"]), default=None)
+        assets = [asset for asset in assets if owner(asset["name"]) == platform]
     if len(assets) != 1:
         names = ", ".join(asset["name"] for asset in assets) or "none"
-        raise RuntimeError(f"Expected one AshBelow Windows ZIP, found: {names}. Use --asset for an exact asset name.")
+        raise RuntimeError(f"Expected one AshBelow {PLATFORMS[platform]['label']} ZIP, found: {names}. Use --asset for an exact asset name.")
     return assets[0]
 
 
@@ -99,7 +112,8 @@ def download_asset(asset, destination):
         raise RuntimeError("Release checksum mismatch. The download will not be installed.")
 
 
-def extract_release(archive_path, destination):
+def extract_release(archive_path, destination, platform="windows"):
+    info = PLATFORMS[platform]
     with zipfile.ZipFile(archive_path) as archive:
         entries = archive.infolist()
         if len(entries) > 100000 or sum(entry.file_size for entry in entries) > MAX_EXTRACTED_BYTES:
@@ -125,21 +139,26 @@ def extract_release(archive_path, destination):
                 target.parent.mkdir(parents=True, exist_ok=True)
                 with archive.open(entry) as source, target.open("wb") as output:
                     shutil.copyfileobj(source, output)
-    executables = list(destination.rglob("AshBelow.exe"))
+                if (entry.external_attr >> 16) & 0o111:
+                    target.chmod(target.stat().st_mode | 0o755)
+    executables = list(destination.rglob(info["executable"]))
     if len(executables) != 1:
-        raise RuntimeError("The release is not a playable Windows build (AshBelow.exe missing or ambiguous).")
+        raise RuntimeError(f"The release is not a playable {info['label']} build ({info['executable']} missing or ambiguous).")
     root = executables[0].parent
-    if not (root / "UnityPlayer.dll").is_file() or not (root / "AshBelow_Data").is_dir():
+    if not (root / info["runtime"]).is_file() or not (root / "AshBelow_Data").is_dir():
         raise RuntimeError("The release is missing Unity runtime files.")
+    # ZIPs made by Unity's editor do not record Unix permissions, so the launcher is marked runnable here.
+    executables[0].chmod(executables[0].stat().st_mode | 0o755)
     if list(root.rglob("progress.json")) or list(root.rglob("progress.json.bak")):
         raise RuntimeError("Release archives must not bundle player saves.")
     return root
 
 
-def install_release(directory, repo, save_directory, asset_name=None, check=False):
+def install_release(directory, repo, save_directory, asset_name=None, check=False, platform="windows"):
+    executable = PLATFORMS[platform]["executable"]
     require_separate_save_directory(directory, save_directory)
     release = request_json(f"https://api.github.com/repos/{repo}/releases/latest")
-    asset = select_asset(release, asset_name)
+    asset = select_asset(release, asset_name, platform)
     print(f"Latest release: {release['tag_name']} / {asset['name']}")
     if check:
         return None
@@ -151,8 +170,8 @@ def install_release(directory, repo, save_directory, asset_name=None, check=Fals
     require_separate_save_directory(target, save_directory)
     if target.exists():
         marker = target / ".ashbelow-release.json"
-        if marker.exists() and json.loads(marker.read_text(encoding="utf-8")).get("asset_id") == asset["id"] and (target / "AshBelow.exe").is_file():
-            print(f"Already downloaded. Launch: {target / 'AshBelow.exe'}")
+        if marker.exists() and json.loads(marker.read_text(encoding="utf-8")).get("asset_id") == asset["id"] and (target / executable).is_file():
+            print(f"Already downloaded. Launch: {target / executable}")
             return target
         raise RuntimeError(f"Destination already exists and will not be overwritten: {target}")
     backup_saves(save_directory)
@@ -163,10 +182,10 @@ def install_release(directory, repo, save_directory, asset_name=None, check=Fals
         download_asset(asset, archive)
         unpacked = staging / "unpacked"
         unpacked.mkdir()
-        root = extract_release(archive, unpacked)
+        root = extract_release(archive, unpacked, platform)
         (root / ".ashbelow-release.json").write_text(json.dumps({"tag": release["tag_name"], "asset_id": asset["id"]}), encoding="utf-8")
         root.rename(target)
-    print(f"Update ready. Launch: {target / 'AshBelow.exe'}")
+    print(f"Update ready. Launch: {target / executable}")
     print("Your previous installation is retained. Ash and upgrades stay in the shared save folder.")
     return target
 
@@ -201,7 +220,8 @@ def main(argv=None):
     parser.add_argument("--directory", type=Path, default=Path(__file__).resolve().parent.parent if Path(__file__).resolve().parent.name == "scripts" else Path(__file__).resolve().parent)
     parser.add_argument("--repo", default=DEFAULT_REPO)
     parser.add_argument("--branch", default="main")
-    parser.add_argument("--asset", help="Exact Windows ZIP asset name, if the release contains multiple ZIPs")
+    parser.add_argument("--platform", choices=tuple(PLATFORMS), default=default_platform(), help="Which build to install in release mode")
+    parser.add_argument("--asset", help="Exact ZIP asset name, if the release contains multiple ZIPs for this platform")
     parser.add_argument("--save-directory", type=Path, default=default_save_directory())
     parser.add_argument("--check", action="store_true", help="Check for updates without installing or backing up saves")
     args = parser.parse_args(argv)
@@ -211,7 +231,7 @@ def main(argv=None):
         if args.mode == "source":
             update_source(args.directory.resolve(), args.save_directory, args.branch, args.check)
         else:
-            install_release(args.directory.resolve(), args.repo, args.save_directory, args.asset, args.check)
+            install_release(args.directory.resolve(), args.repo, args.save_directory, args.asset, args.check, args.platform)
         return 0
     except (OSError, ValueError, RuntimeError, zipfile.BadZipFile, subprocess.CalledProcessError) as error:
         print(f"Update stopped: {error}", file=sys.stderr)

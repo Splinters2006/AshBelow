@@ -133,6 +133,29 @@ class UpdaterTests(unittest.TestCase):
             updater.select_asset(self.release)
         self.assertEqual(updater.select_asset(self.release, "AshBelow-test.zip"), self.asset)
 
+    def test_linux_release_installs_runnable_game_and_ignores_windows_zip(self):
+        linux_asset = dict(self.asset, id=77, name="AshBelow-Linux-test.zip")
+        self.release["assets"].append(linux_asset)
+        self.assertEqual(updater.select_asset(self.release, platform="linux"), linux_asset)
+        self.assertEqual(updater.select_asset(self.release, platform="windows"), self.asset)
+        archive = self.root / "linux.zip"
+        with zipfile.ZipFile(archive, "w") as output:
+            output.writestr("AshBelow-Linux-build/AshBelow.x86_64", b"new linux executable")
+            output.writestr("AshBelow-Linux-build/UnityPlayer.so", b"runtime")
+            output.writestr("AshBelow-Linux-build/AshBelow_Data/data", b"data")
+        with mock.patch.object(updater, "request_json", return_value=self.release), mock.patch.object(
+                updater, "download_asset", side_effect=lambda asset, dest: shutil.copyfile(archive, dest)) as download:
+            new = updater.install_release(self.install, "example/repo", self.saves, platform="linux")
+            self.assertEqual(download.call_args.args[0], linux_asset)
+            game = new / "AshBelow.x86_64"
+            self.assertEqual(game.read_bytes(), b"new linux executable")
+            self.assertTrue(game.stat().st_mode & stat.S_IXUSR)
+            self.assertEqual(updater.install_release(new, "example/repo", self.saves, platform="linux"), new)
+        self.assertEqual(self.progress.read_bytes(), self.original)
+        # A Windows build is not accepted as a Linux one.
+        with self.assertRaises(RuntimeError):
+            updater.extract_release(self.archive(), self.root / "wrong-platform", "linux")
+
     def test_git_fast_forward_and_dirty_checkout_protection(self):
         def run(*args):
             return subprocess.run(["git", *map(str, args)], check=True, capture_output=True, text=True)
