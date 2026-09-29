@@ -4,8 +4,10 @@ namespace Slopgame
 {
     public sealed class EnemyProjectile : MonoBehaviour
     {
-        private const float Speed = 7.5f;
+        public const float DefaultSpeed = 7.5f;
         private DungeonRun run;
+        private float speed = DefaultSpeed;
+        public float Speed => speed;
         private Vector2 direction;
         public Vector2 Direction => direction;
         /// <summary>Co-op id assigned by the host; 0 outside co-op.</summary>
@@ -20,11 +22,12 @@ namespace Slopgame
         public static EnemyProjectile Spawn(DungeonRun run, Transform parent, Vector2 position, Vector2 direction) => Spawn(run, parent, position, direction, true);
 
         /// <summary>Every machine flies its own copy; a copy only ever strikes that machine's hero.</summary>
-        public static EnemyProjectile Spawn(DungeonRun run, Transform parent, Vector2 position, Vector2 direction, bool announce)
+        public static EnemyProjectile Spawn(DungeonRun run, Transform parent, Vector2 position, Vector2 direction, bool announce, float speed = DefaultSpeed)
         {
             var projectile = DungeonVisuals.CreateEmberBolt(parent, position).gameObject.AddComponent<EnemyProjectile>();
             projectile.run = run;
             projectile.direction = direction.normalized;
+            projectile.speed = speed;
             projectile.transform.rotation = Quaternion.Euler(0, 0, Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg);
             if (announce && run.IsNetworked && run.Coop.IsHost) run.Coop.AnnounceBolt(projectile, position, projectile.direction);
             return projectile;
@@ -38,7 +41,7 @@ namespace Slopgame
             lifetime -= deltaTime;
             if (lifetime <= 0) { Consume(); return; }
             // Small steps prevent fast projectiles from skipping walls or the player.
-            Vector2 movement = direction * Speed * deltaTime;
+            Vector2 movement = direction * speed * deltaTime;
             int steps = Mathf.Max(1, Mathf.CeilToInt(movement.magnitude / 0.08f));
             for (int i = 0; i < steps; i++)
             {

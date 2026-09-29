@@ -22,13 +22,15 @@ namespace Slopgame
         public Vector2 AimDirection { get; private set; } = Vector2.right;
         private const float RollDuration = 0.25f;
         public const float RollCooldown = 1.4f;
+        /// <summary>Seconds between burning-ground damage ticks.</summary>
+        public const float BurnInterval = 1f;
         public float DodgeCooldownRemaining => DebugMode.Cooldown(Mathf.Max(0f, rollReady - Time.time));
         public WeaponType ClassWeapon => weaponType;
         public Vector2 RollDirection => rollDirection;
         public AttackCharge Charge { get; private set; }
         public KnightShield Shield { get; private set; }
         public PlayerAbilities Abilities { get; private set; }
-        private float invulnerableUntil, rollUntil, rollReady, busyUntil, veiledUntil;
+        private float invulnerableUntil, rollUntil, rollReady, busyUntil, veiledUntil, nextBurnAt;
         private Vector2 rollDirection;
         private SpriteRenderer body, details;
         private bool facingLeft;
@@ -152,10 +154,17 @@ namespace Slopgame
             return true;
         }
 
-        public void Hit()
+        /// <summary>Standing in burning ground: one damage per second, however many fires overlap.</summary>
+        public void Burn()
         {
-            if (!Run.IsPlaying || IsInvulnerable || Health <= 0) return;
-            if (DebugMode.Enabled) { Health = MaxHealth; return; }
+            if (Time.time >= nextBurnAt && Hit()) nextBurnAt = Time.time + BurnInterval;
+        }
+
+        /// <summary>Takes one hit (or spends a ward). False when nothing landed: invulnerable, dead, or debug mode.</summary>
+        public bool Hit()
+        {
+            if (!Run.IsPlaying || IsInvulnerable || Health <= 0) return false;
+            if (DebugMode.Enabled) { Health = MaxHealth; return false; }
             bool warded = Powerups.AbsorbHit();
             if (!warded) Health--;
             if (Run.ProjectileRoot != null)
@@ -164,10 +173,11 @@ namespace Slopgame
                 else HeroVfx.Sparks(Run.ProjectileRoot, transform.position, new Color(1f, 0.3f, 0.3f), 10, 3.6f, 0.35f);
             }
             invulnerableUntil = Time.time + 1f;
-            if (Health > 0) return;
-            if (!Run.IsNetworked) { Run.EndRun(); return; }
+            if (Health > 0) return true;
+            if (!Run.IsNetworked) { Run.EndRun(); return true; }
             SetVisible(false);
             Run.LocalHeroDied();
+            return true;
         }
 
         /// <summary>Co-op: a fallen hero rises at the start of the next floor with half health.</summary>

@@ -20,7 +20,8 @@ namespace Slopgame
             // A second renderer needs its own object.
             var frontObject = new GameObject("Hellfire aura front");
             frontObject.transform.SetParent(aura.transform, false);
-            aura.front = new FlameMesh(frontObject, 5);
+            // In front of his body (4) and its detail layer (5).
+            aura.front = new FlameMesh(frontObject, 6);
             return aura;
         }
 
@@ -33,7 +34,7 @@ namespace Slopgame
 
             behind.Begin();
             // Scorched ground (or the flight shadow when airborne).
-            behind.Ellipse(ground + Vector2.down * 0.9f, 1.6f - lift * 0.5f, 0.55f - lift * 0.15f,
+            behind.Ellipse(ground + Vector2.down * 1.15f, 1.6f - lift * 0.5f, 0.55f - lift * 0.15f,
                 FlameMesh.Alpha(Color.black, 0.45f + lift * 0.2f), FlameMesh.Alpha(Color.black, 0f));
             if (lift < 0.5f)
             {
@@ -59,12 +60,28 @@ namespace Slopgame
                     behind.Flame(root, dir, 0.55f + u * 0.25f, span * (1f - Mathf.Abs(u - 0.5f) * 0.8f), FlameMesh.Hash(i, side), 0.95f);
                 }
             behind.Disc(body, 1.4f + lift * 0.6f, FlameMesh.Alpha(FlameMesh.Orange, 0.3f + lift * 0.25f), FlameMesh.Alpha(FlameMesh.Crimson, 0f));
+            // A shroud of black smoke curls around him so his silhouette looms over the fire.
+            for (int i = 0; i < 10; i++)
+            {
+                float seed = FlameMesh.Hash(i, 6.6f), angle = i * Mathf.PI * 2f / 10f + time * (0.3f + seed * 0.3f);
+                Vector2 puff = body + new Vector2(Mathf.Cos(angle) * 1.2f, Mathf.Sin(angle) * 0.9f + 0.1f);
+                behind.Disc(puff, 0.55f + 0.15f * Mathf.Sin(time * 2f + i), FlameMesh.Alpha(new Color(0.06f, 0.01f, 0.02f), 0.45f), FlameMesh.Alpha(Color.black, 0f), 16);
+            }
             behind.Commit();
 
             front.Begin();
             // A crown of flame over the horns.
             for (int i = -2; i <= 2; i++)
-                front.Flame(body + new Vector2(i * 0.22f, 0.95f - Mathf.Abs(i) * 0.08f), Vector2.up, 0.3f, 0.9f - Mathf.Abs(i) * 0.12f, FlameMesh.Hash(i, 8.8f), 0.9f);
+                front.Flame(body + new Vector2(i * 0.22f, 0.85f - Mathf.Abs(i) * 0.08f), Vector2.up, 0.3f, 0.9f - Mathf.Abs(i) * 0.12f, FlameMesh.Hash(i, 8.8f), 0.9f);
+            // His eyes burn; brighter and wilder once bloodied.
+            float glare = (enraged ? 0.75f : 0.5f) + 0.2f * Mathf.Sin(time * (enraged ? 14f : 5f));
+            for (int side = -1; side <= 1; side += 2)
+            {
+                Vector2 eye = body + new Vector2(side * 0.21f, 0.37f) * (ArchdemonBoss.Size / 2.6f);
+                front.Disc(eye, 0.24f, FlameMesh.Alpha(FlameMesh.Yellow, glare), FlameMesh.Alpha(FlameMesh.Orange, 0f), 14);
+                if (enraged)
+                    front.Bar(eye, new Vector2(side * 0.4f, 1f).normalized, 0.55f, 0.07f, FlameMesh.Alpha(FlameMesh.Core, glare), FlameMesh.Alpha(FlameMesh.Orange, 0f));
+            }
             // Drifting embers shed from his body.
             for (int i = 0; i < 16; i++)
             {

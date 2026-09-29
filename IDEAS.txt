@@ -1,6 +1,5 @@
-make paladin judgement aimable
-make all mobilty moves not restricted to just their maximum distance, if cursor is closer to the character than max distance, go to that point if its reachable
-increase assasin shadow step by 1 unit
-make assassin fan of knives fly way faster on the way back
-increase knight shield rush speed by 50%, keep the total distance the same
-make the holy sword aoe 33% smaller
+add keybind editor
+add visuaL for paladin blessing charging in coop
+add restart run button on coop
+reduce projectile speed of archdemon in bullethell phase, make the burning ground deal 1 dmg per second, make the burning ground area more obvious before it happens, increasse time before it happens and enlarge the safe area
+make archdemon look more menacing, make it a good sprite, add extra attacks to the dashing boss,

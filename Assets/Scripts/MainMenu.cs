@@ -5,10 +5,11 @@ namespace Slopgame
     public sealed class MainMenu : MonoBehaviour
     {
         public DungeonRun Run { get; set; }
-        private bool selecting, shopping, coop;
+        private bool selecting, shopping, coop, controls;
         private readonly AshShop shop = new AshShop();
         private readonly CoopMenu coopMenu = new CoopMenu();
-        public void ResetPage(bool showCoop = false) { selecting = false; shopping = false; coop = showCoop; }
+        private readonly KeybindMenu keybindMenu = new KeybindMenu();
+        public void ResetPage(bool showCoop = false) { selecting = false; shopping = false; controls = false; coop = showCoop; keybindMenu.Cancel(); }
         public void ShowCoop() => ResetPage(true);
 
         private void OnGUI()
@@ -24,8 +25,9 @@ namespace Slopgame
                     DungeonUi.Panel(new Rect(700 + i * 45 + offset, 70 + i * 65, 130, 2), new Color(0.21f, 0.3f, 0.33f, 0.22f));
                 }
                 DungeonUi.Label(new Rect(70, 52, 900, 25), "A ROGUELIKE DESCENT", 14, AbilityCatalog.Gold);
-                DungeonUi.Label(new Rect(65, 88, 1100, 94), shopping ? "ASH SHOP" : coop ? "CO-OP" : "ASH / BELOW", 66);
+                DungeonUi.Label(new Rect(65, 88, 1100, 94), shopping ? "ASH SHOP" : controls ? "CONTROLS" : coop ? "CO-OP" : "ASH / BELOW", 66);
                 DungeonUi.Label(new Rect(70, 188, 1100, 42), shopping ? "Spend the ash you carry home. Grow stronger with every descent."
+                    : controls ? "Rebind every action to the keys and mouse buttons you like. Changes save instantly."
                     : coop ? "Descend with up to three friends. Fallen heroes rise again on the next floor."
                     : selecting ? "Choose your hero. Shape your build. Claim the relics below." : "Seven heroes. Two relic abilities. One life in the ash.", 20, DungeonUi.Muted);
                 DungeonUi.Label(new Rect(930, 55, 280, 32), Run.Progress.IsReadOnly ? "SAVE UNAVAILABLE" : $"{Run.Progress.Ash} ASH", 23, AbilityCatalog.Gold, TextAnchor.UpperRight);
@@ -33,6 +35,12 @@ namespace Slopgame
                 {
                     shop.Draw(Run);
                     if (DungeonUi.Button("shopBack", new Rect(70, 598, 268, 48), "Back", DungeonUi.Muted)) shopping = false;
+                }
+                else if (controls)
+                {
+                    keybindMenu.Draw();
+                    if (DungeonUi.Button("controlsBack", new Rect(70, 598, 268, 48), "Back", DungeonUi.Muted)) { keybindMenu.Cancel(); controls = false; }
+                    if (DungeonUi.Button("controlsReset", new Rect(860, 598, 350, 48), "Reset to defaults", DungeonUi.Teal)) { keybindMenu.Cancel(); KeyBindings.ResetToDefaults(); }
                 }
                 else if (coop)
                 {
@@ -51,7 +59,8 @@ namespace Slopgame
                     DungeonUi.Label(new Rect(102, 374, 530, 130), "Charge your attacks. Read the enemy.\nEvery fifth floor, face an arena guardian.\nTake its artifact and choose your own power.", 22, DungeonUi.Muted);
                     if (DungeonUi.Button("chooseClass", new Rect(755, 290, 420, 60), "Choose your hero", AbilityCatalog.Gold)) selecting = true;
                     if (DungeonUi.Button("coop", new Rect(755, 362, 420, 48), "Co-op", AbilityCatalog.Gold)) coop = true;
-                    if (DungeonUi.Button("shop", new Rect(755, 422, 420, 48), "Ash shop", DungeonUi.Teal)) shopping = true;
+                    if (DungeonUi.Button("shop", new Rect(755, 422, 205, 48), "Ash shop", DungeonUi.Teal)) shopping = true;
+                    if (DungeonUi.Button("controls", new Rect(970, 422, 205, 48), "Controls", DungeonUi.Teal)) controls = true;
                     if (DungeonUi.Button("debugMode", new Rect(755, 545, 420, 42),
                         DebugMode.Enabled ? "Debug admin mode: ON  (F1)" : "Debug admin mode: OFF  (F1)",
                         DebugMode.Enabled ? DungeonHud.DebugColor : DungeonUi.Muted)) DebugMode.Toggle();
@@ -67,7 +76,8 @@ namespace Slopgame
                 else DrawSelection();
                 if (!string.IsNullOrEmpty(Run.Progress.LastError))
                     DungeonUi.Label(new Rect(70, 645, 1140, 24), Run.Progress.LastError, 14, AbilityCatalog.Gold);
-                DungeonUi.Label(new Rect(70, 672, 1100, 24), "WASD  move     HOLD / RELEASE LMB  attack     RMB  class skill     Q / E  relic abilities", 14, DungeonUi.Muted);
+                DungeonUi.Label(new Rect(70, 672, 1100, 24), $"{KeyBindings.MovementLabel()}  move     HOLD / RELEASE {KeyBindings.Label(GameAction.Attack)}  attack     "
+                    + $"{KeyBindings.Label(GameAction.Special)}  class skill     {KeyBindings.Label(GameAction.AbilityQ)} / {KeyBindings.Label(GameAction.AbilityE)}  relic abilities", 14, DungeonUi.Muted);
             }
             finally { GUI.matrix = previous; }
         }
@@ -103,7 +113,7 @@ namespace Slopgame
             DungeonUi.Label(new Rect(536, 300, 630, 52), character.DisplayName, 38, character.Color);
             DungeonUi.Label(new Rect(538, 361, 610, 32), $"{character.StartingHealth + permanent.Health} HP     {character.StartingDamage + permanent.Damage} DAMAGE     {character.MoveSpeed + permanent.Speed:0.#} SPEED", 16, DungeonUi.Muted);
             DungeonUi.Label(new Rect(402, 434, 766, 80), character.Description, 20);
-            DungeonUi.Label(new Rect(402, 535, 766, 28), $"RMB  {DungeonUi.SpecialName(character.Weapon)}     /     Q + E unlock from boss artifacts", 16, character.Color);
+            DungeonUi.Label(new Rect(402, 535, 766, 28), $"{KeyBindings.Label(GameAction.Special)}  {DungeonUi.SpecialName(character.Weapon)}     /     {KeyBindings.Label(GameAction.AbilityQ)} + {KeyBindings.Label(GameAction.AbilityE)} unlock from boss artifacts", 16, character.Color);
             if (DungeonUi.Button("back", new Rect(70, 598, 268, 48), "Back", DungeonUi.Muted)) selecting = false;
             if (DungeonUi.Button("begin", new Rect(860, 598, 350, 48), "Begin descent", character.Color)) Run.Restart();
         }

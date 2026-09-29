@@ -40,7 +40,8 @@ namespace Slopgame
         public virtual void OnDefeated() { }
 
         /// <summary>Spawns an aimed enemy bolt (announced to co-op guests by the bolt itself).</summary>
-        protected void Fire(Vector2 from, Vector2 direction) => EnemyProjectile.Spawn(Run, Run.ProjectileRoot, from + direction.normalized * 0.5f, direction);
+        protected void Fire(Vector2 from, Vector2 direction, float speed = EnemyProjectile.DefaultSpeed)
+            => EnemyProjectile.Spawn(Run, Run.ProjectileRoot, from + direction.normalized * 0.5f, direction, true, speed);
 
         protected void Hazard(HazardShape shape, Vector2 center, Vector2 direction, float radius, float width, float telegraph, float duration)
             => HellfireZone.Spawn(Run, new HazardSpec

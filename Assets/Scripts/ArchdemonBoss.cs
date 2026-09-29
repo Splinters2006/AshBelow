@@ -12,7 +12,10 @@ namespace Slopgame
         private enum State : byte { Idle, Cross, Meteors, Nova, Ascend, Bombard, Descend, Staggered }
         private enum Attack { Cross, Meteors, Nova, Cataclysm }
         private static readonly Attack[] Rotation = { Attack.Meteors, Attack.Cross, Attack.Nova, Attack.Cataclysm, Attack.Cross, Attack.Meteors, Attack.Nova, Attack.Cataclysm };
-        private const float FlightHeight = 2.6f, InfernoTelegraph = 2.4f, InfernoDuration = 6.5f;
+        private const float FlightHeight = 2.6f, InfernoTelegraph = 3.6f, InfernoDuration = 6.5f;
+        // The Cataclysm barrage is slower than a regular bolt so it can be read and weaved through.
+        private const float BombardBoltSpeed = 4.8f;
+        public const float Size = 2.6f;
         public static readonly Color Hellfire = new Color(1f, 0.32f, 0.05f);
         private State state;
         private int rotation;
@@ -50,7 +53,7 @@ namespace Slopgame
         protected override void OnSetup()
         {
             Enemy.Speed = 1.3f;
-            transform.localScale = Vector2.one * 2.3f;
+            transform.localScale = Vector2.one * Size;
             ground = transform.position;
             GetComponent<SpriteRenderer>().sprite = DungeonVisuals.BossSprite(BossKind.Archdemon);
             DungeonVisuals.DecorateArchdemon(transform);
@@ -178,7 +181,7 @@ namespace Slopgame
         private void Cataclysm()
         {
             state = State.Ascend;
-            float radius = (IsEnraged ? 2.4f : 2.8f) + 0.35f * (Run.PartySize - 1);
+            float radius = (IsEnraged ? 3.4f : 3.9f) + 0.45f * (Run.PartySize - 1);
             var arena = DungeonMap.Arena;
             Vector2 safe = DungeonMap.ClampToArena(new Vector2(Random.Range(arena.xMin, arena.xMax), Random.Range(arena.yMin, arena.yMax)), radius + 1.5f);
             Hazard(HazardShape.Inferno, safe, Vector2.up, radius, 0f, InfernoTelegraph, InfernoDuration);
@@ -196,7 +199,7 @@ namespace Slopgame
                 nextVolley = Time.time + (IsEnraged ? 0.5f : 0.65f);
                 Vector2 aim = (target - from).sqrMagnitude > 0.01f ? (target - from).normalized : Vector2.down;
                 int shots = IsEnraged ? 5 : 3;
-                for (int i = 0; i < shots; i++) Fire(from, Quaternion.Euler(0, 0, (i - (shots - 1) * 0.5f) * 11f) * aim);
+                for (int i = 0; i < shots; i++) Fire(from, Quaternion.Euler(0, 0, (i - (shots - 1) * 0.5f) * 11f) * aim, BombardBoltSpeed);
                 CombatVfx.GlowBolt(Run.ProjectileRoot, transform.position, from, Hellfire);
                 CoopFx.Bolt(Run, transform.position, from, Hellfire, true);
             }
@@ -204,7 +207,7 @@ namespace Slopgame
             {
                 nextSpiral = Time.time + (IsEnraged ? 1.1f : 1.5f);
                 spiralAngle += 17f;
-                for (int i = 0; i < 10; i++) Fire(from, Quaternion.Euler(0, 0, spiralAngle + i * 36f) * Vector2.up);
+                for (int i = 0; i < 10; i++) Fire(from, Quaternion.Euler(0, 0, spiralAngle + i * 36f) * Vector2.up, BombardBoltSpeed);
             }
         }
 

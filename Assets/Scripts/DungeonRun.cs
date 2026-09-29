@@ -14,9 +14,9 @@ namespace Slopgame
         public bool IsBossFloor => Floor > 0 && Floor % 5 == 0;
         public DungeonBoss Boss { get; private set; }
         public ArtifactPickup Artifact { get; private set; }
-        public string Objective => Artifact != null ? "Claim the glowing artifact  /  F"
+        public string Objective => Artifact != null ? "Claim the glowing artifact  /  " + KeyBindings.Label(GameAction.Interact)
             : IsBossFloor && Enemies.Count > 0 ? "Defeat the arena guardian"
-            : Enemies.Count == 0 ? "Find the gold stairs  /  F" : "Clear the floor to unlock the stairs";
+            : Enemies.Count == 0 ? "Find the gold stairs  /  " + KeyBindings.Label(GameAction.Interact) : "Clear the floor to unlock the stairs";
         private readonly List<PowerupDefinition> upgradeChoices = new List<PowerupDefinition>();
         public IReadOnlyList<PowerupDefinition> UpgradeChoices => upgradeChoices;
         public int Floor { get; private set; }

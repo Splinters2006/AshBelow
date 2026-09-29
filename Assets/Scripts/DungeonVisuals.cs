@@ -8,7 +8,7 @@ namespace Slopgame
         private static Sprite emberBolt;
 
         private static readonly Sprite[] enemySprites = new Sprite[3];
-        private static Sprite flameSprite, shadowHero, duelistSprite, archdemonSprite;
+        private static Sprite flameSprite, shadowHero, duelistSprite, archdemonSprite, archdemonDetails;
         public static Sprite FlameSprite => flameSprite != null ? flameSprite : flameSprite = PixelSprite("Burn flame", new[]
         {
             "....W...", "...WW...", "...WW.W.", "..WWWWW.", ".WWWWWW.", ".WWWWWW.", "..WWWW..", "...WW..."
@@ -177,14 +177,7 @@ namespace Slopgame
                     "....WWW..WWW....", "...WWW....WWW...", "...WW......WW...", "..DDD......DDD.."
                 });
             if (kind == BossKind.Archdemon)
-                return archdemonSprite != null ? archdemonSprite : archdemonSprite = PixelSprite("Hellfire archdemon", new[]
-                {
-                    "W..................W", "WW................WW", ".WW..............WW.", "..WW....WWWW....WW..",
-                    "...WWW.WWWWWW.WWW...", "....WWWWWWWWWWWW....", "....WWDDWWWWDDWW....", "....WWWWWWWWWWWW....",
-                    ".....WWDDDDDDWW.....", "..WWWWWWWWWWWWWWWW..", ".WWWWWDWWWWWWDWWWWW.", "WWW.WWDWWDDWWDWW.WWW",
-                    "WW..WWWWWDDWWWWW..WW", "W...WWWWWWWWWWWW...W", "....WWWDDDDDDWWW....", "....WWWWW..WWWWW....",
-                    "....WWWW....WWWW....", "...WWWW......WWWW...", "...DDDD......DDDD...", "...................."
-                });
+                return archdemonSprite != null ? archdemonSprite : archdemonSprite = MirroredSprite("Hellfire archdemon", ArchdemonGrid, false);
             return null;
         }
 
@@ -202,15 +195,66 @@ namespace Slopgame
             Detail(boss, "Sash", new Vector2(0f, -0.2f), new Vector2(0.5f, 0.06f), new Color(0.85f, 0.2f, 0.25f));
         }
 
+        // Left half of the 32x32 archdemon, mirrored for the right. Body layer (tinted): L highlight, W base, M shade,
+        // D outline. Detail layer (fixed): H horn, h horn shade, E burning eyes, K maw, F fangs, O magma, Y molten core.
+        private static readonly string[] ArchdemonGrid =
+        {
+            ".H..............", ".HH.............", "..hH............", "..hHH...........",
+            "...hHH..........", "....hHHH........", ".....hhHHH......", ".......hhHHDDDDD",
+            ".........hDLWWWW", "..........DMMWWW", "..........DWEMMW", "..........DWEEEM",
+            "...H......DWWWWW", "..hH......DMKFKF", "..hHDDDDDDDDKOOO", ".DDLWWWWWWDDKFKF",
+            "DLWWWWWWWWWDDMWW", "DWWWMWWWWWWWWWWW", "DWWMDMWWWWWWOWWW", "DWMD.DMWWWWWOOWW",
+            "DWMD.DWWWWWWWOYY", "DWMD.DMWWWWWWOYY", "DMMD.DWMWWWWWOOW", "DWMD.DWWMWWWWWWW",
+            "DWMD.DMWWWMMWWWW", "DMMD.DDMWWWWMDDD", "HhHh..DDDDDDDD..", "H.H...DMWWWMD...",
+            "......DMWWMD....", ".......DWWMD....", "......DhHHhD....", ".....DhhhhhD....",
+        };
+
+        /// <summary>The archdemon's fixed-colour layer: horns, burning eyes, fanged maw and the magma in his chest.</summary>
+        public static Sprite ArchdemonDetails => archdemonDetails != null ? archdemonDetails
+            : archdemonDetails = MirroredSprite("Hellfire archdemon details", ArchdemonGrid, true);
+
+        /// <summary>Builds a symmetric sprite from its left half; one unit across, like the other boss bodies.</summary>
+        private static Sprite MirroredSprite(string name, string[] halfRows, bool details)
+        {
+            int half = halfRows[0].Length, width = half * 2, height = halfRows.Length;
+            var texture = new Texture2D(width, height, TextureFormat.RGBA32, false)
+            { name = name, filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Clamp };
+            var pixels = new Color[width * height];
+            for (int y = 0; y < height; y++)
+                for (int x = 0; x < width; x++)
+                {
+                    char c = halfRows[y][x < half ? x : width - 1 - x];
+                    Color? body = c == 'L' ? new Color(1f, 1f, 1f) : c == 'W' ? new Color(0.82f, 0.82f, 0.84f)
+                        : c == 'M' ? new Color(0.55f, 0.55f, 0.6f) : c == 'D' ? new Color(0.08f, 0.07f, 0.1f) : (Color?)null;
+                    pixels[(height - y - 1) * width + x] = details ? (body.HasValue ? Color.clear : ArchdemonDetailColor(c)) : body ?? Color.clear;
+                }
+            texture.SetPixels(pixels);
+            texture.Apply(false, true);
+            return Sprite.Create(texture, new Rect(0, 0, width, height), Vector2.one * 0.5f, width);
+        }
+
+        private static Color ArchdemonDetailColor(char c)
+        {
+            switch (c)
+            {
+                case 'H': return new Color(0.9f, 0.84f, 0.7f);
+                case 'h': return new Color(0.5f, 0.4f, 0.32f);
+                case 'E': return new Color(1f, 0.96f, 0.55f);
+                case 'K': return new Color(0.05f, 0f, 0.02f);
+                case 'F': return new Color(0.97f, 0.94f, 0.86f);
+                case 'O': return new Color(1f, 0.45f, 0.08f);
+                case 'Y': return new Color(1f, 0.86f, 0.35f);
+                default: return Color.clear;
+            }
+        }
+
         public static void DecorateArchdemon(Transform boss)
         {
-            var eye = new Color(1f, 0.92f, 0.35f);
-            Detail(boss, "Left eye", new Vector2(-0.15f, 0.175f), new Vector2(0.1f, 0.05f), eye, 7);
-            Detail(boss, "Right eye", new Vector2(0.15f, 0.175f), new Vector2(0.1f, 0.05f), eye, 7);
-            Detail(boss, "Maw", new Vector2(0f, 0.075f), new Vector2(0.3f, 0.05f), new Color(1f, 0.45f, 0.08f), 7);
-            Detail(boss, "Heart of the pit", new Vector2(0f, -0.1f), new Vector2(0.1f, 0.1f), new Color(1f, 0.6f, 0.15f), 7);
-            Detail(boss, "Left horn tip", new Vector2(-0.475f, 0.475f), new Vector2(0.05f, 0.05f), eye, 7);
-            Detail(boss, "Right horn tip", new Vector2(0.475f, 0.475f), new Vector2(0.05f, 0.05f), eye, 7);
+            var body = boss.GetComponent<SpriteRenderer>();
+            var details = new GameObject("Archdemon details").AddComponent<SpriteRenderer>();
+            details.transform.SetParent(boss, false);
+            details.sprite = ArchdemonDetails;
+            details.sortingOrder = body.sortingOrder + 1;
         }
 
         public static void DecorateBoss(Transform boss)

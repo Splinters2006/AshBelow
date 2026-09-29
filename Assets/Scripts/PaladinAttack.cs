@@ -23,8 +23,6 @@ namespace Slopgame
         private SwordAttack swipe;
         private PaladinRelics relics;
         private float readyAt, swordReadyAt;
-        private LineRenderer circle;
-        private Material material;
 
         public void Initialize(DungeonPlayer player, SwordAttack sword)
         {
@@ -32,17 +30,9 @@ namespace Slopgame
             swipe = sword;
             swipe.ShowChargePreview = false;
             relics = GetComponent<PaladinRelics>();
-            var visual = new GameObject("Blessing charge radius");
-            visual.transform.SetParent(transform, false);
-            circle = visual.AddComponent<LineRenderer>();
-            material = new Material(Shader.Find("Sprites/Default"));
-            circle.sharedMaterial = material;
-            circle.useWorldSpace = true;
-            circle.loop = true;
-            circle.positionCount = 64;
-            circle.widthMultiplier = 0.06f;
-            circle.sortingOrder = 5;
-            circle.enabled = false;
+            // Teammates see the same ring through RemoteHero.
+            BlessingChargeRing.Attach(transform, () => Player.Run.IsPlaying && Player.Health > 0 && Player.Charge.IsCharging
+                && !Player.IsRolling && !IsHeavyAttacking, () => Player.Charge.Amount);
         }
 
         public bool TryAttack(Vector2 aim, float charge = 0f)
@@ -110,22 +100,6 @@ namespace Slopgame
             CombatDamage.Apply(Player, target, damage, DamageElement.Physical, sword.Target + Vector2.up, 0.2f);
             if (target.Health > 0) target.Chill(0.8f);
         }
-        public void Hide() { swipe.Hide(); if (circle != null) circle.enabled = false; }
-
-        private void LateUpdate()
-        {
-            circle.enabled = Player.Run.IsPlaying && Player.Charge.IsCharging && !Player.IsRolling && !IsHeavyAttacking;
-            if (!circle.enabled) return;
-            Color color = AbilityCatalog.Gold;
-            color.a = Mathf.Lerp(0.2f, 1f, Player.Charge.Amount);
-            circle.startColor = circle.endColor = color;
-            for (int i = 0; i < circle.positionCount; i++)
-            {
-                float angle = i * Mathf.PI * 2f / circle.positionCount;
-                circle.SetPosition(i, transform.position + new Vector3(Mathf.Cos(angle), Mathf.Sin(angle)) * BlessingRadius);
-            }
-        }
-
-        private void OnDestroy() { if (material != null) Destroy(material); }
+        public void Hide() { swipe.Hide(); }
     }
 }

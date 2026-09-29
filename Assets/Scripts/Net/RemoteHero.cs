@@ -15,6 +15,8 @@ namespace Slopgame
         public bool IsEmpowered => (flags & PlayerStateMessage.Empowered) != 0;
         public bool IsBlessed => (moreFlags & PlayerStateMessage.Blessed) != 0;
         public bool IsVeiled => (moreFlags & PlayerStateMessage.Veiled) != 0;
+        public bool IsCharging => (flags & PlayerStateMessage.Charging) != 0;
+        public float ChargeAmount { get; private set; }
         public Vector2 Aim { get; private set; } = Vector2.right;
         private DungeonRun run;
         private SpriteRenderer body, details, shield;
@@ -38,6 +40,8 @@ namespace Slopgame
             hero.shield = DungeonVisuals.Create("Teammate shield", body.transform, position, new Vector2(0.14f, 1.3f), new Color(0.45f, 0.78f, 1f, 0.8f), 7);
             hero.shield.enabled = false;
             BlessingSparkles.Attach(body.transform, () => hero.IsAlive && hero.IsBlessed);
+            if (character.Weapon == WeaponType.Hammer)
+                BlessingChargeRing.Attach(body.transform, () => hero.IsAlive && hero.IsCharging && !hero.IsRolling, () => hero.ChargeAmount);
             hero.renderers = body.GetComponentsInChildren<Renderer>(true);
             return hero;
         }
@@ -48,6 +52,7 @@ namespace Slopgame
             if (state.Aim.sqrMagnitude > 0.001f) Aim = state.Aim.normalized;
             flags = state.Flags;
             moreFlags = state.MoreFlags;
+            ChargeAmount = state.Charge / 255f;
             Health = (flags & PlayerStateMessage.Dead) != 0 ? 0 : Mathf.Max(1, (int)state.Health);
             MaxHealth = Mathf.Max(1, (int)state.MaxHealth);
             // Big jumps (a blink, a new floor) snap instead of sliding through walls.

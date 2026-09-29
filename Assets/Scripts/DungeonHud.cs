@@ -12,6 +12,10 @@ namespace Slopgame
         private AbilityType pendingRelic = AbilityType.None;
         private int pendingSlot = -1;
         private Vector2 talentScroll;
+        // Co-op restart asks for a second click so a stray press does not throw away the party's run.
+        private float restartConfirmUntil;
+        private static readonly Rect RestartRect = new Rect(896, 24, 112, 40);
+        private bool CanRestartCoop => Run.IsNetworked && Run.Coop.IsHost && Run.IsPlaying;
 
         public bool BlocksPointer(Vector2 screenPosition)
         {
@@ -19,7 +23,7 @@ namespace Slopgame
             Vector2 point = new Vector2(screenPosition.x - (Screen.width - DungeonUi.Width * scale) / 2f,
                 Screen.height - screenPosition.y - (Screen.height - DungeonUi.Height * scale) / 2f) / scale;
             return !Run.IsPlaying || new Rect(1020, 24, 236, 40).Contains(point)
-                || (Run.CanSkipRoom && new Rect(896, 24, 112, 40).Contains(point))
+                || ((Run.CanSkipRoom || CanRestartCoop) && RestartRect.Contains(point))
                 || (showTalents && new Rect(922, 82, 334, 470).Contains(point));
         }
 
@@ -80,7 +84,16 @@ namespace Slopgame
                 DungeonUi.Bar(new Rect(412, 145, 456, 7), displayedBossHealth, untouchable ? AbilityCatalog.Gold : new Color(0.94f, 0.3f, 0.38f));
                 DungeonUi.Label(new Rect(400, 182, 480, 23), Run.Boss.Tell, 13, untouchable || Run.Boss.IsCharging ? AbilityCatalog.Gold : DungeonUi.Muted, TextAnchor.MiddleCenter);
             }
-            if (Run.CanSkipRoom && DungeonUi.Button("skipRoom", new Rect(896, 24, 112, 40), "Skip room", DebugColor)) Run.DebugSkipRoom();
+            if (Run.CanSkipRoom && DungeonUi.Button("skipRoom", RestartRect, "Skip room", DebugColor)) Run.DebugSkipRoom();
+            if (CanRestartCoop)
+            {
+                bool confirming = Time.unscaledTime < restartConfirmUntil;
+                if (DungeonUi.Button("coopRunRestart", RestartRect, confirming ? "Confirm?" : "Restart", confirming ? AbilityCatalog.Gold : DungeonUi.Muted))
+                {
+                    if (confirming) { restartConfirmUntil = 0f; Run.Coop.HostBeginRun(); }
+                    else restartConfirmUntil = Time.unscaledTime + 3f;
+                }
+            }
             if (DungeonUi.Button("talents", new Rect(1020, 24, 112, 40), "Talents", DungeonUi.Teal)) showTalents = !showTalents;
             if (DungeonUi.Button("menu", new Rect(1144, 24, 112, 40), Run.IsNetworked ? "Leave" : "Menu", DungeonUi.Muted)) Run.ShowMainMenu();
         }
@@ -88,15 +101,15 @@ namespace Slopgame
         private void DrawHotbar()
         {
             var player = Run.Player;
-            Slot(new Rect(260, 596, 180, 78), "RMB", DungeonUi.SpecialName(player.ClassWeapon), player.Weapon?.HeavyCooldownRemaining ?? 0f,
+            Slot(new Rect(260, 596, 180, 78), KeyBindings.Label(GameAction.Special), DungeonUi.SpecialName(player.ClassWeapon), player.Weapon?.HeavyCooldownRemaining ?? 0f,
                 DungeonUi.SpecialCooldown(player.ClassWeapon), Run.SelectedCharacter.Color);
             for (int i = 0; i < PlayerAbilities.SlotCount; i++)
             {
                 var ability = AbilityCatalog.Get(player.Abilities.Equipped(i));
-                Slot(new Rect(452 + i * 192, 596, 180, 78), i == 0 ? "Q" : "E", ability == null ? "Boss relic required" : ability.Name,
+                Slot(new Rect(452 + i * 192, 596, 180, 78), SlotKey(i), ability == null ? "Boss relic required" : ability.Name,
                     player.Abilities.CooldownRemaining(i), ability?.Cooldown ?? 1f, ability?.Color ?? DungeonUi.Muted, ability == null);
             }
-            Slot(new Rect(836, 596, 180, 78), "SPACE", "Dodge", player.DodgeCooldownRemaining, DungeonPlayer.RollCooldown, DungeonUi.Teal);
+            Slot(new Rect(836, 596, 180, 78), KeyBindings.Label(GameAction.Dodge), "Dodge", player.DodgeCooldownRemaining, DungeonPlayer.RollCooldown, DungeonUi.Teal);
             if (player.Blessing.BonusDamage > 0)
                 DungeonUi.Label(new Rect(440, 505, 400, 24), $"BLESSED  +{player.Blessing.BonusDamage} DAMAGE  /  {player.Blessing.Remaining:0.0}s", 14, AbilityCatalog.Gold, TextAnchor.MiddleCenter);
             string buff = BuffStatus(player.Buffs);
@@ -112,12 +125,16 @@ namespace Slopgame
                     : player.Charge.Amount >= 1f ? "FULL CHARGE  /  RELEASE" : $"CHARGING  {player.Charge.Amount:P0}", 14, AbilityCatalog.Gold, TextAnchor.MiddleCenter);
                 DungeonUi.Bar(new Rect(500, 568, 280, 5), player.Charge.Amount, AbilityCatalog.Gold);
             }
+            string attack = KeyBindings.Label(GameAction.Attack), interact = KeyBindings.Label(GameAction.Interact);
             DungeonUi.Label(new Rect(250, 690, 780, 22), player.ClassWeapon == WeaponType.Hammer
-                ? "LMB  weak swipe     HOLD / RELEASE LMB  bless allies     F  interact"
+                ? $"{attack}  weak swipe     HOLD / RELEASE {attack}  bless allies     {interact}  interact"
                 : player.ClassWeapon == WeaponType.Fists
-                ? "LMB  jab     HOLD / RELEASE LMB  punch barrage     RMB  empower     F  interact"
-                : "WASD  move     HOLD / RELEASE LMB  charge attack     F  interact", 13, DungeonUi.Muted, TextAnchor.UpperCenter);
+                ? $"{attack}  jab     HOLD / RELEASE {attack}  punch barrage     {KeyBindings.Label(GameAction.Special)}  empower     {interact}  interact"
+                : $"{KeyBindings.MovementLabel()}  move     HOLD / RELEASE {attack}  charge attack     {interact}  interact", 13, DungeonUi.Muted, TextAnchor.UpperCenter);
         }
+
+        /// <summary>The key bound to relic slot 0 or 1.</summary>
+        private static string SlotKey(int slot) => KeyBindings.Label(slot == 0 ? GameAction.AbilityQ : GameAction.AbilityE);
 
         private static string BuffStatus(HeroBuffs buffs)
         {
@@ -233,7 +250,7 @@ namespace Slopgame
         {
             if (DrawWaiting()) { pendingRelic = AbilityType.None; return; }
             if (pendingRelic != AbilityType.None) { DrawReplaceConfirmation(); return; }
-            ModalTitle("GUARDIAN DEFEATED", "An artifact awakens", "Choose an active ability for your class. Q and E hold two abilities. Choosing an equipped ability raises its rank.");
+            ModalTitle("GUARDIAN DEFEATED", "An artifact awakens", $"Choose an active ability for your class. {SlotKey(0)} and {SlotKey(1)} hold two abilities. Choosing an equipped ability raises its rank.");
             int index = 0;
             foreach (var ability in AbilityCatalog.All)
             {
@@ -241,7 +258,7 @@ namespace Slopgame
                 Rect rect = new Rect(142 + index++ * 340, 300, 316, 340);
                 bool equipped = Run.Player.Abilities.IsEquipped(ability.Type);
                 int rank = Run.Player.Abilities.Rank(ability.Type);
-                string binding = Run.Player.Abilities.Equipped(0) == ability.Type ? "Q" : "E";
+                string binding = SlotKey(Run.Player.Abilities.Equipped(0) == ability.Type ? 0 : 1);
                 Card(rect, equipped ? $"{binding} EQUIPPED  /  RANK {rank}" : $"ACTIVE  /  {ability.Cooldown:0}s COOLDOWN", ability.Name, ability.Description, ability.Color, ability.Glyph);
                 if (equipped)
                 {
@@ -255,7 +272,7 @@ namespace Slopgame
                     {
                         bool occupied = Run.Player.Abilities.Equipped(slot) != AbilityType.None;
                         if (!DungeonUi.Button("bind" + ability.Type + slot, new Rect(rect.x + 24 + slot * 140, rect.yMax - 60, 128, 40),
-                            $"{(occupied ? "Replace" : "Bind to")} {(slot == 0 ? "Q" : "E")}", ability.Color)) continue;
+                            $"{(occupied ? "Replace" : "Bind to")} {SlotKey(slot)}", ability.Color)) continue;
                         // Overwriting an equipped relic unequips it, so ask first.
                         if (occupied) { pendingRelic = ability.Type; pendingSlot = slot; }
                         else Run.ChooseArtifact(ability.Type, slot);
@@ -271,7 +288,7 @@ namespace Slopgame
             var incoming = AbilityCatalog.Get(pendingRelic);
             var current = AbilityCatalog.Get(Run.Player.Abilities.Equipped(pendingSlot));
             if (incoming == null || current == null) { pendingRelic = AbilityType.None; return; }
-            string key = pendingSlot == 0 ? "Q" : "E";
+            string key = SlotKey(pendingSlot);
             ModalTitle("REPLACE RELIC?", $"Replace {current.Name}?", $"{incoming.Name} will take the {key} slot and {current.Name} will be unequipped.");
             var panel = new Rect(390, 300, 500, 250);
             DungeonUi.Panel(panel, DungeonUi.PanelColor);

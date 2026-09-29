@@ -58,10 +58,10 @@ namespace Slopgame
 
         // ---------------------------------------------------------------- run lifecycle
 
-        /// <summary>Host only: starts a new descent for the whole party.</summary>
+        /// <summary>Host only: starts a new descent for the whole party, from the lobby, after a wipe, or mid-run as a restart.</summary>
         public void HostBeginRun()
         {
-            if (!IsHost || (Session.State != NetState.Lobby && !RunOver)) return;
+            if (!IsHost || (Session.State != NetState.Lobby && Session.State != NetState.InRun)) return;
             int seed = Random.Range(0, 1000000);
             int party = Session.Peers.Count;
             using (var writer = NetSession.Writer())
@@ -187,7 +187,8 @@ namespace Slopgame
                 Aim = player.Shield != null && player.Shield.IsBlocking ? player.Shield.Direction : player.AimDirection,
                 Flags = flags, MoreFlags = (byte)((player.Blessing != null && player.Blessing.BonusDamage > 0 ? PlayerStateMessage.Blessed : 0)
                     | (player.IsVeiled ? PlayerStateMessage.Veiled : 0)),
-                Health = (short)player.Health, MaxHealth = (short)player.MaxHealth
+                Health = (short)player.Health, MaxHealth = (short)player.MaxHealth,
+                Charge = (byte)Mathf.RoundToInt((player.Charge != null ? player.Charge.Amount : 0f) * 255f)
             };
             using var writer = NetSession.Writer(64);
             message.Write(writer);
@@ -306,6 +307,7 @@ namespace Slopgame
             writer.WriteValueSafe(bolt.Id);
             writer.WriteValueSafe(position);
             writer.WriteValueSafe(direction);
+            writer.WriteValueSafe(bolt.Speed);
             Session.Send(CoopMessages.Bolt, writer);
         }
 
@@ -316,8 +318,9 @@ namespace Slopgame
             reader.ReadValueSafe(out int id);
             reader.ReadValueSafe(out Vector2 position);
             reader.ReadValueSafe(out Vector2 direction);
+            reader.ReadValueSafe(out float speed);
             if (floor != Run.Floor || Run.ProjectileRoot == null) return;
-            var bolt = EnemyProjectile.Spawn(Run, Run.ProjectileRoot, position, direction, false);
+            var bolt = EnemyProjectile.Spawn(Run, Run.ProjectileRoot, position, direction, false, speed);
             bolt.Id = id;
             bolts[id] = bolt;
         }

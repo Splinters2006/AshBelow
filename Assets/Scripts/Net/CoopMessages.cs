@@ -29,11 +29,14 @@ namespace Slopgame
         public Vector2 Position, Aim;
         public byte Flags, MoreFlags;
         public short Health, MaxHealth;
+        /// <summary>How far the current attack charge has filled, 0-255.</summary>
+        public byte Charge;
 
         public void Write(FastBufferWriter w)
         {
             w.WriteValueSafe(Id); w.WriteValueSafe(Floor); w.WriteValueSafe(Position); w.WriteValueSafe(Aim);
             w.WriteValueSafe(Flags); w.WriteValueSafe(MoreFlags); w.WriteValueSafe(Health); w.WriteValueSafe(MaxHealth);
+            w.WriteValueSafe(Charge);
         }
 
         public static PlayerStateMessage Read(FastBufferReader r)
@@ -41,6 +44,7 @@ namespace Slopgame
             var m = new PlayerStateMessage();
             r.ReadValueSafe(out m.Id); r.ReadValueSafe(out m.Floor); r.ReadValueSafe(out m.Position); r.ReadValueSafe(out m.Aim);
             r.ReadValueSafe(out m.Flags); r.ReadValueSafe(out m.MoreFlags); r.ReadValueSafe(out m.Health); r.ReadValueSafe(out m.MaxHealth);
+            r.ReadValueSafe(out m.Charge);
             return m;
         }
     }

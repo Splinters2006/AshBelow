@@ -40,6 +40,8 @@ namespace Slopgame
         private Vector2 meteorFrom;
 
         public bool IsBurning => age >= spec.Telegraph && age < spec.Telegraph + spec.Duration;
+        /// <summary>The Cataclysm sea of fire and meteor craters are burning ground; beams and rings are strikes.</summary>
+        private bool IsGround => spec.Shape == HazardShape.Inferno || spec.Shape == HazardShape.Pool;
         private float ActiveTime => age - spec.Telegraph;
         private float RingRadius => Mathf.Lerp(0.6f, spec.Radius, Mathf.Clamp01(ActiveTime / Mathf.Max(0.01f, spec.Duration)));
 
@@ -85,8 +87,12 @@ namespace Slopgame
             var hero = run.Player;
             if (IsBurning && hero != null && hero.Health > 0 && !hero.IsInvulnerable && Contains(hero.transform.position))
             {
-                hero.Hit();
-                HeroVfx.Sparks(run.ProjectileRoot, hero.transform.position, FlameMesh.Orange, 12, 4f, 0.4f, Vector2.up, 120f);
+                int before = hero.Health;
+                // Burning ground ticks once a second; pillars and fire walls strike like any other blow.
+                if (IsGround) hero.Burn();
+                else hero.Hit();
+                if (hero.Health != before || hero.IsInvulnerable)
+                    HeroVfx.Sparks(run.ProjectileRoot, hero.transform.position, FlameMesh.Orange, 12, 4f, 0.4f, Vector2.up, 120f);
             }
             Draw();
         }
@@ -153,12 +159,20 @@ namespace Slopgame
                     float seed = FlameMesh.Hash(x, y);
                     if (warning)
                     {
-                        // The floor darkens and cracks with pulsing magma before the eruption.
-                        float glow = (0.12f + 0.3f * warn * pulse) * (0.7f + 0.3f * seed);
+                        // The floor turns red at once and cracks with pulsing magma, so the doomed area reads instantly.
+                        float glow = (0.3f + 0.35f * warn * pulse) * (0.75f + 0.25f * seed);
                         flames.Rect(cell - Vector2.one * 0.5f, cell + Vector2.one * 0.5f, FlameMesh.Alpha(FlameMesh.Crimson, glow));
-                        if (seed > 0.55f)
-                            flames.Bar(cell + new Vector2(seed - 0.5f, -0.4f), FlameMesh.Polar(seed * 6.3f, 1f), 0.7f, 0.06f,
-                                FlameMesh.Alpha(FlameMesh.Yellow, warn * 0.8f), FlameMesh.Alpha(FlameMesh.Orange, 0f));
+                        // Diagonal hazard stripes crawl across the doomed floor.
+                        if (Mathf.Repeat(x + y - time * 2f, 3f) < 1f)
+                            flames.Bar(cell + new Vector2(-0.5f, -0.5f), new Vector2(1f, 1f).normalized, 1.41f, 0.22f,
+                                FlameMesh.Alpha(FlameMesh.Orange, 0.18f + 0.22f * warn), FlameMesh.Alpha(FlameMesh.Orange, 0.18f + 0.22f * warn));
+                        if (seed > 0.45f)
+                            flames.Bar(cell + new Vector2(seed - 0.5f, -0.4f), FlameMesh.Polar(seed * 6.3f, 1f), 0.7f, 0.07f,
+                                FlameMesh.Alpha(FlameMesh.Yellow, 0.35f + warn * 0.65f), FlameMesh.Alpha(FlameMesh.Orange, 0f));
+                        // Small flames start licking up over the last stretch of the warning.
+                        float kindle = Mathf.InverseLerp(0.55f, 1f, warn);
+                        if (kindle > 0f && seed > 0.35f)
+                            flames.Flame(cell + new Vector2(seed - 0.5f, -0.45f) * 0.8f, Vector2.up, 0.45f, (0.3f + 0.5f * seed) * kindle, seed, kindle * 0.8f);
                         continue;
                     }
                     float heat = 0.55f + 0.2f * Mathf.Sin(time * 7f + seed * 20f);
@@ -179,6 +193,13 @@ namespace Slopgame
                 : FlameMesh.Alpha(FlameMesh.Orange, 0.7f * fade), FlameMesh.Alpha(FlameMesh.Crimson, (warning ? 0.2f + 0.3f * warn * pulse : 0.6f) * fade), 64);
             // The sanctuary: a gold ring with rotating runes, then a white-hot wall of flame around it.
             float spin = time * 1.6f;
+            if (warning)
+            {
+                // A pillar of gold light marks the sanctuary from anywhere in the arena.
+                flames.Bar(spec.Center, Vector2.up, 7f, safe * 0.9f, FlameMesh.Alpha(AbilityCatalog.Gold, 0.2f + 0.12f * pulse), FlameMesh.Alpha(AbilityCatalog.Gold, 0f));
+                flames.Ring(spec.Center, safe + 0.25f + (1f - Mathf.Repeat(time * 1.5f, 1f)) * 2.5f, 0.1f,
+                    FlameMesh.Alpha(AbilityCatalog.Gold, 0.6f * Mathf.Repeat(time * 1.5f, 1f)), 64);
+            }
             flames.Disc(spec.Center, safe, FlameMesh.Alpha(AbilityCatalog.Gold, 0.12f + 0.08f * pulse), FlameMesh.Alpha(AbilityCatalog.Gold, 0.02f));
             flames.Ring(spec.Center, safe, warning ? 0.12f + 0.1f * pulse : 0.14f, FlameMesh.Alpha(AbilityCatalog.Gold, warning ? 1f : 0.8f * fade));
             for (int i = 0; i < 12; i++)
