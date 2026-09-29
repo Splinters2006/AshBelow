@@ -16,6 +16,7 @@ namespace Slopgame
         public static void ApplyShadowstep(DungeonPlayer player, DungeonEnemy enemy)
         {
             if (enemy == null || enemy.Health <= 0) return;
+            if (enemy.IsInvulnerable) { enemy.Hit(0, player.transform.position); return; }
             // Shadowstep emerges behind its victim, regardless of their turn during the blink.
             Vector2 source = (Vector2)enemy.transform.position - enemy.Facing.Direction;
             HitVfx(player, enemy.transform.position, source, new Color(0.8f, 0.5f, 1f), true);
@@ -38,6 +39,7 @@ namespace Slopgame
         public static void Apply(DungeonPlayer player, DungeonEnemy enemy, int damage, DamageElement element, Vector2 source, float knockback = 1f)
         {
             if (enemy == null || enemy.Health <= 0) return;
+            if (enemy.IsInvulnerable) { enemy.Hit(0, source); return; }
             if (enemy.Facing.IsBehind(source)) RearHitMarker.Show(player != null ? player.Run : null, enemy);
             if (element == DamageElement.Physical)
             {

@@ -52,6 +52,7 @@ namespace Slopgame
             Session.Handle(CoopMessages.ChoiceDone, OnChoiceDone);
             Session.Handle(CoopMessages.Advance, OnAdvance);
             Session.Handle(CoopMessages.Died, OnDied);
+            Session.Handle(CoopMessages.Hazard, OnHazard);
             Session.Handle(CoopMessages.Over, (sender, reader) => { if (!IsHost) EndRunLocal(); });
         }
 
@@ -218,7 +219,7 @@ namespace Slopgame
                 if (enemy.IsBurning) flags |= EnemySnapshot.Burning;
                 var shooter = enemy.GetComponent<EnemyShooter>();
                 if ((shooter != null && shooter.IsCharging) || (enemy.Boss != null && enemy.Boss.IsCharging)) flags |= EnemySnapshot.Charging;
-                if (enemy.Boss != null && enemy.Boss.Pattern % 2 == 1) flags |= EnemySnapshot.PatternOdd;
+                if (enemy.Boss != null) flags |= (byte)(enemy.Boss.NetState << EnemySnapshot.BossStateShift);
                 new EnemySnapshot { Id = enemy.NetId, Position = enemy.transform.position, Facing = enemy.Facing.Direction, Health = enemy.Health, Flags = flags }.Write(writer);
             }
             Session.Send(CoopMessages.Enemies, writer, NetworkDelivery.UnreliableSequenced);
@@ -345,6 +346,21 @@ namespace Slopgame
             if (message.Floor != Run.Floor || !bolts.TryGetValue(message.Bolt, out var bolt) || bolt == null || bolt.IsSpent) return;
             if (message.Kind == CoopBoltEventKind.Consumed) bolt.Consume();
             else bolt.MirrorReflection(message.Position, message.Direction);
+        }
+
+        /// <summary>Host only: shows a boss hazard to the guests, whose own copy judges their hero.</summary>
+        public void AnnounceHazard(HazardSpec spec)
+        {
+            using var writer = NetSession.Writer(64);
+            new HazardMessage { Floor = Run.Floor, Spec = spec }.Write(writer);
+            Session.Send(CoopMessages.Hazard, writer);
+        }
+
+        private void OnHazard(ulong sender, FastBufferReader reader)
+        {
+            if (IsHost) return;
+            var message = HazardMessage.Read(reader);
+            if (message.Floor == Run.Floor && Run.ProjectileRoot != null) HellfireZone.Spawn(Run, message.Spec, false);
         }
 
         // ---------------------------------------------------------------- teammate effects and support

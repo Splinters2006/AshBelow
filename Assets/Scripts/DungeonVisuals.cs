@@ -8,7 +8,7 @@ namespace Slopgame
         private static Sprite emberBolt;
 
         private static readonly Sprite[] enemySprites = new Sprite[3];
-        private static Sprite flameSprite, shadowHero;
+        private static Sprite flameSprite, shadowHero, duelistSprite, archdemonSprite;
         public static Sprite FlameSprite => flameSprite != null ? flameSprite : flameSprite = PixelSprite("Burn flame", new[]
         {
             "....W...", "...WW...", "...WW.W.", "..WWWWW.", ".WWWWWW.", ".WWWWWW.", "..WWWW..", "...WW..."
@@ -163,6 +163,54 @@ namespace Slopgame
             details.color = Color.white;
             details.sortingOrder = body.sortingOrder + 1;
             return details;
+        }
+
+        /// <summary>Body sprites for the later guardians (the Ash Warden keeps its plain block body).</summary>
+        public static Sprite BossSprite(BossKind kind)
+        {
+            if (kind == BossKind.Duelist)
+                return duelistSprite != null ? duelistSprite : duelistSprite = PixelSprite("Ashen duelist", new[]
+                {
+                    "......WWWW......", ".....WWWWWW.....", "....WWDDDDWW....", "....WDDDDDDW....",
+                    "....WDDDDDDW....", ".....WWWWWW.....", "W...WWWWWWWW...W", ".W.WWWDWWDWWW.W.",
+                    "..WWWWDWWDWWWW..", "...WWWDWWDWWW...", "....WWWWWWWW....", "....WWWDDWWW....",
+                    "....WWW..WWW....", "...WWW....WWW...", "...WW......WW...", "..DDD......DDD.."
+                });
+            if (kind == BossKind.Archdemon)
+                return archdemonSprite != null ? archdemonSprite : archdemonSprite = PixelSprite("Hellfire archdemon", new[]
+                {
+                    "W..................W", "WW................WW", ".WW..............WW.", "..WW....WWWW....WW..",
+                    "...WWW.WWWWWW.WWW...", "....WWWWWWWWWWWW....", "....WWDDWWWWDDWW....", "....WWWWWWWWWWWW....",
+                    ".....WWDDDDDDWW.....", "..WWWWWWWWWWWWWWWW..", ".WWWWWDWWWWWWDWWWWW.", "WWW.WWDWWDDWWDWW.WWW",
+                    "WW..WWWWWDDWWWWW..WW", "W...WWWWWWWWWWWW...W", "....WWWDDDDDDWWW....", "....WWWWW..WWWWW....",
+                    "....WWWW....WWWW....", "...WWWW......WWWW...", "...DDDD......DDDD...", "...................."
+                });
+            return null;
+        }
+
+        public static void DecorateDuelist(Transform boss)
+        {
+            var blade = new Color(0.45f, 0.95f, 1f);
+            Detail(boss, "Left eye", new Vector2(-0.094f, 0.28f), new Vector2(0.09f, 0.05f), blade, 7);
+            Detail(boss, "Right eye", new Vector2(0.094f, 0.28f), new Vector2(0.09f, 0.05f), blade, 7);
+            for (int side = -1; side <= 1; side += 2)
+            {
+                var sword = Create("Blade", boss, boss.position, new Vector2(0.06f, 0.75f), blade, 6);
+                sword.transform.localPosition = new Vector2(side * 0.58f, -0.12f);
+                sword.transform.localRotation = Quaternion.Euler(0, 0, side * 32f);
+            }
+            Detail(boss, "Sash", new Vector2(0f, -0.2f), new Vector2(0.5f, 0.06f), new Color(0.85f, 0.2f, 0.25f));
+        }
+
+        public static void DecorateArchdemon(Transform boss)
+        {
+            var eye = new Color(1f, 0.92f, 0.35f);
+            Detail(boss, "Left eye", new Vector2(-0.15f, 0.175f), new Vector2(0.1f, 0.05f), eye, 7);
+            Detail(boss, "Right eye", new Vector2(0.15f, 0.175f), new Vector2(0.1f, 0.05f), eye, 7);
+            Detail(boss, "Maw", new Vector2(0f, 0.075f), new Vector2(0.3f, 0.05f), new Color(1f, 0.45f, 0.08f), 7);
+            Detail(boss, "Heart of the pit", new Vector2(0f, -0.1f), new Vector2(0.1f, 0.1f), new Color(1f, 0.6f, 0.15f), 7);
+            Detail(boss, "Left horn tip", new Vector2(-0.475f, 0.475f), new Vector2(0.05f, 0.05f), eye, 7);
+            Detail(boss, "Right horn tip", new Vector2(0.475f, 0.475f), new Vector2(0.05f, 0.05f), eye, 7);
         }
 
         public static void DecorateBoss(Transform boss)

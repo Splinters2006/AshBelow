@@ -10,13 +10,20 @@ namespace Slopgame
         public const int Height = 39;
         private readonly bool[,] floor = new bool[Width, Height];
         public List<Vector2Int> Centers { get; } = new List<Vector2Int>();
+        /// <summary>The walkable cells of a boss floor.</summary>
+        public static readonly RectInt Arena = new RectInt(14, 8, 27, 23);
+
+        /// <summary>Keeps a point inside the boss arena, at least <paramref name="margin"/> away from its walls.</summary>
+        public static Vector2 ClampToArena(Vector2 point, float margin) => new Vector2(
+            Mathf.Clamp(point.x, Arena.xMin - 0.5f + margin, Arena.xMax - 0.5f - margin),
+            Mathf.Clamp(point.y, Arena.yMin - 0.5f + margin, Arena.yMax - 0.5f - margin));
 
         public DungeonMap(int seed, bool bossArena = false)
         {
             if (bossArena)
             {
-                for (int x = 14; x <= 40; x++)
-                    for (int y = 8; y <= 30; y++) floor[x, y] = true;
+                for (int x = Arena.xMin; x < Arena.xMax; x++)
+                    for (int y = Arena.yMin; y < Arena.yMax; y++) floor[x, y] = true;
                 Centers.Add(new Vector2Int(27, 14));
                 Centers.Add(new Vector2Int(27, 22));
                 return;

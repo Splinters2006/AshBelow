@@ -2,77 +2,72 @@ using UnityEngine;
 
 namespace Slopgame
 {
+    public enum BossKind { AshWarden, Duelist, Archdemon }
+
+    /// <summary>
+    /// The arena guardian's shared state (health, title, invulnerability, co-op state). Its fighting style lives in
+    /// a <see cref="BossBehaviour"/> component chosen by floor: the Ash Warden, the Ashen Duelist, then the Archdemon.
+    /// </summary>
     [RequireComponent(typeof(DungeonEnemy))]
     public sealed class DungeonBoss : MonoBehaviour
     {
         public DungeonEnemy Enemy { get; private set; }
+        public BossBehaviour Behaviour { get; private set; }
+        public BossKind Kind { get; private set; }
         public int MaxHealth { get; private set; }
-        public string Title => Enemy.Run.Floor % 10 == 0 ? "THE CINDER SOVEREIGN" : "THE ASH WARDEN";
+        public string Title => Behaviour.Title;
+        public string Tell => Behaviour.Tell;
         public bool IsEnraged => Enemy.Health <= MaxHealth / 2;
-        public string Tell => charging ? pattern % 2 == 0 ? "EMBER FAN - SIDESTEP" : "NOVA - KEEP MOVING" : IsEnraged ? "ENRAGED" : "GUARDIAN OF THE RELIC";
-        private float readyAt, fireAt;
-        private bool charging, dropped;
-        private int pattern;
-        public bool IsCharging => charging;
-        public int Pattern => pattern;
-        private Vector2 lockedAim;
+        public bool IsCharging => Behaviour.IsCharging;
+        public bool IsInvulnerable => Behaviour.IsInvulnerable;
+        public float HitRadius => Behaviour.HitRadius;
+        public bool DealsContactDamage => Behaviour.DealsContactDamage;
+        public float ContactReach => Behaviour.ContactReach;
+        /// <summary>Four bits of attack state mirrored to co-op guests.</summary>
+        public byte NetState => (byte)(Behaviour.NetState & 0x0F);
         private SpriteRenderer body;
+        private bool dropped;
+        private float nextDeflect;
+
+        /// <summary>Boss floors cycle Warden, Duelist, Archdemon (floors 5, 10, 15, then again from 20).</summary>
+        public static BossKind KindForFloor(int floor) => (BossKind)(Mathf.Max(0, floor / 5 - 1) % 3);
 
         public void Initialize(DungeonRun run)
         {
             Enemy = GetComponent<DungeonEnemy>();
             Enemy.Run = run;
             Enemy.Boss = this;
-            MaxHealth = run.EnemyHealthScaled(24 + run.Floor * 3);
-            Enemy.Health = MaxHealth;
-            Enemy.Speed = 1.5f;
             body = GetComponent<SpriteRenderer>();
+            Kind = KindForFloor(run.Floor);
+            Behaviour = Kind == BossKind.Duelist ? gameObject.AddComponent<DuelistBoss>()
+                : Kind == BossKind.Archdemon ? (BossBehaviour)gameObject.AddComponent<ArchdemonBoss>()
+                : gameObject.AddComponent<AshWardenBoss>();
+            MaxHealth = run.EnemyHealthScaled(Behaviour.BaseHealth(run.Floor));
+            Enemy.Health = MaxHealth;
+            Behaviour.Setup(this);
             gameObject.name = Title;
-            readyAt = Enemy.ActionTime + 2f;
-            DungeonVisuals.DecorateBoss(transform);
         }
 
         private void Update()
         {
             if (!Enemy.Run.IsPlaying || Enemy.Health <= 0) return;
-            body.color = Enemy.IsFlashing || charging ? Color.Lerp(AbilityCatalog.Gold, Color.white, 0.5f + Mathf.Sin(Time.time * 18f) * 0.5f)
-                : Enemy.IsChilled ? AbilityCatalog.Ice : IsEnraged ? new Color(1f, 0.26f, 0.28f) : new Color(0.65f, 0.3f, 0.55f);
+            body.color = Behaviour.BodyColor();
+            Behaviour.VisualTick();
             if (Enemy.Run.IsGuest) return;
             Vector2 offset = Enemy.Run.NearestHero(transform.position) - (Vector2)transform.position;
-            Enemy.Facing.TurnToward(offset, Time.deltaTime * Enemy.ActionSpeedMultiplier);
-            if (charging)
-            {
-                if (Enemy.ActionTime >= fireAt)
-                {
-                    int shots = pattern % 2 == 0 ? (IsEnraged ? 7 : 5) : (IsEnraged ? 16 : 12);
-                    for (int i = 0; i < shots; i++)
-                    {
-                        float angle = pattern % 2 == 0 ? (i - (shots - 1) * 0.5f) * 14f : i * 360f / shots;
-                        Vector2 direction = Quaternion.Euler(0, 0, angle) * lockedAim;
-                        EnemyProjectile.Spawn(Enemy.Run, Enemy.Run.ProjectileRoot, (Vector2)transform.position + direction * 0.5f, direction);
-                    }
-                    pattern++;
-                    charging = false;
-                    readyAt = Enemy.ActionTime + (IsEnraged ? 1.1f : 1.65f);
-                }
-            }
-            else if (Enemy.ActionTime >= readyAt)
-            {
-                charging = true;
-                lockedAim = offset.sqrMagnitude > 0.01f ? offset.normalized : Vector2.down;
-                fireAt = Enemy.ActionTime + 0.85f;
-                CombatVfx.Ring(Enemy.Run.ProjectileRoot, transform.position, 1.5f, AbilityCatalog.Gold, 0.85f);
-            }
-            else if (offset.magnitude > 2f)
-                transform.position = Enemy.Run.Map.Move(transform.position, offset.normalized * Enemy.Speed * Enemy.MoveMultiplier * Time.deltaTime);
-            Enemy.TryContactHit(1.05f);
+            Behaviour.HostTick(offset);
+            if (DealsContactDamage) Enemy.TryContactHit(ContactReach);
         }
 
-        /// <summary>Co-op guest: mirror the host's windup so the tell and flashing match.</summary>
-        public void ApplySnapshot(bool isCharging, bool oddPattern)
+        /// <summary>Co-op guest: mirror the host's attack state so tells, flight and invulnerability match.</summary>
+        public void ApplySnapshot(bool isCharging, byte state) => Behaviour.ApplyNetState(isCharging, state);
+
+        /// <summary>A blow glanced off while the boss is untouchable.</summary>
+        public void Deflect(Vector2 source)
         {
-            charging = isCharging;
-            if (pattern % 2 == 1 != oddPattern) pattern++;
+            if (Time.time < nextDeflect) return;
+            nextDeflect = Time.time + 0.12f;
+            HeroVfx.Sparks(Enemy.Run.ProjectileRoot, transform.position, AbilityCatalog.Gold, 6, 3f, 0.25f, source - (Vector2)transform.position, 90f);
         }
 
         public void Defeated()
@@ -84,7 +79,13 @@ namespace Slopgame
                 bolt.gameObject.SetActive(false);
                 Destroy(bolt.gameObject);
             }
-            Enemy.Run.DropArtifact(transform.position);
+            foreach (var zone in Enemy.Run.ProjectileRoot.GetComponentsInChildren<HellfireZone>())
+            {
+                zone.gameObject.SetActive(false);
+                Destroy(zone.gameObject);
+            }
+            Behaviour.OnDefeated();
+            Enemy.Run.DropArtifact(Behaviour.GroundPosition);
         }
     }
 }

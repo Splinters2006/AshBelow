@@ -94,6 +94,20 @@ namespace Slopgame.Editor
             var boltBack = RoundTrip(bolt, (m, w) => m.Write(w), BoltEventMessage.Read);
             Require(boltBack.Origin == 1 && boltBack.Floor == 5 && boltBack.Bolt == 44 && boltBack.Kind == CoopBoltEventKind.Reflected
                 && boltBack.Position == bolt.Position && boltBack.Direction == Vector2.left, "Bolt event did not round-trip.");
+
+            var hazard = new HazardMessage
+            {
+                Floor = 15,
+                Spec = new HazardSpec { Shape = HazardShape.Inferno, Center = new Vector2(27f, 19f), Direction = Vector2.up, Radius = 2.8f, Width = 0.9f, Telegraph = 2.4f, Duration = 6.5f }
+            };
+            var hazardBack = RoundTrip(hazard, (m, w) => m.Write(w), HazardMessage.Read);
+            Require(hazardBack.Floor == 15 && hazardBack.Spec.Shape == HazardShape.Inferno && hazardBack.Spec.Center == hazard.Spec.Center
+                && hazardBack.Spec.Direction == Vector2.up && Mathf.Approximately(hazardBack.Spec.Radius, 2.8f) && Mathf.Approximately(hazardBack.Spec.Width, 0.9f)
+                && Mathf.Approximately(hazardBack.Spec.Telegraph, 2.4f) && Mathf.Approximately(hazardBack.Spec.Duration, 6.5f), "Hellfire hazard did not round-trip.");
+            Require(DungeonBoss.KindForFloor(5) == BossKind.AshWarden && DungeonBoss.KindForFloor(10) == BossKind.Duelist
+                && DungeonBoss.KindForFloor(15) == BossKind.Archdemon && DungeonBoss.KindForFloor(20) == BossKind.AshWarden, "Boss rotation is wrong.");
+            Require((byte)((0x0F << EnemySnapshot.BossStateShift) & (EnemySnapshot.Flashing | EnemySnapshot.Chilled | EnemySnapshot.Burning | EnemySnapshot.Charging)) == 0,
+                "Boss state bits overlap the enemy snapshot flags.");
         }
 
         private static void TestFlowField()

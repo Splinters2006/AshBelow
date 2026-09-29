@@ -120,6 +120,7 @@ namespace Slopgame
             Boss = null;
             Artifact = null;
             Time.timeScale = 1f;
+            ScreenFx.Clear();
             IsInMainMenu = true;
             if (level != null) { level.gameObject.SetActive(false); Destroy(level.gameObject); level = null; }
             if (Player != null) { Player.gameObject.SetActive(false); Destroy(Player.gameObject); Player = null; }
@@ -167,6 +168,7 @@ namespace Slopgame
         private void NextFloor()
         {
             Time.timeScale = 1f;
+            ScreenFx.Clear();
             Boss = null;
             Artifact = null;
             ChoosingArtifact = false;
@@ -252,7 +254,21 @@ namespace Slopgame
             // A fallen co-op hero watches a living teammate until the next floor.
             Transform follow = Player.Health <= 0 && IsNetworked && Coop.SpectateTarget != null ? Coop.SpectateTarget.transform : Player.transform;
             var target = new Vector3(follow.position.x, follow.position.y, -10);
-            view.transform.position = Vector3.Lerp(view.transform.position, target, 1 - Mathf.Exp(-10 * Time.deltaTime));
+            view.transform.position = Vector3.Lerp(view.transform.position - (Vector3)cameraShake, target, 1 - Mathf.Exp(-10 * Time.deltaTime));
+            cameraShake = ScreenFx.Offset;
+            view.transform.position += (Vector3)cameraShake;
+        }
+
+        private Vector2 cameraShake;
+
+        /// <summary>Solo debug mode only: abandons the current floor (boss arenas included) and builds the next one.</summary>
+        public bool CanSkipRoom => DebugMode.Enabled && !IsNetworked && IsPlaying;
+
+        public void DebugSkipRoom()
+        {
+            if (!CanSkipRoom) return;
+            Player.Charge.Cancel();
+            NextFloor();
         }
 
         public void EnemyDefeated(DungeonEnemy enemy)

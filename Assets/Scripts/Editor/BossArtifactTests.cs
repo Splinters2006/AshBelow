@@ -107,6 +107,7 @@ namespace Slopgame.Editor
                     Require(run.Floor == 6 && !run.ChoosingUpgrade, "Boss floor gave a passive reward or failed to descend.");
                     while (run.Floor < 10) ClearFloor(run);
                     Require(run.IsBossFloor && run.Boss != null, "Floor ten has no boss.");
+                    Require(run.Boss.Kind == BossKind.Duelist && run.Boss.Behaviour is DuelistBoss, "Floor ten did not summon the Ashen Duelist.");
                     run.Boss.Enemy.Hit(100000);
                     run.BeginArtifactChoice();
                     Require(run.ChooseArtifact(AbilityType.FrostNova, 1), "Second artifact did not fill E.");

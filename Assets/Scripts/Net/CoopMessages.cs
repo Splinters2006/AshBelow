@@ -9,7 +9,7 @@ namespace Slopgame
         public const string Start = "ab.start", Lobby = "ab.lobby", State = "ab.state", Enemies = "ab.enemies",
             Damage = "ab.damage", Kill = "ab.kill", Bolt = "ab.bolt", BoltEvent = "ab.boltevent", Fx = "ab.fx",
             Support = "ab.support", Interact = "ab.interact", Choice = "ab.choice", ChoiceDone = "ab.done",
-            Advance = "ab.advance", Died = "ab.died", Over = "ab.over";
+            Advance = "ab.advance", Died = "ab.died", Over = "ab.over", Hazard = "ab.hazard";
     }
 
     public enum CoopChoice : byte { Upgrade, Artifact }
@@ -44,7 +44,9 @@ namespace Slopgame
 
     public struct EnemySnapshot
     {
-        public const byte Flashing = 1, Chilled = 2, Burning = 4, Charging = 8, PatternOdd = 16;
+        public const byte Flashing = 1, Chilled = 2, Burning = 4, Charging = 8;
+        /// <summary>The top four bits carry the boss's attack state (see <see cref="DungeonBoss.NetState"/>).</summary>
+        public const int BossStateShift = 4;
         public ushort Id;
         public Vector2 Position, Facing;
         public int Health;
@@ -131,6 +133,26 @@ namespace Slopgame
             var m = new FxMessage();
             r.ReadValueSafe(out m.Origin); r.ReadValueSafe(out m.Floor); r.ReadValueSafe(out m.Kind); r.ReadValueSafe(out m.A); r.ReadValueSafe(out m.B);
             r.ReadValueSafe(out m.Color); r.ReadValueSafe(out m.F1); r.ReadValueSafe(out m.F2); r.ReadValueSafe(out m.N);
+            return m;
+        }
+    }
+
+    public struct HazardMessage
+    {
+        public int Floor;
+        public HazardSpec Spec;
+
+        public void Write(FastBufferWriter w)
+        {
+            w.WriteValueSafe(Floor); w.WriteValueSafe(Spec.Shape); w.WriteValueSafe(Spec.Center); w.WriteValueSafe(Spec.Direction);
+            w.WriteValueSafe(Spec.Radius); w.WriteValueSafe(Spec.Width); w.WriteValueSafe(Spec.Telegraph); w.WriteValueSafe(Spec.Duration);
+        }
+
+        public static HazardMessage Read(FastBufferReader r)
+        {
+            var m = new HazardMessage();
+            r.ReadValueSafe(out m.Floor); r.ReadValueSafe(out m.Spec.Shape); r.ReadValueSafe(out m.Spec.Center); r.ReadValueSafe(out m.Spec.Direction);
+            r.ReadValueSafe(out m.Spec.Radius); r.ReadValueSafe(out m.Spec.Width); r.ReadValueSafe(out m.Spec.Telegraph); r.ReadValueSafe(out m.Spec.Duration);
             return m;
         }
     }

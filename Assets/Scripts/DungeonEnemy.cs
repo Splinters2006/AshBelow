@@ -13,7 +13,9 @@ namespace Slopgame
         private EnemyShooter shooter;
         public DungeonBoss Boss { get; set; }
         public bool IsTank { get; set; }
-        public float HitRadius => Boss != null ? 0.85f : IsTank ? 0.5f : 0.38f;
+        public float HitRadius => Boss != null ? Boss.HitRadius : IsTank ? 0.5f : 0.38f;
+        /// <summary>True while a boss is out of reach (such as the Archdemon in flight); blows glance off.</summary>
+        public bool IsInvulnerable => Boss != null && Boss.IsInvulnerable;
         public float MoveRadius => IsTank ? 0.42f : 0.28f;
         public bool IsBurning => burnTicks > 0 || netBurning;
         /// <summary>Spawn-order id shared by every machine in a co-op run.</summary>
@@ -105,7 +107,7 @@ namespace Slopgame
                 burnIndicator.gameObject.SetActive(IsBurning);
                 burnIndicator.transform.localScale = new Vector3(0.28f, 0.4f, 1f) * (1f + 0.12f * Mathf.Sin(Time.time * 12f));
             }
-            if (Boss != null) { TryContactHit(1.05f); return; }
+            if (Boss != null) { if (Boss.DealsContactDamage) TryContactHit(Boss.ContactReach); return; }
             UpdateColor();
             if (!IsRanged) TryContactHit(HitRadius + 0.27f);
         }
@@ -123,7 +125,7 @@ namespace Slopgame
             chilledUntil = (snapshot.Flags & EnemySnapshot.Chilled) != 0 ? Time.time + 0.25f : Mathf.Min(chilledUntil, Time.time);
             bool charging = (snapshot.Flags & EnemySnapshot.Charging) != 0;
             if (shooter != null) shooter.SetCharging(charging);
-            if (Boss != null) Boss.ApplySnapshot(charging, (snapshot.Flags & EnemySnapshot.PatternOdd) != 0);
+            if (Boss != null) Boss.ApplySnapshot(charging, (byte)(snapshot.Flags >> EnemySnapshot.BossStateShift));
         }
 
         /// <summary>Contact damage against the local hero (each machine judges its own hero).</summary>
@@ -143,6 +145,7 @@ namespace Slopgame
         public void Hit(int damage, Vector2 source, float knockback = 1f)
         {
             if (Health <= 0) return;
+            if (IsInvulnerable) { Boss.Deflect(source); return; }
             if (DebugMode.Enabled) damage = Mathf.Max(damage, Health);
             LastHitRegion = Facing.RegionFrom(source);
             HitReceived?.Invoke(LastHitRegion);
@@ -193,12 +196,14 @@ namespace Slopgame
 
         public void Chill(float duration)
         {
+            if (IsInvulnerable) return;
             if (Run.IsGuest) { Run.Coop.ReportDamage(this, CoopDamageKind.Chill, 0, transform.position, 0, duration); return; }
             chilledUntil = Mathf.Max(chilledUntil, Time.time + duration * (Boss != null ? 0.5f : 1f));
         }
 
         public void Burn(int ticks, int damage, Color? color = null)
         {
+            if (IsInvulnerable) return;
             if (Run.IsGuest) { Run.Coop.ReportDamage(this, CoopDamageKind.Burn, damage, transform.position, ticks, 0f, color); return; }
             if (burnTicks == 0)
             {

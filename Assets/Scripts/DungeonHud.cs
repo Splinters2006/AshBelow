@@ -16,6 +16,7 @@ namespace Slopgame
             Vector2 point = new Vector2(screenPosition.x - (Screen.width - DungeonUi.Width * scale) / 2f,
                 Screen.height - screenPosition.y - (Screen.height - DungeonUi.Height * scale) / 2f) / scale;
             return !Run.IsPlaying || new Rect(1020, 24, 236, 40).Contains(point)
+                || (Run.CanSkipRoom && new Rect(896, 24, 112, 40).Contains(point))
                 || (showTalents && new Rect(922, 82, 334, 470).Contains(point));
         }
 
@@ -35,6 +36,8 @@ namespace Slopgame
             Matrix4x4 previous = DungeonUi.Begin();
             try
             {
+                var flash = ScreenFx.FlashColor;
+                if (flash.a > 0f) DungeonUi.Panel(new Rect(0, 0, 1280, 720), flash);
                 DrawStatus();
                 if (Run.Player == null) return;
                 if (Run.IsNetworked) DrawTeam();
@@ -68,9 +71,11 @@ namespace Slopgame
             {
                 DungeonUi.Panel(new Rect(390, 104, 500, 74), DungeonUi.PanelColor);
                 DungeonUi.Label(new Rect(406, 113, 468, 24), Run.Boss.Title, 18, AbilityCatalog.Gold, TextAnchor.MiddleCenter);
-                DungeonUi.Bar(new Rect(412, 145, 456, 7), displayedBossHealth, new Color(0.94f, 0.3f, 0.38f));
-                DungeonUi.Label(new Rect(400, 182, 480, 23), Run.Boss.Tell, 13, DungeonUi.Muted, TextAnchor.MiddleCenter);
+                bool untouchable = Run.Boss.IsInvulnerable;
+                DungeonUi.Bar(new Rect(412, 145, 456, 7), displayedBossHealth, untouchable ? AbilityCatalog.Gold : new Color(0.94f, 0.3f, 0.38f));
+                DungeonUi.Label(new Rect(400, 182, 480, 23), Run.Boss.Tell, 13, untouchable || Run.Boss.IsCharging ? AbilityCatalog.Gold : DungeonUi.Muted, TextAnchor.MiddleCenter);
             }
+            if (Run.CanSkipRoom && DungeonUi.Button("skipRoom", new Rect(896, 24, 112, 40), "Skip room", DebugColor)) Run.DebugSkipRoom();
             if (DungeonUi.Button("talents", new Rect(1020, 24, 112, 40), "Talents", DungeonUi.Teal)) showTalents = !showTalents;
             if (DungeonUi.Button("menu", new Rect(1144, 24, 112, 40), Run.IsNetworked ? "Leave" : "Menu", DungeonUi.Muted)) Run.ShowMainMenu();
         }
