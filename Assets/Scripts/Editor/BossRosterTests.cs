@@ -16,6 +16,8 @@ namespace Slopgame.Editor
         private static int stage;
         private static float waitUntil;
         private static bool failed, sawDash;
+        private static int neonIndex, attackMask;
+        private static bool sawNeonHazard, sawNeonBolt;
         private static int healthBefore;
         private static HellfireZone inferno;
 
@@ -131,7 +133,37 @@ namespace Slopgame.Editor
                         run.Boss.Enemy.Hit(100000);
                         Require(run.Artifact != null && run.Enemies.Count == 0, "The Archdemon dropped no artifact.");
                         Require(run.ProjectileRoot.GetComponentsInChildren<HellfireZone>().Length == 0, "Hellfire outlived the Archdemon.");
-                        Finish(!failed, "Warden/Duelist/Archdemon rotation, Duelist dashes, Cataclysm inferno and invulnerable flight, stagger kill, debug skip room, minimap reveal/spotting/reset");
+                        stage = 6;
+                        break;
+                    case 6:
+                        SkipTo(run, 20 + neonIndex * 5);
+                        Require(run.Boss.Behaviour is NeonBossBehaviour, "Arcology reused an ash guardian.");
+                        Require((int)run.Boss.Kind == 3 + neonIndex, "Wrong Arcology guardian.");
+                        run.Boss.Enemy.Health = run.Boss.MaxHealth / 2;
+                        attackMask = 0; sawNeonHazard = false; sawNeonBolt = false;
+                        stage = 7;
+                        break;
+                    case 7:
+                        byte state = run.Boss.NetState;
+                        if (state >= 1 && state <= 3) attackMask |= 1 << (state - 1);
+                        sawNeonHazard |= run.ProjectileRoot.GetComponentsInChildren<HellfireZone>().Length > 0;
+                        sawNeonBolt |= run.ProjectileRoot.GetComponentsInChildren<EnemyProjectile>().Length > 0;
+                        if (attackMask != 7 || state != 4) return;
+                        Require(sawNeonHazard, "Arcology guardian created no hazards.");
+                        if (neonIndex == 2) Require(sawNeonBolt, "Core did not fire its spiral/satellite bolts.");
+                        var behaviour = run.Boss.Behaviour;
+                        for (byte value = 0; value <= 4; value++)
+                        {
+                            behaviour.ApplyNetState(value >= 1 && value <= 3, value);
+                            Require(behaviour.NetState == value && !string.IsNullOrEmpty(behaviour.Tell), "Arcology snapshot state failed.");
+                            behaviour.VisualTick();
+                        }
+                        run.Boss.Enemy.Hit(100000);
+                        Require(run.Artifact != null && run.Enemies.Count == 0, "Arcology guardian dropped no artifact.");
+                        Require(run.ProjectileRoot.GetComponentsInChildren<HellfireZone>().Length == 0, "Arcology hazards outlived their boss.");
+                        Require(run.ProjectileRoot.GetComponentsInChildren<EnemyProjectile>().Length == 0, "Arcology bolts outlived their boss.");
+                        if (++neonIndex < 3) { stage = 6; break; }
+                        Finish(!failed, "All six guardians, nine Arcology attack patterns, hazards/projectiles, replicated states, artifact drops and cleanup; ash roster regressions");
                         break;
                 }
             }

@@ -37,10 +37,14 @@ You can rebind every action under **Controls** in the main menu. Each action get
   - **Two relics,** which last the rest of the run: Heart Crystal (+1 max HP), Ember Hone (+1 damage), Windrunner Boots (+0.7 speed), Quickfinger Gloves (+20% attack speed), Hawkeye Lens (+10% crit chance), Warding Sigil (+1 ward every floor), Vampire Fang (a rank of Soul Harvest) or Phoenix Feather (shorter dodge cooldown). Relics add ranks to the matching boon and stop selling once it's maxed.
 
   Each ware costs 50% more every time you buy it in the same shop. In co-op, everyone sees the same stock. The shop's stairs lead to the guardian.
-- **Beat the guardians.** Every fifth floor is a boss arena. Three guardians take turns, and each gets more dangerous below half health:
+- **Beat the guardians.** Every fifth floor is a boss arena. Each world has three guardians, and each gets more dangerous below half health:
   - **The Rime Warden**, a frost caster who fills the arena with icicle fans, frost novas, blizzard spirals, hailstorms and closing rings of ice.
   - **The Steel Duelist**, a fast, fragile swordsman who dashes, throws blade fans, teleports behind you and cuts crosses of blade light.
   - **Malphas, the Hellfire Archdemon**. Watch for **Cataclysm**: the floor turns red, then everything except one golden circle erupts in fire. A gold arrow at your feet points to the circle.
+  - **Grid Overseer** (Neon Arcology, floor 20): cyan scan grids, target traces and sequential firewalls. Step between the lanes.
+  - **Bastion, the Siege Engine** (floor 25): amber missile walks, cluster mines and twin rail broadsides. Clear the reticles or shelter between the rails.
+  - **Null, the Singularity Core** (floor 30): violet spiral streams, satellite crossfire and repeated orbital pulse waves. Weave between bolts and dodge each wave.
+  The Arcology guardians vent between attacks, giving you time to punish them.
 - **Claim an artifact.** A beaten guardian drops an artifact that unlocks an active ability for your class. Put it on **Q** or **E**. You can hold two at a time, and later artifacts can upgrade one (up to rank 3) or replace it. You can also leave an artifact for 40 crystals.
 - **Death ends the run.** Boons and abilities reset, but your **Ash** and Ash shop upgrades are kept.
 

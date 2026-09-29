@@ -24,7 +24,10 @@ namespace Slopgame
         /// <summary>The Steel Duelist's blade light.</summary>
         Steel,
         /// <summary>The Neon Arcology's crackling plasma.</summary>
-        Plasma
+        Plasma,
+        Circuit,
+        Artillery,
+        Void
     }
 
     /// <summary>Everything needed to rebuild a hazard on another machine.</summary>
@@ -86,6 +89,12 @@ namespace Slopgame
             zone.spec = spec;
             zone.colors = spec.Style == HazardStyle.Frost ? FrostPalette : spec.Style == HazardStyle.Steel ? SteelPalette
                 : spec.Style == HazardStyle.Plasma ? PlasmaPalette : HellfirePalette;
+            if (spec.Style == HazardStyle.Circuit || spec.Style == HazardStyle.Artillery || spec.Style == HazardStyle.Void)
+            {
+                Color tint = spec.Style == HazardStyle.Circuit ? WorldCatalog.Neon
+                    : spec.Style == HazardStyle.Artillery ? new Color(1f, 0.65f, 0.15f) : new Color(0.75f, 0.35f, 1f);
+                zone.colors = new Palette(Color.white, Color.Lerp(tint, Color.white, 0.4f), tint, tint * 0.4f, tint * 0.15f);
+            }
             zone.gameObject.name = spec.Style + " " + spec.Shape;
             zone.flames = new FlameMesh(zone.gameObject, spec.Shape == HazardShape.Inferno ? 2 : 3);
             zone.meteorFrom = spec.Center + new Vector2(Random.Range(-4f, 4f), 11f);
@@ -168,6 +177,12 @@ namespace Slopgame
             bool warning = age < spec.Telegraph;
             float warn = spec.Telegraph > 0f ? Mathf.Clamp01(age / spec.Telegraph) : 1f;
             float fadeOut = Mathf.Clamp01((spec.Telegraph + spec.Duration + 0.35f - age) / 0.35f);
+            if (spec.Style == HazardStyle.Circuit || spec.Style == HazardStyle.Artillery || spec.Style == HazardStyle.Void)
+            {
+                DrawDigital(warning, warn, fadeOut);
+                flames.Commit();
+                return;
+            }
             switch (spec.Shape)
             {
                 case HazardShape.Inferno: DrawInferno(warning, warn, fadeOut); break;
@@ -176,6 +191,45 @@ namespace Slopgame
                 case HazardShape.Ring: DrawRing(warning, warn, fadeOut); break;
             }
             flames.Commit();
+        }
+
+        // Crisp scan lanes, targeting reticles and orbital waves, without the ash guardians' flames or ice.
+        private void DrawDigital(bool warning, float progress, float fade)
+        {
+            Color bright = FlameMesh.Alpha(colors.Main, fade * (warning ? 0.65f : 1f));
+            Color fill = FlameMesh.Alpha(colors.Main, fade * (warning ? 0.12f : 0.35f));
+            if (spec.Shape == HazardShape.Beam)
+            {
+                Vector2 side = Vector2.Perpendicular(spec.Direction) * spec.Width * 0.5f;
+                flames.Bar(spec.Center, spec.Direction, spec.Radius, spec.Width, fill, fill);
+                flames.Bar(spec.Center + side, spec.Direction, spec.Radius, 0.05f, bright, bright);
+                flames.Bar(spec.Center - side, spec.Direction, spec.Radius, 0.05f, bright, bright);
+                if (!warning) flames.Bar(spec.Center, spec.Direction, spec.Radius, spec.Width * 0.22f, colors.Core, bright);
+                for (float d = 0f; d < spec.Radius; d += 1.5f)
+                    flames.Diamond(spec.Center + spec.Direction * d, 0.1f, bright);
+            }
+            else if (spec.Shape == HazardShape.Pool)
+            {
+                flames.Disc(spec.Center, spec.Radius, fill, fill, 32);
+                flames.Ring(spec.Center, spec.Radius, 0.09f, bright, 32);
+                flames.Ring(spec.Center, spec.Radius * (warning ? 1f - progress : 0.7f), 0.06f, bright, 32);
+                for (int i = 0; i < 4; i++)
+                {
+                    Vector2 dir = FlameMesh.Polar(i * Mathf.PI / 2f, 1f);
+                    flames.Bar(spec.Center + dir * spec.Radius * 0.6f, dir, spec.Radius * 0.4f, 0.1f, bright, bright);
+                }
+                if (!warning)
+                    for (int i = 0; i < 8; i++)
+                        flames.Diamond(spec.Center + FlameMesh.Polar(i * Mathf.PI / 4f + Time.time, spec.Radius * 0.65f), 0.15f, bright);
+            }
+            else
+            {
+                float radius = warning ? 0.6f + progress * 0.5f : RingRadius;
+                flames.Ring(spec.Center, radius, warning ? 0.08f : spec.Width, fill, bright, 72);
+                flames.Ring(spec.Center, radius, 0.08f, FlameMesh.Alpha(colors.Core, fade), 72);
+                for (int i = 0; i < 12; i++)
+                    flames.Diamond(spec.Center + FlameMesh.Polar(i * Mathf.PI / 6f + Time.time, radius), 0.12f, bright);
+            }
         }
 
         private void DrawInferno(bool warning, float warn, float fade)

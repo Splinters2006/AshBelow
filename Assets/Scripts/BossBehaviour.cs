@@ -13,7 +13,7 @@ namespace Slopgame
         protected DungeonEnemy Enemy => Boss.Enemy;
         protected DungeonRun Run => Boss.Enemy.Run;
         protected bool IsEnraged => Boss.IsEnraged;
-        /// <summary>True for the Neon Arcology's guardians, which fight the same way under sci-fi names and colours.</summary>
+        /// <summary>True while fighting in the Neon Arcology.</summary>
         protected bool HighTech => WorldCatalog.ForFloor(Run.Floor).HighTech;
 
         public abstract string Title { get; }

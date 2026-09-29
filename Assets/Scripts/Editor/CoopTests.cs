@@ -106,7 +106,7 @@ namespace Slopgame.Editor
                 && hazardBack.Spec.Direction == Vector2.up && Mathf.Approximately(hazardBack.Spec.Radius, 2.8f) && Mathf.Approximately(hazardBack.Spec.Width, 0.9f)
                 && Mathf.Approximately(hazardBack.Spec.Telegraph, 2.4f) && Mathf.Approximately(hazardBack.Spec.Duration, 6.5f), "Hellfire hazard did not round-trip.");
             Require(DungeonBoss.KindForFloor(5) == BossKind.AshWarden && DungeonBoss.KindForFloor(10) == BossKind.Duelist
-                && DungeonBoss.KindForFloor(15) == BossKind.Archdemon && DungeonBoss.KindForFloor(20) == BossKind.AshWarden, "Boss rotation is wrong.");
+                && DungeonBoss.KindForFloor(15) == BossKind.Archdemon && DungeonBoss.KindForFloor(20) == BossKind.GridOverseer, "Boss rotation is wrong.");
             Require(!WorldCatalog.ForFloor(1).HighTech && !WorldCatalog.ForFloor(15).HighTech && WorldCatalog.ForFloor(16).HighTech
                 && WorldCatalog.ForFloor(45).HighTech && WorldCatalog.EntersWorld(16) && !WorldCatalog.EntersWorld(1) && !WorldCatalog.EntersWorld(31),
                 "The third guardian does not lead into the Neon Arcology.");

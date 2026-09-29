@@ -2,11 +2,11 @@ using UnityEngine;
 
 namespace Slopgame
 {
-    public enum BossKind { AshWarden, Duelist, Archdemon }
+    public enum BossKind { AshWarden, Duelist, Archdemon, GridOverseer, SiegeEngine, SingularityCore }
 
     /// <summary>
     /// The arena guardian's shared state (health, title, invulnerability, co-op state). Its fighting style lives in
-    /// a <see cref="BossBehaviour"/> component chosen by floor: the Rime Warden, the Steel Duelist, then the Archdemon.
+    /// a <see cref="BossBehaviour"/> component chosen by world and floor.
     /// </summary>
     [RequireComponent(typeof(DungeonEnemy))]
     public sealed class DungeonBoss : MonoBehaviour
@@ -39,10 +39,9 @@ namespace Slopgame
         public static int ScaledHealth(int baseHealth, int partySize) => Mathf.CeilToInt(baseHealth * HealthMultiplier * Mathf.Max(1, partySize));
 
         /// <summary>
-        /// Boss floors cycle Warden, Duelist, Archdemon (floors 5, 10, 15), then again from 20 in the Neon Arcology,
-        /// where they return as the Cryo Sentinel, the Chrome Duelist and the Reactor Titan.
+        /// The ash guardians occupy floors 5/10/15; the Arcology has its own guardians on 20/25/30.
         /// </summary>
-        public static BossKind KindForFloor(int floor) => (BossKind)(Mathf.Max(0, floor / 5 - 1) % 3);
+        public static BossKind KindForFloor(int floor) => (BossKind)(Mathf.Max(0, floor / 5 - 1) % 3 + (WorldCatalog.ForFloor(floor).HighTech ? 3 : 0));
 
         public void Initialize(DungeonRun run)
         {
@@ -51,7 +50,10 @@ namespace Slopgame
             Enemy.Boss = this;
             body = GetComponent<SpriteRenderer>();
             Kind = KindForFloor(run.Floor);
-            Behaviour = Kind == BossKind.Duelist ? gameObject.AddComponent<DuelistBoss>()
+            Behaviour = Kind == BossKind.GridOverseer ? gameObject.AddComponent<GridOverseerBoss>()
+                : Kind == BossKind.SiegeEngine ? (BossBehaviour)gameObject.AddComponent<SiegeEngineBoss>()
+                : Kind == BossKind.SingularityCore ? gameObject.AddComponent<SingularityCoreBoss>()
+                : Kind == BossKind.Duelist ? gameObject.AddComponent<DuelistBoss>()
                 : Kind == BossKind.Archdemon ? (BossBehaviour)gameObject.AddComponent<ArchdemonBoss>()
                 : gameObject.AddComponent<AshWardenBoss>();
             MaxHealth = ScaledHealth(Behaviour.BaseHealth(run.Floor), run.PartySize);
