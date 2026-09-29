@@ -81,7 +81,8 @@ namespace Slopgame.Editor
                         Require(run.Boss != null && run.Boss.Kind == BossKind.AshWarden, "Floor five is not the Ash Warden.");
                         SkipTo(run, 10);
                         Require(run.Boss != null && run.Boss.Behaviour is DuelistBoss, "Floor ten is not the Duelist.");
-                        Require(run.Boss.MaxHealth < DungeonRun.ScaleHealth(24 + 10 * 3, 1), "The Duelist is not squishier than the Warden.");
+                        Require(run.Boss.MaxHealth < DungeonBoss.ScaledHealth(24 + 10 * 3, 1), "The Duelist is not squishier than the Warden.");
+                        Require(run.Boss.MaxHealth == DungeonBoss.ScaledHealth(12 + 10 * 2, run.PartySize), "The Duelist's health is not boss-scaled.");
                         waitUntil = Time.time + 5f;
                         stage = 1;
                         break;

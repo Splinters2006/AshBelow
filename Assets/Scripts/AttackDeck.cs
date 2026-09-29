@@ -16,6 +16,14 @@ namespace Slopgame
 
         public AttackDeck(params T[] cards) => this.cards = cards;
 
+        /// <summary>A fixed opening attack, played outside the deck; the first shuffle won't lead with it again.</summary>
+        public T Open(T card)
+        {
+            last = card;
+            dealt = true;
+            return card;
+        }
+
         public T Draw()
         {
             if (pile.Count == 0) Shuffle();

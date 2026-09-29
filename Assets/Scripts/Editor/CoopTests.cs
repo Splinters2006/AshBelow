@@ -144,6 +144,8 @@ namespace Slopgame.Editor
             Require(DungeonRun.ScaleHealth(3, 2) == 5, "Scaled health rounds up.");
             Require(DungeonRun.ScaleHealth(27, 4) == 68, "Four heroes: 2.5x health.");
             Require(DungeonRun.ScaleHealth(5, 0) == 5, "A missing party size counts as solo.");
+            Require(DungeonBoss.ScaledHealth(10, 1) == 30 && DungeonBoss.ScaledHealth(10, 0) == 30, "Solo guardians: 3x base health.");
+            Require(DungeonBoss.ScaledHealth(10, 2) == 60 && DungeonBoss.ScaledHealth(10, 4) == 120, "Every hero adds a full guardian's health.");
         }
 
         private static void TestDeterminism()

@@ -29,6 +29,15 @@ namespace Slopgame
         private bool dropped;
         private float nextDeflect;
 
+        /// <summary>Guardians have this many times their style's base health, so a fight lasts through several attack cycles.</summary>
+        public const float HealthMultiplier = 3f;
+
+        /// <summary>
+        /// A guardian's health for a party: every hero adds a full guardian's worth (normal enemies only add half),
+        /// so a bigger party still has to work through every attack.
+        /// </summary>
+        public static int ScaledHealth(int baseHealth, int partySize) => Mathf.CeilToInt(baseHealth * HealthMultiplier * Mathf.Max(1, partySize));
+
         /// <summary>Boss floors cycle Warden, Duelist, Archdemon (floors 5, 10, 15, then again from 20).</summary>
         public static BossKind KindForFloor(int floor) => (BossKind)(Mathf.Max(0, floor / 5 - 1) % 3);
 
@@ -42,7 +51,7 @@ namespace Slopgame
             Behaviour = Kind == BossKind.Duelist ? gameObject.AddComponent<DuelistBoss>()
                 : Kind == BossKind.Archdemon ? (BossBehaviour)gameObject.AddComponent<ArchdemonBoss>()
                 : gameObject.AddComponent<AshWardenBoss>();
-            MaxHealth = run.EnemyHealthScaled(Behaviour.BaseHealth(run.Floor));
+            MaxHealth = ScaledHealth(Behaviour.BaseHealth(run.Floor), run.PartySize);
             Enemy.Health = MaxHealth;
             Behaviour.Setup(this);
             gameObject.name = Title;

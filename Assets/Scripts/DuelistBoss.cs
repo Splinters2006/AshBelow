@@ -128,7 +128,7 @@ namespace Slopgame
 
         private void BeginAttack(Vector2 toHero)
         {
-            Attack attack = opened ? deck.Draw() : Attack.Dashes;
+            Attack attack = opened ? deck.Draw() : deck.Open(Attack.Dashes);
             opened = true;
             switch (attack)
             {

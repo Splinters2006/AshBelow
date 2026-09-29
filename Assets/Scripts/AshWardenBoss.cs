@@ -49,7 +49,8 @@ namespace Slopgame
             Enemy.Speed = 1.5f;
             transform.localScale = Vector2.one * Size;
             readyAt = Enemy.ActionTime + 2f;
-            pattern = deck.Draw();
+            // Always opens with the Ember Fan so the fight starts with something readable.
+            pattern = deck.Open(Fan);
             DungeonVisuals.DecorateWarden(transform);
             aura = WardenAura.Attach(this);
             HeroVfx.Pulse(Run.ProjectileRoot, transform.position, 3f, Violet, 0.8f);
