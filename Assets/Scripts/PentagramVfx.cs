@@ -3,12 +3,27 @@ using UnityEngine;
 namespace Slopgame
 {
     /// <summary>
-    /// Demon Curse's sigil: a violet circle and five-pointed star trace themselves onto the ground during the windup,
+    /// Demon Curse's sigil: a violet circle and five-pointed star, ringed by a band of burning runes, trace themselves onto the ground during the windup,
     /// then flare with dark flames as the curse takes hold. Purely visual; the Demoness applies the curse.
     /// </summary>
     public sealed class PentagramVfx : MonoBehaviour
     {
         private const float FlareTime = 0.6f;
+        private const int RuneCount = 18;
+        // Runes as line segments (x0, y0, x1, y1, ...) in a unit cell; x runs along the rim, y points outward.
+        private static readonly float[][] Runes =
+        {
+            new[] { 0f, -0.5f, 0f, 0.5f, 0f, 0.5f, 0.4f, 0.25f, 0f, 0.15f, 0.4f, -0.1f },
+            new[] { -0.3f, -0.5f, -0.3f, 0.5f, -0.3f, 0.5f, 0.3f, 0.2f, 0.3f, 0.2f, 0.3f, -0.5f },
+            new[] { 0f, -0.5f, 0f, 0.5f, 0f, 0.25f, 0.35f, 0f, 0.35f, 0f, 0f, -0.25f },
+            new[] { 0f, -0.5f, 0f, 0.5f, 0f, 0.5f, 0.35f, 0.25f, 0.35f, 0.25f, 0f, 0f, 0f, 0f, 0.35f, -0.5f },
+            new[] { 0.3f, 0.5f, -0.2f, 0f, -0.2f, 0f, 0.3f, -0.5f },
+            new[] { -0.35f, 0.5f, 0.35f, -0.5f, 0.35f, 0.5f, -0.35f, -0.5f },
+            new[] { -0.3f, -0.5f, -0.3f, 0.5f, 0.3f, -0.5f, 0.3f, 0.5f, -0.3f, 0.2f, 0.3f, -0.2f },
+            new[] { 0f, -0.5f, 0f, 0.5f, 0f, 0.1f, -0.35f, 0.5f, 0f, 0.1f, 0.35f, 0.5f },
+            new[] { 0f, -0.5f, 0f, 0.5f, 0f, 0.5f, -0.35f, 0.15f, 0f, 0.5f, 0.35f, 0.15f },
+            new[] { 0f, 0.5f, 0.3f, 0.1f, 0.3f, 0.1f, 0f, -0.3f, 0f, -0.3f, -0.3f, 0.1f, -0.3f, 0.1f, 0f, 0.5f, 0f, -0.3f, -0.3f, -0.5f, 0f, -0.3f, 0.3f, -0.5f },
+        };
         private FlameMesh mesh;
         private Vector2 center;
         private float radius, windup, age;
@@ -59,6 +74,39 @@ namespace Slopgame
                 mesh.Bar(from, direction, length, 0.06f, FlameMesh.Alpha(pale, alpha), FlameMesh.Alpha(pale, alpha));
             }
             for (int i = 0; i < 5; i++) mesh.Diamond(tips[i], 0.12f + 0.08f * flare, FlameMesh.Alpha(pale, progress * alpha));
+            DrawRunes(progress, alpha, flare);
+        }
+
+        /// <summary>A band of glowing runes around the outside of the circle, burning in one by one and turning against the star.</summary>
+        private void DrawRunes(float progress, float alpha, float flare)
+        {
+            Color violet = DemonessAttack.Violet, pale = DemonessAttack.Pale;
+            float band = radius * 1.1f, height = radius * 0.13f, width = 0.035f + 0.03f * flare;
+            mesh.Ring(center, radius * 1.2f, 0.05f, FlameMesh.Alpha(violet, 0.7f * progress * alpha), 72);
+            mesh.Ring(center, band, height * 1.6f, FlameMesh.Alpha(DemonessAttack.Abyss, 0.35f * alpha), FlameMesh.Alpha(violet, 0.08f * alpha), 72);
+            float spin = -age * 0.35f;
+            for (int i = 0; i < RuneCount; i++)
+            {
+                float show = Mathf.Clamp01(progress * RuneCount * 1.5f - i);
+                if (show <= 0f) break;
+                float a = spin + i * Mathf.PI * 2f / RuneCount;
+                Vector2 up = FlameMesh.Polar(a, 1f), along = -Vector2.Perpendicular(up);
+                Vector2 at = center + up * band;
+                float glow = show * alpha * (0.7f + 0.3f * Mathf.Sin(age * 9f + i * 2.3f));
+                float[] rune = Runes[(int)(FlameMesh.Hash(i, 7.3f) * Runes.Length) % Runes.Length];
+                for (int k = 0; k + 3 < rune.Length; k += 4)
+                {
+                    Vector2 from = at + (along * rune[k] * 0.75f + up * rune[k + 1]) * height;
+                    Vector2 to = at + (along * rune[k + 2] * 0.75f + up * rune[k + 3]) * height;
+                    Vector2 direction = (to - from).normalized;
+                    float length = Vector2.Distance(from, to);
+                    mesh.Bar(from, direction, length, width * 3f, FlameMesh.Alpha(violet, 0.45f * glow), FlameMesh.Alpha(violet, 0.45f * glow));
+                    mesh.Bar(from, direction, length, width, FlameMesh.Alpha(pale, glow), FlameMesh.Alpha(pale, glow));
+                }
+                // A tick on the outer ring between each rune.
+                Vector2 tick = FlameMesh.Polar(a + Mathf.PI / RuneCount, 1f);
+                mesh.Bar(center + tick * radius * 1.16f, tick, radius * 0.08f, 0.04f, FlameMesh.Alpha(pale, 0.8f * glow), FlameMesh.Alpha(violet, 0f));
+            }
         }
 
         private void DrawFlare(float t)
