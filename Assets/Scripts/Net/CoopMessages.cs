@@ -60,15 +60,18 @@ namespace Slopgame
         /// <summary>The top four bits carry the boss's attack state (see <see cref="DungeonBoss.NetState"/>).</summary>
         public const int BossStateShift = 4;
         /// <summary>Bits of <see cref="MoreFlags"/>.</summary>
-        public const byte Paralyzed = 1, Cursed = 2, Frozen = 4;
+        public const byte Paralyzed = 1, Cursed = 2, Frozen = 4, HasMaxHealth = 8;
         public ushort Id;
         public Vector2 Position, Facing;
         public int Health;
+        /// <summary>A guardian's maximum health on the host (sent only with <see cref="HasMaxHealth"/>), so every health bar agrees.</summary>
+        public int MaxHealth;
         public byte Flags, MoreFlags;
 
         public void Write(FastBufferWriter w)
         {
             w.WriteValueSafe(Id); w.WriteValueSafe(Position); w.WriteValueSafe(Facing); w.WriteValueSafe(Health); w.WriteValueSafe(Flags); w.WriteValueSafe(MoreFlags);
+            if ((MoreFlags & HasMaxHealth) != 0) w.WriteValueSafe(MaxHealth);
         }
 
         public static EnemySnapshot Read(FastBufferReader r)
@@ -76,6 +79,7 @@ namespace Slopgame
             var m = new EnemySnapshot();
             r.ReadValueSafe(out m.Id); r.ReadValueSafe(out m.Position); r.ReadValueSafe(out m.Facing); r.ReadValueSafe(out m.Health); r.ReadValueSafe(out m.Flags);
             r.ReadValueSafe(out m.MoreFlags);
+            if ((m.MoreFlags & HasMaxHealth) != 0) r.ReadValueSafe(out m.MaxHealth);
             return m;
         }
     }

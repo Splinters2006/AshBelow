@@ -26,7 +26,7 @@ namespace Slopgame
         /// <summary>Four bits of attack state mirrored to co-op guests.</summary>
         public byte NetState => (byte)(Behaviour.NetState & 0x0F);
         private SpriteRenderer body;
-        private bool dropped;
+        private bool dropped, hostMaxHealthLogged;
         private float nextDeflect;
 
         /// <summary>Guardians have this many times their style's base health, so a fight lasts through several attack cycles.</summary>
@@ -66,6 +66,21 @@ namespace Slopgame
             Vector2 offset = Enemy.Run.NearestHero(transform.position) - (Vector2)transform.position;
             Behaviour.HostTick(offset);
             if (DealsContactDamage) Enemy.TryContactHit(ContactReach);
+        }
+
+        /// <summary>
+        /// Co-op guest: take the host's maximum health, so the health bar measures against the same total the host
+        /// uses. If the machines worked it out differently, the guest's bar started part-empty on every guardian.
+        /// </summary>
+        public void SyncMaxHealth(int hostMaxHealth)
+        {
+            if (hostMaxHealth <= 0 || hostMaxHealth == MaxHealth) return;
+            if (!hostMaxHealthLogged)
+            {
+                hostMaxHealthLogged = true;
+                Debug.LogWarning($"{Title}: host max health {hostMaxHealth} differs from this machine's {MaxHealth} (party {Enemy.Run.PartySize}). Are both players on the same build?");
+            }
+            MaxHealth = hostMaxHealth;
         }
 
         /// <summary>Co-op guest: mirror the host's attack state so tells, flight and invulnerability match.</summary>

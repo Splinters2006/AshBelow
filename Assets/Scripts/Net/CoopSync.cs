@@ -272,9 +272,9 @@ namespace Slopgame
                 if ((shooter != null && shooter.IsCharging) || (enemy.Boss != null && enemy.Boss.IsCharging)) flags |= EnemySnapshot.Charging;
                 if (enemy.Boss != null) flags |= (byte)(enemy.Boss.NetState << EnemySnapshot.BossStateShift);
                 byte more = (byte)((enemy.IsParalyzed ? EnemySnapshot.Paralyzed : 0) | (enemy.IsCursed ? EnemySnapshot.Cursed : 0)
-                    | (enemy.IsFrozen ? EnemySnapshot.Frozen : 0));
+                    | (enemy.IsFrozen ? EnemySnapshot.Frozen : 0) | (enemy.Boss != null ? EnemySnapshot.HasMaxHealth : 0));
                 new EnemySnapshot { Id = enemy.NetId, Position = enemy.transform.position, Facing = enemy.Facing.Direction, Health = enemy.Health,
-                    Flags = flags, MoreFlags = more }.Write(writer);
+                    MaxHealth = enemy.Boss != null ? enemy.Boss.MaxHealth : 0, Flags = flags, MoreFlags = more }.Write(writer);
             }
             Session.Send(CoopMessages.Enemies, writer, NetworkDelivery.UnreliableSequenced);
         }

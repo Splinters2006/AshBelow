@@ -170,6 +170,7 @@ namespace Slopgame
             if (!hasSnapshot) transform.position = netPosition;
             hasSnapshot = true;
             Facing.Face(snapshot.Facing);
+            if (Boss != null && (snapshot.MoreFlags & EnemySnapshot.HasMaxHealth) != 0) Boss.SyncMaxHealth(snapshot.MaxHealth);
             if (snapshot.Health > 0 && Time.time - lastLocalHitAt > GuestPredictionWindow)
             {
                 // The host says it is still alive: bring back an enemy this guest wrongly thought it had killed.
