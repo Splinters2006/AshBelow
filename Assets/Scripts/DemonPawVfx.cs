@@ -4,7 +4,7 @@ namespace Slopgame
 {
     /// <summary>
     /// HEEEELP: a portal rips open in the air above the target while a violet warning circle fills on the ground,
-    /// red eyes glare out of it, then the Demoness's giant pet shoves a red-furred, clawed paw through and slams it down. Purely visual; she applies the damage.
+    /// red eyes glare out of it, then the Demoness's giant pet shoves a pixel-art, red-furred, clawed paw through and slams it down. Purely visual; she applies the damage.
     /// </summary>
     public sealed class DemonPawVfx : MonoBehaviour
     {
@@ -13,10 +13,24 @@ namespace Slopgame
         public Vector2 Center { get; set; }
         private FlameMesh mesh;
         private float radius, windup, age;
-        private static readonly Color Blood = new Color(0.62f, 0.04f, 0.06f);
-        private static readonly Color BloodDark = new Color(0.22f, 0.01f, 0.03f);
+        private SpriteRenderer pawRenderer, armRenderer;
         private static readonly Color Hellfire = new Color(1f, 0.16f, 0.08f);
-        private static readonly Color ClawBlack = new Color(0.05f, 0.01f, 0.02f);
+
+        // Pixel art for the pet's paw, drawn as left halves and mirrored. N outline, R blood-red fur, r dark fur,
+        // L fur highlight, e/E smouldering embers, C claw, G glowing claw edge.
+        private const float PixelsPerUnit = 24f;
+        private static readonly string[] PawHalf =
+        {
+            "...NrRRRRRRR", "..NrRRLRRRRR", ".NrRRRRReRRR", "NrRRLRRRReRR", "NrRRRRRRRReR", "NrRRRRLRRRRR",
+            "NrRLRRRRRRRR", "NrRRRRNrRRRN", "NrRLRNrRLRRN", "NrRRRNrRRRRN", "NrRRrNrRRRrN", "NrrrrNNrrrrN",
+            ".NCGN..NCGN.", ".NCCGN.NCCGN", "..NCGN.NCCG.", "..NCCG..NCG.", "...NCG..NCG.", "...NCCG.NCG.",
+            "....NCG..G..", ".....NG.....", "......G.....",
+        };
+        // One tile of the forearm, repeated up to the portal; bristling tufts stick out of its edges.
+        private static readonly string[] ArmHalf = { "....NrRRRLRR", "...NrRRRRRRR", "..NrrRRLRRRR", "....NrReRRRR" };
+        private static Sprite pawSprite, armSprite;
+        private static Sprite PawSprite => pawSprite != null ? pawSprite : pawSprite = Mirrored("Demon paw", PawHalf, new Vector2(0.5f, 0f));
+        private static Sprite ArmSprite => armSprite != null ? armSprite : armSprite = Mirrored("Demon forearm", ArmHalf, new Vector2(0.5f, 0f));
 
         public static DemonPawVfx Play(Transform root, Vector2 center, float radius, float windup)
         {
@@ -27,6 +41,9 @@ namespace Slopgame
             effect.radius = radius;
             effect.windup = Mathf.Max(0.05f, windup);
             effect.mesh = new FlameMesh(effect.gameObject, 10);
+            effect.armRenderer = effect.CreateLayer("Forearm", ArmSprite, 11);
+            effect.armRenderer.drawMode = SpriteDrawMode.Tiled;
+            effect.pawRenderer = effect.CreateLayer("Paw", PawSprite, 12);
             return effect;
         }
 
@@ -46,7 +63,7 @@ namespace Slopgame
                 // The paw pushes through the portal, then plunges.
                 float drop = Mathf.Clamp01((t - 0.35f) / 0.65f);
                 drop *= drop;
-                if (t > 0.35f) Paw(Center + Vector2.up * Mathf.Lerp(PortalHeight, size * 0.35f, drop), size, Mathf.Clamp01((t - 0.35f) * 6f));
+                Paw(Center + Vector2.up * Mathf.Lerp(PortalHeight, size * 0.35f, drop), size, t > 0.35f ? Mathf.Clamp01((t - 0.35f) * 6f) : 0f);
             }
             else
             {
@@ -84,69 +101,37 @@ namespace Slopgame
         }
 
         /// <summary>
-        /// A huge paw matted with blood-red fur: jagged tufts bristle along the forearm and knuckles, embers glow in
-        /// the cracks of its hide and long hooked black claws rake toward the ground.
+        /// Places the pixel-art paw so its claw tips sit just under <paramref name="at"/>, with the forearm tiled up to
+        /// the portal it reaches out of.
         /// </summary>
         private void Paw(Vector2 at, float size, float alpha)
         {
-            if (alpha <= 0f) return;
-            Color fur = FlameMesh.Alpha(Blood, alpha), furDark = FlameMesh.Alpha(BloodDark, alpha);
-            Color rim = FlameMesh.Alpha(Hellfire, 0.55f * alpha), clawBase = FlameMesh.Alpha(ClawBlack, alpha);
-            float breathe = 0.75f + 0.25f * Mathf.Sin(age * 9f);
-            // The forearm reaching down out of the portal, bristling with fur along both edges.
-            float armWidth = size * 1.3f;
-            mesh.Bar(at, Vector2.up, PortalHeight, armWidth + size * 0.12f, FlameMesh.Alpha(Hellfire, 0.4f * alpha), FlameMesh.Alpha(Hellfire, 0f));
-            mesh.Bar(at, Vector2.up, PortalHeight, armWidth, fur, FlameMesh.Alpha(BloodDark, 0.3f * alpha));
-            for (int i = 0; i < 9; i++)
-            {
-                float y = size * 0.3f + i * PortalHeight / 10f, fade = alpha * (1f - i / 10f);
-                for (int side = -1; side <= 1; side += 2)
-                {
-                    float spike = size * (0.22f + 0.2f * FlameMesh.Hash(i, side * 3.1f)) * (0.9f + 0.1f * Mathf.Sin(age * 12f + i));
-                    Vector2 root = at + new Vector2(side * armWidth * 0.5f, y);
-                    mesh.Triangle(root + Vector2.down * size * 0.12f, root + new Vector2(side * spike, spike * 0.7f), root + Vector2.up * size * 0.14f,
-                        FlameMesh.Alpha(Blood, fade), FlameMesh.Alpha(BloodDark, fade), FlameMesh.Alpha(Blood, fade));
-                }
-            }
-            // The paw itself: a hellish glow, then dark-edged red fur.
-            mesh.Ellipse(at, size * 1.22f, size * 0.95f, FlameMesh.Alpha(Hellfire, 0.5f * alpha * breathe), FlameMesh.Alpha(Hellfire, 0f));
-            mesh.Ellipse(at, size * 1.06f, size * 0.8f, fur, furDark);
-            // Ragged tufts along the top and sides of the paw.
-            for (int i = 0; i < 7; i++)
-            {
-                float a = Mathf.Lerp(0.15f, Mathf.PI - 0.15f, i / 6f);
-                Vector2 dir = new Vector2(Mathf.Cos(a), Mathf.Sin(a) * 0.78f);
-                Vector2 root = at + dir * size;
-                Vector2 tangent = Vector2.Perpendicular(dir).normalized * size * 0.16f;
-                float length = size * (0.25f + 0.18f * FlameMesh.Hash(i, 8.2f));
-                mesh.Triangle(root + tangent, root + dir.normalized * length + tangent * 0.8f, root - tangent, fur, furDark, fur);
-            }
-            // Embers smouldering in cracks across the back of the paw.
-            for (int i = 0; i < 4; i++)
-            {
-                float a = -0.9f + i * 0.6f + FlameMesh.Hash(i, 2.4f) * 0.3f;
-                Vector2 from = at + new Vector2(Mathf.Cos(a + Mathf.PI * 0.5f) * size * 0.15f, size * 0.25f);
-                Vector2 dir = FlameMesh.Polar(a - Mathf.PI * 0.5f, 1f);
-                mesh.Bar(from, dir, size * (0.35f + 0.2f * FlameMesh.Hash(i, 6.6f)), size * 0.07f,
-                    FlameMesh.Alpha(FlameMesh.Yellow, 0.9f * alpha * breathe), FlameMesh.Alpha(Hellfire, 0.2f * alpha));
-            }
-            for (int i = 0; i < 4; i++)
-            {
-                float offset = i - 1.5f;
-                Vector2 toe = at + new Vector2(offset * size * 0.52f, -size * 0.72f + Mathf.Abs(offset) * size * 0.16f);
-                mesh.Ellipse(toe, size * 0.3f, size * 0.33f, FlameMesh.Alpha(Hellfire, 0.5f * alpha), FlameMesh.Alpha(Hellfire, 0f));
-                mesh.Ellipse(toe, size * 0.23f, size * 0.27f, fur, furDark);
-                // Long hooked claws: they bow outward, then curl back in to a needle point.
-                float flare = offset * size * 0.1f;
-                Vector2 baseL = toe + new Vector2(-size * 0.11f, -size * 0.12f), baseR = toe + new Vector2(size * 0.11f, -size * 0.12f);
-                Vector2 bend = toe + new Vector2(flare * 1.6f, -size * 0.52f);
-                Vector2 tip = toe + new Vector2(flare * 0.4f - Mathf.Sign(offset) * size * 0.08f, -size * 0.9f);
-                mesh.Triangle(baseL, bend + Vector2.left * size * 0.07f, baseR, clawBase, clawBase, clawBase);
-                mesh.Triangle(baseR, bend + Vector2.left * size * 0.07f, bend + Vector2.right * size * 0.07f, clawBase, clawBase, clawBase);
-                mesh.Triangle(bend + Vector2.left * size * 0.07f, tip, bend + Vector2.right * size * 0.07f, clawBase, FlameMesh.Alpha(Hellfire, alpha), clawBase);
-                // A red glint along the edge of each claw.
-                mesh.Bar(baseR, (bend - baseR).normalized, (bend - baseR).magnitude, size * 0.03f, rim, FlameMesh.Alpha(Hellfire, 0.9f * alpha));
-            }
+            bool visible = alpha > 0f;
+            pawRenderer.enabled = armRenderer.enabled = visible;
+            if (!visible) return;
+            float scale = size * 2.3f;
+            var tint = new Color(1f, 1f, 1f, alpha);
+            Vector2 tips = at + Vector2.down * size * 0.35f;
+            pawRenderer.transform.localPosition = tips;
+            pawRenderer.transform.localScale = Vector3.one * scale;
+            pawRenderer.color = tint;
+            float wristY = tips.y + PawSprite.rect.height / PixelsPerUnit * scale;
+            float armLength = Center.y + PortalHeight - wristY;
+            armRenderer.enabled = armLength > 0.01f;
+            armRenderer.transform.localPosition = new Vector2(tips.x, wristY);
+            armRenderer.transform.localScale = Vector3.one * scale;
+            armRenderer.size = new Vector2(ArmSprite.rect.width / PixelsPerUnit, Mathf.Max(0.01f, armLength) / scale);
+            armRenderer.color = tint;
+        }
+
+        private SpriteRenderer CreateLayer(string name, Sprite sprite, int order)
+        {
+            var layer = new GameObject(name).AddComponent<SpriteRenderer>();
+            layer.transform.SetParent(transform, false);
+            layer.sprite = sprite;
+            layer.sortingOrder = order;
+            layer.enabled = false;
+            return layer;
         }
 
         /// <summary>Two slit eyes glaring out of the dark before the paw comes through.</summary>
@@ -172,6 +157,37 @@ namespace Slopgame
                 float a = i * Mathf.PI * 2f / 7f + FlameMesh.Hash(i, 5.3f);
                 float length = radius * (0.7f + FlameMesh.Hash(i, 1.7f) * 0.6f);
                 mesh.Bar(Center, FlameMesh.Polar(a, 1f), length, 0.1f, FlameMesh.Alpha(FlameMesh.Yellow, 0.9f * fade), FlameMesh.Alpha(Hellfire, 0f));
+            }
+        }
+
+        private static Sprite Mirrored(string name, string[] halfRows, Vector2 pivot)
+        {
+            int half = halfRows[0].Length, width = half * 2, height = halfRows.Length;
+            var texture = new Texture2D(width, height, TextureFormat.RGBA32, false)
+            { name = name, filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Clamp };
+            var pixels = new Color[width * height];
+            for (int y = 0; y < height; y++)
+                for (int x = 0; x < width; x++)
+                    pixels[(height - y - 1) * width + x] = PixelColor(halfRows[y][x < half ? x : width - 1 - x]);
+            texture.SetPixels(pixels);
+            texture.Apply(false, true);
+            // Full-rect meshes so the forearm can tile.
+            return Sprite.Create(texture, new Rect(0, 0, width, height), pivot, PixelsPerUnit, 0, SpriteMeshType.FullRect);
+        }
+
+        private static Color PixelColor(char c)
+        {
+            switch (c)
+            {
+                case 'N': return new Color(0.08f, 0.01f, 0.02f);
+                case 'R': return new Color(0.62f, 0.04f, 0.06f);
+                case 'r': return new Color(0.34f, 0.02f, 0.04f);
+                case 'L': return new Color(0.86f, 0.16f, 0.1f);
+                case 'e': return new Color(1f, 0.35f, 0.08f);
+                case 'E': return new Color(1f, 0.72f, 0.2f);
+                case 'C': return new Color(0.2f, 0.05f, 0.07f);
+                case 'G': return Hellfire;
+                default: return Color.clear;
             }
         }
 
