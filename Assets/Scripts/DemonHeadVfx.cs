@@ -9,22 +9,22 @@ namespace Slopgame
     /// </summary>
     public sealed class DemonHeadVfx : MonoBehaviour
     {
-        private const float RiseTime = 0.35f, RoarStart = 0.45f, RoarEnd = 1.3f, Lifetime = 1.9f;
+        private const float RiseTime = 0.22f, RoarStart = 0.3f, RoarEnd = 0.8f, Lifetime = 1.1f;
         private const float PixelsPerUnit = 24f;
-        private static readonly Color Hellfire = new Color(1f, 0.16f, 0.08f);
+        private static readonly Color Soulfire = new Color(0.6f, 0.12f, 1f);
 
-        // Pixel art drawn as left halves and mirrored. N outline, H/h horn bone and shade, R blood-red skin, r dark skin,
-        // L skin highlight, E/e blazing eyes, B the black maw, T fangs.
+        // Pixel art drawn as left halves and mirrored. N outline, H/h horn bone and shade, P violet skin, p dark skin,
+        // L skin highlight, c cracks, S hollow eye sockets, E/e burning pupils, B the black maw, T fangs.
         private static readonly string[] HeadHalf =
         {
             "NH..............", "NHh.............", ".NHh............", ".NHhh...........", "..NHhh.....NNNNN",
-            "..NHHhNNNNNrrrrr", "...NHhrRRRRRRRRR", "...NNrRRRLRRRRRR", "....NrRRRRRRRRRR", "....NrRLRRRRRRNN",
-            "...NrRRRNNNRRRRR", "...NrRRNeEEeNRRR", "...NrRRNEEEeNRRR", "...NrRRRNNNNRRRR", "...NrRRRRRRRRNrR",
-            "....NrRRRRRRRNrN", "....NrRRRRRRRRRR", "....NrRBBBBBBBBB", "....NrRBTBTBTBTB", ".....NrBBBBBBBBB",
+            "..NHHhNNNNNpPPPP", "...NHhpPPPPPPLPP", "...NNpPPLPPPPPcP", "....NpPPPPPPPPcP", "....NpPNNPPPPPPc",
+            "...NpPPNSSNNPPPP", "...NpPPNSeESSNPP", "...NpPPNSEESSNPP", "...NpPPPNSSSSNPP", "...NpLPPPNNNNPNS",
+            "....NpPPPPPPPPNS", "....NpPPLPPPPPPN", "....NpPBBBBBBBBB", "....NpPBTBBTBBBT", ".....NpBTBBTBBBT",
         };
         private static readonly string[] JawHalf =
         {
-            ".....NrBBBBBBBBB", ".....NrBTBTBTBTB", ".....NrRRRRRRRRR", "......NrRRRRRRRR", ".......NNrRRRRRR", ".........NNNNNNN",
+            ".....NpBBBBBBBBT", ".....NpBBTBBBTBB", ".....NpBTTBBTTBB", "......NpPPPPPPPP", ".......NNpPPPPPP", ".........NNNNNNN",
         };
         private static Sprite headSprite, jawSprite;
         private static Sprite HeadSprite => headSprite != null ? headSprite : headSprite = Mirrored("Demon head", HeadHalf, new Vector2(0.5f, 0f));
@@ -69,9 +69,17 @@ namespace Slopgame
             Vector2 jawAt = baseAt + Vector2.up * (1f - open * 5f) * px;
 
             mesh.Begin();
-            // A pool of shadow and hellfire the head rises out of.
+            // A pool of shadow and soulfire the head rises out of.
             mesh.Ellipse(center + Vector2.up * 0.2f, radius * 0.85f * rise, radius * 0.3f * rise,
                 FlameMesh.Alpha(DemonessAttack.Abyss, 0.75f * fade), FlameMesh.Alpha(DemonessAttack.Violet, 0f));
+            // Shadow tendrils writhing up out of the pool around the head.
+            for (int i = 0; i < 8; i++)
+            {
+                float a = Mathf.PI * (0.15f + 0.7f * i / 7f) + Mathf.Sin(age * 6f + i * 1.7f) * 0.15f;
+                float length = radius * rise * (0.45f + 0.35f * FlameMesh.Hash(i, 0f)) * fade;
+                mesh.Bar(center + new Vector2(Mathf.Cos(a) * radius * 0.6f, 0f), FlameMesh.Polar(a, 1f), length, 0.14f,
+                    FlameMesh.Alpha(DemonessAttack.Abyss, 0.8f * fade), FlameMesh.Alpha(DemonessAttack.Violet, 0f));
+            }
             // A violet aura behind the head.
             Vector2 middle = baseAt + Vector2.up * 10f * px;
             mesh.Ellipse(middle, 20f * px * (1f + 0.05f * Mathf.Sin(age * 9f)), 15f * px,
@@ -79,7 +87,7 @@ namespace Slopgame
             // The glowing throat between the jaws.
             if (open > 0.05f)
                 mesh.Ellipse(baseAt + Vector2.up * (1.5f - open * 2f) * px, 7f * px, (1.5f + open * 3f) * px,
-                    FlameMesh.Alpha(FlameMesh.Yellow, 0.9f * fade), FlameMesh.Alpha(Hellfire, 0.6f * fade), 20);
+                    FlameMesh.Alpha(DemonessAttack.Pale, 0.9f * fade), FlameMesh.Alpha(Soulfire, 0.6f * fade), 20);
             DrawEyes(baseAt, px, fade * Mathf.Clamp01((age - RiseTime * 0.6f) * 6f));
             if (roaring) DrawRoar(baseAt, roar);
             mesh.Commit();
@@ -104,9 +112,9 @@ namespace Slopgame
             float flare = 1f + 1.2f * Mathf.Clamp01(1f - Mathf.Abs(age - RoarStart) * 5f);
             for (int side = -1; side <= 1; side += 2)
             {
-                Vector2 eye = baseAt + new Vector2(side * 6f, 8.5f) * px;
-                mesh.Ellipse(eye, 4f * px * flare, 2.2f * px * flare, FlameMesh.Alpha(Hellfire, 0.6f * alpha), FlameMesh.Alpha(Hellfire, 0f));
-                mesh.Ellipse(eye, 1.6f * px, 0.9f * px, FlameMesh.Alpha(FlameMesh.Yellow, alpha), FlameMesh.Alpha(FlameMesh.Yellow, 0.4f * alpha), 12);
+                Vector2 eye = baseAt + new Vector2(side * 6f, 8f) * px;
+                mesh.Ellipse(eye, 4f * px * flare, 2.2f * px * flare, FlameMesh.Alpha(Soulfire, 0.6f * alpha), FlameMesh.Alpha(Soulfire, 0f));
+                mesh.Ellipse(eye, 1.2f * px, 1.2f * px, FlameMesh.Alpha(DemonessAttack.Pale, alpha), FlameMesh.Alpha(DemonessAttack.Violet, 0.5f * alpha), 12);
             }
         }
 
@@ -119,12 +127,12 @@ namespace Slopgame
                 float r = Mathf.Lerp(0.6f, radius, t);
                 mesh.Ring(center, r, 0.16f * (1f - t) + 0.03f, FlameMesh.Alpha(i == 1 ? DemonessAttack.Pale : DemonessAttack.Violet, 0.75f * (1f - t)), 64);
             }
-            // Streaks of hellfire blasting from the maw.
+            // Streaks of soulfire blasting from the maw.
             for (int i = 0; i < 10; i++)
             {
                 float a = -Mathf.PI * 0.5f + (i - 4.5f) * 0.32f + Mathf.Sin(age * 20f + i) * 0.05f;
                 float length = radius * (0.35f + 0.5f * FlameMesh.Hash(i, age * 3f));
-                mesh.Bar(baseAt, FlameMesh.Polar(a, 1f), length, 0.09f, FlameMesh.Alpha(FlameMesh.Yellow, 0.6f * (1f - roar)), FlameMesh.Alpha(Hellfire, 0f));
+                mesh.Bar(baseAt, FlameMesh.Polar(a, 1f), length, 0.09f, FlameMesh.Alpha(DemonessAttack.Pale, 0.6f * (1f - roar)), FlameMesh.Alpha(Soulfire, 0f));
             }
         }
 
@@ -156,16 +164,18 @@ namespace Slopgame
         {
             switch (c)
             {
-                case 'N': return new Color(0.08f, 0.01f, 0.02f);
-                case 'H': return new Color(0.9f, 0.84f, 0.7f);
-                case 'h': return new Color(0.55f, 0.48f, 0.4f);
-                case 'R': return new Color(0.62f, 0.04f, 0.06f);
-                case 'r': return new Color(0.34f, 0.02f, 0.04f);
-                case 'L': return new Color(0.86f, 0.16f, 0.1f);
-                case 'E': return FlameMesh.Yellow;
-                case 'e': return new Color(1f, 0.45f, 0.08f);
-                case 'B': return new Color(0.03f, 0f, 0.02f);
-                case 'T': return new Color(0.95f, 0.92f, 0.85f);
+                case 'N': return new Color(0.04f, 0.01f, 0.07f);
+                case 'H': return new Color(0.78f, 0.74f, 0.82f);
+                case 'h': return new Color(0.42f, 0.36f, 0.5f);
+                case 'P': return new Color(0.38f, 0.1f, 0.62f);
+                case 'p': return new Color(0.18f, 0.04f, 0.32f);
+                case 'L': return new Color(0.6f, 0.34f, 0.92f);
+                case 'c': return new Color(0.1f, 0.02f, 0.18f);
+                case 'S': return new Color(0.01f, 0f, 0.03f);
+                case 'E': return DemonessAttack.Pale;
+                case 'e': return DemonessAttack.Violet;
+                case 'B': return new Color(0.02f, 0f, 0.04f);
+                case 'T': return new Color(0.9f, 0.86f, 0.95f);
                 default: return Color.clear;
             }
         }
