@@ -73,19 +73,26 @@ namespace Slopgame
         private void DrawStatus()
         {
             var player = Run.Player;
-            DungeonUi.Panel(new Rect(24, 24, 292, 100), DungeonUi.PanelColor);
+            var gambler = player.Weapon as GamblerAttack;
+            // The Gambler's coins get their own row, so the panel (and everything under it) grows to fit.
+            float coinRow = gambler != null ? 26f : 0f;
+            DungeonUi.Panel(new Rect(24, 24, 292, 100 + coinRow), DungeonUi.PanelColor);
             DungeonUi.Label(new Rect(42, 37, 250, 28), Run.SelectedCharacter.DisplayName.ToUpperInvariant(), 22, Run.SelectedCharacter.Color);
             DungeonUi.Label(new Rect(176, 41, 122, 22), $"{player.Crystals.Crystals} CRYSTALS", 14, CrystalPouch.CrystalColor, TextAnchor.UpperRight);
             DungeonUi.Label(new Rect(42, 73, 130, 22), DebugMode.Enabled ? "INFINITE HP" : $"{player.Health} / {player.MaxHealth} HP", 16, DebugMode.Enabled ? DebugColor : (Color?)null);
-            DungeonUi.Label(new Rect(176, 73, 120, 22), player.Weapon is GamblerAttack gambler
-                ? $"WARD  {player.Powerups.ArmorCharges}   COINS  {gambler.Coins}" : $"WARD  {player.Powerups.ArmorCharges}", 14, DungeonUi.Muted, TextAnchor.UpperRight);
-            DungeonUi.Label(new Rect(24, 135, 300, 26), $"ASH  {Run.Progress.Ash}   /   +{Run.RunAshEarned} this run", 16, AbilityCatalog.Gold);
+            DungeonUi.Label(new Rect(176, 73, 120, 22), $"WARD  {player.Powerups.ArmorCharges}", 14, DungeonUi.Muted, TextAnchor.UpperRight);
+            if (gambler != null)
+            {
+                GUI.DrawTexture(new Rect(42, 101, 18, 18), DungeonVisuals.CoinSprite.texture);
+                DungeonUi.Label(new Rect(66, 99, 232, 24), $"{gambler.Coins:N0} {(gambler.Coins == 1 ? "COIN" : "COINS")}", 16, GamblerAttack.Gold);
+            }
+            DungeonUi.Label(new Rect(24, 135 + coinRow, 300, 26), $"ASH  {Run.Progress.Ash}   /   +{Run.RunAshEarned} this run", 16, AbilityCatalog.Gold);
             if (!string.IsNullOrEmpty(Run.Progress.LastError))
-                DungeonUi.Label(new Rect(24, 165, 310, 70), Run.Progress.LastError, 14, AbilityCatalog.Gold);
-            DungeonUi.Bar(new Rect(42, 103, 256, 6), displayedHealth, Run.SelectedCharacter.Color);
+                DungeonUi.Label(new Rect(24, 165 + coinRow, 310, 70), Run.Progress.LastError, 14, AbilityCatalog.Gold);
+            DungeonUi.Bar(new Rect(42, 103 + coinRow, 256, 6), displayedHealth, Run.SelectedCharacter.Color);
             if (DebugMode.Enabled)
                 DungeonUi.Label(new Rect(365, 4, 550, 22), "DEBUG ADMIN MODE  /  INVINCIBLE  ONE-HIT KILLS  NO COOLDOWNS  2X SPEED  /  F1", 12, DebugColor, TextAnchor.MiddleCenter);
-            DungeonUi.Label(new Rect(405, 28, 470, 25), Run.InShop ? $"FLOOR {Run.Floor:00}  /  CRYSTAL SHOP" : Run.IsBossFloor ? $"FLOOR {Run.Floor:00}  /  BOSS ARENA"
+            DungeonUi.Label(new Rect(405, 28, 470, 25), Run.InShop ? $"CRYSTAL SHOP  /  GUARDIAN OF FLOOR {Run.Floor + 1:00} AHEAD" : Run.IsBossFloor ? $"FLOOR {Run.Floor:00}  /  BOSS ARENA"
                 : $"FLOOR {Run.Floor:00}  /  {Run.Enemies.Count} ENEMIES", 17, Run.InShop ? CrystalPouch.CrystalColor : AbilityCatalog.Gold, TextAnchor.MiddleCenter);
             DungeonUi.Label(new Rect(365, 59, 550, 40), Run.Objective, 17, DungeonUi.Text, TextAnchor.UpperCenter);
             if (Run.Boss != null && Run.Boss.Enemy.Health > 0)
@@ -228,7 +235,7 @@ namespace Slopgame
             var rect = PurseRect;
             DungeonUi.Panel(rect, DungeonUi.Background);
             DungeonUi.Label(new Rect(rect.x + 20, rect.y + 14, 220, 28), "THE PURSE", 22, GamblerAttack.Gold);
-            DungeonUi.Label(new Rect(rect.x + 190, rect.y + 18, 146, 24), $"{purse.Coins?.Coins ?? 1} COINS", 16, GamblerAttack.Gold, TextAnchor.UpperRight);
+            DungeonUi.Label(new Rect(rect.x + 190, rect.y + 18, 146, 24), $"{purse.Coins?.Coins ?? 1:N0} COINS", 16, GamblerAttack.Gold, TextAnchor.UpperRight);
             for (int i = 0; i < GamblerPurse.Offers.Length; i++)
             {
                 var offer = GamblerPurse.Offers[i];

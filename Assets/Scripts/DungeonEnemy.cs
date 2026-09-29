@@ -11,6 +11,9 @@ namespace Slopgame
         private float hitUntil;
         private SpriteRenderer body;
         private EnemyShooter shooter;
+        /// <summary>The special kind of floor enemy this is (Ash skitter, Cinder husk), or null for the basic three.</summary>
+        public EnemyVariant Variant => variant != null ? variant : variant = GetComponent<EnemyVariant>();
+        private EnemyVariant variant;
         public DungeonBoss Boss { get; set; }
         public bool IsTank { get; set; }
         public float HitRadius => Boss != null ? Boss.HitRadius : IsTank ? 0.5f : 0.38f;
@@ -60,7 +63,7 @@ namespace Slopgame
             shooter = GetComponent<EnemyShooter>();
             if (IsRanged) gameObject.name = "Ember caster";
             tactics = GetComponent<EnemyTactics>();
-            if (Boss == null) body.sprite = DungeonVisuals.EnemySprite(IsRanged, IsTank);
+            if (Boss == null) body.sprite = Variant != null ? Variant.Sprite : DungeonVisuals.EnemySprite(IsRanged, IsTank);
             burnIndicator = DungeonVisuals.Create("Burn indicator", transform, transform.position,
                 new Vector2(0.28f, 0.4f), burnColor, 9);
             burnIndicator.sprite = DungeonVisuals.FlameSprite;
@@ -129,7 +132,8 @@ namespace Slopgame
             body.color = IsFlashing || netFlashing || (IsRanged && shooter.IsCharging && !IsHeld) ? Color.white
                 : IsParalyzed ? DemonessAttack.ParalyzedTint(Time.time)
                 : IsFrozen ? FrozenTint
-                : IsChilled ? AbilityCatalog.Ice : IsTank ? new Color(0.65f, 0.7f, 0.8f) : IsRanged ? new Color(1f, 0.65f, 0.2f) : new Color(1f, 0.35f, 0.4f);
+                : IsChilled ? AbilityCatalog.Ice : Variant != null ? Variant.Tint
+                : IsTank ? new Color(0.65f, 0.7f, 0.8f) : IsRanged ? new Color(1f, 0.65f, 0.2f) : new Color(1f, 0.35f, 0.4f);
         }
 
         /// <summary>Co-op guest: follow the host's snapshots; only contact with the local hero is judged here.</summary>
@@ -224,6 +228,7 @@ namespace Slopgame
             Run.EnemyDefeated(this);
             if (localKill && Run.Player.Health > 0) Run.Player.Powerups.OnKill(Run.Player);
             Boss?.Defeated();
+            if (Variant != null) Variant.OnDeath(this);
             // The Gambler collects a gold coin from every fallen enemy (each machine drops coins for its own hero).
             if (Run.Player != null && Run.Player.Weapon is GamblerAttack) GoldCoin.Drop(Run, transform.position);
             // Every fallen enemy leaves crystals for the shop before the next boss (each machine drops its own).

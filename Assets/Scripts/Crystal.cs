@@ -19,7 +19,8 @@ namespace Slopgame
         public int Value { get; private set; }
 
         /// <summary>Crystals an enemy is worth: guardians shower the hero, iron brutes carry a few.</summary>
-        public static int ValueFor(DungeonEnemy enemy) => enemy.Boss != null ? 15 : enemy.IsTank ? 3 : 1;
+        public static int ValueFor(DungeonEnemy enemy) => enemy.Boss != null ? 15 : enemy.IsTank ? 3
+            : enemy.Variant != null ? enemy.Variant.CrystalValue : 1;
 
         public static Crystal Drop(DungeonRun run, Vector2 position, int value)
         {

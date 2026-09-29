@@ -313,6 +313,11 @@ namespace Slopgame.Editor
             int damage = player.Damage;
             Require(purse.Buy(dice) && player.Damage == damage + 1 && coins.Coins == 2, "Loaded Dice failed.");
             Require(!purse.Buy(GamblerPurse.Offers[(int)GamblerPurse.Ware.Draught]), "A full-health Gambler bought a Healing Draught.");
+            // The purse is capped, so repeated doubling cannot overflow into a negative (or reset) count.
+            coins.AddCoins(GamblerAttack.MaxCoins - 1000);
+            for (int i = 0; i < 40; i++) coins.DoubleOrNothing(0f);
+            coins.AddCoins(int.MaxValue);
+            Require(coins.Coins == GamblerAttack.MaxCoins, "Gambler coins overflowed past the purse cap.");
         }
 
         private static void Finish(bool success, string message)

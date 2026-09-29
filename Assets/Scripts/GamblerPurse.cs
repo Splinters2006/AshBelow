@@ -93,8 +93,8 @@ namespace Slopgame
                     break;
                 case Ware.DoubleOrNothing:
                     int stake = coins.Coins;
-                    LastResult = coins.DoubleOrNothing(roll) ? $"WIN! {stake} coins become {stake * 2}."
-                        : $"Bust. {stake} coins gone; the purse spits one back.";
+                    LastResult = coins.DoubleOrNothing(roll) ? $"WIN! {stake:N0} coins become {coins.Coins:N0}."
+                        : $"Bust. {stake:N0} coins gone; the purse spits one back.";
                     break;
             }
             return true;

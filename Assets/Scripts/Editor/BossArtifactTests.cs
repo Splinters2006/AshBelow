@@ -12,6 +12,7 @@ namespace Slopgame.Editor
         private static double started;
         private static int stage;
         private static float waitUntil;
+        private static bool variantsTested;
         private static bool failed, checkedChilledBoss;
         private static readonly List<WeaponType> classes = new List<WeaponType> { WeaponType.Sword, WeaponType.Bow, WeaponType.Staff, WeaponType.Daggers, WeaponType.Hammer, WeaponType.Shadow, WeaponType.Fists, WeaponType.Tail, WeaponType.Coins };
         private static int classIndex;
@@ -90,13 +91,32 @@ namespace Slopgame.Editor
                 }
                 if (run.Player == null || run.Player.Weapon == null) return;
                 run.Player.enabled = false;
-                if (stage == 1)
+                if (stage == 1 && !variantsTested)
                 {
                     TestEnemies(run);
                     FreezeEnemies(run);
                     TestWizard(run);
                     TestCrystalDrops(run);
-                    while (run.Floor < 4) ClearFloor(run);
+                    TestEnemyVariants(run);
+                    variantsTested = true;
+                    // The cinder burst hit the hero; wait out the hit protection before the shop wounds them again.
+                    waitUntil = Time.time + 1.1f;
+                    return;
+                }
+                if (stage == 1)
+                {
+                    if (Time.time < waitUntil) return;
+                    run.Player.Heal(run.Player.MaxHealth);
+                    bool skittersSeen = false, husksSeen = false;
+                    while (run.Floor < 4)
+                    {
+                        ClearFloor(run);
+                        Require(run.Floor < 2 || run.Enemies.TrueForAll(enemy => run.Floor >= 3 || !(enemy.Variant is CinderHusk)),
+                            "A cinder husk spawned before floor 3.");
+                        skittersSeen |= run.Enemies.Exists(enemy => enemy.Variant is AshSkitter);
+                        husksSeen |= run.Enemies.Exists(enemy => enemy.Variant is CinderHusk);
+                    }
+                    Require(skittersSeen && husksSeen, "Floors 2 to 4 spawned no ash skitters or cinder husks.");
                     ClearFloor(run);
                     TestShop(run);
                     Require(run.IsBossFloor && run.Boss != null && run.Enemies.Count == 1, "Floor five did not create a dedicated boss arena.");
@@ -343,6 +363,37 @@ namespace Slopgame.Editor
             normal.Hit(100000);
             var dropped = run.ProjectileRoot.GetComponentsInChildren<Crystal>();
             Require(dropped.Length == before + 1 && Array.Exists(dropped, crystal => crystal.Value == 1), "A slain enemy dropped no crystal.");
+        }
+
+        private static void TestEnemyVariants(DungeonRun run)
+        {
+            var player = run.Player;
+            Require(run.Floor == 1 && !run.Enemies.Exists(enemy => enemy.Variant != null), "Special enemies spawned on floor 1.");
+            var plain = run.Enemies.FindAll(enemy => !enemy.IsTank && !enemy.IsRanged && enemy.Variant == null);
+            Require(plain.Count >= 2, "Floor 1 has too few plain ashlings to test variants.");
+            DungeonEnemy huskEnemy = plain[0], skitterEnemy = plain[1];
+            int health = skitterEnemy.Health;
+            float speed = skitterEnemy.Speed;
+            skitterEnemy.gameObject.AddComponent<AshSkitter>().Configure(skitterEnemy);
+            Require(skitterEnemy.Variant is AshSkitter && skitterEnemy.Speed > speed && skitterEnemy.Health == Mathf.Max(1, health / 2)
+                && Crystal.ValueFor(skitterEnemy) == 1, "The ash skitter is not a fast, fragile ashling.");
+            health = huskEnemy.Health;
+            var husk = huskEnemy.gameObject.AddComponent<CinderHusk>();
+            husk.Configure(huskEnemy);
+            Require(huskEnemy.Health == health + 2 && Crystal.ValueFor(huskEnemy) == 2, "The cinder husk's health or crystals are wrong.");
+
+            // Killing the husk leaves a fuse; the burst then hurts the hero and nearby enemies.
+            Vector2 at = player.transform.position;
+            huskEnemy.transform.position = at + Vector2.right * 0.8f;
+            skitterEnemy.transform.position = at + Vector2.right * 1.6f;
+            Require(!player.IsInvulnerable, "The hero was still protected before the cinder burst test.");
+            int hearts = player.Health, wards = player.Powerups.ArmorCharges;
+            huskEnemy.Hit(100000);
+            var fuses = run.GetComponentsInChildren<CinderBurst>();
+            Require(fuses.Length == 1 && player.Health == hearts && run.Enemies.Contains(skitterEnemy), "The cinder husk burst without a fuse.");
+            fuses[0].Detonate();
+            Require(player.Health == hearts - 1 || player.Powerups.ArmorCharges == wards - 1, "The cinder burst did not hurt a hero in range.");
+            Require(!run.Enemies.Contains(skitterEnemy), "The cinder burst did not hurt a nearby enemy.");
         }
 
         private static void TestShop(DungeonRun run)

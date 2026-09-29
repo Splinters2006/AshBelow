@@ -217,6 +217,8 @@ namespace Slopgame
                 Enemies.Add(enemy);
                 DungeonVisuals.DecorateArena(level);
             }
+            // Plain ashlings may turn out to be skitters (from floor 2) or cinder husks (from floor 3), from the run seed.
+            var variants = new System.Random(Seed + Floor * 6151);
             for (int room = 1; !IsBossFloor && !InShop && room < Map.Centers.Count; room++)
             {
                 int count = Mathf.Min(4, 1 + Floor);
@@ -237,6 +239,13 @@ namespace Slopgame
                         enemy.Speed *= 0.6f;
                         enemy.transform.localScale = Vector2.one * 0.9f;
                     }
+                    else
+                    {
+                        double roll = variants.NextDouble();
+                        EnemyVariant variant = Floor >= 3 && roll < HuskChance ? enemy.gameObject.AddComponent<CinderHusk>()
+                            : Floor >= 2 && roll < HuskChance + SkitterChance ? enemy.gameObject.AddComponent<AshSkitter>() : null;
+                        variant?.Configure(enemy);
+                    }
                     Enemies.Add(enemy);
                 }
             }
@@ -250,6 +259,8 @@ namespace Slopgame
 
         /// <summary>True when the floor after <paramref name="floor"/> is a boss floor, so the crystal shop comes first.</summary>
         public static bool IsShopNext(int floor) => floor > 0 && (floor + 1) % 5 == 0;
+        /// <summary>Chances for a plain ashling to spawn as a cinder husk (floor 3 on) or an ash skitter (floor 2 on).</summary>
+        public const double HuskChance = 0.2, SkitterChance = 0.3;
 
         private void Update()
         {

@@ -37,7 +37,9 @@ namespace Slopgame
         public float VolleyReach => VolleyRange + Player.Powerups.Count(PowerupType.LongToss);
         public bool CanAttack => Player.Run.IsPlaying && !Player.IsRolling && !Player.IsBusy && Time.time >= readyAt;
 
-        public void AddCoins(int amount) { if (amount > 0) coins = Coins + amount; }
+        /// <summary>The purse holds at most this many; Double or Nothing and Windfall cannot push past it (or overflow).</summary>
+        public const int MaxCoins = 999999;
+        public void AddCoins(int amount) { if (amount > 0) coins = (int)System.Math.Min(MaxCoins, (long)Coins + amount); }
 
         /// <summary>Spends coins if he has enough. The purse tops an empty pocket back up to one.</summary>
         public bool Spend(int amount)
