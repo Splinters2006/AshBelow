@@ -154,14 +154,29 @@ namespace Slopgame
             if (!IsRanged) TryContactHit(HitRadius + 0.27f);
         }
 
-        /// <summary>Co-op guest: the host's view of this enemy. Health only ever falls, so local hits are never undone.</summary>
+        /// <summary>How long a guest trusts its own hits before the host's health overrides them (covers the round trip).</summary>
+        private const float GuestPredictionWindow = 0.5f;
+        private float lastLocalHitAt = -10f;
+        private readonly System.Collections.Generic.List<Renderer> hiddenRenderers = new System.Collections.Generic.List<Renderer>();
+
+        /// <summary>
+        /// Co-op guest: the host's view of this enemy. Fresh local hits are kept until the host has had time to apply
+        /// them; after that the host's health wins. Without this, hits the host rejected (the boss was untouchable
+        /// there, or not cursed) piled up here until the guest saw the boss "die" and vanish while it fought on.
+        /// </summary>
         public void ApplySnapshot(EnemySnapshot snapshot)
         {
             netPosition = snapshot.Position;
             if (!hasSnapshot) transform.position = netPosition;
             hasSnapshot = true;
             Facing.Face(snapshot.Facing);
-            if (Health > 0) Health = Mathf.Max(1, Mathf.Min(Health, snapshot.Health));
+            if (snapshot.Health > 0 && Time.time - lastLocalHitAt > GuestPredictionWindow)
+            {
+                // The host says it is still alive: bring back an enemy this guest wrongly thought it had killed.
+                if (Health <= 0) SetVisible(true);
+                Health = snapshot.Health;
+            }
+            else if (Health > 0) Health = Mathf.Max(1, Mathf.Min(Health, snapshot.Health));
             netFlashing = (snapshot.Flags & EnemySnapshot.Flashing) != 0;
             netBurning = (snapshot.Flags & EnemySnapshot.Burning) != 0;
             chilledUntil = (snapshot.Flags & EnemySnapshot.Chilled) != 0 ? Time.time + 0.25f : Mathf.Min(chilledUntil, Time.time);
@@ -200,6 +215,7 @@ namespace Slopgame
                 Run.Coop.ReportDamage(this, CoopDamageKind.Hit, damage, source, knockback: knockback);
                 Health = Mathf.Max(0, Health - CursedDamage(damage));
                 hitUntil = Time.time + 0.15f;
+                lastLocalHitAt = Time.time;
                 if (Health <= 0) SetVisible(false);
                 return;
             }
@@ -216,9 +232,17 @@ namespace Slopgame
                 transform.position = Run.Map.Move(transform.position, away * (IsTank ? 0.2f : 0.65f) * knockback, MoveRadius);
         }
 
+        // Only renderers that were showing get restored, so indicators and telegraphs keep their own state.
         private void SetVisible(bool value)
         {
-            foreach (var renderer in GetComponentsInChildren<Renderer>()) renderer.enabled = value;
+            if (!value)
+            {
+                foreach (var renderer in GetComponentsInChildren<Renderer>())
+                    if (renderer.enabled) { renderer.enabled = false; hiddenRenderers.Add(renderer); }
+                return;
+            }
+            foreach (var renderer in hiddenRenderers) if (renderer != null) renderer.enabled = true;
+            hiddenRenderers.Clear();
         }
 
         /// <summary>Removes the enemy with its death effects and rewards; kill talents apply only to the killer.</summary>

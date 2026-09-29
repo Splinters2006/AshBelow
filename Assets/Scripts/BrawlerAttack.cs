@@ -316,15 +316,19 @@ namespace Slopgame
 
         public void Hide()
         {
-            if (barrage != null)
-            {
-                StopCoroutine(barrage);
-                StopFlurry();
-                barrage = null;
-                readyAt = Time.time + 0.25f * Interval;
-            }
+            StopBarrage();
             Player.Charge.Cancel();
             if (preview != null) preview.enabled = false;
+        }
+
+        /// <summary>Cuts a running barrage short but leaves a held punch charging (a dodge keeps the Brawler's charge).</summary>
+        public void StopBarrage()
+        {
+            if (barrage == null) return;
+            StopCoroutine(barrage);
+            StopFlurry();
+            barrage = null;
+            readyAt = Time.time + 0.25f * Interval;
         }
 
         private void LateUpdate()

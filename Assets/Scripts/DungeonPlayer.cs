@@ -167,6 +167,8 @@ namespace Slopgame
             if (!usedAbility && Mechanic != null && PlayerInput.Mechanic) usedAbility = Mechanic.TryActivate(toCursor);
             if (IsBusy) { Charge.Cancel(); return; }
             if (!usedAbility && !Run.IsPointerOverHud && PlayerInput.HeavyAttack && !IsRolling) Weapon.TryHeavyAttack(toCursor);
+            // Brawler mid-roll: the charge is left alone, then keeps building (or fires, if released) once the roll ends.
+            if (IsRolling && Weapon is BrawlerAttack) return;
             Charge.Tick(PlayerInput.Attack, !Run.IsPointerOverHud && !usedAbility && !IsRolling && !Weapon.IsHeavyAttacking && !PlayerInput.HeavyAttack);
         }
 
@@ -183,8 +185,13 @@ namespace Slopgame
             rollUntil = Time.time + RollDuration;
             rollReady = Time.time + Mathf.Max(0.2f, RollCooldown * Powerups.DodgeCooldownMultiplier * Buffs.DodgeCooldownMultiplier
                 - Buffs.DodgeCooldownReduction);
-            Weapon?.Hide();
-            Charge.Cancel();
+            // The Brawler keeps a held punch charging through the roll; every other class loses it.
+            if (Weapon is BrawlerAttack brawler) brawler.StopBarrage();
+            else
+            {
+                Weapon?.Hide();
+                Charge.Cancel();
+            }
             return true;
         }
 
