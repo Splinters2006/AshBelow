@@ -4,19 +4,24 @@ namespace Slopgame
 {
     /// <summary>
     /// Timed self-buffs that scale a hero's core stats. Every multiplier is neutral (1 or 0) while nothing is
-    /// active, so heroes that never gain a buff are unaffected. Used by the Brawler's Empower and Primal Rage.
+    /// active, so heroes that never gain a buff are unaffected. Used by the Brawler's Empower and Primal Rage
+    /// and the Demoness's Archdemon's Technique.
     /// </summary>
     public sealed class HeroBuffs : MonoBehaviour
     {
         public static readonly Color EmpowerColor = new Color(1f, 0.72f, 0.3f);
         public static readonly Color RageColor = new Color(1f, 0.25f, 0.2f);
         public static readonly Color TiredColor = new Color(0.55f, 0.58f, 0.66f);
+        public static readonly Color AscendColor = new Color(0.62f, 0.2f, 1f);
         public DungeonPlayer Player { get; set; }
-        private float empoweredUntil, ragingUntil, tiredUntil, nextFx;
+        private float empoweredUntil, ragingUntil, tiredUntil, ascendedUntil, nextFx;
 
         public bool IsEmpowered => Time.time < empoweredUntil;
         public bool IsRaging => Time.time < ragingUntil;
         public bool IsTired => !IsRaging && Time.time < tiredUntil;
+        /// <summary>Archdemon's Technique: the Demoness's attacks count as fully charged and charging winds up a tail whip.</summary>
+        public bool IsAscended => Time.time < ascendedUntil;
+        public float AscendRemaining => Mathf.Max(0f, ascendedUntil - Time.time);
         public float EmpowerRemaining => Mathf.Max(0f, empoweredUntil - Time.time);
         public float RageRemaining => Mathf.Max(0f, ragingUntil - Time.time);
         public float TiredRemaining => IsTired ? tiredUntil - Time.time : 0f;
@@ -42,15 +47,18 @@ namespace Slopgame
             tiredUntil = ragingUntil + tiredDuration;
         }
 
-        public void Clear() { empoweredUntil = ragingUntil = tiredUntil = 0f; }
+        public void Ascend(float duration) { ascendedUntil = Mathf.Max(ascendedUntil, Time.time + duration); }
+
+        public void Clear() { empoweredUntil = ragingUntil = tiredUntil = ascendedUntil = 0f; }
 
         /// <summary>The hero's body colour with a hint of the strongest active buff.</summary>
-        public Color Tint(Color baseColor) => Tint(baseColor, IsEmpowered, IsRaging, IsTired);
+        public Color Tint(Color baseColor) => Tint(baseColor, IsEmpowered, IsRaging, IsTired, IsAscended);
 
         /// <summary>Shared with co-op teammates' heroes, which only know the buff flags.</summary>
-        public static Color Tint(Color baseColor, bool empowered, bool raging, bool tired)
+        public static Color Tint(Color baseColor, bool empowered, bool raging, bool tired, bool ascended = false)
         {
             float wave = 0.5f + 0.5f * Mathf.Sin(Time.time * 10f);
+            if (ascended) return Color.Lerp(baseColor, AscendColor, 0.35f + 0.2f * wave);
             if (raging) return Color.Lerp(baseColor, RageColor, 0.4f + 0.2f * wave);
             if (tired) return Color.Lerp(baseColor, TiredColor, 0.55f);
             if (empowered) return Color.Lerp(baseColor, EmpowerColor, 0.2f + 0.15f * wave);
@@ -62,7 +70,13 @@ namespace Slopgame
             if (Player == null || Player.Run == null || Player.Run.ProjectileRoot == null || !Player.Run.IsPlaying || Time.time < nextFx) return;
             var root = Player.Run.ProjectileRoot;
             Vector2 position = transform.position;
-            if (IsRaging)
+            if (IsAscended)
+            {
+                nextFx = Time.time + 0.16f;
+                HeroVfx.Sparks(root, position + Vector2.down * 0.35f, AscendColor, 3, 1.8f, 0.4f, Vector2.up, 70f, 0.9f);
+                HeroVfx.Motes(root, position, 0.5f, new Color(0.08f, 0.02f, 0.14f), 2, 0.6f);
+            }
+            else if (IsRaging)
             {
                 nextFx = Time.time + 0.14f;
                 HeroVfx.Sparks(root, position + Vector2.down * 0.3f, RageColor, 3, 2.2f, 0.35f, Vector2.up, 80f, 0.9f);

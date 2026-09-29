@@ -25,13 +25,22 @@ namespace Slopgame
         private EnemyTactics tactics;
         private SpriteRenderer burnIndicator;
         public bool IsChilled => Time.time < chilledUntil;
-        public float ActionSpeedMultiplier => (IsChilled ? 0.5f : 1f) * (HolyBubble.SlowsAt(transform.position) ? HolyBubble.SanctuarySlow : 1f);
+        /// <summary>Paralysed enemies cannot move, turn or attack (the Demoness's vital stabs and curses).</summary>
+        public bool IsParalyzed => Time.time < paralyzedUntil;
+        /// <summary>Cursed enemies take <see cref="CurseDamageMultiplier"/> times the damage from every hit.</summary>
+        public bool IsCursed => Time.time < cursedUntil;
+        public const float CurseDamageMultiplier = 1.5f;
+        /// <summary>After a paralysis wears off, a guardian shrugs off new ones for this long.</summary>
+        public const float BossParalysisImmunity = 3f;
+        public float ActionSpeedMultiplier => IsParalyzed ? 0f
+            : (IsChilled ? 0.5f : 1f) * (HolyBubble.SlowsAt(transform.position) ? HolyBubble.SanctuarySlow : 1f);
         public float MoveMultiplier => ActionSpeedMultiplier;
         // Attack timers follow local action time; status durations and damage-over-time use world time.
         public float ActionTime { get; private set; }
         private float contactReadyAt;
         public bool IsFlashing => Time.time < hitUntil;
-        private float chilledUntil, nextBurn;
+        private float chilledUntil, nextBurn, paralyzedUntil, paralysisImmuneUntil, cursedUntil;
+        private SpriteRenderer curseIndicator;
         private int burnTicks, burnDamage;
         private Color burnColor = new Color(1f, 0.4f, 0.16f);
         public bool IsRanged => shooter != null;
@@ -53,6 +62,20 @@ namespace Slopgame
             burnIndicator.sprite = DungeonVisuals.FlameSprite;
             burnIndicator.transform.localPosition = new Vector2(0, 0.95f);
             burnIndicator.gameObject.SetActive(IsBurning);
+            curseIndicator = DungeonVisuals.Create("Curse indicator", transform, transform.position,
+                new Vector2(0.3f, 0.3f), DemonessAttack.Violet, 9);
+            curseIndicator.transform.localPosition = new Vector2(0, -0.85f);
+            curseIndicator.gameObject.SetActive(false);
+        }
+
+        /// <summary>A small violet sigil under a cursed enemy that spins while the curse holds.</summary>
+        private void UpdateCurseIndicator()
+        {
+            if (curseIndicator == null) return;
+            curseIndicator.gameObject.SetActive(IsCursed);
+            if (!IsCursed) return;
+            curseIndicator.transform.localRotation = Quaternion.Euler(0, 0, 45f + Time.time * 90f);
+            curseIndicator.color = FlameMesh.Alpha(DemonessAttack.Violet, 0.6f + 0.3f * Mathf.Sin(Time.time * 8f));
         }
 
         private void Update()
@@ -60,6 +83,7 @@ namespace Slopgame
             if (!Run.IsPlaying || Health <= 0) return;
             if (Run.IsGuest) { GuestUpdate(); return; }
             ActionTime += Time.deltaTime * ActionSpeedMultiplier;
+            UpdateCurseIndicator();
             if (burnTicks > 0 && Time.time >= nextBurn)
             {
                 burnTicks--;
@@ -75,6 +99,7 @@ namespace Slopgame
                 burnIndicator.transform.localScale = new Vector3(0.28f, 0.4f, 1f) * (1f + 0.12f * Mathf.Sin(Time.time * 12f));
             }
             if (Boss != null) return;
+            if (IsParalyzed) { UpdateColor(); return; }
             Vector2 position = transform.position;
             // Heroes in Shadow Veil are invisible: with nobody to see, the enemy holds still and keeps its facing.
             if (!Run.TryNearestVisibleHero(position, out Vector2 target))
@@ -97,7 +122,8 @@ namespace Slopgame
 
         private void UpdateColor()
         {
-            body.color = IsFlashing || netFlashing || (IsRanged && shooter.IsCharging) ? Color.white
+            body.color = IsFlashing || netFlashing || (IsRanged && shooter.IsCharging && !IsParalyzed) ? Color.white
+                : IsParalyzed ? DemonessAttack.ParalyzedTint(Time.time)
                 : IsChilled ? AbilityCatalog.Ice : IsTank ? new Color(0.65f, 0.7f, 0.8f) : IsRanged ? new Color(1f, 0.65f, 0.2f) : new Color(1f, 0.35f, 0.4f);
         }
 
@@ -105,6 +131,7 @@ namespace Slopgame
         private void GuestUpdate()
         {
             ActionTime += Time.deltaTime * ActionSpeedMultiplier;
+            UpdateCurseIndicator();
             if (hasSnapshot)
                 transform.position = Vector2.Distance(transform.position, netPosition) > 2.5f ? netPosition
                     : Vector2.Lerp(transform.position, netPosition, 1f - Mathf.Exp(-14f * Time.deltaTime));
@@ -129,6 +156,8 @@ namespace Slopgame
             netFlashing = (snapshot.Flags & EnemySnapshot.Flashing) != 0;
             netBurning = (snapshot.Flags & EnemySnapshot.Burning) != 0;
             chilledUntil = (snapshot.Flags & EnemySnapshot.Chilled) != 0 ? Time.time + 0.25f : Mathf.Min(chilledUntil, Time.time);
+            paralyzedUntil = (snapshot.MoreFlags & EnemySnapshot.Paralyzed) != 0 ? Time.time + 0.25f : Mathf.Min(paralyzedUntil, Time.time);
+            cursedUntil = (snapshot.MoreFlags & EnemySnapshot.Cursed) != 0 ? Time.time + 0.25f : Mathf.Min(cursedUntil, Time.time);
             bool charging = (snapshot.Flags & EnemySnapshot.Charging) != 0;
             if (shooter != null) shooter.SetCharging(charging);
             if (Boss != null) Boss.ApplySnapshot(charging, (byte)(snapshot.Flags >> EnemySnapshot.BossStateShift));
@@ -137,7 +166,7 @@ namespace Slopgame
         /// <summary>Contact damage against the local hero (each machine judges its own hero).</summary>
         public void TryContactHit(float reach)
         {
-            if (!Run.IsPlaying || Health <= 0 || ActionTime < contactReadyAt || Run.Player.IsInvulnerable || Run.Player.Health <= 0
+            if (!Run.IsPlaying || Health <= 0 || IsParalyzed || ActionTime < contactReadyAt || Run.Player.IsInvulnerable || Run.Player.Health <= 0
                 || Vector2.Distance(transform.position, Run.Player.transform.position) >= reach) return;
             Run.Player.Hit();
             contactReadyAt = ActionTime + 1f;
@@ -157,14 +186,14 @@ namespace Slopgame
             HitReceived?.Invoke(LastHitRegion);
             if (Run.IsGuest)
             {
-                // Show the hit now; the host applies it and confirms any kill.
+                // Show the hit now; the host applies it (and any curse) and confirms any kill.
                 Run.Coop.ReportDamage(this, CoopDamageKind.Hit, damage, source, knockback: knockback);
-                Health = Mathf.Max(0, Health - damage);
+                Health = Mathf.Max(0, Health - CursedDamage(damage));
                 hitUntil = Time.time + 0.15f;
                 if (Health <= 0) SetVisible(false);
                 return;
             }
-            Health -= damage;
+            Health -= CursedDamage(damage);
             hitUntil = Time.time + 0.15f;
             if (Health <= 0)
             {
@@ -205,6 +234,31 @@ namespace Slopgame
             if (IsInvulnerable) return;
             if (Run.IsGuest) { Run.Coop.ReportDamage(this, CoopDamageKind.Chill, 0, transform.position, 0, duration); return; }
             chilledUntil = Mathf.Max(chilledUntil, Time.time + duration * (Boss != null ? 0.5f : 1f));
+        }
+
+        /// <summary>Damage after the curse, rounded half up so even a 1-damage hit is worth more on a cursed enemy.</summary>
+        public int CursedDamage(int damage) => IsCursed ? Mathf.FloorToInt(damage * CurseDamageMultiplier + 0.5f) : damage;
+
+        /// <summary>Freezes the enemy in place. Guardians are held half as long and then resist for a few seconds.</summary>
+        public void Paralyze(float duration)
+        {
+            if (IsInvulnerable || duration <= 0f) return;
+            if (Run.IsGuest) { Run.Coop.ReportDamage(this, CoopDamageKind.Paralyze, 0, transform.position, 0, duration); return; }
+            if (Boss != null)
+            {
+                // Covers the paralysis itself too, so repeated stabs cannot chain-lock a guardian.
+                if (Time.time < paralysisImmuneUntil) return;
+                duration *= 0.5f;
+            }
+            paralyzedUntil = Mathf.Max(paralyzedUntil, Time.time + duration);
+            if (Boss != null) paralysisImmuneUntil = paralyzedUntil + BossParalysisImmunity;
+        }
+
+        public void Curse(float duration)
+        {
+            if (IsInvulnerable || duration <= 0f) return;
+            if (Run.IsGuest) { Run.Coop.ReportDamage(this, CoopDamageKind.Curse, 0, transform.position, 0, duration); return; }
+            cursedUntil = Mathf.Max(cursedUntil, Time.time + duration);
         }
 
         public void Burn(int ticks, int damage, Color? color = null)

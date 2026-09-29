@@ -57,6 +57,16 @@ namespace Slopgame
         public static void Flurry(DungeonRun run, float length, float halfWidth, Color color, float duration)
             => Send(run, FxKind.Flurry, default, default, color, length, halfWidth, Mathf.RoundToInt(duration * 1000f));
 
+        public static void TailStab(DungeonRun run, Vector2 origin, Vector2 aim, float reach, Color color)
+            => Send(run, FxKind.TailStab, origin, aim, color, reach);
+        public static void TailSweep(DungeonRun run, Vector2 origin, Vector2 aim, float reach, float cone, Color color)
+            => Send(run, FxKind.TailSweep, origin, aim, color, reach, cone);
+        public static void Pentagram(DungeonRun run, Vector2 center, float radius, float windup)
+            => Send(run, FxKind.Pentagram, center, default, null, radius, windup);
+        /// <summary>Teammates see the paw land where it was aimed when cast (their copy does not track the target).</summary>
+        public static void DemonPaw(DungeonRun run, Vector2 center, float radius, float windup)
+            => Send(run, FxKind.DemonPaw, center, default, null, radius, windup);
+
         private static RemoteHero FindHero(DungeonRun run, ulong id)
         {
             foreach (var hero in run.Coop.RemoteHeroes) if (hero != null && hero.Id == id) return hero;
@@ -107,6 +117,10 @@ namespace Slopgame
                 case FxKind.HolySword: HolySwordVfx.Play(root, fx.A); break;
                 case FxKind.Venom: VenomVial.SpawnGhost(run, fx.A, fx.B, fx.F1, fx.F2); break;
                 case FxKind.HeavyPunch: BrawlerVfx.HeavyPunch(root, fx.A, fx.B, fx.F1, fx.F2, color); break;
+                case FxKind.TailStab: TailVfx.Stab(root, fx.A, fx.B, fx.F1, color); break;
+                case FxKind.TailSweep: TailVfx.Sweep(root, fx.A, fx.B, fx.F1, fx.F2, color); break;
+                case FxKind.Pentagram: PentagramVfx.Play(root, fx.A, fx.F1, fx.F2); break;
+                case FxKind.DemonPaw: DemonPawVfx.Play(root, fx.A, fx.F1, fx.F2); break;
                 case FxKind.Flurry:
                     var brawler = FindHero(run, fx.Origin);
                     if (brawler != null) BrawlerVfx.Flurry(root, brawler.transform, () => brawler != null ? brawler.Aim : Vector2.zero, fx.F1, fx.F2, color, fx.N / 1000f);

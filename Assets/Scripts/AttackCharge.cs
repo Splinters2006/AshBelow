@@ -11,6 +11,7 @@ namespace Slopgame
         public float Duration => (Player.ClassWeapon == WeaponType.Bow
             ? Player.Powerups.DrawTimeMultiplier : Player.ClassWeapon == WeaponType.Hammer ? PaladinAttack.ChargeDuration
             : Player.ClassWeapon == WeaponType.Daggers ? 1.2f / 1.5f : Player.ClassWeapon == WeaponType.Fists ? BrawlerAttack.ChargeDuration
+            : Player.ClassWeapon == WeaponType.Tail ? DemonessAttack.ChargeDuration
             : Player.ClassWeapon == WeaponType.Sword ? KnightChargeDuration : 1.2f)
             * Player.Powerups.AttackIntervalMultiplier * Player.Buffs.ChargeDurationMultiplier;
         public const float KnightChargeDuration = 0.75f;

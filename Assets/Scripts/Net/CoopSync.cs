@@ -228,7 +228,8 @@ namespace Slopgame
                 Id = LocalId, Floor = Run.Floor, Position = player.transform.position,
                 Aim = player.Shield != null && player.Shield.IsBlocking ? player.Shield.Direction : player.AimDirection,
                 Flags = flags, MoreFlags = (byte)((player.Blessing != null && player.Blessing.BonusDamage > 0 ? PlayerStateMessage.Blessed : 0)
-                    | (player.IsVeiled ? PlayerStateMessage.Veiled : 0)),
+                    | (player.IsVeiled ? PlayerStateMessage.Veiled : 0)
+                    | (player.Buffs != null && player.Buffs.IsAscended ? PlayerStateMessage.Ascended : 0)),
                 Health = (short)player.Health, MaxHealth = (short)player.MaxHealth,
                 Charge = (byte)Mathf.RoundToInt((player.Charge != null ? player.Charge.Amount : 0f) * 255f)
             };
@@ -265,7 +266,9 @@ namespace Slopgame
                 var shooter = enemy.GetComponent<EnemyShooter>();
                 if ((shooter != null && shooter.IsCharging) || (enemy.Boss != null && enemy.Boss.IsCharging)) flags |= EnemySnapshot.Charging;
                 if (enemy.Boss != null) flags |= (byte)(enemy.Boss.NetState << EnemySnapshot.BossStateShift);
-                new EnemySnapshot { Id = enemy.NetId, Position = enemy.transform.position, Facing = enemy.Facing.Direction, Health = enemy.Health, Flags = flags }.Write(writer);
+                byte more = (byte)((enemy.IsParalyzed ? EnemySnapshot.Paralyzed : 0) | (enemy.IsCursed ? EnemySnapshot.Cursed : 0));
+                new EnemySnapshot { Id = enemy.NetId, Position = enemy.transform.position, Facing = enemy.Facing.Direction, Health = enemy.Health,
+                    Flags = flags, MoreFlags = more }.Write(writer);
             }
             Session.Send(CoopMessages.Enemies, writer, NetworkDelivery.UnreliableSequenced);
         }
@@ -285,7 +288,7 @@ namespace Slopgame
 
         // ---------------------------------------------------------------- enemy damage and kills
 
-        /// <summary>Guest only: forwards a hit, burn or chill on an enemy to the host.</summary>
+        /// <summary>Guest only: forwards a hit, burn, chill, paralysis or curse on an enemy to the host.</summary>
         public void ReportDamage(DungeonEnemy enemy, CoopDamageKind kind, int amount, Vector2 source, int ticks = 0, float duration = 0f,
             Color? color = null, float knockback = 1f)
         {
@@ -309,6 +312,8 @@ namespace Slopgame
             {
                 if (message.Kind == CoopDamageKind.Hit) enemy.Hit(message.Amount, message.Source, message.Knockback);
                 else if (message.Kind == CoopDamageKind.Burn) enemy.Burn(message.Ticks, message.Amount, message.Color);
+                else if (message.Kind == CoopDamageKind.Paralyze) enemy.Paralyze(message.Duration);
+                else if (message.Kind == CoopDamageKind.Curse) enemy.Curse(message.Duration);
                 else enemy.Chill(message.Duration);
             }
             finally { Attacker = LocalId; }

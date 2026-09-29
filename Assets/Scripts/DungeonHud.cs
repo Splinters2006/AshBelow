@@ -118,7 +118,7 @@ namespace Slopgame
                 DungeonUi.Label(new Rect(440, 505, 400, 24), $"BLESSED  +{player.Blessing.BonusDamage} DAMAGE  /  {player.Blessing.Remaining:0.0}s", 14, AbilityCatalog.Gold, TextAnchor.MiddleCenter);
             string buff = BuffStatus(player.Buffs);
             if (buff != null)
-                DungeonUi.Label(new Rect(440, 475, 400, 24), buff, 14, player.Buffs.IsRaging ? HeroBuffs.RageColor
+                DungeonUi.Label(new Rect(440, 475, 400, 24), buff, 14, player.Buffs.IsAscended ? HeroBuffs.AscendColor : player.Buffs.IsRaging ? HeroBuffs.RageColor
                     : player.Buffs.IsTired ? HeroBuffs.TiredColor : HeroBuffs.EmpowerColor, TextAnchor.MiddleCenter);
             if (player.Charge.IsCharging)
             {
@@ -126,6 +126,10 @@ namespace Slopgame
                     ? player.Charge.Amount >= 1f ? "RELEASE TO BLESS ALLIES" : $"CHARGING BLESSING  {player.Charge.Amount:P0}"
                     : player.ClassWeapon == WeaponType.Fists
                     ? player.Charge.Amount >= 1f ? "RELEASE FOR A BARRAGE" : $"WINDING UP BARRAGE  {player.Charge.Amount:P0}"
+                    : player.ClassWeapon == WeaponType.Tail && player.Buffs.IsAscended
+                    ? player.Charge.Amount >= 1f ? "RELEASE FOR A TAIL WHIP" : $"WINDING UP TAIL WHIP  {player.Charge.Amount:P0}"
+                    : player.ClassWeapon == WeaponType.Tail
+                    ? player.Charge.Amount >= 1f ? "RELEASE TO STAB VITALS" : $"AIMING FOR VITALS  {player.Charge.Amount:P0}"
                     : player.Charge.Amount >= 1f ? "FULL CHARGE  /  RELEASE" : $"CHARGING  {player.Charge.Amount:P0}", 14, AbilityCatalog.Gold, TextAnchor.MiddleCenter);
                 DungeonUi.Bar(new Rect(500, 568, 280, 5), player.Charge.Amount, AbilityCatalog.Gold);
             }
@@ -134,6 +138,8 @@ namespace Slopgame
                 ? $"{attack}  weak swipe     HOLD / RELEASE {attack}  bless allies     {interact}  interact"
                 : player.ClassWeapon == WeaponType.Fists
                 ? $"{attack}  jab     HOLD / RELEASE {attack}  punch barrage     {KeyBindings.Label(GameAction.Special)}  empower     {interact}  interact"
+                : player.ClassWeapon == WeaponType.Tail
+                ? $"{attack}  tail stab     HOLD / RELEASE {attack}  paralysing vital stab     {KeyBindings.Label(GameAction.Special)}  tail sweep     {interact}  interact"
                 : $"{KeyBindings.MovementLabel()}  move     HOLD / RELEASE {attack}  charge attack     {interact}  interact", 13, DungeonUi.Muted, TextAnchor.UpperCenter);
         }
 
@@ -147,6 +153,7 @@ namespace Slopgame
             if (buffs.IsRaging) parts.Add($"PRIMAL RAGE  {buffs.RageRemaining:0.0}s");
             if (buffs.IsTired) parts.Add($"TIRED  {buffs.TiredRemaining:0.0}s");
             if (buffs.IsEmpowered) parts.Add($"EMPOWERED  {buffs.EmpowerRemaining:0.0}s");
+            if (buffs.IsAscended) parts.Add($"ARCHDEMON'S TECHNIQUE  {buffs.AscendRemaining:0.0}s");
             return parts.Count == 0 ? null : string.Join("  /  ", parts);
         }
 

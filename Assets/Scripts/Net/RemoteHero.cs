@@ -74,7 +74,8 @@ namespace Slopgame
             body.color = IsRolling ? new Color(0.4f, 0.65f, 1f)
                 : (flags & PlayerStateMessage.Invulnerable) != 0 && Mathf.Repeat(Time.time * 8f, 1f) > 0.5f ? Color.white
                 : HeroBuffs.Tint(Character.Color, (flags & PlayerStateMessage.Empowered) != 0,
-                    (flags & PlayerStateMessage.Raging) != 0, (flags & PlayerStateMessage.Tired) != 0);
+                    (flags & PlayerStateMessage.Raging) != 0, (flags & PlayerStateMessage.Tired) != 0,
+                    (moreFlags & PlayerStateMessage.Ascended) != 0);
             if (Aim.x < -0.15f) facingLeft = true;
             else if (Aim.x > 0.15f) facingLeft = false;
             body.flipX = facingLeft;

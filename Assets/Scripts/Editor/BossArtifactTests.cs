@@ -12,7 +12,7 @@ namespace Slopgame.Editor
         private static int stage;
         private static float waitUntil;
         private static bool failed, checkedChilledBoss;
-        private static readonly List<WeaponType> classes = new List<WeaponType> { WeaponType.Sword, WeaponType.Bow, WeaponType.Staff, WeaponType.Daggers, WeaponType.Hammer, WeaponType.Shadow, WeaponType.Fists };
+        private static readonly List<WeaponType> classes = new List<WeaponType> { WeaponType.Sword, WeaponType.Bow, WeaponType.Staff, WeaponType.Daggers, WeaponType.Hammer, WeaponType.Shadow, WeaponType.Fists, WeaponType.Tail };
         private static int classIndex;
         private static int abilityIndex;
         private static bool activeCast;
@@ -21,7 +21,7 @@ namespace Slopgame.Editor
 
         private static bool IsDelayed(AbilityType type) => type == AbilityType.ShieldRush || type == AbilityType.Earthshatter
             || type == AbilityType.Judgment || type == AbilityType.KnuckleSandwich || type == AbilityType.FrostNova
-            || type == AbilityType.VenomVial;
+            || type == AbilityType.VenomVial || type == AbilityType.DemonPaw || type == AbilityType.DemonCurse;
 
         private static void VerifyDelayed(DungeonRun run, AbilityDefinition ability)
         {
@@ -30,6 +30,9 @@ namespace Slopgame.Editor
             Require(!run.Player.IsBusy, ability.Name + " left the hero stuck.");
             if (ability.Type == AbilityType.FrostNova)
                 Require(activeTarget.ActionSpeedMultiplier == 0.5f, "Frost Nova did not chill.");
+            if (ability.Type == AbilityType.DemonCurse)
+                Require(activeTarget.IsCursed && activeTarget.IsParalyzed && activeTarget.ActionSpeedMultiplier == 0f,
+                    "Demon Curse did not paralyse and curse the enemy on its pentagram.");
             if (ability.Type == AbilityType.VenomVial)
                 Require(activeTarget.IsBurning, "Venom Vial's pool did not poison the enemy standing in it.");
             if (ability.Type == AbilityType.ShieldRush)
@@ -77,7 +80,7 @@ namespace Slopgame.Editor
             {
                 if (stage == 0)
                 {
-                    Require(run.Characters.Count == 7, "Seven class assets must load.");
+                    Require(run.Characters.Count == 8, "Eight class assets must load.");
                     StartClass(run, WeaponType.Staff);
                     stage = 1;
                     return;
@@ -164,7 +167,8 @@ namespace Slopgame.Editor
                     abilityIndex++;
                     if (abilityIndex < AbilityCatalog.All.Length)
                     { StartClass(run, AbilityCatalog.All[abilityIndex].ClassWeapon); return; }
-                    burnTarget = run.Enemies[0];
+                    // Not the last ability's target: it may still be paralysed by Demon Curse.
+                    burnTarget = run.Enemies.Find(enemy => enemy != activeTarget) ?? run.Enemies[0];
                     burnTarget.enabled = true;
                     burnTarget.Speed = 0f;
                     burnTarget.transform.position = (Vector2)run.Map.Centers[run.Map.Centers.Count - 1];
@@ -278,7 +282,7 @@ namespace Slopgame.Editor
                     run.Player.Blessing.Apply(2, 8f);
                     run.Restart();
                     Require(run.Player.Blessing.BonusDamage == 0, "New run retained blessing.");
-                    Finish(!failed, "Bosses, artifacts, seven classes, Brawler jab/empower/rage/leap, rear-hit markers, active abilities, status effects, Paladin swipe/charge/allies/range/refresh/expiration/reset");
+                    Finish(!failed, "Bosses, artifacts, eight classes, Brawler jab/empower/rage/leap, Demoness stab/sweep/paralysis/curse, rear-hit markers, active abilities, status effects, Paladin swipe/charge/allies/range/refresh/expiration/reset");
                 }
             }
             catch (Exception error) { Debug.LogException(error); Finish(false, error.Message); }
@@ -394,6 +398,7 @@ namespace Slopgame.Editor
             run.Player.Powerups.Add(PowerupType.AttackSpeed);
             Require(Mathf.Abs(run.Player.Charge.Duration - baseCharge / 1.2f) < 0.001f, "Attack speed did not improve this class's charge speed.");
             if (type == WeaponType.Fists) TestBrawler(run);
+            if (type == WeaponType.Tail) TestDemoness(run);
             int slot = 0;
             foreach (var ability in AbilityCatalog.All)
             {
@@ -441,6 +446,33 @@ namespace Slopgame.Editor
             Require(run.ProjectileRoot.GetComponentsInChildren<FadingSprite>().Length > markers, "Rear hit showed no indicator.");
             player.Buffs.Clear();
             // Wild Leap needs a nearby target when it is cast as the class Q ability.
+            target.transform.position = player.transform.position + Vector3.right * 2f;
+        }
+
+        private static void TestDemoness(DungeonRun run)
+        {
+            var player = run.Player;
+            Require(player.Weapon is DemonessAttack && player.Shield == null && player.MaxHealth == 5, "Demoness weapon/stats missing.");
+            var target = run.Enemies[0];
+            var bystander = run.Enemies[1];
+            // A tail stab strikes only the nearest enemy in its lane.
+            target.transform.position = player.transform.position + Vector3.right;
+            bystander.transform.position = player.transform.position + Vector3.right * 1.6f;
+            target.Health = bystander.Health = 100;
+            Require(player.Weapon.TryAttack(Vector2.right, 0f) && (target.Health == 99 || target.Health == 98) && bystander.Health == 100
+                && !target.IsParalyzed, "Tail stab did not hit only the nearest enemy, or paralysed without a full charge.");
+            Require(!player.Weapon.TryAttack(Vector2.right, 0f), "Tail stab ignored its attack interval.");
+            // The sweep covers a half circle and hits paralysed enemies twice as hard.
+            target.Paralyze(2f);
+            Require(target.IsParalyzed && target.ActionSpeedMultiplier == 0f, "Paralysis did not stop the enemy.");
+            bystander.transform.position = player.transform.position + new Vector3(0.2f, 1.2f);
+            target.Health = bystander.Health = 100;
+            Require(player.Weapon.TryHeavyAttack(Vector2.right) && (target.Health == 96 || target.Health == 92)
+                && (bystander.Health == 98 || bystander.Health == 96), "Tail sweep missed its half circle or its bonus on paralysed enemies.");
+            Require(!player.Weapon.TryHeavyAttack(Vector2.right), "Tail sweep bypassed its cooldown.");
+            target.Curse(1f);
+            Require(target.CursedDamage(1) == 2 && target.CursedDamage(4) == 6, "Curse did not raise damage taken by 50%.");
+            // HEEEELP needs a nearby target when it is cast as the class Q ability.
             target.transform.position = player.transform.position + Vector3.right * 2f;
         }
 
@@ -541,6 +573,16 @@ namespace Slopgame.Editor
                     Require(player.Health == player.MaxHealth, "Healing Light did not heal."); break;
                 case AbilityType.WildLeap:
                     Require(player.IsBusy && player.IsInvulnerable, "Wild Leap did not start an invulnerable leap."); break;
+                case AbilityType.ArchdemonTechnique:
+                    Require(player.Buffs.IsAscended && Mathf.Abs(player.Abilities.CooldownRemaining(0) - ability.Cooldown) < 0.01f,
+                        "Archdemon's Technique did not empower the Demoness or started its cooldown early.");
+                    Require(player.Weapon.TryAttack(Vector2.right, 0f) && target.Health < 100 && target.IsParalyzed,
+                        "Under Archdemon's Technique a click was not a fully charged, paralysing stab.");
+                    player.Buffs.Clear(); break;
+                case AbilityType.DemonPaw:
+                    Require(target.Health == 100 && run.ProjectileRoot.GetComponentInChildren<DemonPawVfx>() != null, "HEEEELP slammed without a portal windup."); break;
+                case AbilityType.DemonCurse:
+                    Require(target.Health == 100 && run.ProjectileRoot.GetComponentInChildren<PentagramVfx>() != null, "Demon Curse struck without a pentagram."); break;
                 case AbilityType.PrimalRage:
                     Require(player.Buffs.IsRaging && player.Damage == player.BaseDamage * 2
                         && Mathf.Abs(player.Abilities.CooldownRemaining(0) - ability.Cooldown) < 0.01f,

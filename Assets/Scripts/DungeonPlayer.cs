@@ -99,6 +99,12 @@ namespace Slopgame
                 fists.Player = this;
                 Weapon = fists;
             }
+            else if (weaponType == WeaponType.Tail)
+            {
+                var tail = gameObject.AddComponent<DemonessAttack>();
+                tail.Player = this;
+                Weapon = tail;
+            }
             else if (weaponType == WeaponType.Staff)
             {
                 var staff = gameObject.AddComponent<WizardAttack>();

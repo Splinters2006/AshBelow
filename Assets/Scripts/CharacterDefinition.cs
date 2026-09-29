@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace Slopgame
 {
-    public enum WeaponType { Sword, Bow, Staff, Daggers, Hammer, Shadow, Fists }
+    public enum WeaponType { Sword, Bow, Staff, Daggers, Hammer, Shadow, Fists, Tail }
     [CreateAssetMenu(menuName = "Slopgame/Character", fileName = "NewCharacter")]
     public sealed class CharacterDefinition : ScriptableObject
     {

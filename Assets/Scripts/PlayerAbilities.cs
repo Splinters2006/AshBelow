@@ -22,7 +22,7 @@ namespace Slopgame
         public AbilityType Equipped(int slot) => slot >= 0 && slot < SlotCount ? equipped[slot] : AbilityType.None;
         public int Rank(AbilityType type) => ranks.TryGetValue(type, out int value) ? value : 0;
         public bool IsEquipped(AbilityType type) => type != AbilityType.None && (equipped[0] == type || equipped[1] == type);
-        // Capped at the ability's own cooldown, so a delayed start (Primal Rage) reads as a paused timer.
+        // Capped at the ability's own cooldown, so a delayed start (Primal Rage, Archdemon's Technique) reads as a paused timer.
         public float CooldownRemaining(int slot) => DebugMode.Cooldown(Mathf.Min(Mathf.Max(0f, readyAt[slot] - Time.time),
             AbilityCatalog.Get(equipped[slot])?.Cooldown ?? float.MaxValue));
         public int EmptySlot => equipped[0] == AbilityType.None ? 0 : equipped[1] == AbilityType.None ? 1 : -1;
@@ -135,6 +135,12 @@ namespace Slopgame
                     var brawler = Player.GetComponent<BrawlerAttack>();
                     if (brawler == null || !brawler.CastArtifact(definition.Type, aim, rank)) return false;
                     break;
+                case AbilityType.ArchdemonTechnique:
+                case AbilityType.DemonPaw:
+                case AbilityType.DemonCurse:
+                    var demoness = Player.GetComponent<DemonessAttack>();
+                    if (demoness == null || !demoness.CastArtifact(definition.Type, aim, rank, cursorDistance)) return false;
+                    break;
             }
             CombatVfx.Ring(Player.Run.ProjectileRoot, transform.position, 0.65f, definition.Color);
             CoopFx.Ring(Player.Run, transform.position, 0.65f, definition.Color);
@@ -143,9 +149,10 @@ namespace Slopgame
                 HeroVfx.Pulse(Player.Run.ProjectileRoot, transform.position, 1.1f, definition.Color, 0.35f);
                 HeroVfx.Sparks(Player.Run.ProjectileRoot, transform.position, definition.Color, 10, 3.5f, 0.35f);
             }
-            // Primal Rage's cooldown only starts once the rage and the tiredness after it have ended.
+            // Primal Rage's and Archdemon's Technique's cooldowns only start once their effects have ended.
             readyAt[slot] = Time.time + definition.Cooldown
-                + (definition.Type == AbilityType.PrimalRage ? Player.Buffs.RageCycleRemaining : 0f);
+                + (definition.Type == AbilityType.PrimalRage ? Player.Buffs.RageCycleRemaining
+                    : definition.Type == AbilityType.ArchdemonTechnique ? Player.Buffs.AscendRemaining : 0f);
             castReadyAt = Time.time + 0.2f;
             return true;
         }

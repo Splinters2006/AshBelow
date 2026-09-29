@@ -493,10 +493,12 @@ namespace Slopgame.Editor
             EnsureHero("Admin", WeaponType.Shadow, 12, 6.4f, new Color(0.58f, 0.25f, 0.95f),
                 "An unbound shadow sovereign. Tear through enemies with charged rifts. Nightfall instantly executes visible enemies, even guardians. Intentionally overpowered.", 32);
             EnsureHero("Brawler", WeaponType.Fists, 6, 5.3f, new Color(0.98f, 0.62f, 0.42f), BrawlerDescription);
+            EnsureHero("Demoness", WeaponType.Tail, 5, 5.2f, new Color(0.86f, 0.74f, 1f), DemonessDescription);
             AssetDatabase.SaveAssets();
-            Debug.Log("CHARACTER_ASSETS_OK: Seven classes ready.");
+            Debug.Log("CHARACTER_ASSETS_OK: Eight classes ready.");
         }
 
+        private const string DemonessDescription = "A half-demon daughter of the Demon Lord in purple, white and black. Stab with her pointed tail, charge to strike the vitals and paralyse, and sweep her tail to slash paralysed foes.";
         private const string BrawlerDescription = "A scrappy puppygirl pit-fighter in red gloves. Jab fast, wind up a slow barrage of punches, and Empower to hit harder, faster and wider.";
 
         private static void EnsureHero(string name, WeaponType weapon, int health, float speed, Color color, string description, int damage = 1)

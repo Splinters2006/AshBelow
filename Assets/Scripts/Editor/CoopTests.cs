@@ -70,10 +70,11 @@ namespace Slopgame.Editor
             Require(stateBack.Id == 3 && stateBack.Floor == 7 && stateBack.Position == state.Position && stateBack.Aim == Vector2.up
                 && stateBack.Flags == buffFlags && stateBack.MoreFlags == PlayerStateMessage.Blessed && stateBack.Health == 4 && stateBack.MaxHealth == 8 && stateBack.Charge == 200, "Player state did not round-trip.");
 
-            var enemy = new EnemySnapshot { Id = 12, Position = new Vector2(20f, 9f), Facing = Vector2.left, Health = 31, Flags = EnemySnapshot.Burning | EnemySnapshot.Charging };
+            var enemy = new EnemySnapshot { Id = 12, Position = new Vector2(20f, 9f), Facing = Vector2.left, Health = 31, Flags = EnemySnapshot.Burning | EnemySnapshot.Charging,
+                MoreFlags = EnemySnapshot.Paralyzed | EnemySnapshot.Cursed };
             var enemyBack = RoundTrip(enemy, (m, w) => m.Write(w), EnemySnapshot.Read);
             Require(enemyBack.Id == 12 && enemyBack.Position == enemy.Position && enemyBack.Facing == Vector2.left && enemyBack.Health == 31
-                && enemyBack.Flags == enemy.Flags, "Enemy snapshot did not round-trip.");
+                && enemyBack.Flags == enemy.Flags && enemyBack.MoreFlags == enemy.MoreFlags, "Enemy snapshot did not round-trip.");
 
             var damage = new DamageMessage { Floor = 2, Enemy = 5, Kind = CoopDamageKind.Burn, Amount = 3, Ticks = 4, Duration = 1.5f, Knockback = 0.1f, Source = Vector2.one, Color = new Color32(1, 2, 3, 4) };
             var damageBack = RoundTrip(damage, (m, w) => m.Write(w), DamageMessage.Read);

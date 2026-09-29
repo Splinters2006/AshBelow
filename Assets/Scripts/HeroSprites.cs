@@ -7,7 +7,7 @@ namespace Slopgame
     /// 16x16 pixel-art sprites for the regular heroes (every class except Admin, which keeps its own sprite).
     /// Each hero has two layers built from one grid: a body layer drawn in greys so the SpriteRenderer's colour
     /// tints it with the class colour (keeping the dodge/hit flashes), and an accent layer with fixed colours for
-    /// skin, steel, gold, wood, fur and gloves. Sprites face right; flip them to face left.
+    /// skin, steel, gold, wood, fur, gloves and horns. Sprites face right; flip them to face left.
     /// </summary>
     public static class HeroSprites
     {
@@ -15,6 +15,7 @@ namespace Slopgame
         // Accent layer (fixed): K steel, Q steel highlight, k dark steel, G gold, g dark gold, B wood, b dark wood,
         // S skin, s skin shade, E eyes, H hair, I glow, F white cloth, f bowstring,
         // A floppy-ear / tail fur, R boxing glove, r glove shade, P pink tongue.
+        // N demon horn / tail black, V violet hair, v glowing violet eyes, T glowing tail tip.
         private static readonly Dictionary<WeaponType, string[]> Grids = new Dictionary<WeaponType, string[]>
         {
             { WeaponType.Sword, new[] // Knight
@@ -58,6 +59,13 @@ namespace Slopgame
                 ".DAAHSSESSESAD..", ".DAAHSSSSPSRRr..", ".DAADsSSSSDRRr..", "..DAADrrGrD.....",
                 "A..DLWWWWWFFRRRr", "AA.DLWWWWWMDRRRr", ".AADWWMWWWMD.rr.", "..DDDDgGgDDD....",
                 "...DMWWDWWMD....", "....DSSDSsD.....", "....DkkDkkD.....", "...DDDD.DDDD....",
+            } },
+            { WeaponType.Tail, new[] // Demoness: black horns, violet hair and eyes, a white dress and a spade-tipped tail
+            {
+                "...N.......N....", "...NN.....NN....", "....NDDDDDN.....", "...DVVVVVVVD....",
+                "..DVVSSSSSSVD...", "..DVVSSvSSvSD...", "..DVVSSSSSSSD...", "..DVVDsSSSsD....",
+                "T.DVV.DSSD......", "TT.DDLWWWWWD....", ".TN.DLWFFWWMD...", "..N.DWWMWWMD....",
+                "..NDWWWWWWWWD...", "...NDDDDDDDDD...", "....DSSD.DSSD...", "...DNND..DNND...",
             } },
         };
         // Drawn about 1.45 units tall before the hero's 0.65 scale, matching the old hero footprint.
@@ -136,6 +144,10 @@ namespace Slopgame
                 case 'R': return new Color(0.93f, 0.2f, 0.2f);
                 case 'r': return new Color(0.58f, 0.09f, 0.12f);
                 case 'P': return new Color(1f, 0.52f, 0.62f);
+                case 'N': return new Color(0.08f, 0.05f, 0.12f);
+                case 'V': return new Color(0.42f, 0.16f, 0.66f);
+                case 'v': return new Color(0.85f, 0.5f, 1f);
+                case 'T': return new Color(0.72f, 0.38f, 1f);
                 default: return Color.clear;
             }
         }

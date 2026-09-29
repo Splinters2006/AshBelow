@@ -137,7 +137,8 @@ namespace Slopgame.Editor
                 {
                     var player = run.Player;
                     var character = run.SelectedCharacter;
-                    int expectedHealth = character.StartingHealth + 1 + (Classes[hero] == WeaponType.Sword || Classes[hero] == WeaponType.Hammer || Classes[hero] == WeaponType.Fists ? 1 : 0);
+                    int expectedHealth = character.StartingHealth + 1 + (Classes[hero] == WeaponType.Sword || Classes[hero] == WeaponType.Hammer || Classes[hero] == WeaponType.Fists
+                        || Classes[hero] == WeaponType.Tail ? 1 : 0);
                     Require(player.MaxHealth == expectedHealth && player.Health == expectedHealth, "Permanent HP did not apply or leaked between classes.");
                     Require(player.BaseDamage == character.StartingDamage + 1 + (Classes[hero] == WeaponType.Bow ? 1 : 0), "Permanent damage did not apply or leaked.");
                     Require(Mathf.Abs(player.Powerups.AttackIntervalMultiplier - 1f / 1.05f) < 0.001f, "Permanent attack speed missing.");
@@ -152,6 +153,9 @@ namespace Slopgame.Editor
                             Require(player.Weapon.TryAttack(Vector2.right, 1f) && player.Blessing.Remaining > 8.9f, "Paladin permanent blessing upgrade missing."); break;
                         case WeaponType.Fists:
                             Require(player.Weapon is BrawlerAttack fists && fists.BarrageCount == BrawlerAttack.BarragePunches + 1, "Brawler barrage upgrade missing."); break;
+                        case WeaponType.Tail:
+                            Require(player.Weapon is DemonessAttack tail && Mathf.Abs(tail.ParalysisDuration - DemonessAttack.VitalParalysis - 0.1f) < 0.001f,
+                                "Demoness paralysis upgrade missing."); break;
                     }
                     hero++;
                     if (hero < Classes.Length) { StartHero(run); return; }

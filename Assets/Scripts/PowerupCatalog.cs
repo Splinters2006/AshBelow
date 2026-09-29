@@ -9,7 +9,8 @@ namespace Slopgame
         WindstepDistance, FireballRadius, FrostDuration, BlinkDistance, Backstab, AssassinCrit, KnifeCount, VenomDuration,
         VeilDuration, PaladinWard, HealingPower, JudgmentPower, SanctuarySize,
         RiftReach, AbyssalPower, EclipseRadius, SoulRendPower, ReignDuration,
-        Flurry, Adrenaline, ExtraFilling, CraterMaker, Bloodlust
+        Flurry, Adrenaline, ExtraFilling, CraterMaker, Bloodlust,
+        NerveStrike, LongTail, Bloodline, BigPaws, HexMastery
     }
 
     public sealed class PowerupDefinition
@@ -74,7 +75,12 @@ namespace Slopgame
             new PowerupDefinition(PowerupType.Adrenaline, "Brawler: Adrenaline", "+1 second of Empower", 3, WeaponType.Fists),
             new PowerupDefinition(PowerupType.ExtraFilling, "Extra Filling", "+0.4 Knuckle Sandwich length and width", 3, WeaponType.Fists, AbilityType.KnuckleSandwich),
             new PowerupDefinition(PowerupType.CraterMaker, "Crater Maker", "+0.5 Wild Leap slam radius", 3, WeaponType.Fists, AbilityType.WildLeap),
-            new PowerupDefinition(PowerupType.Bloodlust, "Bloodlust", "+1 second of Primal Rage", 3, WeaponType.Fists, AbilityType.PrimalRage)
+            new PowerupDefinition(PowerupType.Bloodlust, "Bloodlust", "+1 second of Primal Rage", 3, WeaponType.Fists, AbilityType.PrimalRage),
+            new PowerupDefinition(PowerupType.NerveStrike, "Demoness: Nerve Strike", "+0.25 seconds of vital stab paralysis", 3, WeaponType.Tail),
+            new PowerupDefinition(PowerupType.LongTail, "Demoness: Long Tail", "+0.3 tail sweep reach", 3, WeaponType.Tail),
+            new PowerupDefinition(PowerupType.Bloodline, "Bloodline", "+1 second of Archdemon's Technique", 3, WeaponType.Tail, AbilityType.ArchdemonTechnique),
+            new PowerupDefinition(PowerupType.BigPaws, "Good Boy", "+0.4 HEEEELP slam radius", 3, WeaponType.Tail, AbilityType.DemonPaw),
+            new PowerupDefinition(PowerupType.HexMastery, "Hex Mastery", "+0.5 seconds of Demon Curse paralysis", 3, WeaponType.Tail, AbilityType.DemonCurse)
         };
 
         public static PowerupDefinition Get(PowerupType type) => All[(int)type];

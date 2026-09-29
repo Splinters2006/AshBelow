@@ -15,6 +15,7 @@ namespace Slopgame
         public float PhysicalCritChance { get; }
         public float BlessingDuration { get; }
         public int BarragePunches { get; }
+        public float ParalysisBonus { get; }
 
         public PermanentBonuses(PermanentProgress progress, WeaponType weapon)
         {
@@ -44,6 +45,9 @@ namespace Slopgame
                 case WeaponType.Fists:
                     Health += progress.Rank("brawler_health");
                     BarragePunches = progress.Rank("brawler_barrage"); break;
+                case WeaponType.Tail:
+                    Health += progress.Rank("demoness_health");
+                    ParalysisBonus = progress.Rank("demoness_paralysis") * 0.1f; break;
             }
         }
     }
