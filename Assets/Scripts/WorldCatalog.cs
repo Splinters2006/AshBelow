@@ -4,7 +4,7 @@ namespace Slopgame
 {
     /// <summary>
     /// One world of the descent: how its floors, walls and arena look and what its enemies are called and look like.
-    /// Every world has three guardians; beating the third leads down into the next world.
+    /// Every world has three guardians; beating the third opens the world-cleared screen and its travel map.
     /// </summary>
     public sealed class WorldDefinition
     {
@@ -27,13 +27,21 @@ namespace Slopgame
         public Color BruteTint { get; }
         /// <summary>What the world's casters fire.</summary>
         public BoltKind Bolts { get; }
+        /// <summary>The hero this world belongs to (it will unlock them later); null for the starting world.</summary>
+        public WeaponType? Hero { get; }
+        /// <summary>True while the world only reuses the Ash Below's enemies and guardians under its own names and colours.</summary>
+        public bool IsPlaceholder { get; }
+        /// <summary>Where the world sits on the travel map, 0-1 across and down the map. Tweak the layout here.</summary>
+        public Vector2 MapPosition { get; }
 
         public WorldDefinition(int index, string name, bool highTech, Color background, Color floorA, Color floorB, Color wall, Color accent,
-            Color arenaRune, string basicName, string casterName, string bruteName, Color basicTint, Color casterTint, Color bruteTint, BoltKind bolts)
+            Color arenaRune, string basicName, string casterName, string bruteName, Color basicTint, Color casterTint, Color bruteTint, BoltKind bolts,
+            WeaponType? hero = null, bool placeholder = false, Vector2 mapPosition = default)
         {
             Index = index; Name = name; HighTech = highTech; Background = background; FloorA = floorA; FloorB = floorB; Wall = wall; Accent = accent;
             ArenaRune = arenaRune; BasicName = basicName; CasterName = casterName; BruteName = bruteName;
             BasicTint = basicTint; CasterTint = casterTint; BruteTint = bruteTint; Bolts = bolts;
+            Hero = hero; IsPlaceholder = placeholder; MapPosition = mapPosition;
         }
     }
 
@@ -50,12 +58,52 @@ namespace Slopgame
                 new Color(0.12f, 0.17f, 0.21f), new Color(0.14f, 0.19f, 0.23f), new Color(0.29f, 0.38f, 0.43f),
                 new Color(0.56f, 0.38f, 0.22f), new Color(0.55f, 0.3f, 0.4f),
                 "Ashling", "Ember caster", "Iron brute",
-                new Color(1f, 0.35f, 0.4f), new Color(1f, 0.65f, 0.2f), new Color(0.65f, 0.7f, 0.8f), BoltKind.Ember),
+                new Color(1f, 0.35f, 0.4f), new Color(1f, 0.65f, 0.2f), new Color(0.65f, 0.7f, 0.8f), BoltKind.Ember,
+                null, false, new Vector2(0.04f, 0.72f)),
+            // The Augment's world.
             new WorldDefinition(1, "THE NEON ARCOLOGY", true, new Color(0.015f, 0.01f, 0.05f),
                 new Color(0.07f, 0.08f, 0.16f), new Color(0.09f, 0.1f, 0.19f), new Color(0.2f, 0.22f, 0.32f),
                 Neon, NeonPink,
                 "Drone", "Laser drone", "Heavy mech",
-                new Color(0.55f, 0.95f, 1f), new Color(1f, 0.4f, 0.85f), new Color(0.72f, 0.76f, 0.9f), BoltKind.Plasma),
+                new Color(0.55f, 0.95f, 1f), new Color(1f, 0.4f, 0.85f), new Color(0.72f, 0.76f, 0.9f), BoltKind.Plasma,
+                WeaponType.Beam, false, new Vector2(0.18f, 0.25f)),
+            // Placeholder hero worlds: their own names and colours, with the Ash Below's enemies and guardians until each is designed.
+            new WorldDefinition(2, "THE INFERNAL COURT", false, new Color(0.06f, 0.015f, 0.03f),
+                new Color(0.16f, 0.06f, 0.08f), new Color(0.19f, 0.07f, 0.1f), new Color(0.36f, 0.12f, 0.2f),
+                new Color(0.85f, 0.25f, 0.55f), new Color(0.6f, 0.2f, 0.7f),
+                "Imp", "Hex witch", "Hellhound",
+                new Color(1f, 0.3f, 0.3f), new Color(0.8f, 0.35f, 1f), new Color(0.6f, 0.25f, 0.3f), BoltKind.Ember,
+                WeaponType.Tail, true, new Vector2(0.32f, 0.7f)),
+            new WorldDefinition(3, "THE ARCANE SPIRE", false, new Color(0.03f, 0.03f, 0.08f),
+                new Color(0.1f, 0.1f, 0.2f), new Color(0.12f, 0.12f, 0.23f), new Color(0.26f, 0.26f, 0.45f),
+                new Color(0.55f, 0.6f, 1f), new Color(0.4f, 0.85f, 1f),
+                "Wisp", "Apprentice", "Arcane golem",
+                new Color(0.6f, 0.8f, 1f), new Color(0.75f, 0.55f, 1f), new Color(0.6f, 0.6f, 0.75f), BoltKind.Frost,
+                WeaponType.Staff, true, new Vector2(0.46f, 0.22f)),
+            new WorldDefinition(4, "THE SHADOW MARKET", false, new Color(0.02f, 0.04f, 0.035f),
+                new Color(0.09f, 0.12f, 0.11f), new Color(0.11f, 0.14f, 0.13f), new Color(0.22f, 0.28f, 0.26f),
+                new Color(0.45f, 0.95f, 0.7f), new Color(0.3f, 0.7f, 0.5f),
+                "Cutpurse", "Knife thrower", "Enforcer",
+                new Color(0.7f, 0.9f, 0.75f), new Color(0.5f, 1f, 0.7f), new Color(0.55f, 0.65f, 0.6f), BoltKind.Blade,
+                WeaponType.Daggers, true, new Vector2(0.6f, 0.68f)),
+            new WorldDefinition(5, "THE SUNKEN CATHEDRAL", false, new Color(0.05f, 0.045f, 0.03f),
+                new Color(0.2f, 0.18f, 0.13f), new Color(0.23f, 0.21f, 0.15f), new Color(0.45f, 0.4f, 0.3f),
+                new Color(1f, 0.77f, 0.36f), new Color(1f, 0.9f, 0.6f),
+                "Hollow acolyte", "Fallen cleric", "Stone sentinel",
+                new Color(0.9f, 0.85f, 0.7f), new Color(1f, 0.8f, 0.4f), new Color(0.7f, 0.68f, 0.6f), BoltKind.Ember,
+                WeaponType.Hammer, true, new Vector2(0.73f, 0.26f)),
+            new WorldDefinition(6, "THE SAVAGE WILDS", false, new Color(0.03f, 0.05f, 0.025f),
+                new Color(0.12f, 0.17f, 0.09f), new Color(0.14f, 0.19f, 0.1f), new Color(0.3f, 0.36f, 0.2f),
+                new Color(0.95f, 0.6f, 0.25f), new Color(0.6f, 0.85f, 0.35f),
+                "Wild boar", "Spear hunter", "Ape brute",
+                new Color(0.85f, 0.6f, 0.45f), new Color(0.7f, 0.9f, 0.4f), new Color(0.55f, 0.45f, 0.35f), BoltKind.Blade,
+                WeaponType.Fists, true, new Vector2(0.85f, 0.7f)),
+            new WorldDefinition(7, "THE GILDED CASINO", false, new Color(0.04f, 0.02f, 0.02f),
+                new Color(0.08f, 0.2f, 0.12f), new Color(0.1f, 0.22f, 0.14f), new Color(0.4f, 0.12f, 0.12f),
+                new Color(1f, 0.8f, 0.3f), new Color(0.9f, 0.25f, 0.3f),
+                "Card soldier", "Dealer", "Bouncer",
+                new Color(0.95f, 0.9f, 0.85f), new Color(1f, 0.8f, 0.3f), new Color(0.6f, 0.3f, 0.3f), BoltKind.Blade,
+                WeaponType.Coins, true, new Vector2(0.96f, 0.24f)),
         };
 
         /// <summary>The world a floor belongs to; floors past the last world stay in it.</summary>
@@ -63,5 +111,11 @@ namespace Slopgame
         public static WorldDefinition ForFloor(int floor) => All[IndexForFloor(floor)];
         /// <summary>True on the first floor of any world after the first, where the hero arrives in a new world.</summary>
         public static bool EntersWorld(int floor) => floor > 1 && (floor - 1) % FloorsPerWorld == 0 && (floor - 1) / FloorsPerWorld < All.Length;
+        /// <summary>True on a world's third guardian floor (15, 30, ...): beating it clears that world. Endless floors past the last world never do.</summary>
+        public static bool CompletesWorld(int floor) => floor > 0 && floor % FloorsPerWorld == 0 && floor / FloorsPerWorld <= All.Length;
+        /// <summary>True when another world follows the one <paramref name="floor"/> belongs to.</summary>
+        public static bool HasWorldAfter(int floor) => IndexForFloor(floor) + 1 < All.Length;
+        /// <summary>The first floor of a world: 1, 16, 31, ...</summary>
+        public static int FirstFloor(int index) => Mathf.Clamp(index, 0, All.Length - 1) * FloorsPerWorld + 1;
     }
 }

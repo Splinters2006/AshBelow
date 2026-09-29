@@ -71,13 +71,16 @@ namespace Slopgame
             if (!IsHost || (Session.State != NetState.Lobby && Session.State != NetState.InRun)) return;
             int seed = Random.Range(0, 1000000);
             int party = Session.Peers.Count;
+            // The host's travel-map pick decides where the whole party begins.
+            int world = Run.StartWorld;
             using (var writer = NetSession.Writer())
             {
                 writer.WriteValueSafe(seed);
                 writer.WriteValueSafe(party);
+                writer.WriteValueSafe(world);
                 Session.Send(CoopMessages.Start, writer);
             }
-            BeginRunLocal(seed, party);
+            BeginRunLocal(seed, party, world);
         }
 
         private void OnStart(ulong sender, FastBufferReader reader)
@@ -85,10 +88,11 @@ namespace Slopgame
             if (IsHost) return;
             reader.ReadValueSafe(out int seed);
             reader.ReadValueSafe(out int party);
-            BeginRunLocal(seed, party);
+            reader.ReadValueSafe(out int world);
+            BeginRunLocal(seed, party, world);
         }
 
-        private void BeginRunLocal(int seed, int party)
+        private void BeginRunLocal(int seed, int party, int world)
         {
             if (Session.State == NetState.Lobby) Session.StartRun();
             RunOver = false;
@@ -100,7 +104,7 @@ namespace Slopgame
             openChoice = null;
             WaitingForTeam = false;
             ClearRemoteHeroes();
-            Run.StartCoopRun(Run.Characters[Mathf.Clamp(Session.LocalClassIndex, 0, Run.Characters.Count - 1)], seed, party);
+            Run.StartCoopRun(Run.Characters[Mathf.Clamp(Session.LocalClassIndex, 0, Run.Characters.Count - 1)], seed, party, world);
             foreach (var peer in Session.Peers)
             {
                 if (peer.Id == LocalId) continue;
@@ -517,7 +521,12 @@ namespace Slopgame
             if (!Run.IsPlaying || openChoice.HasValue || Run.Enemies.Count != 0) return;
             if (choice == CoopChoice.Artifact && Run.Artifact == null) return;
             if (choice == CoopChoice.Upgrade && Run.Artifact != null) return;
-            if (choice == CoopChoice.Upgrade && Run.IsBossFloor) { HostAdvance(); return; }
+            if (choice == CoopChoice.Upgrade && Run.IsBossFloor)
+            {
+                if (WorldCatalog.CompletesWorld(Run.Floor)) HostWorldComplete();
+                else HostAdvance();
+                return;
+            }
             // Nobody is dragged out of the crystal shop mid-purchase: the party leaves together.
             if (choice == CoopChoice.Upgrade && Run.InShop) { if (PartyAtStairs()) HostAdvance(); return; }
             openChoice = choice;
@@ -589,7 +598,7 @@ namespace Slopgame
                 using (var writer = NetSession.Writer(16))
                 {
                     writer.WriteValueSafe(Run.Floor);
-                    writer.WriteValueSafe((byte)1);
+                    writer.WriteValueSafe(AdvanceArtifact);
                     writer.WriteValueSafe(Session.Peers.Count);
                     Session.Send(CoopMessages.Advance, writer);
                 }
@@ -602,11 +611,52 @@ namespace Slopgame
             using (var writer = NetSession.Writer(16))
             {
                 writer.WriteValueSafe(Run.Floor);
-                writer.WriteValueSafe((byte)0);
+                writer.WriteValueSafe(AdvanceFloor);
                 writer.WriteValueSafe(Session.Peers.Count);
                 Session.Send(CoopMessages.Advance, writer);
             }
             Run.AdvanceCoopFloor(Session.Peers.Count);
+        }
+
+        /// <summary>
+        /// Advance message kinds: descend to the next floor, resume after the artifact pick, show the world-cleared screen,
+        /// or travel to the world the host picked on the travel map (its index follows the party size).
+        /// </summary>
+        private const byte AdvanceFloor = 0, AdvanceArtifact = 1, AdvanceWorldComplete = 2, AdvanceTravel = 3;
+
+        /// <summary>Host only: the party beat a world's third guardian; everyone sees the world-cleared screen.</summary>
+        private void HostWorldComplete()
+        {
+            using (var writer = NetSession.Writer(16))
+            {
+                writer.WriteValueSafe(Run.Floor);
+                writer.WriteValueSafe(AdvanceWorldComplete);
+                writer.WriteValueSafe(Session.Peers.Count);
+                Session.Send(CoopMessages.Advance, writer);
+            }
+            Run.ShowWorldComplete();
+        }
+
+        /// <summary>Host only, from the world-cleared screen past the last world: the whole party keeps descending.</summary>
+        public void HostContinueFromWorld()
+        {
+            if (!IsHost || !Active || !Run.WorldComplete) return;
+            HostAdvance();
+        }
+
+        /// <summary>Host only, from the travel map: the whole party travels to world <paramref name="index"/>.</summary>
+        public void HostTravel(int index)
+        {
+            if (!IsHost || !Active || !Run.WorldComplete || index < 0 || index >= WorldCatalog.All.Length) return;
+            using (var writer = NetSession.Writer(16))
+            {
+                writer.WriteValueSafe(Run.Floor);
+                writer.WriteValueSafe(AdvanceTravel);
+                writer.WriteValueSafe(Session.Peers.Count);
+                writer.WriteValueSafe(index);
+                Session.Send(CoopMessages.Advance, writer);
+            }
+            Run.JumpToWorld(index, Session.Peers.Count);
         }
 
         private void OnAdvance(ulong sender, FastBufferReader reader)
@@ -616,8 +666,14 @@ namespace Slopgame
             reader.ReadValueSafe(out byte kind);
             reader.ReadValueSafe(out int party);
             if (floor != Run.Floor) return;
-            if (kind == 0) Run.AdvanceCoopFloor(party);
-            else ResumeAfterArtifact();
+            if (kind == AdvanceFloor) Run.AdvanceCoopFloor(party);
+            else if (kind == AdvanceWorldComplete) Run.ShowWorldComplete();
+            else if (kind == AdvanceTravel)
+            {
+                reader.ReadValueSafe(out int world);
+                Run.JumpToWorld(world, party);
+            }
+            else if (kind == AdvanceArtifact) ResumeAfterArtifact();
         }
 
         private void ResumeAfterArtifact()

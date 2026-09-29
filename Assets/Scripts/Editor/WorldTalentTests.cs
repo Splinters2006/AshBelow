@@ -75,13 +75,14 @@ namespace Slopgame.Editor
                     TestAsh(run);
                     TestUniversalEffects(run);
                     DebugMode.Set(true);
-                    while (run.Floor < 16) run.DebugSkipRoom();
+                    while (run.Floor < 15) run.DebugSkipRoom();
                     DebugMode.Set(false);
+                    TestWorldComplete(run);
                     stage++;
                     return;
                 }
                 TestNeon(run);
-                Finish(!failed, "26 talent caps/class gates; crit, burn, freeze, shock, ward effects; both world spawns; spread fire, freeze/pause, charge/recovery/walls");
+                Finish(!failed, "26 talent caps/class gates; crit, burn, freeze, shock, ward effects; world-cleared screen; both world spawns; spread fire, freeze/pause, charge/recovery/walls");
             }
             catch (Exception error) { Debug.LogException(error); Finish(false, error.Message); }
         }
@@ -177,6 +178,56 @@ namespace Slopgame.Editor
             powers.Add(PowerupType.StaticField);
             CombatDamage.Shock(player, enemy.transform.position, enemy, 4);
             Require(target.Health == 999, "Static Field did not expand shock damage");
+        }
+
+        /// <summary>The first world's third guardian: its stairs open the world-cleared screen, and Next world carries on into world 2.</summary>
+        private static void TestWorldComplete(DungeonRun run)
+        {
+            int lastFloor = WorldCatalog.All.Length * WorldCatalog.FloorsPerWorld;
+            Require(WorldCatalog.CompletesWorld(15) && WorldCatalog.CompletesWorld(30) && WorldCatalog.CompletesWorld(lastFloor) && !WorldCatalog.CompletesWorld(5)
+                && !WorldCatalog.CompletesWorld(10) && !WorldCatalog.CompletesWorld(lastFloor + WorldCatalog.FloorsPerWorld), "Wrong world-clearing floors");
+            Require(WorldCatalog.HasWorldAfter(15) && WorldCatalog.HasWorldAfter(30) && !WorldCatalog.HasWorldAfter(lastFloor), "Wrong next-world check");
+            TestWorldCatalog();
+            Require(run.Floor == 15 && run.IsBossFloor && !run.InShop && run.World.Index == 0, "Did not reach the first world's last guardian");
+            while (run.Enemies.Count > 0) run.Enemies[0].Die(true);
+            Require(run.Artifact != null, "The third guardian dropped no artifact");
+            run.BeginUpgradeChoice();
+            Require(!run.WorldComplete && run.IsPlaying, "The world ended before the artifact was dealt with");
+            run.BeginArtifactChoice();
+            Require(run.LeaveArtifact() && run.IsPlaying && run.Artifact == null, "Could not leave the artifact");
+            run.BeginUpgradeChoice();
+            Require(run.WorldComplete && !run.IsPlaying && !run.ChoosingUpgrade && run.Floor == 15 && run.HasNextWorld,
+                "The third guardian's stairs did not open the world-cleared screen");
+            run.BeginUpgradeChoice();
+            Require(run.WorldComplete && run.Floor == 15, "The stairs moved on while the world-cleared screen was open");
+            run.TravelToWorld(WorldCatalog.All.Length);
+            Require(run.WorldComplete && run.Floor == 15, "Travelled to a world that does not exist");
+            run.ContinueFromWorldComplete();
+            Require(!run.WorldComplete && run.IsPlaying && run.Floor == 16 && run.World.Index == 1 && Time.timeScale == 1f,
+                "Next world did not carry on into the second world");
+            run.TravelToWorld(3);
+            Require(run.Floor == 16, "Travelled between worlds without clearing one");
+        }
+
+        /// <summary>The travel map's data: one world per hero but the Knight and Archer, the Augment's second, all on the map.</summary>
+        private static void TestWorldCatalog()
+        {
+            var worlds = WorldCatalog.All;
+            var heroes = new System.Collections.Generic.HashSet<WeaponType>();
+            var names = new System.Collections.Generic.HashSet<string>();
+            for (int i = 0; i < worlds.Length; i++)
+            {
+                var world = worlds[i];
+                Require(world.Index == i && names.Add(world.Name), "World index or name clash: " + world.Name);
+                Require(world.MapPosition.x >= 0f && world.MapPosition.x <= 1f && world.MapPosition.y >= 0f && world.MapPosition.y <= 1f,
+                    "World off the travel map: " + world.Name);
+                Require(i == 0 ? !world.Hero.HasValue : world.Hero.HasValue && heroes.Add(world.Hero.Value), "Hero world missing or doubled: " + world.Name);
+                Require(!world.Hero.HasValue || (world.Hero != WeaponType.Sword && world.Hero != WeaponType.Bow && world.Hero != WeaponType.Shadow),
+                    "A starting hero got a world: " + world.Name);
+                Require(WorldCatalog.FirstFloor(i) == i * WorldCatalog.FloorsPerWorld + 1 && WorldCatalog.IndexForFloor(WorldCatalog.FirstFloor(i)) == i,
+                    "Wrong first floor for " + world.Name);
+            }
+            Require(worlds[1].Hero == WeaponType.Beam && !worlds[1].IsPlaceholder && !worlds[0].IsPlaceholder, "The Arcology is not the Augment's finished world");
         }
 
         private static void TestNeon(DungeonRun run)

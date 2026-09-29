@@ -11,6 +11,12 @@ namespace Slopgame
         public bool IsPlaying { get; private set; }
         public bool ChoosingUpgrade { get; private set; }
         public bool ChoosingArtifact { get; private set; }
+        /// <summary>True on the world-cleared screen after a world's third guardian: go on to the next world or leave.</summary>
+        public bool WorldComplete { get; private set; }
+        /// <summary>True when another world follows the current one.</summary>
+        public bool HasNextWorld => WorldCatalog.HasWorldAfter(Floor);
+        /// <summary>The world a new descent begins in, picked on the main menu's travel map (nothing is locked yet).</summary>
+        public int StartWorld { get; private set; }
         public bool IsBossFloor => Floor > 0 && Floor % 5 == 0;
         public DungeonBoss Boss { get; private set; }
         public ArtifactPickup Artifact { get; private set; }
@@ -31,7 +37,7 @@ namespace Slopgame
         private readonly List<PowerupDefinition> upgradeChoices = new List<PowerupDefinition>();
         public IReadOnlyList<PowerupDefinition> UpgradeChoices => upgradeChoices;
         public int Floor { get; private set; }
-        /// <summary>The world this floor belongs to: the Ash Below for floors 1-15, then the Neon Arcology.</summary>
+        /// <summary>The world this floor belongs to: 15 floors each (the Ash Below for floors 1-15, then the Neon Arcology, ...).</summary>
         public WorldDefinition World => WorldCatalog.ForFloor(Floor);
         /// <summary>Until when the HUD announces the world just entered.</summary>
         public float WorldBannerUntil { get; private set; }
@@ -52,6 +58,13 @@ namespace Slopgame
         private Vector2 exit;
         private StairVisual stairs;
         private bool floorRewardGranted;
+        /// <summary>
+        /// Guardians beaten in this descent. The Ash shop's record counts these rather than the floor number, so a descent
+        /// begun or continued in a later world through the travel map does not count guardians it never fought.
+        /// </summary>
+        private int guardiansThisRun;
+        /// <summary>Set by a travel-map jump so the next floor shows the world banner.</summary>
+        private bool arrivingByTravel;
         private float nextSaveRetry;
         public PermanentProgress Progress { get; private set; }
         public int RunAshEarned { get; private set; }
@@ -113,6 +126,12 @@ namespace Slopgame
             if (IsInMainMenu && System.Array.IndexOf(characters, character) >= 0) SelectedCharacter = character;
         }
 
+        /// <summary>Main menu travel map: the world the next descent (solo, or a co-op party this player hosts) begins in.</summary>
+        public void SelectStartWorld(int index)
+        {
+            if (IsInMainMenu) StartWorld = Mathf.Clamp(index, 0, WorldCatalog.All.Length - 1);
+        }
+
         /// <summary>Returns to the main menu, leaving any co-op party (after a disconnect the menu explains why).</summary>
         public void ShowMainMenu() => ShowMainMenu(false);
 
@@ -135,6 +154,7 @@ namespace Slopgame
             IsPlaying = false;
             ChoosingUpgrade = false;
             ChoosingArtifact = false;
+            WorldComplete = false;
             Boss = null;
             Artifact = null;
             InShop = false;
@@ -151,28 +171,30 @@ namespace Slopgame
         public void Restart()
         {
             if (IsNetworked) { Coop.HostBeginRun(); return; }
-            BeginRun(UnityEngine.Random.Range(0, 1000000), 1);
+            BeginRun(UnityEngine.Random.Range(0, 1000000), 1, StartWorld);
         }
 
-        /// <summary>Starts a co-op descent; every machine calls this with the same seed and party size.</summary>
-        public void StartCoopRun(CharacterDefinition character, int seed, int partySize)
+        /// <summary>Starts a co-op descent; every machine calls this with the same seed, party size and starting world.</summary>
+        public void StartCoopRun(CharacterDefinition character, int seed, int partySize, int startWorld = 0)
         {
             SelectedCharacter = character;
-            BeginRun(seed, partySize);
+            BeginRun(seed, partySize, startWorld);
         }
 
-        private void BeginRun(int seed, int partySize)
+        private void BeginRun(int seed, int partySize, int startWorld)
         {
             if (SelectedCharacter == null) return;
             IsInMainMenu = false;
             if (Player != null) { Player.gameObject.SetActive(false); Destroy(Player.gameObject); }
             Seed = seed;
             PartySize = Mathf.Max(1, partySize);
-            Floor = 0;
+            // NextFloor below steps onto the world's first floor (floor 1 for the Ash Below).
+            Floor = WorldCatalog.FirstFloor(startWorld) - 1;
             InShop = false;
             WorldBannerUntil = 0f;
             Kills = 0;
             RunAshEarned = 0;
+            guardiansThisRun = 0;
             Player = DungeonVisuals.Create(SelectedCharacter.DisplayName, transform, Vector2.zero, Vector2.one * 0.65f,
                 SelectedCharacter.Color, 4).gameObject.AddComponent<DungeonPlayer>();
             Player.Run = this;
@@ -195,6 +217,7 @@ namespace Slopgame
             Artifact = null;
             Shop = null;
             ChoosingArtifact = false;
+            WorldComplete = false;
             upgradeChoices.Clear();
             Player.Powerups.BeginFloor();
             Player.Weapon?.Hide();
@@ -224,7 +247,10 @@ namespace Slopgame
                 DungeonVisuals.DecorateArena(level, World);
             }
             // Past the third guardian the stairs lead down into the next world.
-            if (!InShop && WorldCatalog.EntersWorld(Floor))
+            // Travelling on the map announces the world too, even the first one.
+            bool travelled = arrivingByTravel;
+            arrivingByTravel = false;
+            if (!InShop && (WorldCatalog.EntersWorld(Floor) || travelled))
             {
                 ScreenFx.Flash(FlameMesh.Alpha(World.Accent, 0.6f), 1.2f);
                 WorldBannerUntil = Time.time + 4f;
@@ -334,7 +360,7 @@ namespace Slopgame
             if (!Enemies.Remove(enemy)) return;
             Kills++;
             int reward = enemy.Boss != null ? 50 : 1;
-            if (enemy.Boss != null) Progress.RecordGuardian(Floor / 5, Player != null ? Player.ClassWeapon : (WeaponType?)null);
+            if (enemy.Boss != null) Progress.RecordGuardian(++guardiansThisRun, Player != null ? Player.ClassWeapon : (WeaponType?)null);
             if (Enemies.Count == 0 && !floorRewardGranted)
             { reward += 10; floorRewardGranted = true; }
             RunAshEarned += reward;
@@ -351,6 +377,7 @@ namespace Slopgame
             IsPlaying = false;
             ChoosingUpgrade = false;
             ChoosingArtifact = false;
+            WorldComplete = false;
             Player.Weapon?.Hide();
             if (!IsNetworked) Time.timeScale = 0f;
         }
@@ -465,6 +492,8 @@ namespace Slopgame
         public void BeginUpgradeChoice()
         {
             if (!IsPlaying || Enemies.Count != 0 || Artifact != null) return;
+            // The third guardian's stairs end the world: a cleared screen offers the next world or the menu.
+            if (IsBossFloor && WorldCatalog.CompletesWorld(Floor)) { ShowWorldComplete(); return; }
             if (IsBossFloor || InShop) { NextFloor(); return; }
             var pool = new List<PowerupDefinition>();
             foreach (var powerup in PowerupCatalog.All)
@@ -488,6 +517,52 @@ namespace Slopgame
             Player.Weapon?.Hide();
             ChoosingUpgrade = true;
             if (!IsNetworked) Time.timeScale = 0f;
+        }
+
+        /// <summary>
+        /// Opens the world-cleared screen. Callers check the floor is clear first; in co-op the host calls it for the party,
+        /// so a guest applies it as soon as the host's message arrives.
+        /// </summary>
+        public void ShowWorldComplete()
+        {
+            if (WorldComplete || IsInMainMenu || Player == null) return;
+            IsPlaying = false;
+            ChoosingUpgrade = false;
+            WorldComplete = true;
+            Player.Weapon?.Hide();
+            Player.Charge.Cancel();
+            if (!IsNetworked) Time.timeScale = 0f;
+        }
+
+        /// <summary>
+        /// From the world-cleared screen, go on to the next world; past the last world the descent carries on endlessly
+        /// (in co-op only the host decides).
+        /// </summary>
+        public void ContinueFromWorldComplete()
+        {
+            if (!WorldComplete) return;
+            if (HasNextWorld) { TravelToWorld(World.Index + 1); return; }
+            if (IsNetworked) { if (Coop.IsHost) Coop.HostContinueFromWorld(); return; }
+            NextFloor();
+        }
+
+        /// <summary>From the world-cleared screen's travel map, go to any world (nothing is locked yet; co-op: the host decides).</summary>
+        public void TravelToWorld(int index)
+        {
+            if (!WorldComplete || index < 0 || index >= WorldCatalog.All.Length) return;
+            if (IsNetworked) { if (Coop.IsHost) Coop.HostTravel(index); return; }
+            JumpToWorld(index, PartySize);
+        }
+
+        /// <summary>Builds the first floor of world <paramref name="index"/>; in co-op every machine calls this together.</summary>
+        public void JumpToWorld(int index, int partySize)
+        {
+            if (IsInMainMenu || Player == null) return;
+            PartySize = Mathf.Max(1, partySize);
+            InShop = false;
+            Floor = WorldCatalog.FirstFloor(index) - 1;
+            arrivingByTravel = true;
+            NextFloor();
         }
 
         public void ChooseUpgrade(int choice)

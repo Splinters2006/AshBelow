@@ -107,9 +107,12 @@ namespace Slopgame.Editor
                 && Mathf.Approximately(hazardBack.Spec.Telegraph, 2.4f) && Mathf.Approximately(hazardBack.Spec.Duration, 6.5f), "Hellfire hazard did not round-trip.");
             Require(DungeonBoss.KindForFloor(5) == BossKind.AshWarden && DungeonBoss.KindForFloor(10) == BossKind.Duelist
                 && DungeonBoss.KindForFloor(15) == BossKind.Archdemon && DungeonBoss.KindForFloor(20) == BossKind.GridOverseer, "Boss rotation is wrong.");
+            // Floors past the last world stay in it, and no world begins after the last one.
+            int lastFloor = WorldCatalog.All.Length * WorldCatalog.FloorsPerWorld;
             Require(!WorldCatalog.ForFloor(1).HighTech && !WorldCatalog.ForFloor(15).HighTech && WorldCatalog.ForFloor(16).HighTech
-                && WorldCatalog.ForFloor(45).HighTech && WorldCatalog.EntersWorld(16) && !WorldCatalog.EntersWorld(1) && !WorldCatalog.EntersWorld(31),
-                "The third guardian does not lead into the Neon Arcology.");
+                && WorldCatalog.ForFloor(30).HighTech && WorldCatalog.EntersWorld(16) && !WorldCatalog.EntersWorld(1) && WorldCatalog.EntersWorld(31)
+                && !WorldCatalog.EntersWorld(lastFloor + 1) && WorldCatalog.ForFloor(lastFloor + 45) == WorldCatalog.All[WorldCatalog.All.Length - 1],
+                "The third guardian does not lead into the Neon Arcology, or the later worlds are out of order.");
             Require((byte)((0x0F << EnemySnapshot.BossStateShift) & (EnemySnapshot.Flashing | EnemySnapshot.Chilled | EnemySnapshot.Burning | EnemySnapshot.Charging)) == 0,
                 "Boss state bits overlap the enemy snapshot flags.");
         }

@@ -14,6 +14,9 @@ namespace Slopgame
         private Vector2 talentScroll;
         // Co-op restart asks for a second click so a stray press does not throw away the party's run.
         private float restartConfirmUntil;
+        // The world-cleared screen's travel map (the host's, in co-op) and whether it is showing.
+        private readonly WorldMap travelMap = new WorldMap();
+        private bool showTravelMap;
         private static readonly Rect RestartRect = new Rect(896, 24, 112, 40);
         private static readonly Rect PurseRect = new Rect(900, 262, 356, 260);
         private static readonly Rect ShopRect = new Rect(876, 84, 380, 476);
@@ -40,6 +43,7 @@ namespace Slopgame
             if (Run.Boss != null) displayedBossHealth = Mathf.Lerp(displayedBossHealth, Run.Boss.Enemy.Health / (float)Run.Boss.MaxHealth, smooth);
             else displayedBossHealth = 1f;
             if (!Run.ChoosingArtifact) pendingRelic = AbilityType.None;
+            if (!Run.WorldComplete) showTravelMap = false;
             modalFade = Mathf.MoveTowards(modalFade, Run.IsPlaying ? 0f : 1f, Time.unscaledDeltaTime * 5f);
         }
 
@@ -65,6 +69,7 @@ namespace Slopgame
                 DungeonUi.Panel(new Rect(0, 0, 1280, 720), new Color(0.01f, 0.018f, 0.035f, 0.88f * modalFade));
                 if (Run.ChoosingArtifact) DrawArtifacts();
                 else if (Run.ChoosingUpgrade) DrawUpgrades();
+                else if (Run.WorldComplete) DrawWorldComplete();
                 else DrawDeath();
             }
             finally { GUI.matrix = previous; }
@@ -454,6 +459,53 @@ namespace Slopgame
                 pendingRelic = AbilityType.None;
                 Run.ChooseArtifact(type, slot);
             }
+        }
+
+        /// <summary>
+        /// After a world's third guardian: Next world opens the travel map (the next world picked), or leave for the menu.
+        /// In co-op the host decides for the party.
+        /// </summary>
+        private void DrawWorldComplete()
+        {
+            bool decides = !Run.IsNetworked || Run.Coop.IsHost;
+            if (showTravelMap && decides) { DrawTravelMap(); return; }
+            var world = Run.World;
+            string ahead = Run.HasNextWorld ? "Ahead:  " + WorldCatalog.All[world.Index + 1].Name : "No world lies beyond. The descent goes on without end.";
+            ModalTitle($"WORLD {world.Index + 1} CLEARED", world.Name,
+                $"All three guardians have fallen  /  {Run.Kills} enemies defeated  /  +{Run.RunAshEarned} Ash this descent\n{ahead}");
+            if (decides && DungeonUi.Button("worldNext", new Rect(450, 370, 380, 62), Run.HasNextWorld ? "Next world" : "Travel map", world.Accent))
+            {
+                travelMap.Selected = Run.HasNextWorld ? world.Index + 1 : world.Index;
+                showTravelMap = true;
+            }
+            if (Run.IsNetworked)
+            {
+                if (Run.Coop.IsHost)
+                {
+                    if (DungeonUi.Button("worldLobby", new Rect(450, 450, 380, 50), "Back to the party", DungeonUi.Teal)) Run.Coop.HostReturnToLobby();
+                }
+                else DungeonUi.Label(new Rect(450, 380, 380, 40), "Waiting for the host…", 18, DungeonUi.Muted, TextAnchor.MiddleCenter);
+                if (DungeonUi.Button("worldLeave", new Rect(450, 520, 380, 44), "Leave party", DungeonUi.Muted)) Run.ShowMainMenu();
+                return;
+            }
+            if (DungeonUi.Button("worldMenu", new Rect(450, 450, 380, 50), "Main menu", DungeonUi.Muted)) Run.ShowMainMenu();
+        }
+
+        /// <summary>The travel map between worlds: pick any world (nothing is locked yet) and travel there.</summary>
+        private void DrawTravelMap()
+        {
+            var world = Run.World;
+            // Below the dimmed floor label and objective, which sit at the top of the screen.
+            DungeonUi.Label(new Rect(70, 112, 1140, 22), "TRAVEL MAP", 14, AbilityCatalog.Gold);
+            DungeonUi.Label(new Rect(70, 134, 1140, 46), "Where does the descent go next?", 32, DungeonUi.Text);
+            travelMap.Draw(Run, new Rect(70, 186, 1140, 396), world.Index, true);
+            var target = WorldCatalog.All[travelMap.Selected];
+            if (DungeonUi.Button("mapBack", new Rect(70, 598, 268, 48), "Back", DungeonUi.Muted)) showTravelMap = false;
+            // Past the last world, the descent can also simply carry on.
+            if (!Run.HasNextWorld && DungeonUi.Button("mapDescend", new Rect(450, 598, 380, 48), "Keep descending", world.Accent))
+                Run.ContinueFromWorldComplete();
+            if (DungeonUi.Button("mapTravel", new Rect(860, 598, 350, 48), $"Travel to world {travelMap.Selected + 1}", target.Accent))
+                Run.TravelToWorld(travelMap.Selected);
         }
 
         private void DrawDeath()
