@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Brawler
   m_EditorClassIdentifier: Assembly-CSharp::Slopgame.CharacterDefinition
   displayName: Brawler
-  description: A scrappy puppygirl pit-fighter in red gloves. Jab fast, wind up a slow barrage of punches, and Empower to hit harder, faster and wider.
+  description: A scrappy puppygirl pit-fighter in big red gloves. Jab fast, charge a hammering barrage of punches, and Empower to hit harder, faster and wider.
   color: {r: 0.98, g: 0.62, b: 0.42, a: 1}
   startingHealth: 6
   startingDamage: 1

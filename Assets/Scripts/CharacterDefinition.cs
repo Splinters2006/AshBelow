@@ -7,7 +7,7 @@ namespace Slopgame
     public sealed class CharacterDefinition : ScriptableObject
     {
         [SerializeField] private string displayName = "Knight";
-        [SerializeField, TextArea] private string description = "A sword-and-shield delver. Charge wide slashes and reflect incoming bolts with a timed directional shield.";
+        [SerializeField, TextArea] private string description = "A sword-and-shield veteran. Charge wide sweeping slashes, and raise your shield at the right moment to parry and reflect enemy bolts.";
         [SerializeField] private Color color = new Color(0.35f, 0.95f, 0.8f);
         [SerializeField, Min(1)] private int startingHealth = 6;
         [SerializeField, Min(1)] private int startingDamage = 1;

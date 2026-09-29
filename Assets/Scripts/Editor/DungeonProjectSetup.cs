@@ -477,7 +477,7 @@ namespace Slopgame.Editor
                 var archer = ScriptableObject.CreateInstance<CharacterDefinition>();
                 var serialized = new SerializedObject(archer);
                 serialized.FindProperty("displayName").stringValue = "Archer";
-                serialized.FindProperty("description").stringValue = "A close-range archer with 5 HP. Charge powerful arrows or fire a three-arrow spread. Arrows travel 5 units, increasing to 6 at full charge.";
+                serialized.FindProperty("description").stringValue = "A nimble archer who fights up close. Charge arrows for up to triple damage and a little extra range, or loose a tight three-arrow spread.";
                 serialized.FindProperty("startingHealth").intValue = 5;
                 serialized.FindProperty("color").colorValue = new Color(0.65f, 0.85f, 0.35f);
                 serialized.FindProperty("weapon").enumValueIndex = (int)WeaponType.Bow;
@@ -485,21 +485,21 @@ namespace Slopgame.Editor
                 AssetDatabase.CreateAsset(archer, archerPath);
             }
             EnsureHero("Wizard", WeaponType.Staff, 4, 4.8f, new Color(0.65f, 0.45f, 1f),
-                "A fire-and-storm caster. Charge fireballs and cast lightning.");
+                "A fire-and-storm caster. Charge fireballs that burst on impact, and cast lightning that can chain from foe to foe.");
             EnsureHero("Assassin", WeaponType.Daggers, 4, 5.6f, new Color(0.78f, 0.4f, 0.65f),
-                "Charge 50% faster into a narrow, deadly strike. Shadowstep through walls and backstab enemies you cross with doubled critical chance.");
+                "A shadow-cloaked killer. Charge into a narrow, deadly stab, hit from behind for double damage, and Shadowstep through walls to backstab everything in your path.");
             EnsureHero("Paladin", WeaponType.Hammer, 7, 4.5f, new Color(0.95f, 0.78f, 0.4f),
-                "a holy warrior who would die for his allies");
+                "A holy warrior who would die for his allies. Hold to bless nearby friends with extra damage, and call down holy swords on the enemies around you.");
             EnsureHero("Admin", WeaponType.Shadow, 12, 6.4f, new Color(0.58f, 0.25f, 0.95f),
-                "An unbound shadow sovereign. Tear through enemies with charged rifts. Nightfall instantly executes visible enemies, even guardians. Intentionally overpowered.", 32);
+                "An unbound shadow sovereign. Tear through enemies with shadow rifts, while Nightfall executes every nearby enemy, even guardians. Intentionally overpowered.", 32);
             EnsureHero("Brawler", WeaponType.Fists, 6, 5.3f, new Color(0.98f, 0.62f, 0.42f), BrawlerDescription);
             EnsureHero("Demoness", WeaponType.Tail, 5, 5.2f, new Color(0.6f, 0.36f, 0.9f), DemonessDescription);
             AssetDatabase.SaveAssets();
             Debug.Log("CHARACTER_ASSETS_OK: Eight classes ready.");
         }
 
-        private const string DemonessDescription = "A half-demon daughter of the Demon Lord in purple, white and black. Stab with her pointed tail, charge to strike the vitals and paralyse, and sweep her tail to slash paralysed foes.";
-        private const string BrawlerDescription = "A scrappy puppygirl pit-fighter in red gloves. Jab fast, wind up a slow barrage of punches, and Empower to hit harder, faster and wider.";
+        private const string DemonessDescription = "The pale, ram-horned daughter of the Demon Lord. Stab with her pointed tail, charge to strike the vitals and paralyse, then sweep her tail through paralysed foes for double damage.";
+        private const string BrawlerDescription = "A scrappy puppygirl pit-fighter in big red gloves. Jab fast, charge a hammering barrage of punches, and Empower to hit harder, faster and wider.";
 
         private static void EnsureHero(string name, WeaponType weapon, int health, float speed, Color color, string description, int damage = 1)
         {

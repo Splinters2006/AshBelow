@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Admin
   m_EditorClassIdentifier: Assembly-CSharp::Slopgame.CharacterDefinition
   displayName: Admin
-  description: An unbound shadow sovereign. Tear through enemies with charged rifts. Nightfall instantly executes visible enemies, even guardians. Intentionally overpowered.
+  description: An unbound shadow sovereign. Tear through enemies with shadow rifts, while Nightfall executes every nearby enemy, even guardians. Intentionally overpowered.
   color: {r: 0.58, g: 0.25, b: 0.95, a: 1}
   startingHealth: 12
   startingDamage: 32

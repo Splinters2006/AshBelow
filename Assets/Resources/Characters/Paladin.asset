@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Paladin
   m_EditorClassIdentifier: Assembly-CSharp::Slopgame.CharacterDefinition
   displayName: Paladin
-  description: a holy warrior who would die for his allies
+  description: A holy warrior who would die for his allies. Hold to bless nearby friends with extra damage, and call down holy swords on the enemies around you.
   color: {r: 0.95, g: 0.78, b: 0.4, a: 1}
   startingHealth: 7
   startingDamage: 1
