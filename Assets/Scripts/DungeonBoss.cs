@@ -38,7 +38,10 @@ namespace Slopgame
         /// </summary>
         public static int ScaledHealth(int baseHealth, int partySize) => Mathf.CeilToInt(baseHealth * HealthMultiplier * Mathf.Max(1, partySize));
 
-        /// <summary>Boss floors cycle Warden, Duelist, Archdemon (floors 5, 10, 15, then again from 20).</summary>
+        /// <summary>
+        /// Boss floors cycle Warden, Duelist, Archdemon (floors 5, 10, 15), then again from 20 in the Neon Arcology,
+        /// where they return as the Cryo Sentinel, the Chrome Duelist and the Reactor Titan.
+        /// </summary>
         public static BossKind KindForFloor(int floor) => (BossKind)(Mathf.Max(0, floor / 5 - 1) % 3);
 
         public void Initialize(DungeonRun run)

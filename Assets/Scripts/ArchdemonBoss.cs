@@ -6,6 +6,7 @@ namespace Slopgame
     /// The third guardian, an archdemon of hellfire. Draws Infernal Cross, Brimstone Rain, Hellfire Nova and
     /// Serpent's Wake (eruptions racing toward every hero) in a shuffled order, and every fourth attack casts Cataclysm: the whole arena erupts except one small circle while he takes to the sky,
     /// invulnerable, and bombards the party. He crashes down afterwards and is briefly staggered.
+    /// In the Neon Arcology he returns as Omega, the Reactor Titan: the same fight in plasma instead of hellfire.
     /// </summary>
     public sealed class ArchdemonBoss : BossBehaviour
     {
@@ -26,8 +27,12 @@ namespace Slopgame
         private Vector2 ground, descendFrom, landing, safeCenter;
         private HellfireAura aura;
 
-        public override string Title => "MALPHAS, THE HELLFIRE ARCHDEMON";
-        public override string Tell => state switch
+        public override string Title => HighTech ? "OMEGA, THE REACTOR TITAN" : "MALPHAS, THE HELLFIRE ARCHDEMON";
+        protected override BoltKind Bolts => HighTech ? BoltKind.Plasma : BoltKind.Ember;
+        protected override HazardStyle Hazards => HighTech ? HazardStyle.Plasma : HazardStyle.Hellfire;
+        /// <summary>His signature colour: hellfire, or the Reactor Titan's plasma.</summary>
+        private Color Glow => HighTech ? WorldCatalog.NeonPink : Hellfire;
+        public override string Tell => HighTech ? TitanTell : state switch
         {
             State.Cross => "INFERNAL CROSS - GET OFF THE LINES",
             State.Meteors => "BRIMSTONE RAIN - LEAVE THE MARKS",
@@ -38,6 +43,18 @@ namespace Slopgame
             State.Descend => "HE FALLS - MOVE",
             State.Staggered => "STAGGERED - PUNISH HIM",
             _ => IsEnraged ? "THE PIT OPENS WIDER" : "LORD OF THE BURNING PIT"
+        };
+        private string TitanTell => state switch
+        {
+            State.Cross => "PLASMA CROSS - GET OFF THE LINES",
+            State.Meteors => "ORBITAL STRIKE - LEAVE THE MARKS",
+            State.Nova => "REACTOR NOVA - ROLL THROUGH THE ARCS",
+            State.Wake => "ION WAKE - STEP OFF THE PATH",
+            State.Ascend or State.Bombard when Time.time < eruptAt => $"MELTDOWN IN {eruptAt - Time.time:0.0}s - GET INTO THE GOLD CIRCLE",
+            State.Ascend or State.Bombard => "MELTDOWN - STAY IN THE CIRCLE  /  IT IS UNTOUCHABLE",
+            State.Descend => "IT FALLS - MOVE",
+            State.Staggered => "SYSTEMS DOWN - PUNISH IT",
+            _ => IsEnraged ? "CORE CRITICAL" : "HEART OF THE ARCOLOGY"
         };
         public override int BaseHealth(int floor) => 30 + floor * 4;
         public override byte NetState => (byte)state;
@@ -59,16 +76,17 @@ namespace Slopgame
             transform.localScale = Vector2.one * Size;
             ground = transform.position;
             GetComponent<SpriteRenderer>().sprite = DungeonVisuals.BossSprite(BossKind.Archdemon);
-            DungeonVisuals.DecorateArchdemon(transform);
+            DungeonVisuals.DecorateArchdemon(transform, HighTech);
             aura = HellfireAura.Attach(this);
             readyAt = Enemy.ActionTime + 2.5f;
-            HeroVfx.Pulse(Run.ProjectileRoot, transform.position, 4f, Hellfire, 1f);
+            HeroVfx.Pulse(Run.ProjectileRoot, transform.position, 4f, Glow, 1f);
         }
 
         public override Color BodyColor()
         {
-            if (Airborne) return Color.Lerp(new Color(1f, 0.45f, 0.2f), FlameMesh.Core, 0.5f + 0.5f * Mathf.Sin(Time.time * 10f));
-            if (state == State.Staggered) return Color.Lerp(new Color(0.45f, 0.1f, 0.12f), Color.white, Enemy.IsFlashing ? 0.6f : 0f);
+            if (Airborne) return Color.Lerp(HighTech ? new Color(1f, 0.45f, 0.9f) : new Color(1f, 0.45f, 0.2f), FlameMesh.Core, 0.5f + 0.5f * Mathf.Sin(Time.time * 10f));
+            if (state == State.Staggered) return Color.Lerp(HighTech ? new Color(0.25f, 0.22f, 0.35f) : new Color(0.45f, 0.1f, 0.12f), Color.white, Enemy.IsFlashing ? 0.6f : 0f);
+            if (HighTech) return Flashing(IsEnraged ? new Color(0.85f, 0.4f, 0.95f) : new Color(0.55f, 0.55f, 0.72f), Glow, IsCharging);
             return Flashing(IsEnraged ? new Color(1f, 0.2f, 0.12f) : new Color(0.72f, 0.12f, 0.14f), Hellfire, IsCharging);
         }
 
@@ -137,8 +155,8 @@ namespace Slopgame
                 case Attack.Wake: SerpentsWake(); break;
                 default: Cataclysm(); break;
             }
-            CoopFx.Pulse(Run, ground, 2.2f, Hellfire, 0.5f);
-            HeroVfx.Pulse(Run.ProjectileRoot, ground, 2.2f, Hellfire, 0.5f);
+            CoopFx.Pulse(Run, ground, 2.2f, Glow, 0.5f);
+            HeroVfx.Pulse(Run.ProjectileRoot, ground, 2.2f, Glow, 0.5f);
         }
 
         /// <summary>Four (bloodied: eight) pillars of fire burst outward from him in a cross.</summary>
@@ -231,8 +249,8 @@ namespace Slopgame
             stateUntil = Time.time + 1.1f;
             eruptAt = Time.time + InfernoTelegraph;
             landAt = Time.time + InfernoTelegraph + InfernoDuration;
-            CoopFx.Pulse(Run, ground, 5f, Hellfire, 0.9f);
-            HeroVfx.Pulse(Run.ProjectileRoot, ground, 5f, Hellfire, 0.9f);
+            CoopFx.Pulse(Run, ground, 5f, Glow, 0.9f);
+            HeroVfx.Pulse(Run.ProjectileRoot, ground, 5f, Glow, 0.9f);
         }
 
         /// <summary>
@@ -269,8 +287,8 @@ namespace Slopgame
                 Vector2 aim = (target - from).sqrMagnitude > 0.01f ? (target - from).normalized : Vector2.down;
                 int shots = IsEnraged ? 5 : 3;
                 for (int i = 0; i < shots; i++) Fire(from, Quaternion.Euler(0, 0, (i - (shots - 1) * 0.5f) * 11f) * aim, BombardBoltSpeed);
-                CombatVfx.GlowBolt(Run.ProjectileRoot, transform.position, from, Hellfire);
-                CoopFx.Bolt(Run, transform.position, from, Hellfire, true);
+                CombatVfx.GlowBolt(Run.ProjectileRoot, transform.position, from, Glow);
+                CoopFx.Bolt(Run, transform.position, from, Glow, true);
             }
             if (Time.time >= nextSpiral)
             {
@@ -294,7 +312,7 @@ namespace Slopgame
         {
             state = State.Staggered;
             ScreenFx.Shake(0.45f, 0.5f);
-            HeroVfx.Sparks(Run.ProjectileRoot, ground, Hellfire, 26, 7f, 0.5f, null, 360f, 1.5f);
+            HeroVfx.Sparks(Run.ProjectileRoot, ground, Glow, 26, 7f, 0.5f, null, 360f, 1.5f);
             stateUntil = Enemy.ActionTime + (IsEnraged ? 2.2f : 3f);
             for (int i = 0; i < 16; i++) Fire(ground, Quaternion.Euler(0, 0, i * 22.5f) * Vector2.up);
         }
@@ -318,10 +336,10 @@ namespace Slopgame
         public override void OnDefeated()
         {
             ScreenFx.Shake(0.7f, 1.2f);
-            ScreenFx.Flash(new Color(1f, 0.55f, 0.15f, 0.7f), 0.9f);
+            ScreenFx.Flash(HighTech ? new Color(1f, 0.5f, 0.95f, 0.7f) : new Color(1f, 0.55f, 0.15f, 0.7f), 0.9f);
             for (int i = 0; i < 3; i++)
-                HeroVfx.Pulse(Run.ProjectileRoot, GroundPosition, 2.5f + i * 2f, i == 1 ? AbilityCatalog.Gold : Hellfire, 0.6f + i * 0.3f);
-            HeroVfx.Sparks(Run.ProjectileRoot, GroundPosition, Hellfire, 40, 9f, 0.9f, null, 360f, 1.8f);
+                HeroVfx.Pulse(Run.ProjectileRoot, GroundPosition, 2.5f + i * 2f, i == 1 ? AbilityCatalog.Gold : Glow, 0.6f + i * 0.3f);
+            HeroVfx.Sparks(Run.ProjectileRoot, GroundPosition, Glow, 40, 9f, 0.9f, null, 360f, 1.8f);
             if (aura != null) Destroy(aura.gameObject);
         }
     }

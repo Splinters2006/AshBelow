@@ -22,7 +22,9 @@ namespace Slopgame
         /// <summary>The Rime Warden's ice: hail craters and frost walls.</summary>
         Frost,
         /// <summary>The Steel Duelist's blade light.</summary>
-        Steel
+        Steel,
+        /// <summary>The Neon Arcology's crackling plasma.</summary>
+        Plasma
     }
 
     /// <summary>Everything needed to rebuild a hazard on another machine.</summary>
@@ -57,6 +59,8 @@ namespace Slopgame
             new Color(0.38f, 0.72f, 1f), new Color(0.14f, 0.32f, 0.78f), new Color(0.05f, 0.1f, 0.3f));
         private static readonly Palette SteelPalette = new Palette(Color.white, new Color(0.78f, 0.97f, 1f),
             new Color(0.45f, 0.95f, 1f), new Color(0.2f, 0.45f, 0.62f), new Color(0.08f, 0.15f, 0.22f));
+        private static readonly Palette PlasmaPalette = new Palette(new Color(1f, 0.95f, 1f), new Color(1f, 0.6f, 0.95f),
+            new Color(1f, 0.25f, 0.8f), new Color(0.5f, 0.1f, 0.6f), new Color(0.15f, 0.03f, 0.22f));
 
         private DungeonRun run;
         private HazardSpec spec;
@@ -80,7 +84,8 @@ namespace Slopgame
             zone.run = run;
             spec.Direction = spec.Direction.sqrMagnitude > 0.0001f ? spec.Direction.normalized : Vector2.right;
             zone.spec = spec;
-            zone.colors = spec.Style == HazardStyle.Frost ? FrostPalette : spec.Style == HazardStyle.Steel ? SteelPalette : HellfirePalette;
+            zone.colors = spec.Style == HazardStyle.Frost ? FrostPalette : spec.Style == HazardStyle.Steel ? SteelPalette
+                : spec.Style == HazardStyle.Plasma ? PlasmaPalette : HellfirePalette;
             zone.gameObject.name = spec.Style + " " + spec.Shape;
             zone.flames = new FlameMesh(zone.gameObject, spec.Shape == HazardShape.Inferno ? 2 : 3);
             zone.meteorFrom = spec.Center + new Vector2(Random.Range(-4f, 4f), 11f);
@@ -190,24 +195,24 @@ namespace Slopgame
                     {
                         // The floor turns red at once and cracks with pulsing magma, so the doomed area reads instantly.
                         float glow = (0.45f + 0.3f * warn * pulse) * (0.75f + 0.25f * seed);
-                        flames.Rect(cell - Vector2.one * 0.5f, cell + Vector2.one * 0.5f, FlameMesh.Alpha(FlameMesh.Crimson, glow));
+                        flames.Rect(cell - Vector2.one * 0.5f, cell + Vector2.one * 0.5f, FlameMesh.Alpha(colors.Deep, glow));
                         // Diagonal hazard stripes crawl across the doomed floor.
                         if (Mathf.Repeat(x + y - time * 2f, 3f) < 1f)
                             flames.Bar(cell + new Vector2(-0.5f, -0.5f), new Vector2(1f, 1f).normalized, 1.41f, 0.22f,
-                                FlameMesh.Alpha(FlameMesh.Orange, 0.18f + 0.22f * warn), FlameMesh.Alpha(FlameMesh.Orange, 0.18f + 0.22f * warn));
+                                FlameMesh.Alpha(colors.Main, 0.18f + 0.22f * warn), FlameMesh.Alpha(colors.Main, 0.18f + 0.22f * warn));
                         if (seed > 0.45f)
                             flames.Bar(cell + new Vector2(seed - 0.5f, -0.4f), FlameMesh.Polar(seed * 6.3f, 1f), 0.7f, 0.07f,
-                                FlameMesh.Alpha(FlameMesh.Yellow, 0.35f + warn * 0.65f), FlameMesh.Alpha(FlameMesh.Orange, 0f));
+                                FlameMesh.Alpha(colors.Bright, 0.35f + warn * 0.65f), FlameMesh.Alpha(colors.Main, 0f));
                         // Small flames start licking up over the last stretch of the warning.
                         float kindle = Mathf.InverseLerp(0.55f, 1f, warn);
                         if (kindle > 0f && seed > 0.35f)
-                            flames.Flame(cell + new Vector2(seed - 0.5f, -0.45f) * 0.8f, Vector2.up, 0.45f, (0.3f + 0.5f * seed) * kindle, seed, kindle * 0.8f);
+                            Tongue(cell + new Vector2(seed - 0.5f, -0.45f) * 0.8f, Vector2.up, 0.45f, (0.3f + 0.5f * seed) * kindle, seed, kindle * 0.8f);
                         continue;
                     }
                     float heat = 0.55f + 0.2f * Mathf.Sin(time * 7f + seed * 20f);
                     flames.Rect(cell - Vector2.one * 0.5f, cell + Vector2.one * 0.5f,
-                        FlameMesh.Alpha(Color.Lerp(FlameMesh.Crimson, FlameMesh.Orange, seed * 0.5f), heat * fade));
-                    flames.Flame(cell + new Vector2(seed - 0.5f, -0.45f) * 0.8f, Vector2.up, 0.8f, 1.1f + seed * 0.7f, seed, fade);
+                        FlameMesh.Alpha(Color.Lerp(colors.Deep, colors.Main, seed * 0.5f), heat * fade));
+                    Tongue(cell + new Vector2(seed - 0.5f, -0.45f) * 0.8f, Vector2.up, 0.8f, 1.1f + seed * 0.7f, seed, fade);
                 }
             // Rising embers above the sea of fire.
             if (!warning)
@@ -216,10 +221,10 @@ namespace Slopgame
                     float sx = FlameMesh.Hash(i, 1.7f), sy = FlameMesh.Hash(i, 9.3f);
                     Vector2 p = new Vector2(arena.xMin - 0.5f + sx * arena.width, arena.yMin - 0.5f + Mathf.Repeat(sy * arena.height + Time.time * (1.5f + sx * 2f), arena.height));
                     if (Vector2.Distance(p, spec.Center) < safe) continue;
-                    flames.Diamond(p + Vector2.right * Mathf.Sin(Time.time * 3f + i) * 0.2f, 0.08f + sy * 0.06f, FlameMesh.Alpha(FlameMesh.Yellow, 0.9f * fade));
+                    flames.Diamond(p + Vector2.right * Mathf.Sin(Time.time * 3f + i) * 0.2f, 0.08f + sy * 0.06f, FlameMesh.Alpha(colors.Bright, 0.9f * fade));
                 }
-            flames.Ring(spec.Center, safe + 0.4f, 0.8f, warning ? FlameMesh.Alpha(FlameMesh.Crimson, 0.12f + 0.3f * warn * pulse)
-                : FlameMesh.Alpha(FlameMesh.Orange, 0.7f * fade), FlameMesh.Alpha(FlameMesh.Crimson, (warning ? 0.2f + 0.3f * warn * pulse : 0.6f) * fade), 64);
+            flames.Ring(spec.Center, safe + 0.4f, 0.8f, warning ? FlameMesh.Alpha(colors.Deep, 0.12f + 0.3f * warn * pulse)
+                : FlameMesh.Alpha(colors.Main, 0.7f * fade), FlameMesh.Alpha(colors.Deep, (warning ? 0.2f + 0.3f * warn * pulse : 0.6f) * fade), 64);
             // The sanctuary: a gold ring with rotating runes, then a white-hot wall of flame around it.
             float spin = time * 1.6f;
             if (warning)
@@ -248,9 +253,9 @@ namespace Slopgame
                 {
                     float angle = i * Mathf.PI * 2f / tongues;
                     Vector2 outward = FlameMesh.Polar(angle, 1f);
-                    flames.Flame(spec.Center + outward * (safe + 0.05f), outward, 0.5f, 1.3f, FlameMesh.Hash(i, 3.1f), fade);
+                    Tongue(spec.Center + outward * (safe + 0.05f), outward, 0.5f, 1.3f, FlameMesh.Hash(i, 3.1f), fade);
                 }
-                flames.Ring(spec.Center, safe + 0.1f, 0.18f, FlameMesh.Alpha(FlameMesh.Core, fade), FlameMesh.Alpha(FlameMesh.Yellow, 0.4f * fade));
+                flames.Ring(spec.Center, safe + 0.1f, 0.18f, FlameMesh.Alpha(colors.Core, fade), FlameMesh.Alpha(colors.Bright, 0.4f * fade));
             }
         }
 
@@ -272,8 +277,8 @@ namespace Slopgame
         }
 
         /// <summary>
-        /// One tongue of the hazard: a licking flame for hellfire, a jutting ice shard for frost, and a thin flickering
-        /// glint of blade light for steel.
+        /// One tongue of the hazard: a licking flame for hellfire, a jutting ice shard for frost, a thin flickering
+        /// glint of blade light for steel, and a jagged arc for plasma.
         /// </summary>
         private void Tongue(Vector2 root, Vector2 direction, float width, float height, float seed, float fade)
         {
@@ -288,6 +293,15 @@ namespace Slopgame
                     float flicker = 0.5f + 0.5f * Mathf.Sin(Time.time * 25f + seed * 30f);
                     flames.Bar(root, direction, height * 0.5f * (0.6f + 0.4f * flicker), width * 0.12f,
                         FlameMesh.Alpha(colors.Core, fade * flicker), FlameMesh.Alpha(colors.Main, 0f));
+                    break;
+                case HazardStyle.Plasma:
+                    // Two crooked segments that re-kink every few frames, like an electric arc.
+                    float jitter = Mathf.Sin(Mathf.Floor(Time.time * 18f) * 12.9898f + seed * 78.233f);
+                    Vector2 kink = root + (direction + Vector2.Perpendicular(direction) * jitter * 0.5f).normalized * height * 0.3f;
+                    flames.Bar(root, (kink - root).normalized, Vector2.Distance(root, kink), width * 0.16f,
+                        FlameMesh.Alpha(colors.Core, fade), FlameMesh.Alpha(colors.Main, 0.8f * fade));
+                    flames.Bar(kink, (direction - Vector2.Perpendicular(direction) * jitter * 0.4f).normalized, height * 0.25f, width * 0.12f,
+                        FlameMesh.Alpha(colors.Main, 0.8f * fade), FlameMesh.Alpha(colors.Bright, 0f));
                     break;
                 default:
                     flames.Flame(root, direction, width, height, seed, fade);

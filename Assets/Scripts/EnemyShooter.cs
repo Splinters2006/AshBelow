@@ -28,7 +28,7 @@ namespace Slopgame
             if (IsCharging)
             {
                 if (enemy.ActionTime < fireAt) return;
-                EnemyProjectile.Spawn(enemy.Run, transform.parent, transform.position, lockedDirection);
+                EnemyProjectile.Spawn(enemy.Run, transform.parent, transform.position, lockedDirection, true, EnemyProjectile.DefaultSpeed, enemy.Run.World.Bolts);
                 IsCharging = false;
                 readyAt = enemy.ActionTime + 1.5f;
             }

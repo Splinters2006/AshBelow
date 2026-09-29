@@ -2,14 +2,14 @@ using UnityEngine;
 
 namespace Slopgame
 {
-    /// <summary>A small, fragile ember spider that scuttles in much faster than an ashling.</summary>
+    /// <summary>A small, fragile ember spider that scuttles in much faster than an ashling (a scuttle bot in the Neon Arcology).</summary>
     public sealed class AshSkitter : EnemyVariant
     {
         public const float SpeedMultiplier = 1.6f, MaxSpeed = 4.6f;
         private static Sprite sprite;
 
-        public override string DisplayName => "Ash skitter";
-        public override Color Tint => new Color(1f, 0.78f, 0.3f);
+        public override string DisplayName => World.HighTech ? "Scuttle bot" : "Ash skitter";
+        public override Color Tint => World.HighTech ? new Color(0.45f, 1f, 0.75f) : new Color(1f, 0.78f, 0.3f);
 
         public override void Configure(DungeonEnemy enemy)
         {
@@ -19,7 +19,9 @@ namespace Slopgame
             enemy.transform.localScale = Vector2.one * 0.48f;
         }
 
-        public override Sprite Sprite => sprite != null ? sprite : sprite = DungeonVisuals.PaletteSprite(DisplayName, new[]
+        public override Sprite Sprite => World.HighTech ? NeonSprites.Scuttler : AshSprite;
+
+        private static Sprite AshSprite => sprite != null ? sprite : sprite = DungeonVisuals.PaletteSprite("Ash skitter", new[]
         {
             "................", "................", "W..............W", ".W...WWWWWW...W.", "..W.WWWWWWWW.W..",
             "...WWDWWWWDWW...", "W..WWWWWWWWWW..W", ".WWWWWWWWWWWWWW.", "...WWWWWWWWWW...", "W..WWWWWWWWWW..W",

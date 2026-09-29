@@ -61,9 +61,11 @@ namespace Slopgame
         {
             body = GetComponent<SpriteRenderer>();
             shooter = GetComponent<EnemyShooter>();
-            if (IsRanged) gameObject.name = "Ember caster";
+            var world = Run.World;
+            if (IsRanged) gameObject.name = world.CasterName;
             tactics = GetComponent<EnemyTactics>();
-            if (Boss == null) body.sprite = Variant != null ? Variant.Sprite : DungeonVisuals.EnemySprite(IsRanged, IsTank);
+            if (Boss == null) body.sprite = Variant != null ? Variant.Sprite
+                : world.HighTech ? NeonSprites.Enemy(IsRanged, IsTank) : DungeonVisuals.EnemySprite(IsRanged, IsTank);
             burnIndicator = DungeonVisuals.Create("Burn indicator", transform, transform.position,
                 new Vector2(0.28f, 0.4f), burnColor, 9);
             burnIndicator.sprite = DungeonVisuals.FlameSprite;
@@ -133,7 +135,7 @@ namespace Slopgame
                 : IsParalyzed ? DemonessAttack.ParalyzedTint(Time.time)
                 : IsFrozen ? FrozenTint
                 : IsChilled ? AbilityCatalog.Ice : Variant != null ? Variant.Tint
-                : IsTank ? new Color(0.65f, 0.7f, 0.8f) : IsRanged ? new Color(1f, 0.65f, 0.2f) : new Color(1f, 0.35f, 0.4f);
+                : IsTank ? Run.World.BruteTint : IsRanged ? Run.World.CasterTint : Run.World.BasicTint;
         }
 
         /// <summary>Co-op guest: follow the host's snapshots; only contact with the local hero is judged here.</summary>

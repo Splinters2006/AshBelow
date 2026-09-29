@@ -5,11 +5,12 @@ namespace Slopgame
     public static class DungeonVisuals
     {
         private static Sprite square;
-        private static Sprite emberBolt, frostBolt;
+        private static Sprite emberBolt, frostBolt, plasmaBolt;
         private static Sprite thrownBlade;
 
         private static readonly Sprite[] enemySprites = new Sprite[3];
-        private static Sprite flameSprite, shadowHero, duelistSprite, archdemonSprite, archdemonDetails, wardenSprite, wardenDetails;
+        private static Sprite flameSprite, shadowHero, duelistSprite, archdemonSprite, archdemonDetails, wardenSprite, wardenDetails,
+            sentinelDetails, titanDetails;
         public static Sprite FlameSprite => flameSprite != null ? flameSprite : flameSprite = PixelSprite("Burn flame", new[]
         {
             "....W...", "...WW...", "...WW.W.", "..WWWWW.", ".WWWWWW.", ".WWWWWW.", "..WWWW..", "...WW..."
@@ -141,6 +142,17 @@ namespace Slopgame
                     new Color(0.65f, 0.88f, 1f), new Color(0.8f, 0.94f, 1f), new Color(0.96f, 0.99f, 1f));
             var renderer = Create("Frost bolt", parent, position, Vector2.one, Color.white, 6);
             renderer.sprite = frostBolt;
+            return renderer;
+        }
+
+        /// <summary>The Neon Arcology's plasma shot: the ember bolt's shape in magenta with a white-hot core.</summary>
+        public static SpriteRenderer CreatePlasmaBolt(Transform parent, Vector2 position)
+        {
+            if (plasmaBolt == null)
+                plasmaBolt = BoltSprite("Plasma bolt sprite", new Color(1f, 0.2f, 0.8f), new Color(0.9f, 0.25f, 1f), new Color(1f, 0.3f, 0.85f),
+                    new Color(0.5f, 0.9f, 1f), new Color(1f, 0.7f, 0.97f), new Color(1f, 0.97f, 1f));
+            var renderer = Create("Plasma bolt", parent, position, Vector2.one, Color.white, 6);
+            renderer.sprite = plasmaBolt;
             return renderer;
         }
 
@@ -302,9 +314,10 @@ namespace Slopgame
             return null;
         }
 
-        public static void DecorateDuelist(Transform boss)
+        /// <param name="highTech">The Neon Arcology's Chrome Duelist: magenta energy blades and a neon sash.</param>
+        public static void DecorateDuelist(Transform boss, bool highTech = false)
         {
-            var blade = new Color(0.45f, 0.95f, 1f);
+            var blade = highTech ? WorldCatalog.NeonPink : new Color(0.45f, 0.95f, 1f);
             Detail(boss, "Left eye", new Vector2(-0.094f, 0.28f), new Vector2(0.09f, 0.05f), blade, 7);
             Detail(boss, "Right eye", new Vector2(0.094f, 0.28f), new Vector2(0.09f, 0.05f), blade, 7);
             for (int side = -1; side <= 1; side += 2)
@@ -313,7 +326,7 @@ namespace Slopgame
                 sword.transform.localPosition = new Vector2(side * 0.58f, -0.12f);
                 sword.transform.localRotation = Quaternion.Euler(0, 0, side * 32f);
             }
-            Detail(boss, "Sash", new Vector2(0f, -0.2f), new Vector2(0.5f, 0.06f), new Color(0.85f, 0.2f, 0.25f));
+            Detail(boss, "Sash", new Vector2(0f, -0.2f), new Vector2(0.5f, 0.06f), highTech ? WorldCatalog.Neon : new Color(0.85f, 0.2f, 0.25f));
         }
 
         // Left half of the 32x32 archdemon, mirrored for the right. Body layer (tinted): L highlight, W base, M shade,
@@ -351,6 +364,24 @@ namespace Slopgame
         /// <summary>The Rime Warden's fixed-colour layer: crown, gold mask, frost-lit eyes and the crystal in its hands.</summary>
         public static Sprite WardenDetails => wardenDetails != null ? wardenDetails
             : wardenDetails = MirroredSprite("Rime warden details", WardenGrid, true, WardenDetailColor);
+
+        /// <summary>The Cryo Sentinel's layer: the Warden's shape with a chrome crest, a cyan visor and a pink cryo core.</summary>
+        public static Sprite SentinelDetails => sentinelDetails != null ? sentinelDetails
+            : sentinelDetails = MirroredSprite("Cryo sentinel details", WardenGrid, true, SentinelDetailColor);
+
+        private static Color SentinelDetailColor(char c)
+        {
+            switch (c)
+            {
+                case 'G': return new Color(0.78f, 0.84f, 0.95f);
+                case 'g': return new Color(0.36f, 0.4f, 0.52f);
+                case 'E': return WorldCatalog.Neon;
+                case 'K': return new Color(0.02f, 0.02f, 0.06f);
+                case 'O': return WorldCatalog.NeonPink;
+                case 'Y': return new Color(1f, 0.9f, 1f);
+                default: return Color.clear;
+            }
+        }
 
         private static Color WardenDetailColor(char c)
         {
@@ -401,42 +432,72 @@ namespace Slopgame
             }
         }
 
-        public static void DecorateArchdemon(Transform boss)
+        /// <summary>The Reactor Titan's layer: the Archdemon's shape with chrome antennae, visor eyes and a plasma reactor.</summary>
+        public static Sprite TitanDetails => titanDetails != null ? titanDetails
+            : titanDetails = MirroredSprite("Reactor titan details", ArchdemonGrid, true, TitanDetailColor);
+
+        private static Color TitanDetailColor(char c)
+        {
+            switch (c)
+            {
+                case 'H': return new Color(0.8f, 0.86f, 0.96f);
+                case 'h': return new Color(0.36f, 0.4f, 0.52f);
+                case 'E': return WorldCatalog.Neon;
+                case 'K': return new Color(0.02f, 0.01f, 0.06f);
+                case 'F': return new Color(0.6f, 0.95f, 1f);
+                case 'O': return WorldCatalog.NeonPink;
+                case 'Y': return new Color(1f, 0.85f, 1f);
+                default: return Color.clear;
+            }
+        }
+
+        public static void DecorateArchdemon(Transform boss, bool highTech = false)
         {
             var body = boss.GetComponent<SpriteRenderer>();
             var details = new GameObject("Archdemon details").AddComponent<SpriteRenderer>();
             details.transform.SetParent(boss, false);
-            details.sprite = ArchdemonDetails;
+            details.sprite = highTech ? TitanDetails : ArchdemonDetails;
             details.sortingOrder = body.sortingOrder + 1;
         }
 
-        public static void DecorateWarden(Transform boss)
+        public static void DecorateWarden(Transform boss, bool highTech = false)
         {
             var body = boss.GetComponent<SpriteRenderer>();
             body.sprite = BossSprite(BossKind.AshWarden);
             var details = new GameObject("Warden details").AddComponent<SpriteRenderer>();
             details.transform.SetParent(boss, false);
-            details.sprite = WardenDetails;
+            details.sprite = highTech ? SentinelDetails : WardenDetails;
             details.sortingOrder = body.sortingOrder + 1;
         }
 
-        public static void DecorateArena(Transform root)
+        public static void DecorateArena(Transform root, WorldDefinition world)
         {
             for (int x = 15; x <= 39; x++)
                 for (int y = 9; y <= 29; y++)
                     if (x == 15 || x == 39 || y == 9 || y == 29)
-                        Create("Arena inlay", root, new Vector2(x, y), Vector2.one * 0.15f, new Color(0.56f, 0.38f, 0.22f), 1);
+                        Create("Arena inlay", root, new Vector2(x, y), Vector2.one * 0.15f, world.Accent, 1);
             for (int i = 0; i < 16; i++)
             {
                 float angle = i * Mathf.PI * 2 / 16;
                 var rune = Create("Arena rune", root, new Vector2(27, 19) + new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * 7f,
-                    new Vector2(0.12f, 0.45f), new Color(0.55f, 0.3f, 0.4f), 1);
+                    new Vector2(0.12f, 0.45f), world.ArenaRune, 1);
                 rune.transform.rotation = Quaternion.Euler(0, 0, angle * Mathf.Rad2Deg);
             }
+            if (!world.HighTech) return;
+            // A glowing containment ring and cross-hairs around the arena's middle.
+            for (int i = 0; i < 48; i++)
+            {
+                float angle = i * Mathf.PI * 2 / 48;
+                var segment = Create("Arena circuit", root, new Vector2(27, 19) + new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * 4f,
+                    new Vector2(0.06f, 0.5f), FlameMesh.Alpha(world.Accent, 0.55f), 1);
+                segment.transform.rotation = Quaternion.Euler(0, 0, angle * Mathf.Rad2Deg);
+            }
+            Create("Arena circuit", root, new Vector2(27, 19), new Vector2(24f, 0.05f), FlameMesh.Alpha(world.Accent, 0.25f), 1);
+            Create("Arena circuit", root, new Vector2(27, 19), new Vector2(0.05f, 20f), FlameMesh.Alpha(world.Accent, 0.25f), 1);
         }
 
-        /// <param name="shop">The crystal shop: warm wooden boards and stone walls instead of the dungeon's cold slate.</param>
-        public static void DrawMap(DungeonMap map, Transform root, bool shop = false)
+        /// <param name="shop">The crystal shop: warm wooden boards and stone walls instead of the world's own tiles.</param>
+        public static void DrawMap(DungeonMap map, Transform root, WorldDefinition world, bool shop = false)
         {
             for (int x = 0; x < DungeonMap.Width; x++)
                 for (int y = 0; y < DungeonMap.Height; y++)
@@ -446,11 +507,25 @@ namespace Slopgame
                         && !map.IsFloor(x, y - 1) && !map.IsFloor(x, y + 1)) continue;
                     Color color = shop
                         ? walkable ? (y % 2 == 0 ? new Color(0.25f, 0.16f, 0.11f) : new Color(0.28f, 0.18f, 0.12f)) : new Color(0.36f, 0.3f, 0.3f)
-                        : walkable
-                        ? ((x + y) % 2 == 0 ? new Color(0.12f, 0.17f, 0.21f) : new Color(0.14f, 0.19f, 0.23f))
-                        : new Color(0.29f, 0.38f, 0.43f);
+                        : walkable ? ((x + y) % 2 == 0 ? world.FloorA : world.FloorB) : world.Wall;
                     Create(walkable ? "Floor" : "Wall", root, new Vector2(x, y), Vector2.one * 0.97f, color, 0);
+                    if (shop || !world.HighTech) continue;
+                    if (!walkable)
+                        // Neon trim along the wall faces that border the floor.
+                        TrimWall(map, root, x, y, world.Accent);
+                    else if (FlameMesh.Hash(x, y) > 0.93f)
+                        // The odd floor panel carries a small status light.
+                        Create("Panel light", root, new Vector2(x, y), Vector2.one * 0.14f, FlameMesh.Alpha(world.Accent, 0.6f), 1);
                 }
+        }
+
+        private static void TrimWall(DungeonMap map, Transform root, int x, int y, Color accent)
+        {
+            var glow = FlameMesh.Alpha(accent, 0.75f);
+            if (map.IsFloor(x, y - 1)) Create("Wall trim", root, new Vector2(x, y - 0.42f), new Vector2(0.97f, 0.08f), glow, 1);
+            if (map.IsFloor(x, y + 1)) Create("Wall trim", root, new Vector2(x, y + 0.42f), new Vector2(0.97f, 0.08f), glow, 1);
+            if (map.IsFloor(x - 1, y)) Create("Wall trim", root, new Vector2(x - 0.42f, y), new Vector2(0.08f, 0.97f), glow, 1);
+            if (map.IsFloor(x + 1, y)) Create("Wall trim", root, new Vector2(x + 0.42f, y), new Vector2(0.08f, 0.97f), glow, 1);
         }
     }
 }

@@ -9,4 +9,3 @@ killing paralyzed enemies resets lowers all your cooldowns by 0.5 seconds
 killing enemies has a 50%/100% (on second aquire) to drop extra crystals
 shop prices reduced by 25%/50% (on second aquire)
 add one reroll to shop inventory
-

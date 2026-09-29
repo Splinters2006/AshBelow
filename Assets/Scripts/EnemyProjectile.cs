@@ -3,7 +3,7 @@ using UnityEngine;
 namespace Slopgame
 {
     /// <summary>What an enemy bolt looks like; every kind behaves identically.</summary>
-    public enum BoltKind : byte { Ember, Blade, Frost }
+    public enum BoltKind : byte { Ember, Blade, Frost, Plasma }
 
     public sealed class EnemyProjectile : MonoBehaviour
     {
@@ -21,7 +21,7 @@ namespace Slopgame
         public bool IsReflected { get; private set; }
         private int reflectedDamage;
         public bool IsSpent => spent;
-        /// <summary>An ember bolt, a thrown steel blade or an icicle.</summary>
+        /// <summary>An ember bolt, a thrown steel blade, an icicle or a plasma shot.</summary>
         public BoltKind Kind { get; private set; }
 
         public static EnemyProjectile Spawn(DungeonRun run, Transform parent, Vector2 position, Vector2 direction) => Spawn(run, parent, position, direction, true);
@@ -31,7 +31,8 @@ namespace Slopgame
             float speed = DefaultSpeed, BoltKind kind = BoltKind.Ember)
         {
             var sprite = kind == BoltKind.Blade ? DungeonVisuals.CreateThrownBlade(parent, position)
-                : kind == BoltKind.Frost ? DungeonVisuals.CreateFrostBolt(parent, position) : DungeonVisuals.CreateEmberBolt(parent, position);
+                : kind == BoltKind.Frost ? DungeonVisuals.CreateFrostBolt(parent, position)
+                : kind == BoltKind.Plasma ? DungeonVisuals.CreatePlasmaBolt(parent, position) : DungeonVisuals.CreateEmberBolt(parent, position);
             var projectile = sprite.gameObject.AddComponent<EnemyProjectile>();
             projectile.run = run;
             projectile.direction = direction.normalized;
@@ -40,6 +41,7 @@ namespace Slopgame
             projectile.transform.rotation = Quaternion.Euler(0, 0, Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg);
             if (kind == BoltKind.Blade) CombatVfx.Trail(projectile.gameObject, new Color(0.45f, 0.95f, 1f, 0.6f), 0.07f, 0.12f);
             else if (kind == BoltKind.Frost) CombatVfx.Trail(projectile.gameObject, new Color(0.7f, 0.92f, 1f, 0.55f), 0.08f, 0.14f);
+            else if (kind == BoltKind.Plasma) CombatVfx.Trail(projectile.gameObject, new Color(1f, 0.35f, 0.9f, 0.55f), 0.08f, 0.14f);
             if (announce && run.IsNetworked && run.Coop.IsHost) run.Coop.AnnounceBolt(projectile, position, projectile.direction);
             return projectile;
         }

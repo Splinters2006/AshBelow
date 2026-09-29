@@ -28,7 +28,7 @@ namespace Slopgame
         private FlameMesh marks;
         private GameObject markObject;
 
-        public override string Title => "THE STEEL DUELIST";
+        public override string Title => HighTech ? "UNIT-7, THE CHROME DUELIST" : "THE STEEL DUELIST";
         // Pure steel: thrown blades and cuts of blade light, never fire.
         protected override BoltKind Bolts => BoltKind.Blade;
         protected override HazardStyle Hazards => HazardStyle.Steel;
@@ -42,7 +42,7 @@ namespace Slopgame
             State.Vanish => "PHANTOM STRIKE - LEAVE THE RING",
             State.Whirl => "WHIRLWIND",
             State.Crosscut => "CROSSCUT - GET OUT OF THE X",
-            _ => IsEnraged ? "BLOODIED - FASTER CHAINS" : "A BLUR OF STEEL"
+            _ => IsEnraged ? (HighTech ? "OVERCLOCKED - FASTER CHAINS" : "BLOODIED - FASTER CHAINS") : HighTech ? "A BLUR OF CHROME" : "A BLUR OF STEEL"
         };
         // Squishy: roughly half the Warden's health at the same depth.
         public override int BaseHealth(int floor) => 12 + floor * 2;
@@ -59,7 +59,7 @@ namespace Slopgame
             transform.localScale = Vector2.one * 1.15f;
             body = GetComponent<SpriteRenderer>();
             body.sprite = DungeonVisuals.BossSprite(BossKind.Duelist);
-            DungeonVisuals.DecorateDuelist(transform);
+            DungeonVisuals.DecorateDuelist(transform, HighTech);
             telegraph = DungeonVisuals.Create("Dash telegraph", Run.ProjectileRoot, transform.position, new Vector2(DashLength, 0.9f), Blade, 2);
             telegraph.gameObject.SetActive(false);
             markObject = new GameObject("Phantom strike telegraph");
@@ -71,7 +71,7 @@ namespace Slopgame
 
         public override Color BodyColor()
         {
-            var color = Flashing(IsEnraged ? new Color(1f, 0.55f, 0.6f) : Steel, Blade, state == State.Aim || state == State.Throw);
+            var color = Flashing(IsEnraged ? (HighTech ? new Color(1f, 0.5f, 0.9f) : new Color(1f, 0.55f, 0.6f)) : Steel, Blade, state == State.Aim || state == State.Throw);
             // Half out of the world while he phases toward his mark.
             if (state == State.Vanish) color.a = 0.12f + 0.1f * Mathf.Sin(Time.time * 40f);
             return color;

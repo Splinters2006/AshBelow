@@ -94,6 +94,14 @@ namespace Slopgame
                 DungeonUi.Label(new Rect(365, 4, 550, 22), "DEBUG ADMIN MODE  /  INVINCIBLE  ONE-HIT KILLS  NO COOLDOWNS  2X SPEED  /  F1", 12, DebugColor, TextAnchor.MiddleCenter);
             DungeonUi.Label(new Rect(405, 28, 470, 25), Run.InShop ? $"CRYSTAL SHOP  /  GUARDIAN OF FLOOR {Run.Floor + 1:00} AHEAD" : Run.IsBossFloor ? $"FLOOR {Run.Floor:00}  /  BOSS ARENA"
                 : $"FLOOR {Run.Floor:00}  /  {Run.Enemies.Count} ENEMIES", 17, Run.InShop ? CrystalPouch.CrystalColor : AbilityCatalog.Gold, TextAnchor.MiddleCenter);
+            if (Run.IsPlaying && Time.time < Run.WorldBannerUntil)
+            {
+                // Fades out over its last second.
+                var world = Run.World;
+                var accent = FlameMesh.Alpha(world.Accent, Mathf.Clamp01(Run.WorldBannerUntil - Time.time));
+                DungeonUi.Label(new Rect(240, 190, 800, 30), $"WORLD {world.Index + 1}", 20, accent, TextAnchor.MiddleCenter);
+                DungeonUi.Label(new Rect(240, 220, 800, 50), world.Name, 36, accent, TextAnchor.MiddleCenter);
+            }
             DungeonUi.Label(new Rect(365, 59, 550, 40), Run.Objective, 17, DungeonUi.Text, TextAnchor.UpperCenter);
             if (Run.Boss != null && Run.Boss.Enemy.Health > 0)
             {

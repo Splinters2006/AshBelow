@@ -7,6 +7,7 @@ namespace Slopgame
     /// The first guardian, the Rime Warden: a slow, crowned frost caster drawing, in a shuffled order, an aimed Icicle
     /// Fan, a full Frost Nova, a rotating Blizzard Spiral, Hailfall (hailstones crash onto every hero) and Ice Cage (a
     /// ring of icicles closes in on every hero). Once bloodied it blinks across the arena before Hailfall.
+    /// In the Neon Arcology it returns as the Cryo Sentinel, a chrome frost machine with the same attacks.
     /// (The class keeps its original Ash Warden name so the boss roster and asset references stay put.)
     /// </summary>
     public sealed class AshWardenBoss : BossBehaviour
@@ -28,7 +29,7 @@ namespace Slopgame
         private Vector2 lockedAim;
         private WardenAura aura;
 
-        public override string Title => "THE RIME WARDEN";
+        public override string Title => HighTech ? "THE CRYO SENTINEL" : "THE RIME WARDEN";
         public override string Tell => IsCharging ? (pattern % Patterns) switch
         {
             Fan => "ICICLE FAN - SIDESTEP",
@@ -36,7 +37,7 @@ namespace Slopgame
             Spiral => "BLIZZARD SPIRAL - CIRCLE WITH THE ARMS",
             Cage => "ICE CAGE - SLIP THROUGH THE GAP",
             _ => "HAILFALL - LEAVE THE MARKS"
-        } : IsEnraged ? "ENRAGED" : "GUARDIAN OF THE RELIC";
+        } : IsEnraged ? "ENRAGED" : HighTech ? "CRYOGENIC CONTAINMENT UNIT" : "GUARDIAN OF THE RELIC";
         public override int BaseHealth(int floor) => 24 + floor * 3;
         public override bool IsCharging => charging || Spiraling;
         public override float HitRadius => 0.95f;
@@ -54,12 +55,13 @@ namespace Slopgame
             readyAt = Enemy.ActionTime + 2f;
             // Always opens with the Icicle Fan so the fight starts with something readable.
             pattern = deck.Open(Fan);
-            DungeonVisuals.DecorateWarden(transform);
+            DungeonVisuals.DecorateWarden(transform, HighTech);
             aura = WardenAura.Attach(this);
             HeroVfx.Pulse(Run.ProjectileRoot, transform.position, 3f, Frost, 0.8f);
         }
 
-        public override Color BodyColor() => Flashing(IsEnraged ? new Color(0.35f, 0.55f, 1f) : new Color(0.62f, 0.8f, 0.98f), Color.white, charging);
+        public override Color BodyColor() => Flashing(HighTech ? (IsEnraged ? new Color(0.5f, 0.55f, 0.95f) : new Color(0.7f, 0.75f, 0.86f))
+            : IsEnraged ? new Color(0.35f, 0.55f, 1f) : new Color(0.62f, 0.8f, 0.98f), Color.white, charging);
 
         public override void HostTick(Vector2 offset)
         {

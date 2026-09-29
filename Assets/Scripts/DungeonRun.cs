@@ -31,6 +31,10 @@ namespace Slopgame
         private readonly List<PowerupDefinition> upgradeChoices = new List<PowerupDefinition>();
         public IReadOnlyList<PowerupDefinition> UpgradeChoices => upgradeChoices;
         public int Floor { get; private set; }
+        /// <summary>The world this floor belongs to: the Ash Below for floors 1-15, then the Neon Arcology.</summary>
+        public WorldDefinition World => WorldCatalog.ForFloor(Floor);
+        /// <summary>Until when the HUD announces the world just entered.</summary>
+        public float WorldBannerUntil { get; private set; }
         public int Kills { get; set; }
         public int Seed { get; private set; }
         public Camera View => view;
@@ -166,6 +170,7 @@ namespace Slopgame
             PartySize = Mathf.Max(1, partySize);
             Floor = 0;
             InShop = false;
+            WorldBannerUntil = 0f;
             Kills = 0;
             RunAshEarned = 0;
             Player = DungeonVisuals.Create(SelectedCharacter.DisplayName, transform, Vector2.zero, Vector2.one * 0.65f,
@@ -202,7 +207,8 @@ namespace Slopgame
             Map = InShop ? DungeonMap.Shop() : new DungeonMap(Seed + Floor * 7919, IsBossFloor);
             level = new GameObject(InShop ? "Crystal shop" : "Floor " + Floor).transform;
             level.SetParent(transform);
-            DungeonVisuals.DrawMap(Map, level, InShop);
+            view.backgroundColor = World.Background;
+            DungeonVisuals.DrawMap(Map, level, World, InShop);
             Player.Crystals.BeginFloor(Floor, InShop);
             Player.transform.position = (Vector2)Map.Centers[0];
             exit = Map.Centers[Map.Centers.Count - 1];
@@ -215,9 +221,16 @@ namespace Slopgame
                 Boss = enemy.gameObject.AddComponent<DungeonBoss>();
                 Boss.Initialize(this);
                 Enemies.Add(enemy);
-                DungeonVisuals.DecorateArena(level);
+                DungeonVisuals.DecorateArena(level, World);
             }
-            // Plain ashlings may turn out to be skitters (from floor 2) or cinder husks (from floor 3), from the run seed.
+            // Past the third guardian the stairs lead down into the next world.
+            if (!InShop && WorldCatalog.EntersWorld(Floor))
+            {
+                ScreenFx.Flash(FlameMesh.Alpha(World.Accent, 0.6f), 1.2f);
+                WorldBannerUntil = Time.time + 4f;
+                HeroVfx.Pulse(level, Player.transform.position, 3f, World.Accent, 0.9f);
+            }
+            // Plain ashlings (or drones) may turn out to be skitters (from floor 2) or cinder husks (from floor 3), from the run seed.
             var variants = new System.Random(Seed + Floor * 6151);
             for (int room = 1; !IsBossFloor && !InShop && room < Map.Centers.Count; room++)
             {
@@ -225,8 +238,8 @@ namespace Slopgame
                 for (int i = 0; i < count; i++)
                 {
                     Vector2 position = (Vector2)Map.Centers[room] + new Vector2(i % 2, i / 2);
-                    var enemy = DungeonVisuals.Create("Ashling", level, position, Vector2.one * 0.6f,
-                        new Color(1f, 0.35f, 0.4f), 3).gameObject.AddComponent<DungeonEnemy>();
+                    var enemy = DungeonVisuals.Create(World.BasicName, level, position, Vector2.one * 0.6f,
+                        World.BasicTint, 3).gameObject.AddComponent<DungeonEnemy>();
                     enemy.Run = this;
                     enemy.Health = EnemyHealthScaled(EnemyHealthForFloor(Floor));
                     enemy.Speed = Mathf.Min(3.6f, 1.8f + Floor * 0.12f);
@@ -234,7 +247,7 @@ namespace Slopgame
                     else if (i == 0 && room % 2 == 0)
                     {
                         enemy.IsTank = true;
-                        enemy.name = "Iron brute";
+                        enemy.name = World.BruteName;
                         enemy.Health *= 3;
                         enemy.Speed *= 0.6f;
                         enemy.transform.localScale = Vector2.one * 0.9f;

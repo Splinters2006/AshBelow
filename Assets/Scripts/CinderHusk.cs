@@ -5,6 +5,7 @@ namespace Slopgame
     /// <summary>
     /// A slow, hardy husk with a burning core. When it dies the core flares for a moment and then bursts,
     /// hurting other enemies caught nearby (never the heroes), so it is worth killing in a crowd.
+    /// In the Neon Arcology it is a volatile core bot whose reactor blows the same way.
     /// </summary>
     public sealed class CinderHusk : EnemyVariant
     {
@@ -14,8 +15,9 @@ namespace Slopgame
         private static Sprite sprite;
         private SpriteRenderer body;
 
-        public override string DisplayName => "Cinder husk";
-        public override Color Tint => Color.Lerp(new Color(0.55f, 0.2f, 0.16f), Ember, 0.35f + 0.25f * Mathf.Sin(Time.time * 5f));
+        public override string DisplayName => World.HighTech ? "Volatile core" : "Cinder husk";
+        public override Color Tint => Color.Lerp(World.HighTech ? new Color(0.45f, 0.45f, 0.6f) : new Color(0.55f, 0.2f, 0.16f),
+            World.HighTech ? WorldCatalog.NeonPink : Ember, 0.35f + 0.25f * Mathf.Sin(Time.time * 5f));
         public override int CrystalValue => 2;
 
         public override void Configure(DungeonEnemy enemy)
@@ -35,7 +37,9 @@ namespace Slopgame
             fuse.Begin(enemy.Run, enemy.transform.position);
         }
 
-        public override Sprite Sprite => sprite != null ? sprite : sprite = DungeonVisuals.PaletteSprite(DisplayName, new[]
+        public override Sprite Sprite => World.HighTech ? NeonSprites.Core : AshSprite;
+
+        private static Sprite AshSprite => sprite != null ? sprite : sprite = DungeonVisuals.PaletteSprite("Cinder husk", new[]
         {
             "................", ".....DDDDDD.....", "....DWWWWWWD....", "...DWDDWWDDWD...", "...DWWWWWWWWD...",
             "..DDWWDDDDWWDD..", ".DWWDDEEEEDDWWD.", ".DWDDEECCEEDDWD.", ".DWDDEECCEEDDWD.", ".DWWDDEEEEDDWWD.",

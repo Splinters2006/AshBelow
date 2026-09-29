@@ -12,6 +12,16 @@ namespace Slopgame
         public abstract string DisplayName { get; }
         public abstract Sprite Sprite { get; }
         public abstract Color Tint { get; }
+        /// <summary>The world this enemy was spawned in, which decides how it looks.</summary>
+        protected WorldDefinition World
+        {
+            get
+            {
+                if (owner == null) owner = GetComponent<DungeonEnemy>();
+                return owner != null && owner.Run != null ? owner.Run.World : WorldCatalog.All[0];
+            }
+        }
+        private DungeonEnemy owner;
         /// <summary>Crystals dropped on death.</summary>
         public virtual int CrystalValue => 1;
 
