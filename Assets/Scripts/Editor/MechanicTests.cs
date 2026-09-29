@@ -1,4 +1,5 @@
 using System;
+using System.Reflection;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -6,7 +7,8 @@ using UnityEngine;
 namespace Slopgame.Editor
 {
     /// <summary>
-    /// Play-mode smoke test for the reworked elemental effects, every class mechanic on R and the Gambler.
+    /// Play-mode smoke test for the reworked elemental effects, every class mechanic on R, the Gambler and the
+    /// universal kill / shop boons (checked once with the Knight, whose shield gives a known class-skill cooldown).
     /// Each class is started in turn with its mechanic bought; a class may wait a few frames before it is checked.
     /// </summary>
     public static class MechanicTests
@@ -48,6 +50,14 @@ namespace Slopgame.Editor
         }
 
         private static void Require(bool condition, string message) { if (!condition) throw new Exception(message); }
+        private static void Near(float value, float expected, string message) => Require(Mathf.Abs(value - expected) < 0.01f, message);
+        /// <summary>Sets the dodge cooldown directly, so the test never has to roll (a roll would block raising the shield).</summary>
+        private static readonly FieldInfo RollReady = typeof(DungeonPlayer).GetField("rollReady", BindingFlags.Instance | BindingFlags.NonPublic);
+        private static readonly PowerupType[] UniversalBoons =
+        {
+            PowerupType.NerveSnap, PowerupType.PyreBurst, PowerupType.Kindling, PowerupType.Massacre, PowerupType.Momentum,
+            PowerupType.Bloodrush, PowerupType.StillHunter, PowerupType.Prospector, PowerupType.Haggler, PowerupType.MerchantsFavor
+        };
 
         private static void StartHero(DungeonRun run)
         {
@@ -98,7 +108,7 @@ namespace Slopgame.Editor
                 }
                 hero++;
                 if (hero < Classes.Length) { StartHero(run); return; }
-                Finish(!failed, "Burn / freeze / shock, Shield Taunt, Elemental Quiver, Wild Storm, Sharpened Dagger, Heavenly Host, Super Angry, Demonic Power, the Gambler and Overclock");
+                Finish(!failed, "Burn / freeze / shock, universal kill and shop boons, Shield Taunt, Elemental Quiver, Wild Storm, Sharpened Dagger, Heavenly Host, Super Angry, Demonic Power, the Gambler and Overclock");
             }
             catch (Exception error) { Debug.LogException(error); Finish(false, error.Message); }
         }
@@ -167,6 +177,7 @@ namespace Slopgame.Editor
                         "A bolt passed through the taunt shield or was reflected.");
                     Vector2 near = (Vector2)player.transform.position + aim * 5f;
                     Require(run.NearestHero(near) == (Vector2)player.transform.position, "Taunting Knight is not targeted.");
+                    TestUniversalBoons(player, aim, enemies);
                     return false;
                 }
                 case WeaponType.Bow:
@@ -299,6 +310,95 @@ namespace Slopgame.Editor
                 }
             }
             return false;
+        }
+
+        /// <summary>
+        /// The universal boons, all within one frame so every kill counts toward the same 1-second streak.
+        /// On entry enemies[0] is frozen, enemies[1] is burning and enemies[2] is untouched; none has died yet.
+        /// </summary>
+        private static void TestUniversalBoons(DungeonPlayer player, Vector2 aim, DungeonEnemy[] enemies)
+        {
+            var powers = player.Powerups;
+            var shield = player.Shield;
+            var frozen = enemies[0];
+            var burning = enemies[1];
+            var plain = enemies[2];
+            Require(shield != null && frozen.IsHeld && burning.IsBurning && !plain.IsHeld && !plain.IsBurning, "Universal boon test set-up is wrong.");
+
+            // Any hero can find them as room rewards, and the crystal merchant sells each one as a relic.
+            foreach (var type in UniversalBoons)
+            {
+                var boon = PowerupCatalog.Get(type);
+                Require(!boon.ClassWeapon.HasValue && boon.RequiredAbility == AbilityType.None && powers.CanTake(type), boon.Name + " is not universal.");
+                Require(Array.Exists(CrystalShop.Offers, offer => offer.Category == CrystalShop.Category.Relic && offer.Powerup == type),
+                    "No crystal shop relic sells " + boon.Name + ".");
+            }
+
+            // Momentum: the second kill within a second resets the dodge (kills 1-2 of the streak).
+            powers.Add(PowerupType.Momentum);
+            RollReady.SetValue(player, Time.time + DungeonPlayer.RollCooldown);
+            powers.OnKill(player, plain);
+            Require(player.DodgeCooldownRemaining > 1f, "Momentum reset the dodge after a single kill.");
+            powers.OnKill(player, plain);
+            Require(player.DodgeCooldownRemaining == 0f, "Momentum did not reset the dodge after two quick kills.");
+
+            // Massacre: the fifth kill within a second resets the class skill (kills 3-5).
+            powers.Add(PowerupType.Massacre);
+            Require(shield.Raise(aim) && player.Weapon.HeavyCooldownRemaining > 0f, "Could not raise the shield for Massacre.");
+            powers.OnKill(player, plain);
+            powers.OnKill(player, plain);
+            Require(player.Weapon.HeavyCooldownRemaining > 0f, "Massacre reset the class skill before the fifth kill.");
+            powers.OnKill(player, plain);
+            Require(player.Weapon.HeavyCooldownRemaining == 0f, "Massacre did not reset the class skill on the fifth quick kill.");
+
+            // Nerve Snap: killing a frozen or paralysed enemy resets the class skill; an ordinary kill does not.
+            powers.Add(PowerupType.NerveSnap);
+            Require(shield.Raise(aim), "Could not raise the shield for Nerve Snap.");
+            powers.OnKill(player, plain);
+            Require(player.Weapon.HeavyCooldownRemaining > 0f, "Nerve Snap reset the class skill on an ordinary kill.");
+            powers.OnKill(player, frozen);
+            Require(player.Weapon.HeavyCooldownRemaining == 0f, "Nerve Snap did not reset the class skill on a frozen kill.");
+
+            // Still Hunter: a frozen or paralysed kill takes 0.5 s off every cooldown. Bloodrush: every kill does, and they stack.
+            powers.Add(PowerupType.StillHunter);
+            RollReady.SetValue(player, Time.time + DungeonPlayer.RollCooldown);
+            powers.OnKill(player, plain);
+            Near(player.DodgeCooldownRemaining, DungeonPlayer.RollCooldown, "Still Hunter cut cooldowns on an ordinary kill.");
+            powers.OnKill(player, frozen);
+            Near(player.DodgeCooldownRemaining, DungeonPlayer.RollCooldown - 0.5f, "Still Hunter did not take 0.5 s off the dodge.");
+            powers.Add(PowerupType.Bloodrush);
+            powers.OnKill(player, plain);
+            Near(player.DodgeCooldownRemaining, DungeonPlayer.RollCooldown - 1f, "Bloodrush did not take 0.5 s off the dodge.");
+            Require(shield.Raise(aim), "Could not raise the shield for Bloodrush.");
+            float skill = player.Weapon.HeavyCooldownRemaining;
+            powers.OnKill(player, plain);
+            Near(player.Weapon.HeavyCooldownRemaining, skill - 0.5f, "Bloodrush did not shorten the class skill.");
+            Require(player.DodgeCooldownRemaining == 0f, "A cooldown cut left the dodge below zero or did not finish it.");
+
+            // Kindling: a freeze (or shock) sets the enemy burning as well.
+            powers.Add(PowerupType.Kindling);
+            CombatDamage.ApplyEffect(player, plain, DamageElement.Ice, 4);
+            Require(plain.IsFrozen && plain.IsBurning, "Kindling did not set a frozen enemy burning.");
+
+            // Pyre Burst: a burning enemy bursts when it dies, hurting the enemy beside it.
+            powers.Add(PowerupType.PyreBurst);
+            int before = frozen.Health;
+            powers.OnKill(player, burning);
+            Require(frozen.Health < before, "Pyre Burst did not hurt the enemy next to the burning one.");
+
+            // Prospector (always at rank 2), Haggler (25% / 50% off) and Merchant's Favor (one reroll).
+            Require(!powers.RollExtraCrystals(), "Extra crystals dropped without Prospector.");
+            powers.Add(PowerupType.Prospector);
+            powers.Add(PowerupType.Prospector);
+            Require(powers.RollExtraCrystals() && !powers.Add(PowerupType.Prospector), "Rank-2 Prospector did not always drop extra crystals, or took a third rank.");
+            Near(powers.ShopPriceMultiplier, 1f, "Shop prices discounted without Haggler.");
+            powers.Add(PowerupType.Haggler);
+            Near(powers.ShopPriceMultiplier, 0.75f, "Haggler rank 1 is not 25% off.");
+            powers.Add(PowerupType.Haggler);
+            Near(powers.ShopPriceMultiplier, 0.5f, "Haggler rank 2 is not 50% off.");
+            Require(!powers.Add(PowerupType.Haggler), "Haggler took a third rank.");
+            Require(powers.ShopRerolls == 0 && powers.Add(PowerupType.MerchantsFavor) && powers.ShopRerolls == 1,
+                "Merchant's Favor did not grant one shop reroll.");
         }
 
         private static void FinishWait(DungeonRun run)
