@@ -25,7 +25,7 @@ namespace Slopgame
         private EnemyTactics tactics;
         private SpriteRenderer burnIndicator;
         public bool IsChilled => Time.time < chilledUntil;
-        public float ActionSpeedMultiplier => IsChilled ? 0.5f : 1f;
+        public float ActionSpeedMultiplier => (IsChilled ? 0.5f : 1f) * (HolyBubble.SlowsAt(transform.position) ? HolyBubble.SanctuarySlow : 1f);
         public float MoveMultiplier => ActionSpeedMultiplier;
         // Attack timers follow local action time; status durations and damage-over-time use world time.
         public float ActionTime { get; private set; }

@@ -18,7 +18,7 @@ namespace Slopgame
     public enum CoopBoltEventKind : byte { Reflected, Consumed }
     public enum SupportKind : byte { Heal, Protect, Bless }
     public enum FxKind : byte { Arrow, Spell, Slash, Bolt, GlowBolt, Ring, Pulse, Rift, Execution, Singularity, Punch, RearHit, Knife, PiercingShot, Aegis, Holy, Sanctuary,
-        Windstep, Shadowstep, Stab, Quake, HolySword, Venom, HeavyPunch, Flurry }
+        Windstep, Shadowstep, Stab, Quake, HolySword, Venom, HeavyPunch, Flurry, SanctuaryEnd }
 
     public struct PlayerStateMessage
     {

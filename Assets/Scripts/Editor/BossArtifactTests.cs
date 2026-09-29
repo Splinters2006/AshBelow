@@ -489,6 +489,8 @@ namespace Slopgame.Editor
                     var outgoing = PlayerProjectile.Spawn(run, origin, Vector2.left, 1);
                     outgoing.Advance(0.5f);
                     Require(incoming.IsSpent && outgoing.IsSpent && player.Health == player.MaxHealth, "Sanctuary let a projectile cross its edge.");
+                    player.GetComponent<PaladinRelics>().EndSanctuary();
+                    Require(!bubble.IsActive && !HolyBubble.SlowsAt(origin), "Recasting Sanctuary did not drop it.");
                     break;
                 case AbilityType.Aegis:
                     Require(player.IsInvulnerable && run.ProjectileRoot.GetComponentInChildren<HolyBubble>() != null, "Aegis showed no bubble."); break;

@@ -5,12 +5,15 @@ namespace Slopgame
 {
     /// <summary>
     /// A shimmering bubble. Aegis wraps the Knight in one that follows them; Sanctuary surrounds the Paladin with a
-    /// bubble of holy light that moves with them and stops every projectile crossing its edge, in either direction.
-    /// Projectiles ask <see cref="Blocks"/> each step.
+    /// bubble of holy light that moves with them and destroys every projectile, friend or foe, that is inside it or
+    /// crosses its edge. It shoves enemies out as it forms and slows any that come back in.
+    /// Projectiles ask <see cref="Blocks"/> each step; enemies ask <see cref="SlowsAt"/>.
     /// </summary>
     public sealed class HolyBubble : MonoBehaviour
     {
         public static readonly Color Holy = new Color(1f, 0.88f, 0.5f);
+        /// <summary>Enemies inside a Sanctuary move and act at this fraction of their speed.</summary>
+        public const float SanctuarySlow = 0.5f;
         private static readonly List<HolyBubble> blockers = new List<HolyBubble>();
         private FlameMesh mesh;
         private Transform follow;
@@ -26,9 +29,38 @@ namespace Slopgame
         public static HolyBubble Wrap(Transform root, Transform hero, float duration, Color color)
             => Create(root, hero, hero.position, 0.85f, duration, color, false);
 
-        /// <summary>A bubble that blocks projectiles crossing its edge (Sanctuary). It follows the Paladin when one is given.</summary>
-        public static HolyBubble Sanctuary(Transform root, Vector2 center, float radius, float duration, Transform follow = null)
-            => Create(root, follow, center, radius, duration, Holy, true);
+        /// <summary>
+        /// A bubble that destroys projectiles in or crossing it (Sanctuary). It follows the Paladin when one is given.
+        /// Every machine plants one; only the host (or a solo run) shoves the enemies out.
+        /// </summary>
+        public static HolyBubble Sanctuary(DungeonRun run, Vector2 center, float radius, float duration, Transform follow = null)
+        {
+            var bubble = Create(run.ProjectileRoot, follow, center, radius, duration, Holy, true);
+            if (bubble != null && !run.IsGuest) bubble.PushOut(run);
+            return bubble;
+        }
+
+        /// <summary>Drops the Sanctuary following <paramref name="hero"/> early, with its usual fade.</summary>
+        public static void EndFollowing(Transform hero)
+        {
+            foreach (var bubble in blockers)
+                if (bubble != null && bubble.follow == hero && bubble.IsActive) bubble.duration = bubble.age;
+        }
+
+        private void PushOut(DungeonRun run)
+        {
+            Vector2 c = Center;
+            foreach (var enemy in run.Enemies)
+            {
+                if (enemy == null || enemy.Health <= 0 || enemy.IsInvulnerable) continue;
+                Vector2 position = enemy.transform.position, offset = position - c;
+                float distance = offset.magnitude, clear = radius + enemy.MoveRadius + 0.15f;
+                if (distance >= clear) continue;
+                Vector2 away = distance > 0.01f ? offset / distance : Random.insideUnitCircle.normalized;
+                enemy.transform.position = run.Map.Move(position, away * (clear - distance), enemy.MoveRadius);
+                HeroVfx.Sparks(transform.parent, enemy.transform.position, color, 6, 3f, 0.3f, away, 70f);
+            }
+        }
 
         private static HolyBubble Create(Transform root, Transform follow, Vector2 center, float radius, float duration, Color color, bool blocks)
         {
@@ -49,17 +81,30 @@ namespace Slopgame
 
         public bool Contains(Vector2 point) => Vector2.Distance(point, Center) < radius;
 
-        /// <summary>True when moving from <paramref name="from"/> to <paramref name="to"/> crosses a Sanctuary's edge.</summary>
+        /// <summary>
+        /// True when a projectile stepping from <paramref name="from"/> to <paramref name="to"/> touches a Sanctuary:
+        /// crossing its edge either way, or flying anywhere inside (even one loosed from within).
+        /// </summary>
         public static bool Blocks(Vector2 from, Vector2 to)
         {
             for (int i = blockers.Count - 1; i >= 0; i--)
             {
                 var bubble = blockers[i];
                 if (bubble == null || !bubble.IsActive) continue;
-                if (bubble.Contains(from) == bubble.Contains(to)) continue;
-                bubble.Ripple(to);
+                bool fromInside = bubble.Contains(from), toInside = bubble.Contains(to);
+                if (!fromInside && !toInside) continue;
+                if (fromInside != toInside) bubble.Ripple(to);
+                else HeroVfx.Sparks(bubble.transform.parent, to, bubble.color, 5, 2f, 0.22f);
                 return true;
             }
+            return false;
+        }
+
+        /// <summary>True when <paramref name="point"/> lies inside an active Sanctuary, which slows enemies there.</summary>
+        public static bool SlowsAt(Vector2 point)
+        {
+            for (int i = blockers.Count - 1; i >= 0; i--)
+                if (blockers[i] != null && blockers[i].IsActive && blockers[i].Contains(point)) return true;
             return false;
         }
 

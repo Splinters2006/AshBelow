@@ -1,5 +1,0 @@
-add keybind editor
-add visuaL for paladin blessing charging in coop
-add restart run button on coop
-reduce projectile speed of archdemon in bullethell phase, make the burning ground deal 1 dmg per second, make the burning ground area more obvious before it happens, increasse time before it happens and enlarge the safe area
-make archdemon look more menacing, make it a good sprite, add extra attacks to the dashing boss,

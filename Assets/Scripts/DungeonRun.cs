@@ -62,7 +62,7 @@ namespace Slopgame
                 || UnityEditor.SessionState.GetBool("AdminPreview", false))
                 saveDirectory = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "ashbelow-tests", System.Guid.NewGuid().ToString("N"));
 #endif
-#if DEVELOPMENT_BUILD || UNITY_EDITOR
+#if DEBUG || UNITY_EDITOR
             // Scripted co-op smoke runs must never touch a real wallet either.
             if (System.Array.IndexOf(System.Environment.GetCommandLineArgs(), "-coopSmoke") >= 0)
                 saveDirectory = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "ashbelow-tests", System.Guid.NewGuid().ToString("N"));

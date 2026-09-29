@@ -180,7 +180,7 @@ namespace Slopgame
             if (dashesLeft > 0) { BeginAim(toHero, 0.32f); return; }
             if (IsEnraged)
                 // The final cut of a bloodied chain scatters a ring of blade shards.
-                for (int i = 0; i < 10; i++) Fire(transform.position, Quaternion.Euler(0, 0, i * 36f) * dashDirection);
+                for (int i = 0; i < 10; i++) Fire(transform.position, Quaternion.Euler(0, 0, i * 36f) * dashDirection, EnemyProjectile.DefaultSpeed, true);
             Recover(IsEnraged ? 1.1f : 1.5f);
         }
 
@@ -190,10 +190,10 @@ namespace Slopgame
             Vector2 aim = toHero.sqrMagnitude > 0.01f ? toHero.normalized : Enemy.Facing.Direction;
             int count = IsEnraged ? 7 : 5;
             for (int i = 0; i < count; i++)
-                Fire(transform.position, Quaternion.Euler(0, 0, (i - (count - 1) * 0.5f) * 14f) * aim, BladeSpeed);
+                Fire(transform.position, Quaternion.Euler(0, 0, (i - (count - 1) * 0.5f) * 14f) * aim, BladeSpeed, true);
             if (IsEnraged)
                 for (int i = 0; i < count - 1; i++)
-                    Fire(transform.position, Quaternion.Euler(0, 0, (i - (count - 2) * 0.5f) * 14f) * aim, BladeSpeed * 0.7f);
+                    Fire(transform.position, Quaternion.Euler(0, 0, (i - (count - 2) * 0.5f) * 14f) * aim, BladeSpeed * 0.7f, true);
             HeroVfx.Slash(Run.ProjectileRoot, transform.position, aim, 1.2f, 120f, Blade, 0.2f);
             CoopFx.Slash(Run, transform.position, aim, 1.2f, 120f, Blade);
             state = State.Stalk;

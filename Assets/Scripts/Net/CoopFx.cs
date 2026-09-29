@@ -42,6 +42,7 @@ namespace Slopgame
         /// judges its own bolts.
         /// </summary>
         public static void Sanctuary(DungeonRun run, Vector2 center, float radius, float duration) => Send(run, FxKind.Sanctuary, center, default, null, radius, duration);
+        public static void SanctuaryEnd(DungeonRun run) => Send(run, FxKind.SanctuaryEnd, default);
         public static void Windstep(DungeonRun run, Vector2 from, Vector2 to) => Send(run, FxKind.Windstep, from, to);
         public static void Shadowstep(DungeonRun run, Vector2 from, Vector2 to) => Send(run, FxKind.Shadowstep, from, to);
         public static void Stab(DungeonRun run, Vector2 origin, Vector2 aim, float reach, Color color) => Send(run, FxKind.Stab, origin, aim, color, reach);
@@ -94,7 +95,11 @@ namespace Slopgame
                     if (knight != null) HolyBubble.Wrap(root, knight.transform, fx.F1, AbilityCatalog.Ice);
                     break;
                 case FxKind.Holy: HolyLightVfx.Play(root, fx.A, fx.F1, fx.F2); break;
-                case FxKind.Sanctuary: HolyBubble.Sanctuary(root, fx.A, fx.F1, fx.F2, FindHero(run, fx.Origin)?.transform); break;
+                case FxKind.Sanctuary: HolyBubble.Sanctuary(run, fx.A, fx.F1, fx.F2, FindHero(run, fx.Origin)?.transform); break;
+                case FxKind.SanctuaryEnd:
+                    var paladin = FindHero(run, fx.Origin);
+                    if (paladin != null) HolyBubble.EndFollowing(paladin.transform);
+                    break;
                 case FxKind.Windstep: WindstepVfx.Play(root, fx.A, fx.B); break;
                 case FxKind.Shadowstep: ShadowstepVfx.Play(root, fx.A, fx.B); break;
                 case FxKind.Stab: StabVfx.Play(root, fx.A, fx.B, fx.F1, color); break;

@@ -350,6 +350,7 @@ namespace Slopgame
             writer.WriteValueSafe(position);
             writer.WriteValueSafe(direction);
             writer.WriteValueSafe(bolt.Speed);
+            writer.WriteValueSafe(bolt.IsBlade);
             Session.Send(CoopMessages.Bolt, writer);
         }
 
@@ -361,8 +362,9 @@ namespace Slopgame
             reader.ReadValueSafe(out Vector2 position);
             reader.ReadValueSafe(out Vector2 direction);
             reader.ReadValueSafe(out float speed);
+            reader.ReadValueSafe(out bool blade);
             if (floor != Run.Floor || Run.ProjectileRoot == null) return;
-            var bolt = EnemyProjectile.Spawn(Run, Run.ProjectileRoot, position, direction, false, speed);
+            var bolt = EnemyProjectile.Spawn(Run, Run.ProjectileRoot, position, direction, false, speed, blade);
             bolt.Id = id;
             bolts[id] = bolt;
         }

@@ -18,17 +18,23 @@ namespace Slopgame
         public bool IsReflected { get; private set; }
         private int reflectedDamage;
         public bool IsSpent => spent;
+        /// <summary>A thrown steel blade rather than an ember bolt; behaves identically.</summary>
+        public bool IsBlade { get; private set; }
 
         public static EnemyProjectile Spawn(DungeonRun run, Transform parent, Vector2 position, Vector2 direction) => Spawn(run, parent, position, direction, true);
 
         /// <summary>Every machine flies its own copy; a copy only ever strikes that machine's hero.</summary>
-        public static EnemyProjectile Spawn(DungeonRun run, Transform parent, Vector2 position, Vector2 direction, bool announce, float speed = DefaultSpeed)
+        public static EnemyProjectile Spawn(DungeonRun run, Transform parent, Vector2 position, Vector2 direction, bool announce,
+            float speed = DefaultSpeed, bool blade = false)
         {
-            var projectile = DungeonVisuals.CreateEmberBolt(parent, position).gameObject.AddComponent<EnemyProjectile>();
+            var sprite = blade ? DungeonVisuals.CreateThrownBlade(parent, position) : DungeonVisuals.CreateEmberBolt(parent, position);
+            var projectile = sprite.gameObject.AddComponent<EnemyProjectile>();
             projectile.run = run;
             projectile.direction = direction.normalized;
             projectile.speed = speed;
+            projectile.IsBlade = blade;
             projectile.transform.rotation = Quaternion.Euler(0, 0, Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg);
+            if (blade) CombatVfx.Trail(projectile.gameObject, new Color(0.45f, 0.95f, 1f, 0.6f), 0.07f, 0.12f);
             if (announce && run.IsNetworked && run.Coop.IsHost) run.Coop.AnnounceBolt(projectile, position, projectile.direction);
             return projectile;
         }

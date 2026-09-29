@@ -6,6 +6,7 @@ namespace Slopgame
     {
         private static Sprite square;
         private static Sprite emberBolt;
+        private static Sprite thrownBlade;
 
         private static readonly Sprite[] enemySprites = new Sprite[3];
         private static Sprite flameSprite, shadowHero, duelistSprite, archdemonSprite, archdemonDetails, wardenSprite, wardenDetails;
@@ -97,6 +98,48 @@ namespace Slopgame
             }
             var renderer = Create("Ember bolt", parent, position, Vector2.one, Color.white, 6);
             renderer.sprite = emberBolt;
+            return renderer;
+        }
+
+        /// <summary>A thrown steel blade: the point sits at the collision position, the hilt trails behind.</summary>
+        public static SpriteRenderer CreateThrownBlade(Transform parent, Vector2 position)
+        {
+            if (thrownBlade == null)
+            {
+                const int width = 32, height = 10;
+                var texture = new Texture2D(width, height, TextureFormat.RGBA32, false)
+                {
+                    name = "Thrown blade sprite",
+                    filterMode = FilterMode.Point,
+                    wrapMode = TextureWrapMode.Clamp
+                };
+                var pixels = new Color[width * height];
+                var steel = new Color(0.8f, 0.86f, 0.94f);
+                var edge = new Color(0.45f, 0.95f, 1f);
+                var grip = new Color(0.32f, 0.2f, 0.16f);
+                var guard = new Color(0.55f, 0.6f, 0.7f);
+                for (int y = 0; y < height; y++)
+                    for (int x = 0; x < width; x++)
+                    {
+                        float dy = Mathf.Abs(y + 0.5f - 5f);
+                        Color color = Color.clear;
+                        if (x >= 3 && x <= 9 && dy < 1f) color = grip;
+                        else if (x == 2 && dy < 1.5f) color = guard;
+                        else if (x >= 10 && x <= 11 && dy < 4f) color = guard;
+                        else if (x >= 12 && x <= 30)
+                        {
+                            // Tapers from a broad base to the point.
+                            float half = Mathf.Lerp(2.6f, 0.4f, (x - 12f) / 18f);
+                            if (dy < half) color = dy < 0.6f ? Color.white : dy > half - 1f ? edge : steel;
+                        }
+                        pixels[y * width + x] = color;
+                    }
+                texture.SetPixels(pixels);
+                texture.Apply(false, true);
+                thrownBlade = Sprite.Create(texture, new Rect(0, 0, width, height), new Vector2(26f / width, 0.5f), 40f);
+            }
+            var renderer = Create("Thrown blade", parent, position, Vector2.one, Color.white, 6);
+            renderer.sprite = thrownBlade;
             return renderer;
         }
 

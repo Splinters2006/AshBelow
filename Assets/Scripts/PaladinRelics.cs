@@ -36,14 +36,25 @@ namespace Slopgame
             }
         }
 
-        /// <summary>A bubble of holy light around the Paladin that moves with them and stops every projectile crossing its edge, on every machine.</summary>
-        public HolyBubble Sanctuary(float duration)
+        /// <summary>
+        /// A bubble of holy light around the Paladin that moves with them, on every machine. It destroys every projectile
+        /// inside or crossing it, shoves enemies out as it forms and slows those that wander back in.
+        /// </summary>
+        public HolyBubble Sanctuary(float radius, float duration)
         {
             Vector2 center = transform.position;
-            CoopFx.Sanctuary(Player.Run, center, SanctuaryRadius, duration);
+            CoopFx.Sanctuary(Player.Run, center, radius, duration);
             Player.Weapon?.Hide();
-            sanctuary = HolyBubble.Sanctuary(Player.Run.ProjectileRoot, center, SanctuaryRadius, duration, transform);
+            sanctuary = HolyBubble.Sanctuary(Player.Run, center, radius, duration, transform);
             return sanctuary;
+        }
+
+        /// <summary>Recasting Sanctuary drops it early, on every machine.</summary>
+        public void EndSanctuary()
+        {
+            if (!IsSanctuaryActive) return;
+            HolyBubble.EndFollowing(transform);
+            CoopFx.SanctuaryEnd(Player.Run);
         }
     }
 }

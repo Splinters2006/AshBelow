@@ -48,6 +48,12 @@ namespace Slopgame
         /// </summary>
         public bool TryUse(int slot, Vector2 aim)
         {
+            // Recasting an active Sanctuary drops it; its cooldown keeps running from the original cast.
+            if (slot >= 0 && slot < SlotCount && equipped[slot] == AbilityType.Sanctuary && Player.Run.IsPlaying)
+            {
+                var holder = Player.GetComponent<PaladinRelics>();
+                if (holder != null && holder.IsSanctuaryActive) { holder.EndSanctuary(); return true; }
+            }
             if (slot < 0 || slot >= SlotCount || !Player.Run.IsPlaying || Player.IsRolling || Player.IsBusy
                 || Time.time < castReadyAt || CooldownRemaining(slot) > 0f || aim.sqrMagnitude < 0.001f) return false;
             var definition = AbilityCatalog.Get(equipped[slot]);
@@ -114,7 +120,8 @@ namespace Slopgame
                     if (definition.Type == AbilityType.Judgment)
                         paladin.Judgment(FindGroundLanding(Player.Run.Map, transform.position, aim, Mathf.Min(PaladinRelics.JudgmentRange, cursorDistance)),
                             damage + powers.Count(PowerupType.JudgmentPower) * 2, 2f);
-                    else paladin.Sanctuary(PaladinRelics.SanctuaryDuration + (rank - 1) * 0.5f + powers.Count(PowerupType.SanctuaryDuration) * 0.4f);
+                    else paladin.Sanctuary(PaladinRelics.SanctuaryRadius + powers.Count(PowerupType.SanctuarySize) * 0.5f,
+                        PaladinRelics.SanctuaryDuration + (rank - 1) * 0.5f);
                     break;
                 case AbilityType.Eclipse:
                 case AbilityType.SoulRend:
