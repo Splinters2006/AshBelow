@@ -67,6 +67,7 @@ namespace Slopgame
         /// <summary>Teammates see the paw land where it was aimed when cast (their copy does not track the target).</summary>
         public static void DemonPaw(DungeonRun run, Vector2 center, float radius, float windup)
             => Send(run, FxKind.DemonPaw, center, default, null, radius, windup);
+        public static void DemonHead(DungeonRun run, Vector2 center, float radius) => Send(run, FxKind.DemonHead, center, default, null, radius);
 
         private static RemoteHero FindHero(DungeonRun run, ulong id)
         {
@@ -123,6 +124,7 @@ namespace Slopgame
                 case FxKind.TailSweep: TailVfx.Sweep(root, fx.A, fx.B, fx.F1, fx.F2, color); break;
                 case FxKind.Pentagram: PentagramVfx.Play(root, fx.A, fx.F1, fx.F2); break;
                 case FxKind.DemonPaw: DemonPawVfx.Play(root, fx.A, fx.F1, fx.F2); break;
+                case FxKind.DemonHead: DemonHeadVfx.Play(root, fx.A, fx.F1); break;
                 case FxKind.Flurry:
                     var brawler = FindHero(run, fx.Origin);
                     if (brawler != null) BrawlerVfx.Flurry(root, brawler.transform, () => brawler != null ? brawler.Aim : Vector2.zero, fx.F1, fx.F2, color, fx.N / 1000f);

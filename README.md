@@ -93,7 +93,7 @@ Once you have beaten the third guardian (floor 15) in a single descent, the Ash 
 | **Assassin** | **Sharpened Dagger:** +1 damage for 7.5 s. Every hit on an enemy's back adds +1 more and refreshes it. |
 | **Paladin** | **Heavenly Host:** after your blessings add 50 bonus damage (more in co-op), angels revive the ally who has been down longest with half health, or heal the weakest ally to full. |
 | **Brawler** | **Super Angry:** after taking 5 damage, go berserk with huge speed, reach, area, charge speed and damage for 8 s. |
-| **Demoness** | **Demonic Power:** after 7 paralyses, terrify every enemy around you: they turn their backs and are paralysed. |
+| **Demoness** | **Demonic Power:** after 7 paralyses, the Demon Lord's massive head rises behind you and roars, terrifying every enemy around you: they turn their backs and are paralysed. |
 
 ## Ash and the Ash shop
 
