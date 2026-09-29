@@ -23,11 +23,15 @@ namespace Slopgame
         public bool WaitingForTeam { get; private set; }
         public int WaitingCount => IsHost ? Mathf.Max(0, Session.Peers.Count - choicesDone.Count) : 0;
         public bool RunOver { get; private set; }
+        /// <summary>Guests who asked to restart the descent; the host restarts once every guest has asked.</summary>
+        public int RestartVotes { get; private set; }
+        public int RestartVotesNeeded => Mathf.Max(1, Session != null ? Session.Peers.Count - 1 : 1);
+        public bool VotedRestart { get; private set; }
 
         private readonly List<RemoteHero> remoteHeroes = new List<RemoteHero>();
         private readonly Dictionary<ushort, DungeonEnemy> enemies = new Dictionary<ushort, DungeonEnemy>();
         private readonly Dictionary<int, EnemyProjectile> bolts = new Dictionary<int, EnemyProjectile>();
-        private readonly HashSet<ulong> choicesDone = new HashSet<ulong>(), dead = new HashSet<ulong>();
+        private readonly HashSet<ulong> choicesDone = new HashSet<ulong>(), dead = new HashSet<ulong>(), restartVotes = new HashSet<ulong>();
         private CoopChoice? openChoice;
         private float nextState, nextSnapshot;
         private int nextBolt;
@@ -53,6 +57,8 @@ namespace Slopgame
             Session.Handle(CoopMessages.Advance, OnAdvance);
             Session.Handle(CoopMessages.Died, OnDied);
             Session.Handle(CoopMessages.Hazard, OnHazard);
+            Session.Handle(CoopMessages.RestartVote, OnRestartVote);
+            Session.Handle(CoopMessages.RestartVotes, OnRestartVotes);
             Session.Handle(CoopMessages.Over, (sender, reader) => { if (!IsHost) EndRunLocal(); });
         }
 
@@ -85,6 +91,9 @@ namespace Slopgame
         {
             if (Session.State == NetState.Lobby) Session.StartRun();
             RunOver = false;
+            restartVotes.Clear();
+            RestartVotes = 0;
+            VotedRestart = false;
             dead.Clear();
             choicesDone.Clear();
             openChoice = null;
@@ -97,6 +106,38 @@ namespace Slopgame
                 var character = Run.Characters[Mathf.Clamp(peer.ClassIndex, 0, Run.Characters.Count - 1)];
                 remoteHeroes.Add(RemoteHero.Create(Run, peer.Id, peer.Name, character, Run.Player.transform.position));
             }
+        }
+
+        /// <summary>Guest: asks the host to restart. The descent restarts once every guest has asked (the host can restart outright).</summary>
+        public void VoteRestart()
+        {
+            if (!Active || VotedRestart) return;
+            if (IsHost) { HostBeginRun(); return; }
+            VotedRestart = true;
+            // A vote stands for the rest of the descent, so it is not tied to the floor it was cast on.
+            using var writer = NetSession.Writer(8);
+            Session.Send(CoopMessages.RestartVote, writer);
+        }
+
+        private void OnRestartVote(ulong sender, FastBufferReader reader)
+        {
+            if (IsHost && Active && restartVotes.Add(sender)) ResolveRestartVotes();
+        }
+
+        private void ResolveRestartVotes()
+        {
+            if (restartVotes.Count >= RestartVotesNeeded) { HostBeginRun(); return; }
+            RestartVotes = restartVotes.Count;
+            using var writer = NetSession.Writer(8);
+            writer.WriteValueSafe(RestartVotes);
+            Session.Send(CoopMessages.RestartVotes, writer);
+        }
+
+        private void OnRestartVotes(ulong sender, FastBufferReader reader)
+        {
+            if (IsHost) return;
+            reader.ReadValueSafe(out int votes);
+            RestartVotes = votes;
         }
 
         /// <summary>Host only: sends everyone back to the party lobby.</summary>
@@ -146,6 +187,7 @@ namespace Slopgame
             choicesDone.Remove(id);
             dead.Remove(id);
             ResolveChoice();
+            if (restartVotes.Remove(id) || restartVotes.Count > 0) ResolveRestartVotes();
             CheckAllDead();
         }
 

@@ -2,60 +2,182 @@ using UnityEngine;
 
 namespace Slopgame
 {
-    /// <summary>The first guardian: a slow caster alternating an aimed ember fan and a full nova.</summary>
+    /// <summary>
+    /// The first guardian: a slow, crowned caster cycling an aimed Ember Fan, a full Nova, a rotating Ash Spiral and
+    /// Cinderfall (embers crash onto every hero). Once bloodied it blinks across the arena before Cinderfall.
+    /// </summary>
     public sealed class AshWardenBoss : BossBehaviour
     {
-        private float readyAt, fireAt;
+        private const int Patterns = 4;
+        private const int Fan = 0, Nova = 1, Spiral = 2, Cinderfall = 3;
+        // Spiral bolts drift slower than aimed ones so the rotating arms can be read and walked around.
+        private const float SpiralBoltSpeed = 5f, SpiralDuration = 2.2f;
+        public const float Size = 1.8f;
+        public static readonly Color Ember = new Color(1f, 0.55f, 0.2f);
+        public static readonly Color Violet = new Color(0.7f, 0.35f, 0.95f);
+        private float readyAt, fireAt, spiralUntil, nextSpiralShot, spiralAngle;
         private bool charging;
         private int pattern;
         private Vector2 lockedAim;
+        private WardenAura aura;
 
         public override string Title => "THE ASH WARDEN";
-        public override string Tell => charging ? pattern % 2 == 0 ? "EMBER FAN - SIDESTEP" : "NOVA - KEEP MOVING" : IsEnraged ? "ENRAGED" : "GUARDIAN OF THE RELIC";
+        public override string Tell => IsCharging ? (pattern % Patterns) switch
+        {
+            Fan => "EMBER FAN - SIDESTEP",
+            Nova => "NOVA - KEEP MOVING",
+            Spiral => "ASH SPIRAL - CIRCLE WITH THE ARMS",
+            _ => "CINDERFALL - LEAVE THE MARKS"
+        } : IsEnraged ? "ENRAGED" : "GUARDIAN OF THE RELIC";
         public override int BaseHealth(int floor) => 24 + floor * 3;
-        public override bool IsCharging => charging;
-        public override byte NetState => (byte)(pattern % 2);
+        public override bool IsCharging => charging || Spiraling;
+        public override float HitRadius => 0.95f;
+        public override float ContactReach => 1.15f;
+        public override byte NetState => (byte)(pattern % Patterns);
+        public int Pattern => pattern % Patterns;
+        public bool Spiraling => spiralUntil > Enemy.ActionTime;
 
         protected override void OnSetup()
         {
             Enemy.Speed = 1.5f;
+            transform.localScale = Vector2.one * Size;
             readyAt = Enemy.ActionTime + 2f;
-            DungeonVisuals.DecorateBoss(transform);
+            DungeonVisuals.DecorateWarden(transform);
+            aura = WardenAura.Attach(this);
+            HeroVfx.Pulse(Run.ProjectileRoot, transform.position, 3f, Violet, 0.8f);
         }
 
-        public override Color BodyColor() => Flashing(IsEnraged ? new Color(1f, 0.26f, 0.28f) : new Color(0.65f, 0.3f, 0.55f), AbilityCatalog.Gold, charging);
+        public override Color BodyColor() => Flashing(IsEnraged ? new Color(1f, 0.4f, 0.42f) : new Color(0.72f, 0.5f, 0.9f), AbilityCatalog.Gold, charging);
 
         public override void HostTick(Vector2 offset)
         {
             Enemy.Facing.TurnToward(offset, Time.deltaTime * Enemy.ActionSpeedMultiplier);
+            if (Spiraling) { SpiralTick(); return; }
             if (charging)
             {
                 if (Enemy.ActionTime < fireAt) return;
-                int shots = pattern % 2 == 0 ? (IsEnraged ? 7 : 5) : (IsEnraged ? 16 : 12);
-                for (int i = 0; i < shots; i++)
-                {
-                    float angle = pattern % 2 == 0 ? (i - (shots - 1) * 0.5f) * 14f : i * 360f / shots;
-                    Fire(transform.position, Quaternion.Euler(0, 0, angle) * lockedAim);
-                }
-                pattern++;
                 charging = false;
-                readyAt = Enemy.ActionTime + (IsEnraged ? 1.1f : 1.65f);
+                Release(offset);
             }
             else if (Enemy.ActionTime >= readyAt)
-            {
-                charging = true;
-                lockedAim = offset.sqrMagnitude > 0.01f ? offset.normalized : Vector2.down;
-                fireAt = Enemy.ActionTime + 0.85f;
-                CombatVfx.Ring(Run.ProjectileRoot, transform.position, 1.5f, AbilityCatalog.Gold, 0.85f);
-            }
+                BeginWindup(offset);
             else if (offset.magnitude > 2f)
                 transform.position = Run.Map.Move(transform.position, offset.normalized * Enemy.Speed * Enemy.MoveMultiplier * Time.deltaTime);
+        }
+
+        private void BeginWindup(Vector2 offset)
+        {
+            if (pattern % Patterns == Cinderfall && IsEnraged) Blink(offset);
+            charging = true;
+            lockedAim = offset.sqrMagnitude > 0.01f ? offset.normalized : Vector2.down;
+            fireAt = Enemy.ActionTime + 0.85f;
+            CombatVfx.Ring(Run.ProjectileRoot, transform.position, 1.5f, AbilityCatalog.Gold, 0.85f);
+            CoopFx.Pulse(Run, transform.position, 1.8f, Violet, 0.5f);
+        }
+
+        private void Release(Vector2 offset)
+        {
+            switch (pattern % Patterns)
+            {
+                case Fan:
+                case Nova:
+                    int shots = pattern % Patterns == Fan ? (IsEnraged ? 7 : 5) : (IsEnraged ? 16 : 12);
+                    for (int i = 0; i < shots; i++)
+                    {
+                        float angle = pattern % Patterns == Fan ? (i - (shots - 1) * 0.5f) * 14f : i * 360f / shots;
+                        Fire(transform.position, Quaternion.Euler(0, 0, angle) * lockedAim);
+                    }
+                    HeroVfx.Pulse(Run.ProjectileRoot, transform.position, 1.6f, Ember, 0.35f);
+                    Finish();
+                    break;
+                case Spiral:
+                    spiralUntil = Enemy.ActionTime + SpiralDuration;
+                    spiralAngle = Vector2.SignedAngle(Vector2.up, lockedAim);
+                    nextSpiralShot = Enemy.ActionTime;
+                    break;
+                default:
+                    CastCinderfall();
+                    Finish();
+                    break;
+            }
+        }
+
+        private void Finish()
+        {
+            pattern++;
+            readyAt = Enemy.ActionTime + (IsEnraged ? 1.1f : 1.65f);
+        }
+
+        /// <summary>Two (bloodied: three) arms of embers sweep around the Warden.</summary>
+        private void SpiralTick()
+        {
+            while (Enemy.ActionTime >= nextSpiralShot && Spiraling)
+            {
+                nextSpiralShot += 0.14f;
+                spiralAngle += IsEnraged ? 13f : 11f;
+                int arms = IsEnraged ? 3 : 2;
+                for (int i = 0; i < arms; i++)
+                    Fire(transform.position, Quaternion.Euler(0, 0, spiralAngle + i * 360f / arms) * Vector2.up, SpiralBoltSpeed);
+            }
+            if (!Spiraling)
+            {
+                spiralUntil = 0f;
+                Finish();
+            }
+        }
+
+        /// <summary>Embers crash onto every hero plus a few loose spots, each leaving a short-lived patch of burning ash.</summary>
+        private void CastCinderfall()
+        {
+            float telegraph = 1.1f, burn = IsEnraged ? 2.2f : 1.6f;
+            if (Run.Player.Health > 0) Hazard(HazardShape.Pool, Run.Player.transform.position, Vector2.up, 1.2f, 0f, telegraph, burn);
+            if (Run.IsNetworked)
+                foreach (var hero in Run.Coop.RemoteHeroes)
+                    if (hero != null && hero.IsAlive) Hazard(HazardShape.Pool, hero.transform.position, Vector2.up, 1.2f, 0f, telegraph, burn);
+            var arena = DungeonMap.Arena;
+            int extra = IsEnraged ? 5 : 3;
+            for (int i = 0; i < extra; i++)
+            {
+                var spot = new Vector2(Random.Range(arena.xMin + 1f, arena.xMax - 2f), Random.Range(arena.yMin + 1f, arena.yMax - 2f));
+                Hazard(HazardShape.Pool, spot, Vector2.up, 1.2f, 0f, telegraph + 0.2f + i * 0.15f, burn);
+            }
+        }
+
+        /// <summary>Bloodied: vanishes in a burst of ash and reappears elsewhere in the arena, away from the heroes.</summary>
+        private void Blink(Vector2 offset)
+        {
+            Vector2 hero = (Vector2)transform.position + offset, from = transform.position, best = from;
+            float bestDistance = 0f;
+            var arena = DungeonMap.Arena;
+            for (int attempt = 0; attempt < 8; attempt++)
+            {
+                Vector2 candidate = DungeonMap.ClampToArena(new Vector2(Random.Range(arena.xMin, arena.xMax), Random.Range(arena.yMin, arena.yMax)), 2f);
+                float distance = Vector2.Distance(candidate, hero);
+                if (distance > bestDistance && distance < 9f) { best = candidate; bestDistance = distance; }
+            }
+            if (bestDistance < 3f) return;
+            transform.position = best;
+            foreach (var point in new[] { from, best })
+            {
+                HeroVfx.Pulse(Run.ProjectileRoot, point, 1.8f, Violet, 0.45f);
+                HeroVfx.Sparks(Run.ProjectileRoot, point, Violet, 14, 4f, 0.45f, null, 360f, 1.2f);
+                CoopFx.Pulse(Run, point, 1.8f, Violet, 0.45f);
+            }
         }
 
         public override void ApplyNetState(bool isCharging, byte state)
         {
             charging = isCharging;
-            if (pattern % 2 != state % 2) pattern++;
+            pattern = state % Patterns;
+        }
+
+        public override void OnDefeated()
+        {
+            ScreenFx.Shake(0.4f, 0.7f);
+            for (int i = 0; i < 3; i++)
+                HeroVfx.Pulse(Run.ProjectileRoot, transform.position, 1.8f + i * 1.4f, i == 1 ? AbilityCatalog.Gold : Violet, 0.5f + i * 0.25f);
+            HeroVfx.Sparks(Run.ProjectileRoot, transform.position, Ember, 30, 7f, 0.8f, null, 360f, 1.5f);
+            if (aura != null) Destroy(aura.gameObject);
         }
     }
 }

@@ -101,6 +101,7 @@ namespace Slopgame
         {
             if (Player.Shield != null) return Player.Shield.Raise(aim);
             if (!CanAttack || HeavyCooldownRemaining > 0f || aim.sqrMagnitude < 0.001f) return false;
+            aim = Player.MobilityAim(aim);
             if (Player.ClassWeapon == WeaponType.Daggers)
             {
                 if (!Player.Abilities.Shadowstep(aim, Mathf.Min(PlayerAbilities.ShadowstepDistance, aim.magnitude))) return false;

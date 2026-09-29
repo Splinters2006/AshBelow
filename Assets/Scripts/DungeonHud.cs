@@ -15,7 +15,7 @@ namespace Slopgame
         // Co-op restart asks for a second click so a stray press does not throw away the party's run.
         private float restartConfirmUntil;
         private static readonly Rect RestartRect = new Rect(896, 24, 112, 40);
-        private bool CanRestartCoop => Run.IsNetworked && Run.Coop.IsHost && Run.IsPlaying;
+        private bool CanRestartCoop => Run.IsNetworked && Run.IsPlaying;
 
         public bool BlocksPointer(Vector2 screenPosition)
         {
@@ -87,10 +87,14 @@ namespace Slopgame
             if (Run.CanSkipRoom && DungeonUi.Button("skipRoom", RestartRect, "Skip room", DebugColor)) Run.DebugSkipRoom();
             if (CanRestartCoop)
             {
+                // Guests vote; the host sees how many asked and can restart at once.
+                var coop = Run.Coop;
                 bool confirming = Time.unscaledTime < restartConfirmUntil;
-                if (DungeonUi.Button("coopRunRestart", RestartRect, confirming ? "Confirm?" : "Restart", confirming ? AbilityCatalog.Gold : DungeonUi.Muted))
+                string label = confirming ? "Confirm?" : coop.VotedRestart ? $"Voted {coop.RestartVotes}/{coop.RestartVotesNeeded}"
+                    : coop.RestartVotes > 0 ? $"Restart {coop.RestartVotes}/{coop.RestartVotesNeeded}" : coop.IsHost ? "Restart" : "Vote restart";
+                if (DungeonUi.Button("coopRunRestart", RestartRect, label, confirming || coop.RestartVotes > 0 ? AbilityCatalog.Gold : DungeonUi.Muted, !coop.VotedRestart))
                 {
-                    if (confirming) { restartConfirmUntil = 0f; Run.Coop.HostBeginRun(); }
+                    if (confirming) { restartConfirmUntil = 0f; coop.VoteRestart(); }
                     else restartConfirmUntil = Time.unscaledTime + 3f;
                 }
             }
@@ -189,7 +193,8 @@ namespace Slopgame
             DungeonUi.Label(new Rect(rect.x + 24, rect.y + 24, 54, 54), glyph, 28, color, TextAnchor.MiddleCenter);
             DungeonUi.Label(new Rect(rect.x + 94, rect.y + 41, rect.width - 115, 28), tag, 12, color);
             DungeonUi.Label(new Rect(rect.x + 24, rect.y + 102, rect.width - 48, 68), title, 26);
-            DungeonUi.Label(new Rect(rect.x + 24, rect.y + 183, rect.width - 48, 86), description, 17, DungeonUi.Muted);
+            // Long descriptions scroll instead of being cut off above the card's buttons.
+            DungeonUi.ScrollingText("card" + title, new Rect(rect.x + 24, rect.y + 180, rect.width - 40, rect.height - 180 - 80), description, 17, DungeonUi.Muted);
         }
 
         /// <summary>Teammate health, their name tags in the world, and the fallen-hero banner.</summary>

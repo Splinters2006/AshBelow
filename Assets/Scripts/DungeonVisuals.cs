@@ -8,7 +8,7 @@ namespace Slopgame
         private static Sprite emberBolt;
 
         private static readonly Sprite[] enemySprites = new Sprite[3];
-        private static Sprite flameSprite, shadowHero, duelistSprite, archdemonSprite, archdemonDetails;
+        private static Sprite flameSprite, shadowHero, duelistSprite, archdemonSprite, archdemonDetails, wardenSprite, wardenDetails;
         public static Sprite FlameSprite => flameSprite != null ? flameSprite : flameSprite = PixelSprite("Burn flame", new[]
         {
             "....W...", "...WW...", "...WW.W.", "..WWWWW.", ".WWWWWW.", ".WWWWWW.", "..WWWW..", "...WW..."
@@ -165,9 +165,11 @@ namespace Slopgame
             return details;
         }
 
-        /// <summary>Body sprites for the later guardians (the Ash Warden keeps its plain block body).</summary>
+        /// <summary>Body sprites for the guardians (tinted by the boss's body colour).</summary>
         public static Sprite BossSprite(BossKind kind)
         {
+            if (kind == BossKind.AshWarden)
+                return wardenSprite != null ? wardenSprite : wardenSprite = MirroredSprite("Ash warden", WardenGrid, false, WardenDetailColor);
             if (kind == BossKind.Duelist)
                 return duelistSprite != null ? duelistSprite : duelistSprite = PixelSprite("Ashen duelist", new[]
                 {
@@ -177,7 +179,7 @@ namespace Slopgame
                     "....WWW..WWW....", "...WWW....WWW...", "...WW......WW...", "..DDD......DDD.."
                 });
             if (kind == BossKind.Archdemon)
-                return archdemonSprite != null ? archdemonSprite : archdemonSprite = MirroredSprite("Hellfire archdemon", ArchdemonGrid, false);
+                return archdemonSprite != null ? archdemonSprite : archdemonSprite = MirroredSprite("Hellfire archdemon", ArchdemonGrid, false, ArchdemonDetailColor);
             return null;
         }
 
@@ -211,10 +213,42 @@ namespace Slopgame
 
         /// <summary>The archdemon's fixed-colour layer: horns, burning eyes, fanged maw and the magma in his chest.</summary>
         public static Sprite ArchdemonDetails => archdemonDetails != null ? archdemonDetails
-            : archdemonDetails = MirroredSprite("Hellfire archdemon details", ArchdemonGrid, true);
+            : archdemonDetails = MirroredSprite("Hellfire archdemon details", ArchdemonGrid, true, ArchdemonDetailColor);
+
+        // Left half of the 32x32 Ash Warden, a hooded, crowned caster cradling an ember. Body layer (tinted): L highlight,
+        // W base, M shade, D outline. Detail layer (fixed): G gold, g dark gold, E eyes, K hood void, O ember, Y ember core.
+        private static readonly string[] WardenGrid =
+        {
+            "...............G", "..........G....G", "..........GG..GG", "..........GGGGGG",
+            "..........gGgGgG", ".........DDDDDDD", "........DLWWWWWW", ".......DLWWWWWWW",
+            ".......DWWDDDDDD", "......DLWDKKKKKK", "......DWWDKgGGGG", "......DWWDKGEEGG",
+            "......DWMDKgGGGG", "......DWMDKKgGGg", ".....DLWMDKKKKKK", ".....DWWMMDDDDDD",
+            "....DLWWWWMgGGGG", "...DLWWWWWWMDDDD", "..DLWWWWWWWWMWWW", ".DLWWMWWWWWWWMDD",
+            "DLWWMDWWWWWWDLDO", "DWWMD.DWWWWDLDOY", "DWMD..DWWWWDLDOY", "DWMD..DWWWWWDDOO",
+            "DMD...DWWMWWWWDD", ".D....DWWMWWWWWG", "......DWWMWWWWWG", ".....DLWWMWWWWWG",
+            ".....DWWMWWWMWWG", "....DLWMWWWMWWWG", "....DWMWWWMWWWMG", "....DDDDDDDDDDDD",
+        };
+
+        /// <summary>The Ash Warden's fixed-colour layer: crown, gold mask, burning eyes and the ember in its hands.</summary>
+        public static Sprite WardenDetails => wardenDetails != null ? wardenDetails
+            : wardenDetails = MirroredSprite("Ash warden details", WardenGrid, true, WardenDetailColor);
+
+        private static Color WardenDetailColor(char c)
+        {
+            switch (c)
+            {
+                case 'G': return new Color(0.98f, 0.78f, 0.32f);
+                case 'g': return new Color(0.62f, 0.44f, 0.16f);
+                case 'E': return new Color(1f, 0.97f, 0.75f);
+                case 'K': return new Color(0.04f, 0.01f, 0.07f);
+                case 'O': return new Color(1f, 0.45f, 0.1f);
+                case 'Y': return new Color(1f, 0.9f, 0.5f);
+                default: return Color.clear;
+            }
+        }
 
         /// <summary>Builds a symmetric sprite from its left half; one unit across, like the other boss bodies.</summary>
-        private static Sprite MirroredSprite(string name, string[] halfRows, bool details)
+        private static Sprite MirroredSprite(string name, string[] halfRows, bool details, System.Func<char, Color> detailColor)
         {
             int half = halfRows[0].Length, width = half * 2, height = halfRows.Length;
             var texture = new Texture2D(width, height, TextureFormat.RGBA32, false)
@@ -226,7 +260,7 @@ namespace Slopgame
                     char c = halfRows[y][x < half ? x : width - 1 - x];
                     Color? body = c == 'L' ? new Color(1f, 1f, 1f) : c == 'W' ? new Color(0.82f, 0.82f, 0.84f)
                         : c == 'M' ? new Color(0.55f, 0.55f, 0.6f) : c == 'D' ? new Color(0.08f, 0.07f, 0.1f) : (Color?)null;
-                    pixels[(height - y - 1) * width + x] = details ? (body.HasValue ? Color.clear : ArchdemonDetailColor(c)) : body ?? Color.clear;
+                    pixels[(height - y - 1) * width + x] = details ? (body.HasValue ? Color.clear : detailColor(c)) : body ?? Color.clear;
                 }
             texture.SetPixels(pixels);
             texture.Apply(false, true);
@@ -257,13 +291,14 @@ namespace Slopgame
             details.sortingOrder = body.sortingOrder + 1;
         }
 
-        public static void DecorateBoss(Transform boss)
+        public static void DecorateWarden(Transform boss)
         {
-            Detail(boss, "Mask", new Vector2(0, 0.15f), new Vector2(0.8f, 0.3f), new Color(0.12f, 0.06f, 0.18f));
-            Detail(boss, "Left eye", new Vector2(-0.23f, 0.17f), new Vector2(0.15f, 0.1f), AbilityCatalog.Gold, 7);
-            Detail(boss, "Right eye", new Vector2(0.23f, 0.17f), new Vector2(0.15f, 0.1f), AbilityCatalog.Gold, 7);
-            for (int i = -1; i <= 1; i++)
-                Detail(boss, "Crown", new Vector2(i * 0.4f, 0.65f), new Vector2(0.18f, i == 0 ? 0.5f : 0.3f), AbilityCatalog.Gold);
+            var body = boss.GetComponent<SpriteRenderer>();
+            body.sprite = BossSprite(BossKind.AshWarden);
+            var details = new GameObject("Warden details").AddComponent<SpriteRenderer>();
+            details.transform.SetParent(boss, false);
+            details.sprite = WardenDetails;
+            details.sortingOrder = body.sortingOrder + 1;
         }
 
         public static void DecorateArena(Transform root)

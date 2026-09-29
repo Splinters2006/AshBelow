@@ -9,7 +9,8 @@ namespace Slopgame
         public const string Start = "ab.start", Lobby = "ab.lobby", State = "ab.state", Enemies = "ab.enemies",
             Damage = "ab.damage", Kill = "ab.kill", Bolt = "ab.bolt", BoltEvent = "ab.boltevent", Fx = "ab.fx",
             Support = "ab.support", Interact = "ab.interact", Choice = "ab.choice", ChoiceDone = "ab.done",
-            Advance = "ab.advance", Died = "ab.died", Over = "ab.over", Hazard = "ab.hazard";
+            Advance = "ab.advance", Died = "ab.died", Over = "ab.over", Hazard = "ab.hazard",
+            RestartVote = "ab.restartvote", RestartVotes = "ab.restartvotes";
     }
 
     public enum CoopChoice : byte { Upgrade, Artifact }

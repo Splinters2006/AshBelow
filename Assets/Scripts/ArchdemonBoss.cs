@@ -12,14 +12,14 @@ namespace Slopgame
         private enum State : byte { Idle, Cross, Meteors, Nova, Ascend, Bombard, Descend, Staggered }
         private enum Attack { Cross, Meteors, Nova, Cataclysm }
         private static readonly Attack[] Rotation = { Attack.Meteors, Attack.Cross, Attack.Nova, Attack.Cataclysm, Attack.Cross, Attack.Meteors, Attack.Nova, Attack.Cataclysm };
-        private const float FlightHeight = 2.6f, InfernoTelegraph = 3.6f, InfernoDuration = 6.5f;
-        // The Cataclysm barrage is slower than a regular bolt so it can be read and weaved through.
-        private const float BombardBoltSpeed = 4.8f;
+        private const float FlightHeight = 2.6f, InfernoTelegraph = 4.6f, InfernoDuration = 6.5f;
+        // The Cataclysm barrage is much slower than a regular bolt so it can be read and weaved through.
+        private const float BombardBoltSpeed = 3.6f;
         public const float Size = 2.6f;
         public static readonly Color Hellfire = new Color(1f, 0.32f, 0.05f);
         private State state;
         private int rotation;
-        private float stateUntil, readyAt, landAt, nextVolley, nextSpiral, spiralAngle, altitude;
+        private float stateUntil, readyAt, landAt, nextVolley, nextSpiral, spiralAngle, altitude, eruptAt;
         private bool forcedCataclysm;
         private Vector2 ground, descendFrom, landing;
         private HellfireAura aura;
@@ -30,8 +30,8 @@ namespace Slopgame
             State.Cross => "INFERNAL CROSS - GET OFF THE LINES",
             State.Meteors => "BRIMSTONE RAIN - LEAVE THE MARKS",
             State.Nova => "HELLFIRE NOVA - ROLL THROUGH THE FLAMES",
-            State.Ascend => "CATACLYSM - GET INTO THE CIRCLE",
-            State.Bombard => "CATACLYSM - STAY IN THE CIRCLE  /  HE IS UNTOUCHABLE",
+            State.Ascend or State.Bombard when Time.time < eruptAt => $"CATACLYSM IN {eruptAt - Time.time:0.0}s - GET INTO THE GOLD CIRCLE",
+            State.Ascend or State.Bombard => "CATACLYSM - STAY IN THE CIRCLE  /  HE IS UNTOUCHABLE",
             State.Descend => "HE FALLS - MOVE",
             State.Staggered => "STAGGERED - PUNISH HIM",
             _ => IsEnraged ? "THE PIT OPENS WIDER" : "LORD OF THE BURNING PIT"
@@ -181,11 +181,12 @@ namespace Slopgame
         private void Cataclysm()
         {
             state = State.Ascend;
-            float radius = (IsEnraged ? 3.4f : 3.9f) + 0.45f * (Run.PartySize - 1);
+            float radius = (IsEnraged ? 4.2f : 4.7f) + 0.5f * (Run.PartySize - 1);
             var arena = DungeonMap.Arena;
             Vector2 safe = DungeonMap.ClampToArena(new Vector2(Random.Range(arena.xMin, arena.xMax), Random.Range(arena.yMin, arena.yMax)), radius + 1.5f);
             Hazard(HazardShape.Inferno, safe, Vector2.up, radius, 0f, InfernoTelegraph, InfernoDuration);
             stateUntil = Time.time + 1.1f;
+            eruptAt = Time.time + InfernoTelegraph;
             landAt = Time.time + InfernoTelegraph + InfernoDuration;
             CoopFx.Pulse(Run, ground, 5f, Hellfire, 0.9f);
             HeroVfx.Pulse(Run.ProjectileRoot, ground, 5f, Hellfire, 0.9f);
@@ -240,6 +241,8 @@ namespace Slopgame
         {
             if (netState > (byte)State.Staggered) return;
             var next = (State)netState;
+            // Guests start their countdown when the host announces the Cataclysm.
+            if (next == State.Ascend && state != State.Ascend) eruptAt = Time.time + InfernoTelegraph;
             if (next == State.Staggered && state != State.Staggered) altitude = 0f;
             state = next;
         }

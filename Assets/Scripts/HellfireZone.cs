@@ -160,7 +160,7 @@ namespace Slopgame
                     if (warning)
                     {
                         // The floor turns red at once and cracks with pulsing magma, so the doomed area reads instantly.
-                        float glow = (0.3f + 0.35f * warn * pulse) * (0.75f + 0.25f * seed);
+                        float glow = (0.45f + 0.3f * warn * pulse) * (0.75f + 0.25f * seed);
                         flames.Rect(cell - Vector2.one * 0.5f, cell + Vector2.one * 0.5f, FlameMesh.Alpha(FlameMesh.Crimson, glow));
                         // Diagonal hazard stripes crawl across the doomed floor.
                         if (Mathf.Repeat(x + y - time * 2f, 3f) < 1f)
@@ -200,6 +200,7 @@ namespace Slopgame
                 flames.Ring(spec.Center, safe + 0.25f + (1f - Mathf.Repeat(time * 1.5f, 1f)) * 2.5f, 0.1f,
                     FlameMesh.Alpha(AbilityCatalog.Gold, 0.6f * Mathf.Repeat(time * 1.5f, 1f)), 64);
             }
+            if (warning) DrawSanctuaryGuide(safe, pulse);
             flames.Disc(spec.Center, safe, FlameMesh.Alpha(AbilityCatalog.Gold, 0.12f + 0.08f * pulse), FlameMesh.Alpha(AbilityCatalog.Gold, 0.02f));
             flames.Ring(spec.Center, safe, warning ? 0.12f + 0.1f * pulse : 0.14f, FlameMesh.Alpha(AbilityCatalog.Gold, warning ? 1f : 0.8f * fade));
             for (int i = 0; i < 12; i++)
@@ -222,6 +223,23 @@ namespace Slopgame
                 }
                 flames.Ring(spec.Center, safe + 0.1f, 0.18f, FlameMesh.Alpha(FlameMesh.Core, fade), FlameMesh.Alpha(FlameMesh.Yellow, 0.4f * fade));
             }
+        }
+
+        /// <summary>A gold arrow from the local hero toward the sanctuary while they are still outside it.</summary>
+        private void DrawSanctuaryGuide(float safe, float pulse)
+        {
+            var hero = run.Player;
+            if (hero == null || hero.Health <= 0) return;
+            Vector2 from = hero.transform.position, to = spec.Center - from;
+            float distance = to.magnitude;
+            if (distance < safe * 0.8f) return;
+            Vector2 dir = to / distance;
+            float length = Mathf.Min(2.4f, distance - safe * 0.6f), angle = Mathf.Atan2(dir.y, dir.x);
+            Color gold = FlameMesh.Alpha(AbilityCatalog.Gold, 0.55f + 0.4f * pulse);
+            Vector2 tip = from + dir * (0.7f + length);
+            flames.Bar(from + dir * 0.7f, dir, length, 0.14f, FlameMesh.Alpha(AbilityCatalog.Gold, 0.1f), gold);
+            flames.Bar(tip, -FlameMesh.Polar(angle + 0.6f, 1f), 0.55f, 0.14f, gold, gold);
+            flames.Bar(tip, -FlameMesh.Polar(angle - 0.6f, 1f), 0.55f, 0.14f, gold, gold);
         }
 
         private void DrawPool(bool warning, float warn, float fade)

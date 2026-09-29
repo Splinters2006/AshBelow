@@ -56,15 +56,30 @@ namespace Slopgame
                 InfernoVfx.Wreathe(run.ProjectileRoot, shot.transform, direction, 0.22f);
                 HeroVfx.Sparks(run.ProjectileRoot, position, FlameMesh.Orange, 10, 4f, 0.3f, direction, 70f, 1.1f);
             }
+            else if (shot.IsFireball)
+            {
+                // The Wizard's basic fireball: a smaller wreath of flame than the Inferno Orb, with a muzzle puff.
+                shot.baseScale = 1.2f;
+                InfernoVfx.Wreathe(run.ProjectileRoot, shot.transform, direction, 0.13f);
+                HeroVfx.Sparks(run.ProjectileRoot, position + direction.normalized * 0.4f, FlameMesh.Orange, 5, 2.5f, 0.2f, direction, 50f, 0.8f);
+            }
             return shot;
         }
 
         // Plain white casts use the ember sprite's own colours, so glow orange like it.
         private Color GlowColor => color == Color.white ? new Color(1f, 0.55f, 0.18f) : color;
+        private bool IsFireball => color == Color.white && radius <= 0f;
+        private float nextEmber;
 
         private void Update()
         {
             Advance(Time.deltaTime);
+            if (!IsSpent && IsFireball && Time.time >= nextEmber)
+            {
+                // Sheds a couple of embers as it flies.
+                nextEmber = Time.time + 0.05f;
+                HeroVfx.Sparks(run.ProjectileRoot, transform.position, Color.Lerp(FlameMesh.Yellow, FlameMesh.Orange, Random.value), 1, 1.2f, 0.28f, -direction, 70f, 0.7f);
+            }
             if (!IsSpent) transform.localScale = Vector3.one * baseScale * (1f + 0.12f * Mathf.Sin(Time.time * 30f + pulsePhase));
         }
 
@@ -104,6 +119,11 @@ namespace Slopgame
                     ScreenFx.Shake(0.28f, 0.28f);
                     ScreenFx.Flash(new Color(1f, 0.55f, 0.2f, 0.12f), 0.12f);
                 }
+            }
+            else if (IsFireball)
+            {
+                InfernoVfx.Blast(run.ProjectileRoot, transform.position, 0.45f);
+                HeroVfx.Sparks(run.ProjectileRoot, transform.position, GlowColor, 10, 3.5f, 0.3f);
             }
             else
             {

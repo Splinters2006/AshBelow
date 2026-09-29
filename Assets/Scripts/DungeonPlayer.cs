@@ -20,6 +20,8 @@ namespace Slopgame
         /// <summary>Shadow Veil: enemies cannot see this hero, so they neither chase nor turn toward them.</summary>
         public bool IsVeiled => Time.time < veiledUntil && Health > 0;
         public Vector2 AimDirection { get; private set; } = Vector2.right;
+        /// <summary>This frame's movement input (zero while standing still).</summary>
+        public Vector2 MoveInput { get; private set; }
         private const float RollDuration = 0.25f;
         public const float RollCooldown = 1.4f;
         /// <summary>Seconds between burning-ground damage ticks.</summary>
@@ -121,14 +123,14 @@ namespace Slopgame
         {
             body.color = IsRolling ? new Color(0.4f, 0.65f, 1f) : IsInvulnerable ? Color.white : Buffs.Tint(characterColor);
             SetVeiledLook(IsVeiled);
-            if (!Run.IsPlaying || Health <= 0 || IsBusy) { Charge.Tick(PlayerInput.Attack, false); return; }
+            if (!Run.IsPlaying || Health <= 0 || IsBusy) { MoveInput = Vector2.zero; Charge.Tick(PlayerInput.Attack, false); return; }
             Vector2 cursor = Run.View.ScreenToWorldPoint(new Vector3(PlayerInput.CursorPosition.x,
                 PlayerInput.CursorPosition.y, -Run.View.transform.position.z));
             Vector2 aim = cursor - (Vector2)transform.position;
             if (aim.sqrMagnitude > 0.001f) AimDirection = aim.normalized;
             FaceAim();
-            Vector2 movement = PlayerInput.Movement;
-            if (PlayerInput.Dodge) TryRoll(movement.sqrMagnitude > 0 ? movement : AimDirection);
+            Vector2 movement = MoveInput = PlayerInput.Movement;
+            if (PlayerInput.Dodge) TryRoll(MobilityAim(AimDirection));
             Vector2 velocity = IsRolling ? rollDirection * Speed * 2.6f * Buffs.DodgeSpeedMultiplier
                 : movement * Speed * Buffs.MoveMultiplier * (Weapon.IsHeavyAttacking ? 0.55f : Charge.IsCharging ? 0.7f : 1f);
             if (DebugMode.Enabled) velocity *= DebugMode.SpeedMultiplier;
@@ -141,6 +143,12 @@ namespace Slopgame
             if (!usedAbility && !Run.IsPointerOverHud && PlayerInput.HeavyAttack && !IsRolling) Weapon.TryHeavyAttack(toCursor);
             Charge.Tick(PlayerInput.Attack, !Run.IsPointerOverHud && !usedAbility && !IsRolling && !Weapon.IsHeavyAttacking && !PlayerInput.HeavyAttack);
         }
+
+        /// <summary>
+        /// Where a movement move (roll, dash, blink, shadowstep) goes: the way the hero is walking at full range,
+        /// or, standing still, <paramref name="toCursor"/> (so cursor-limited moves still stop at the cursor).
+        /// </summary>
+        public Vector2 MobilityAim(Vector2 toCursor) => MoveInput.sqrMagnitude > 0.01f ? MoveInput.normalized * 1000f : toCursor;
 
         public bool TryRoll(Vector2 direction)
         {

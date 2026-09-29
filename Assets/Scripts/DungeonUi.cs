@@ -16,6 +16,7 @@ namespace Slopgame
         private static readonly Dictionary<int, GUIStyle> labels = new Dictionary<int, GUIStyle>();
         private static readonly Dictionary<string, float> hovers = new Dictionary<string, float>();
         private static readonly Dictionary<int, GUIStyle> fields = new Dictionary<int, GUIStyle>();
+        private static readonly Dictionary<string, Vector2> scrolls = new Dictionary<string, Vector2>();
 
         public static Matrix4x4 Begin()
         {
@@ -55,6 +56,13 @@ namespace Slopgame
 
         public static void Label(Rect rect, string value, int size = 18, Color? color = null, TextAnchor align = TextAnchor.UpperLeft)
         {
+            var style = LabelStyle(size, align);
+            style.normal.textColor = color ?? Text;
+            GUI.Label(rect, value, style);
+        }
+
+        private static GUIStyle LabelStyle(int size, TextAnchor align)
+        {
             int key = size * 16 + (int)align;
             if (!labels.TryGetValue(key, out var style))
             {
@@ -62,8 +70,28 @@ namespace Slopgame
                     fontStyle = size >= 25 ? FontStyle.Bold : FontStyle.Normal, padding = new RectOffset(0, 0, 0, 0) };
                 labels.Add(key, style);
             }
-            style.normal.textColor = color ?? Text;
-            GUI.Label(rect, value, style);
+            return style;
+        }
+
+        /// <summary>
+        /// Wrapped text that scrolls (mouse wheel or scrollbar) when it does not fit in <paramref name="rect"/>,
+        /// with a small hint while more text lies below.
+        /// </summary>
+        public static void ScrollingText(string id, Rect rect, string value, int size, Color color)
+        {
+            var style = LabelStyle(size, TextAnchor.UpperLeft);
+            const float scrollbar = 14f;
+            float height = style.CalcHeight(new GUIContent(value), rect.width);
+            if (height <= rect.height) { Label(rect, value, size, color); return; }
+            float innerWidth = rect.width - scrollbar;
+            height = style.CalcHeight(new GUIContent(value), innerWidth) + 4f;
+            scrolls.TryGetValue(id, out var scroll);
+            scroll = GUI.BeginScrollView(rect, scroll, new Rect(0, 0, innerWidth, height), false, true);
+            Label(new Rect(0, 0, innerWidth, height), value, size, color);
+            GUI.EndScrollView();
+            scrolls[id] = scroll;
+            if (scroll.y < height - rect.height - 2f)
+                Label(new Rect(rect.x, rect.yMax, innerWidth, 16), "scroll for more  ▾", 11, Muted, TextAnchor.UpperRight);
         }
 
         public static bool Button(string id, Rect rect, string text, Color accent, bool enabled = true)
