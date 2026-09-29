@@ -27,6 +27,11 @@ namespace Slopgame
         public int Coins => Mathf.Max(1, coins);
         public bool IsHeavyAttacking => false;
         public float HeavyCooldownRemaining => DebugMode.Cooldown(Mathf.Max(0f, volleyReadyAt - Time.time));
+        /// <summary>Coins gained from each gold coin picked up (Loose Change adds more).</summary>
+        public int PickupCoins => 1 + Player.Powerups.Count(PowerupType.LooseChange);
+        /// <summary>Long Toss adds range to thrown coins and the volley.</summary>
+        public float ThrowRange => CoinRange + Player.Powerups.Count(PowerupType.LongToss);
+        public float VolleyReach => VolleyRange + Player.Powerups.Count(PowerupType.LongToss);
         public bool CanAttack => Player.Run.IsPlaying && !Player.IsRolling && !Player.IsBusy && Time.time >= readyAt;
 
         public void AddCoins(int amount) { if (amount > 0) coins = Coins + amount; }
@@ -47,7 +52,7 @@ namespace Slopgame
         public bool TryAttack(Vector2 aim, float charge = 0f)
         {
             if (!CanAttack || aim.sqrMagnitude < 0.001f) return false;
-            PlayerProjectile.Spawn(Player.Run, transform.position, aim.normalized, Player.Charge.Damage(charge), CoinRange, ProjectileStyle.Coin);
+            PlayerProjectile.Spawn(Player.Run, transform.position, aim.normalized, Player.Charge.Damage(charge), ThrowRange, ProjectileStyle.Coin);
             readyAt = Time.time + 0.4f * Player.Powerups.AttackIntervalMultiplier;
             return true;
         }
@@ -61,7 +66,7 @@ namespace Slopgame
             for (int i = 0; i < count; i++)
             {
                 float angle = count == 1 ? 0f : -VolleyCone * 0.5f + VolleyCone * i / (count - 1);
-                PlayerProjectile.Spawn(Player.Run, transform.position, Quaternion.Euler(0, 0, angle) * aim, Player.Damage, VolleyRange, ProjectileStyle.Coin);
+                PlayerProjectile.Spawn(Player.Run, transform.position, Quaternion.Euler(0, 0, angle) * aim, Player.Damage, VolleyReach, ProjectileStyle.Coin);
             }
             HeroVfx.Sparks(Player.Run.ProjectileRoot, transform.position, Gold, 10, 3.5f, 0.3f, aim, VolleyCone);
             volleyReadyAt = Time.time + VolleyCooldown;
@@ -90,13 +95,18 @@ namespace Slopgame
 
         public void Windfall(int rank)
         {
-            AddCoins(WindfallCoins + rank - 1);
+            AddCoins(WindfallCoinsFor(rank));
             HeroVfx.Sparks(Player.Run.ProjectileRoot, transform.position, Gold, 16, 4f, 0.4f, Vector2.up, 120f);
             HeroVfx.Motes(Player.Run.ProjectileRoot, transform.position, 0.6f, Gold, 14, 0.8f);
         }
 
+        /// <summary>Windfall's coins: ranks add one, Mint Condition two per stack.</summary>
+        public int WindfallCoinsFor(int rank) => WindfallCoins + rank - 1 + Player.Powerups.Count(PowerupType.MintCondition) * 2;
+
         /// <summary>Double or nothing on every coin carried. True on a win.</summary>
-        public bool AllIn(int rank, float roll) => DoubleOrNothing(roll, 0.5f + 0.05f * (rank - 1));
+        public bool AllIn(int rank, float roll) => DoubleOrNothing(roll, AllInOdds(rank));
+        /// <summary>All In's base odds: ranks and Rigged Odds each add 5% (Lady Luck is added on top).</summary>
+        public float AllInOdds(int rank) => 0.5f + 0.05f * (rank - 1) + 0.05f * Player.Powerups.Count(PowerupType.RiggedOdds);
 
         /// <param name="roll">0-1; below <paramref name="winChance"/> wins.</param>
         public bool DoubleOrNothing(float roll, float winChance = 0.5f)
@@ -125,7 +135,7 @@ namespace Slopgame
                 HeroVfx.Sparks(root, transform.position, new Color(0.5f, 0.45f, 0.4f), 10, 2.5f, 0.35f);
                 return JackpotPrize.Nothing;
             }
-            float duration = JackpotDuration + (rank - 1);
+            float duration = JackpotTime(rank);
             var prize = pick < 1f / 3f ? JackpotPrize.Speed : pick < 2f / 3f ? JackpotPrize.Damage : JackpotPrize.Heal;
             if (prize == JackpotPrize.Speed) Player.Buffs.JackpotHaste(JackpotSpeedFor(spent), duration);
             else if (prize == JackpotPrize.Damage) Player.Buffs.JackpotMight(JackpotDamageFor(spent), duration);
@@ -136,6 +146,9 @@ namespace Slopgame
             ScreenFx.Flash(new Color(1f, 0.85f, 0.3f, 0.2f), 0.2f);
             return prize;
         }
+
+        /// <summary>How long a Jackpot buff lasts: ranks add a second, High Roller two per stack.</summary>
+        public float JackpotTime(int rank) => JackpotDuration + (rank - 1) + Player.Powerups.Count(PowerupType.HighRoller) * 2f;
 
         /// <summary>+10% movement per coin, up to two and a half times as fast.</summary>
         public static float JackpotSpeedFor(int coins) => Mathf.Min(2.5f, 1f + 0.1f * coins);

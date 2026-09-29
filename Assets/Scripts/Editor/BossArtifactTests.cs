@@ -433,6 +433,8 @@ namespace Slopgame.Editor
                 Require(coins.Coins == 1 + GamblerAttack.WindfallCoins, "Windfall did not add 5 coins.");
                 coins.Windfall(2);
                 Require(coins.Coins == 1 + GamblerAttack.WindfallCoins * 2 + 1, "Windfall rank did not add a coin.");
+                Require(player.Powerups.Add(PowerupType.MintCondition) && coins.WindfallCoinsFor(1) == GamblerAttack.WindfallCoins + 2,
+                    "Mint Condition did not add two Windfall coins.");
                 return;
             }
             if (type == AbilityType.AllIn)
@@ -442,6 +444,8 @@ namespace Slopgame.Editor
                 Require(coins.AllIn(1, 0.49f) && coins.Coins == 12, "Winning All In did not double the coins.");
                 Require(!coins.AllIn(1, 0.51f) && coins.Coins == 1, "Losing All In did not take every coin.");
                 Require(coins.AllIn(3, 0.55f), "All In ranks did not improve the odds.");
+                Require(player.Powerups.Add(PowerupType.RiggedOdds) && Mathf.Abs(coins.AllInOdds(1) - 0.55f) < 0.001f && coins.AllIn(1, 0.54f),
+                    "Rigged Odds did not improve All In's odds.");
                 return;
             }
             Require(coins.Coins == 1, "Jackpot did not consume the coins.");
@@ -463,6 +467,13 @@ namespace Slopgame.Editor
             Require(coins.Jackpot(1, 0.1f, 0.9f) == GamblerAttack.JackpotPrize.Heal && player.Health == player.MaxHealth, "A heal Jackpot did not heal.");
             Require(GamblerAttack.JackpotHealFor(4) == 2 && GamblerAttack.JackpotHealFor(1) == 1 && GamblerAttack.JackpotDamageFor(1) == 1
                 && GamblerAttack.JackpotSpeedFor(100) == 2.5f, "Jackpot prizes do not scale with coins as intended.");
+            Require(player.Powerups.Add(PowerupType.HighRoller) && Mathf.Abs(coins.JackpotTime(1) - GamblerAttack.JackpotDuration - 2f) < 0.001f,
+                "High Roller did not lengthen the Jackpot buffs.");
+            int pickup = coins.PickupCoins;
+            float toss = coins.ThrowRange, volley = coins.VolleyReach;
+            Require(player.Powerups.Add(PowerupType.LooseChange) && coins.PickupCoins == pickup + 1, "Loose Change did not add a coin per pickup.");
+            Require(player.Powerups.Add(PowerupType.LongToss) && Mathf.Abs(coins.ThrowRange - toss - 1f) < 0.001f
+                && Mathf.Abs(coins.VolleyReach - volley - 1f) < 0.001f, "Long Toss did not add coin range.");
         }
 
         private static void TestBrawler(DungeonRun run)
