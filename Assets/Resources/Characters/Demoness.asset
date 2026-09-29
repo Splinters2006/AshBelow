@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Slopgame.CharacterDefinition
   displayName: Demoness
   description: A half-demon daughter of the Demon Lord in purple, white and black. Stab with her pointed tail, charge to strike the vitals and paralyse, and sweep her tail to slash paralysed foes.
-  color: {r: 0.86, g: 0.74, b: 1, a: 1}
+  color: {r: 0.6, g: 0.36, b: 0.9, a: 1}
   startingHealth: 5
   startingDamage: 1
   moveSpeed: 5.2

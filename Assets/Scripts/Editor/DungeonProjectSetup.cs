@@ -493,7 +493,7 @@ namespace Slopgame.Editor
             EnsureHero("Admin", WeaponType.Shadow, 12, 6.4f, new Color(0.58f, 0.25f, 0.95f),
                 "An unbound shadow sovereign. Tear through enemies with charged rifts. Nightfall instantly executes visible enemies, even guardians. Intentionally overpowered.", 32);
             EnsureHero("Brawler", WeaponType.Fists, 6, 5.3f, new Color(0.98f, 0.62f, 0.42f), BrawlerDescription);
-            EnsureHero("Demoness", WeaponType.Tail, 5, 5.2f, new Color(0.86f, 0.74f, 1f), DemonessDescription);
+            EnsureHero("Demoness", WeaponType.Tail, 5, 5.2f, new Color(0.6f, 0.36f, 0.9f), DemonessDescription);
             AssetDatabase.SaveAssets();
             Debug.Log("CHARACTER_ASSETS_OK: Eight classes ready.");
         }

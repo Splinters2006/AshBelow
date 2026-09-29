@@ -44,8 +44,9 @@ namespace Slopgame
             if (sweep)
             {
                 // Swings from one edge of the cone to the other in the first 45%, then fades out at the far edge.
+                // Same direction as HeroVfx.Slash (counter-clockwise) so the tail leads its crescent wake.
                 float swing = EaseOut(t / 0.45f);
-                float angle = Mathf.Atan2(aim.y, aim.x) + cone * Mathf.Deg2Rad * (0.5f - swing);
+                float angle = Mathf.Atan2(aim.y, aim.x) + cone * Mathf.Deg2Rad * (swing - 0.5f);
                 DrawTail(FlameMesh.Polar(angle, 1f), reach, fade, 0f);
                 return;
             }
