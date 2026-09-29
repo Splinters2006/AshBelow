@@ -21,6 +21,8 @@ namespace Slopgame
         public CrystalPouch Crystals { get; private set; }
         /// <summary>True while a scripted move (such as Wild Leap) controls the hero; input is ignored.</summary>
         public bool IsBusy => Time.time < busyUntil;
+        /// <summary>Shield Taunt: the Knight can walk with his great shield up, but not attack, dodge or use abilities.</summary>
+        public bool IsHoldingShield => Mechanic is ShieldTaunt taunt && taunt.IsTaunting;
         public float Speed { get; private set; } = 5f;
         public bool IsRolling => Time.time < rollUntil;
         public bool IsInvulnerable => Time.time < invulnerableUntil || IsRolling;
@@ -160,7 +162,8 @@ namespace Slopgame
             if (aim.sqrMagnitude > 0.001f) AimDirection = aim.normalized;
             FaceAim();
             Vector2 movement = MoveInput = PlayerInput.Movement;
-            if (PlayerInput.Dodge) TryRoll(MobilityAim(AimDirection));
+            bool holdingShield = IsHoldingShield;
+            if (PlayerInput.Dodge && !holdingShield) TryRoll(MobilityAim(AimDirection));
             Vector2 velocity = IsRolling ? rollDirection * Speed * 2.6f * Buffs.DodgeSpeedMultiplier
                 : movement * Speed * Buffs.MoveMultiplier * Crystals.SpeedMultiplier * (Weapon.IsHeavyAttacking ? 0.55f : Charge.IsCharging ? 0.7f : 1f);
             if (DebugMode.Enabled) velocity *= DebugMode.SpeedMultiplier;
@@ -168,6 +171,7 @@ namespace Slopgame
             // Abilities and heavy attacks get the full offset to the cursor, so targeted and mobility moves
             // (Venom Vial, Judgment, Shadowstep, Blink...) stop at the cursor when it is within their range.
             Vector2 toCursor = aim.sqrMagnitude > 0.001f ? aim : AimDirection;
+            if (holdingShield) { Charge.Cancel(); return; }
             bool usedAbility = PlayerInput.ActiveQ && Abilities.TryUse(0, toCursor);
             if (!usedAbility && PlayerInput.ActiveE) usedAbility = Abilities.TryUse(1, toCursor);
             if (!usedAbility && Mechanic != null && PlayerInput.Mechanic) usedAbility = Mechanic.TryActivate(toCursor);

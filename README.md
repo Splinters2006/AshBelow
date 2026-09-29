@@ -87,7 +87,7 @@ Once you have beaten the third guardian (floor 15) in a single descent, the Ash 
 
 | Hero | Mechanic |
 | --- | --- |
-| **Knight** | **Shield Taunt:** plant a great shield for 1.5 s (no other actions). It blocks bolts in a 90° cone ahead and gives a ward for each one, and enemies go for you first. |
+| **Knight** | **Shield Taunt:** raise a great shield all around you for 2.25 s (you can walk, but nothing else). It blocks bolts from every side within 2 units and gives a ward for each one, and enemies go for you first. |
 | **Archer** | **Elemental Quiver:** cycle between fire, freeze and shock arrows. Arrows still crit, and a critical hit also sets off the arrow's element. |
 | **Wizard** | **Wild Storm:** after 8 elemental effects, summon a storm over you that takes turns hurling fireballs, lightning and ice bolts for 10 s. Every storm strike is sure to burn, shock or freeze. |
 | **Assassin** | **Sharpened Dagger:** +1 damage for 7.5 s. Every hit on an enemy's back adds +1 more and refreshes it. |

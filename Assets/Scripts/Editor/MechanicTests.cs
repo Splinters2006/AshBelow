@@ -153,15 +153,16 @@ namespace Slopgame.Editor
                         "Shock did not strike only the other enemies within 2 units for a quarter of the hit.");
 
                     var taunt = (ShieldTaunt)player.Mechanic;
-                    Require(taunt.TryActivate(aim) && taunt.IsTaunting && player.IsBusy && player.DrawsAggro, "Shield Taunt did not raise.");
+                    Require(taunt.TryActivate(aim) && taunt.IsTaunting && !player.IsBusy && player.IsHoldingShield && player.DrawsAggro, "Shield Taunt did not raise.");
                     Require(!taunt.TryActivate(aim), "Shield Taunt ignored its cooldown.");
                     int wards = player.Powerups.ArmorCharges;
                     Vector2 front = (Vector2)player.transform.position + aim * 1f;
                     Require(taunt.TryBlock(front, -aim) && player.Powerups.ArmorCharges == wards + 1, "Shield Taunt did not block and ward.");
-                    Require(!taunt.TryBlock((Vector2)player.transform.position - aim, aim), "Shield Taunt blocked from behind.");
+                    Require(taunt.TryBlock((Vector2)player.transform.position - aim, aim), "Shield Taunt did not block from behind.");
+                    Require(!taunt.TryBlock((Vector2)player.transform.position + aim, aim), "Shield Taunt blocked a bolt flying away.");
                     var bolt = EnemyProjectile.Spawn(run, run.ProjectileRoot, front + aim * 0.3f, -aim);
                     bolt.Advance(0.05f);
-                    Require(bolt.IsSpent && !bolt.IsReflected && player.Powerups.ArmorCharges == wards + 2 && player.Health == player.MaxHealth,
+                    Require(bolt.IsSpent && !bolt.IsReflected && player.Powerups.ArmorCharges == wards + 3 && player.Health == player.MaxHealth,
                         "A bolt passed through the taunt shield or was reflected.");
                     Vector2 near = (Vector2)player.transform.position + aim * 5f;
                     Require(run.NearestHero(near) == (Vector2)player.transform.position, "Taunting Knight is not targeted.");

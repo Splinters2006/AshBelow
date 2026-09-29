@@ -47,7 +47,7 @@ namespace Slopgame
             new PermanentUpgradeDefinition("demoness_health", "Infernal Blood", "+1 Demoness maximum HP per rank", 3, 35, 25, WeaponType.Tail),
             new PermanentUpgradeDefinition("gambler_pockets", "Deep Pockets", "The Gambler's purse never lets him drop below +1 more coin per rank", 3, 35, 25, WeaponType.Coins),
             new PermanentUpgradeDefinition("gambler_luck", "Lady Luck", "+4% odds on Double or Nothing, All In and Jackpot per rank", 3, 50, 40, WeaponType.Coins),
-            Mechanic(WeaponType.Sword, "Shield Taunt", "R: raise a great shield for 1.5s. It blocks bolts in front (+1 ward each) and draws the enemies' attention"),
+            Mechanic(WeaponType.Sword, "Shield Taunt", "R: raise a great shield all around you for 2.25s. You can walk; it blocks bolts from every side (+1 ward each) and draws the enemies' attention"),
             Mechanic(WeaponType.Bow, "Elemental Quiver", "R: cycle fire, freeze and shock arrows. Critical hits set off the arrow's element"),
             Mechanic(WeaponType.Staff, "Wild Storm", "R: after 10 elemental effects, summon a storm that hurls fire, lightning and ice, every strike sure to burn, shock or freeze"),
             Mechanic(WeaponType.Daggers, "Sharpened Dagger", "R: +1 damage for 7.5s; every backstab adds +1 more and refreshes it"),
