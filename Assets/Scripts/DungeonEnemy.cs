@@ -226,6 +226,8 @@ namespace Slopgame
             Boss?.Defeated();
             // The Gambler collects a gold coin from every fallen enemy (each machine drops coins for its own hero).
             if (Run.Player != null && Run.Player.Weapon is GamblerAttack) GoldCoin.Drop(Run, transform.position);
+            // Every fallen enemy leaves crystals for the shop before the next boss (each machine drops its own).
+            if (Run.Player != null) Crystal.Drop(Run, transform.position, Crystal.ValueFor(this));
             CombatVfx.Ring(Run.ProjectileRoot, transform.position, Boss != null ? 1.6f : 0.45f, AbilityCatalog.Gold);
             if (Run.Player != null && Run.Player.ClassWeapon != WeaponType.Shadow)
             {

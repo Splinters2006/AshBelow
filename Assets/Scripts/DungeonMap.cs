@@ -18,6 +18,24 @@ namespace Slopgame
             Mathf.Clamp(point.x, Arena.xMin - 0.5f + margin, Arena.xMax - 0.5f - margin),
             Mathf.Clamp(point.y, Arena.yMin - 0.5f + margin, Arena.yMax - 0.5f - margin));
 
+        /// <summary>The walkable cells of the crystal shop visited before each boss.</summary>
+        public static readonly RectInt ShopRoom = new RectInt(19, 13, 17, 11);
+        /// <summary>The merchant's counter: solid cells along the shop's back wall.</summary>
+        public static readonly RectInt ShopCounter = new RectInt(25, 22, 5, 2);
+
+        /// <summary>The crystal shop: one room, the hero entering on the left and the stairs down to the guardian on the right.</summary>
+        public static DungeonMap Shop()
+        {
+            var map = new DungeonMap();
+            for (int x = ShopRoom.xMin; x < ShopRoom.xMax; x++)
+                for (int y = ShopRoom.yMin; y < ShopRoom.yMax; y++) map.floor[x, y] = !ShopCounter.Contains(new Vector2Int(x, y));
+            map.Centers.Add(new Vector2Int(ShopRoom.xMin + 2, 17));
+            map.Centers.Add(new Vector2Int(ShopRoom.xMax - 3, 17));
+            return map;
+        }
+
+        private DungeonMap() { }
+
         public DungeonMap(int seed, bool bossArena = false)
         {
             if (bossArena)

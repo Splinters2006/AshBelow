@@ -16,6 +16,8 @@ namespace Slopgame
         private float restartConfirmUntil;
         private static readonly Rect RestartRect = new Rect(896, 24, 112, 40);
         private static readonly Rect PurseRect = new Rect(900, 262, 356, 318);
+        private static readonly Rect ShopRect = new Rect(876, 84, 380, 476);
+        private bool ShopOpen => Run.Shop != null && Run.Shop.IsOpen;
         private bool CanRestartCoop => Run.IsNetworked && Run.IsPlaying;
 
         public bool BlocksPointer(Vector2 screenPosition)
@@ -26,7 +28,8 @@ namespace Slopgame
             return !Run.IsPlaying || new Rect(1020, 24, 236, 40).Contains(point)
                 || ((Run.CanSkipRoom || CanRestartCoop) && RestartRect.Contains(point))
                 || (showTalents && new Rect(922, 82, 334, 470).Contains(point))
-                || (Run.Player != null && Run.Player.Mechanic is GamblerPurse purse && purse.IsOpen && PurseRect.Contains(point));
+                || (ShopOpen && ShopRect.Contains(point))
+                || (!ShopOpen && Run.Player != null && Run.Player.Mechanic is GamblerPurse purse && purse.IsOpen && PurseRect.Contains(point));
         }
 
         private void Update()
@@ -53,9 +56,11 @@ namespace Slopgame
                 if (Run.IsNetworked) DrawTeam();
                 DrawHotbar();
                 var mechanic = Run.Player.Mechanic;
-                if (Run.IsPlaying && mechanic is GamblerPurse purse && purse.IsOpen) DrawPurse(purse);
-                if (showTalents && Run.IsPlaying) DrawTalents();
-                else if (Run.IsPlaying && Run.Minimap != null) Run.Minimap.Draw(new Rect(1026, 84, 224, 159));
+                // The crystal shop takes the right-hand side while it is open.
+                if (Run.IsPlaying && ShopOpen) DrawShop(Run.Shop);
+                else if (Run.IsPlaying && mechanic is GamblerPurse purse && purse.IsOpen) DrawPurse(purse);
+                if (!ShopOpen && showTalents && Run.IsPlaying) DrawTalents();
+                else if (!ShopOpen && Run.IsPlaying && Run.Minimap != null) Run.Minimap.Draw(new Rect(1026, 84, 224, 159));
                 if (Run.IsPlaying) return;
                 DungeonUi.Panel(new Rect(0, 0, 1280, 720), new Color(0.01f, 0.018f, 0.035f, 0.88f * modalFade));
                 if (Run.ChoosingArtifact) DrawArtifacts();
@@ -70,6 +75,7 @@ namespace Slopgame
             var player = Run.Player;
             DungeonUi.Panel(new Rect(24, 24, 292, 100), DungeonUi.PanelColor);
             DungeonUi.Label(new Rect(42, 37, 250, 28), Run.SelectedCharacter.DisplayName.ToUpperInvariant(), 22, Run.SelectedCharacter.Color);
+            DungeonUi.Label(new Rect(176, 41, 122, 22), $"{player.Crystals.Crystals} CRYSTALS", 14, CrystalPouch.CrystalColor, TextAnchor.UpperRight);
             DungeonUi.Label(new Rect(42, 73, 130, 22), DebugMode.Enabled ? "INFINITE HP" : $"{player.Health} / {player.MaxHealth} HP", 16, DebugMode.Enabled ? DebugColor : (Color?)null);
             DungeonUi.Label(new Rect(176, 73, 120, 22), player.Weapon is GamblerAttack gambler
                 ? $"WARD  {player.Powerups.ArmorCharges}   COINS  {gambler.Coins}" : $"WARD  {player.Powerups.ArmorCharges}", 14, DungeonUi.Muted, TextAnchor.UpperRight);
@@ -79,7 +85,8 @@ namespace Slopgame
             DungeonUi.Bar(new Rect(42, 103, 256, 6), displayedHealth, Run.SelectedCharacter.Color);
             if (DebugMode.Enabled)
                 DungeonUi.Label(new Rect(365, 4, 550, 22), "DEBUG ADMIN MODE  /  INVINCIBLE  ONE-HIT KILLS  NO COOLDOWNS  2X SPEED  /  F1", 12, DebugColor, TextAnchor.MiddleCenter);
-            DungeonUi.Label(new Rect(405, 28, 470, 25), Run.IsBossFloor ? $"FLOOR {Run.Floor:00}  /  BOSS ARENA" : $"FLOOR {Run.Floor:00}  /  {Run.Enemies.Count} ENEMIES", 17, AbilityCatalog.Gold, TextAnchor.MiddleCenter);
+            DungeonUi.Label(new Rect(405, 28, 470, 25), Run.InShop ? $"FLOOR {Run.Floor:00}  /  CRYSTAL SHOP" : Run.IsBossFloor ? $"FLOOR {Run.Floor:00}  /  BOSS ARENA"
+                : $"FLOOR {Run.Floor:00}  /  {Run.Enemies.Count} ENEMIES", 17, Run.InShop ? CrystalPouch.CrystalColor : AbilityCatalog.Gold, TextAnchor.MiddleCenter);
             DungeonUi.Label(new Rect(365, 59, 550, 40), Run.Objective, 17, DungeonUi.Text, TextAnchor.UpperCenter);
             if (Run.Boss != null && Run.Boss.Enemy.Health > 0)
             {
@@ -131,6 +138,8 @@ namespace Slopgame
                 DungeonUi.Label(new Rect(440, 475, 400, 24), buff, 14, player.Buffs.IsFurious ? HeroBuffs.FuryColor
                     : player.Buffs.IsAscended ? HeroBuffs.AscendColor : player.Buffs.IsRaging ? HeroBuffs.RageColor
                     : player.Buffs.IsTired ? HeroBuffs.TiredColor : HeroBuffs.EmpowerColor, TextAnchor.MiddleCenter);
+            string boons = BoonStatus(player.Crystals);
+            if (boons != null) DungeonUi.Label(new Rect(390, 445, 500, 24), boons, 14, CrystalPouch.CrystalColor, TextAnchor.MiddleCenter);
             if (player.Charge.IsCharging)
             {
                 DungeonUi.Label(new Rect(440, 535, 400, 24), player.ClassWeapon == WeaponType.Hammer
@@ -170,6 +179,16 @@ namespace Slopgame
             if (buffs.IsFurious) parts.Add($"SUPER ANGRY  {buffs.FuryRemaining:0.0}s");
             if (buffs.JackpotDamage > 0) parts.Add($"JACKPOT  +{buffs.JackpotDamage} DAMAGE  {buffs.JackpotDamageRemaining:0.0}s");
             if (buffs.JackpotSpeed > 1f) parts.Add($"JACKPOT  x{buffs.JackpotSpeed:0.0} SPEED  {buffs.JackpotSpeedRemaining:0.0}s");
+            return parts.Count == 0 ? null : string.Join("  /  ", parts);
+        }
+
+        /// <summary>The crystal shop's boons while they are active in the boss arena.</summary>
+        private static string BoonStatus(CrystalPouch pouch)
+        {
+            if (pouch == null) return null;
+            var parts = new System.Collections.Generic.List<string>();
+            if (pouch.BonusDamage > 0) parts.Add($"WHETSTONE  +{pouch.BonusDamage} DAMAGE");
+            if (pouch.SpeedMultiplier > 1f) parts.Add($"QUICKSILVER  +{pouch.SpeedMultiplier - 1f:P0} SPEED");
             return parts.Count == 0 ? null : string.Join("  /  ", parts);
         }
 
@@ -222,6 +241,33 @@ namespace Slopgame
             DungeonUi.Label(new Rect(rect.x + 20, rect.yMax - 36, rect.width - 40, 30),
                 purse.LastResult ?? $"{KeyBindings.Label(GameAction.Mechanic)} closes the purse. Coins spent here leave your volley.", 13,
                 purse.LastResult != null ? GamblerAttack.Gold : DungeonUi.Muted);
+        }
+
+        /// <summary>The crystal merchant's wares. Play goes on while it is open.</summary>
+        private void DrawShop(CrystalShop shop)
+        {
+            var rect = ShopRect;
+            var pouch = Run.Player.Crystals;
+            DungeonUi.Panel(rect, DungeonUi.Background);
+            DungeonUi.Label(new Rect(rect.x + 20, rect.y + 14, 220, 28), "CRYSTAL SHOP", 22, CrystalPouch.CrystalColor);
+            DungeonUi.Label(new Rect(rect.x + 200, rect.y + 18, 160, 24), $"{pouch.Crystals} CRYSTALS", 16, CrystalPouch.CrystalColor, TextAnchor.UpperRight);
+            for (int i = 0; i < CrystalShop.Offers.Length; i++)
+            {
+                var offer = CrystalShop.Offers[i];
+                var row = new Rect(rect.x + 16, rect.y + 52 + i * 58, rect.width - 32, 52);
+                if (DungeonUi.Button("shop" + i, new Rect(row.x, row.y, row.width, 32), $"{offer.Name}  /  {shop.Cost(offer)} crystals", offer.Color, shop.CanBuy(offer)))
+                    shop.Buy(offer);
+                DungeonUi.Label(new Rect(row.x + 6, row.y + 34, row.width - 12, 18), offer.Description, 12, DungeonUi.Muted);
+            }
+            var boons = new System.Collections.Generic.List<string>();
+            if (pouch.PendingWards > 0) boons.Add($"+{pouch.PendingWards} wards");
+            if (pouch.PendingDamage > 0) boons.Add($"+{pouch.PendingDamage} damage");
+            if (pouch.PendingSwiftness > 0) boons.Add($"+{pouch.PendingSwiftness * CrystalPouch.SwiftnessPerBoon:P0} speed");
+            DungeonUi.Label(new Rect(rect.x + 20, rect.y + 404, rect.width - 40, 22),
+                boons.Count > 0 ? "For the guardian:  " + string.Join("   ", boons) : "Arena boons last for the boss fight only.", 13, boons.Count > 0 ? AbilityCatalog.Gold : DungeonUi.Muted);
+            DungeonUi.Label(new Rect(rect.x + 20, rect.yMax - 44, rect.width - 40, 36),
+                shop.LastResult ?? $"{KeyBindings.Label(GameAction.Interact)} or walking away closes the shop. Crystals carry over to later shops.", 13,
+                shop.LastResult != null ? CrystalPouch.CrystalColor : DungeonUi.Muted);
         }
 
         private void DrawTalents()

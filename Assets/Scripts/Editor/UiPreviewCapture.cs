@@ -64,11 +64,22 @@ namespace Slopgame.Editor
             if (stage == 4)
             {
                 run.Player.enabled = false;
-                while (run.Floor < 5)
+                while (!run.InShop)
                 {
                     while (run.Enemies.Count > 0) run.Enemies[0].Hit(100000);
                     run.BeginUpgradeChoice(); run.ChooseUpgrade(0);
                 }
+                run.Player.Crystals.Add(120);
+                run.Player.transform.position = run.Shop.Counter + Vector2.down * 1.4f;
+                run.View.transform.position = new Vector3(27, 18, -10);
+                run.Shop.Toggle();
+                nextAt = EditorApplication.timeSinceStartup + 0.8f;
+                stage++; return;
+            }
+            if (stage == 5) { Save("preview-shop"); stage++; return; }
+            if (stage == 6)
+            {
+                run.BeginUpgradeChoice();
                 run.Player.transform.position = new Vector2(27, 19);
                 run.View.transform.position = new Vector3(27, 19, -10);
                 run.Player.Abilities.Claim(AbilityType.Fireball, 0);
@@ -77,16 +88,16 @@ namespace Slopgame.Editor
                 nextAt = EditorApplication.timeSinceStartup + 0.7f;
                 stage++; return;
             }
-            if (stage == 5) { Save("preview-arena"); stage++; return; }
-            if (stage == 6)
+            if (stage == 7) { Save("preview-arena"); stage++; return; }
+            if (stage == 8)
             {
                 run.Boss.Enemy.Hit(100000);
                 run.BeginArtifactChoice();
                 nextAt = EditorApplication.timeSinceStartup + 0.6f;
                 stage++; return;
             }
-            if (stage == 7) { Save("preview-artifacts"); stage++; return; }
-            if (stage == 8)
+            if (stage == 9) { Save("preview-artifacts"); stage++; return; }
+            if (stage == 10)
             {
                 run.FinishArtifactChoice(); run.BeginUpgradeChoice();
                 while (run.Enemies.Count > 0) run.Enemies[0].Hit(100000);
@@ -94,9 +105,9 @@ namespace Slopgame.Editor
                 nextAt = EditorApplication.timeSinceStartup + 0.6f;
                 stage++; return;
             }
-            if (stage == 9) { Save("preview-talents"); stage++; return; }
+            if (stage == 11) { Save("preview-talents"); stage++; return; }
             bool captured = true;
-            foreach (string name in new[] { "menu", "classes", "arena", "artifacts", "talents" })
+            foreach (string name in new[] { "menu", "classes", "shop", "arena", "artifacts", "talents" })
             {
                 string path = Path.GetFullPath(Path.Combine(Application.dataPath, "..", "preview-" + name + ".png"));
                 captured &= File.Exists(path) && File.GetLastWriteTimeUtc(path) >= captureStartedAt;

@@ -56,7 +56,7 @@ namespace Slopgame
             return Sprite.Create(texture, new Rect(0, 0, width, height), Vector2.one * 0.5f, width);
         }
 
-        private static Sprite coinSprite, coinShadow, coinGlint;
+        private static Sprite coinSprite, coinShadow, coinGlint, crystalSprite;
 
         /// <summary>A round gold coin with a bronze rim, a stamped mark and a bright highlight. Draw it untinted.</summary>
         public static Sprite CoinSprite => coinSprite != null ? coinSprite : coinSprite = PaletteSprite("Gold coin", new[]
@@ -85,7 +85,23 @@ namespace Slopgame
             "...W...", "...W...", "..WWW..", "WWWWWWW", "..WWW..", "...W...", "...W..."
         }, key => key == 'W' ? Color.white : Color.clear);
 
-        private static Sprite PaletteSprite(string name, string[] rows, System.Func<char, Color> palette)
+        /// <summary>A faceted violet crystal with a pale core and a bright edge. Draw it untinted.</summary>
+        public static Sprite CrystalSprite => crystalSprite != null ? crystalSprite : crystalSprite = PaletteSprite("Crystal", new[]
+        {
+            "....OO....", "...OLWO...", "..OLWMMO..", "..OLWMMO..", ".OLWMMMDO.", ".OLWMMMDO.",
+            ".OLMMMMDO.", ".OLMMMDDO.", "..OLMMDO..", "..OLMDDO..", "...OMDO...", "....OO...."
+        }, key => key switch
+        {
+            'O' => new Color(0.24f, 0.1f, 0.38f),
+            'L' => new Color(0.95f, 0.8f, 1f),
+            'W' => new Color(1f, 1f, 1f),
+            'M' => new Color(0.74f, 0.44f, 1f),
+            'D' => new Color(0.46f, 0.22f, 0.78f),
+            _ => Color.clear
+        });
+
+        /// <summary>A pixel sprite one world unit wide, drawn from rows of palette keys.</summary>
+        public static Sprite PaletteSprite(string name, string[] rows, System.Func<char, Color> palette)
         {
             int width = rows[0].Length, height = rows.Length;
             var texture = new Texture2D(width, height, TextureFormat.RGBA32, false)
@@ -410,7 +426,8 @@ namespace Slopgame
             }
         }
 
-        public static void DrawMap(DungeonMap map, Transform root)
+        /// <param name="shop">The crystal shop: warm wooden boards and stone walls instead of the dungeon's cold slate.</param>
+        public static void DrawMap(DungeonMap map, Transform root, bool shop = false)
         {
             for (int x = 0; x < DungeonMap.Width; x++)
                 for (int y = 0; y < DungeonMap.Height; y++)
@@ -418,7 +435,9 @@ namespace Slopgame
                     bool walkable = map.IsFloor(x, y);
                     if (!walkable && !map.IsFloor(x - 1, y) && !map.IsFloor(x + 1, y)
                         && !map.IsFloor(x, y - 1) && !map.IsFloor(x, y + 1)) continue;
-                    Color color = walkable
+                    Color color = shop
+                        ? walkable ? (y % 2 == 0 ? new Color(0.25f, 0.16f, 0.11f) : new Color(0.28f, 0.18f, 0.12f)) : new Color(0.36f, 0.3f, 0.3f)
+                        : walkable
                         ? ((x + y) % 2 == 0 ? new Color(0.12f, 0.17f, 0.21f) : new Color(0.14f, 0.19f, 0.23f))
                         : new Color(0.29f, 0.38f, 0.43f);
                     Create(walkable ? "Floor" : "Wall", root, new Vector2(x, y), Vector2.one * 0.97f, color, 0);

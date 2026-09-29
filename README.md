@@ -29,6 +29,8 @@ You can rebind every action under **Controls** in the main menu. Each action get
 
 - **Clear the floor.** Defeat every enemy, then find the gold stairs and press **F** to descend.
 - **Pick a boon.** Between floors you choose one of three upgrades for this run. Each choice also restores 2 HP. Some boons belong to your class, and some only show up after you unlock the ability they improve. Open **Talents** in the HUD to see your build.
+- **Gather crystals.** Every enemy you defeat drops purple crystals (armoured brutes drop 3, guardians 15). Walk near them to pick them up. They last the whole run.
+- **Visit the crystal shop.** Before every guardian you reach a lantern-lit shop. Press **F** at the merchant's counter to spend crystals on a Healing Draught (+2 HP), a Grand Elixir (full HP), a Heart Crystal (+1 max HP for the run) or boons that last only for the boss fight: Stoneskin Tonic (+2 wards), Whetstone (+1 damage) and Quicksilver (+20% move speed). Each ware costs 50% more every time you buy it in the same shop. The shop's stairs lead to the guardian.
 - **Beat the guardians.** Every fifth floor is a boss arena. Three guardians take turns, and each gets more dangerous below half health:
   - **The Ash Warden**, a caster who fills the arena with ember fans, novas, spirals and falling fire.
   - **The Ashen Duelist**, a fast, fragile swordsman who dashes, throws blade fans and teleports behind you.
@@ -81,7 +83,7 @@ Once you have beaten the third guardian (floor 15) in a single descent, the Ash 
 | --- | --- |
 | **Knight** | **Shield Taunt:** plant a great shield for 1.5 s (no other actions). It blocks bolts in a 90° cone ahead and gives a ward for each one, and enemies go for you first. |
 | **Archer** | **Elemental Quiver:** cycle between fire, freeze and shock arrows. Arrows still crit, and a critical hit also sets off the arrow's element. |
-| **Wizard** | **Wild Storm:** after 10 elemental effects, summon a storm over you that takes turns hurling fireballs, lightning and ice bolts for 8 s. |
+| **Wizard** | **Wild Storm:** after 10 elemental effects, summon a storm over you that takes turns hurling fireballs, lightning and ice bolts for 8 s. Every storm strike is sure to burn, shock or freeze. |
 | **Assassin** | **Sharpened Dagger:** +1 damage for 7.5 s. Every hit on an enemy's back adds +1 more and refreshes it. |
 | **Paladin** | **Heavenly Host:** after your blessings add 50 bonus damage (more in co-op), angels revive the ally who has been down longest with half health, or heal the weakest ally to full. |
 | **Brawler** | **Super Angry:** after taking 5 damage, go berserk with huge speed, reach, area, charge speed and damage for 8 s. |
@@ -104,6 +106,7 @@ Everyone picks a hero in the lobby, then the host presses **Begin descent**.
 
 - Enemies get tougher for each extra player, and the game doesn't pause.
 - A fallen hero comes back with half health on the next floor. The run ends only when the whole party is down.
+- Each player collects and spends their own crystals. The crystal shop's stairs only work once the whole party is standing at them.
 - Each player earns Ash into their own save.
 - The host's **Restart** button restarts for everyone. A guest's Restart counts as a vote.
 - You can't join a party once its descent has started.

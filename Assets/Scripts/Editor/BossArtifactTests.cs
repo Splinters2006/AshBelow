@@ -94,7 +94,10 @@ namespace Slopgame.Editor
                     TestEnemies(run);
                     FreezeEnemies(run);
                     TestWizard(run);
-                    while (run.Floor < 5) ClearFloor(run);
+                    TestCrystalDrops(run);
+                    while (run.Floor < 4) ClearFloor(run);
+                    ClearFloor(run);
+                    TestShop(run);
                     Require(run.IsBossFloor && run.Boss != null && run.Enemies.Count == 1, "Floor five did not create a dedicated boss arena.");
                     Require(run.Map.CanStand(new Vector2(15, 9)) && !run.Map.CanStand(new Vector2(12, 9)), "Arena bounds are wrong.");
                     run.Player.Protect(30f);
@@ -131,6 +134,7 @@ namespace Slopgame.Editor
                     Require(run.Artifact == null && run.IsPlaying && Time.timeScale == 1f, "Artifact choice did not resume play.");
                     run.BeginUpgradeChoice();
                     Require(run.Floor == 6 && !run.ChoosingUpgrade, "Boss floor gave a passive reward or failed to descend.");
+                    Require(run.Player.Crystals.BonusDamage == 0 && run.Player.Crystals.SpeedMultiplier == 1f, "Crystal shop boons outlasted the boss arena.");
                     while (run.Floor < 10) ClearFloor(run);
                     Require(run.IsBossFloor && run.Boss != null, "Floor ten has no boss.");
                     Require(run.Boss.Kind == BossKind.Duelist && run.Boss.Behaviour is DuelistBoss, "Floor ten did not summon the Ashen Duelist.");
@@ -321,10 +325,57 @@ namespace Slopgame.Editor
 
         private static void ClearFloor(DungeonRun run)
         {
+            // The crystal shop before each boss has no enemies: its stairs lead straight on.
+            if (run.InShop) { run.BeginUpgradeChoice(); return; }
             while (run.Enemies.Count > 0) run.Enemies[0].Hit(100000);
             run.BeginUpgradeChoice();
             Require(run.ChoosingUpgrade, "Regular floor did not offer talents.");
             run.ChooseUpgrade(0);
+        }
+
+        private static void TestCrystalDrops(DungeonRun run)
+        {
+            var tank = run.Enemies.Find(enemy => enemy.IsTank);
+            var normal = run.Enemies.Find(enemy => !enemy.IsTank);
+            Require(Crystal.ValueFor(tank) == 3 && Crystal.ValueFor(normal) == 1, "Crystal values are wrong.");
+            int before = run.ProjectileRoot.GetComponentsInChildren<Crystal>().Length;
+            normal.Hit(100000);
+            var dropped = run.ProjectileRoot.GetComponentsInChildren<Crystal>();
+            Require(dropped.Length == before + 1 && Array.Exists(dropped, crystal => crystal.Value == 1), "A slain enemy dropped no crystal.");
+        }
+
+        private static void TestShop(DungeonRun run)
+        {
+            var player = run.Player;
+            var pouch = player.Crystals;
+            Require(run.InShop && run.Floor == 4 && run.Enemies.Count == 0 && run.Shop != null && !run.IsBossFloor, "The floor before the boss did not lead into the crystal shop.");
+            Require(run.Map.CanStand(run.Map.Centers[0]) && run.Map.CanStand(run.Exit) && !run.Map.IsFloor(27, 22), "The shop room layout is wrong.");
+            var shop = run.Shop;
+            CrystalShop.Offer Offer(CrystalShop.Ware ware) => Array.Find(CrystalShop.Offers, offer => offer.Ware == ware);
+            pouch.Add(1000 - pouch.Crystals);
+            Require(!shop.CanBuy(Offer(CrystalShop.Ware.Draught)) && !shop.Buy(Offer(CrystalShop.Ware.Elixir)), "Healing was sold to a hero at full health.");
+            Require(player.Hit() && player.Health == player.MaxHealth - 1, "The shop test could not wound the hero.");
+            var draught = Offer(CrystalShop.Ware.Draught);
+            Require(shop.Buy(draught) && player.Health == player.MaxHealth && pouch.Crystals == 1000 - draught.BaseCost, "The Healing Draught did not heal for its price.");
+            Require(shop.Cost(draught) == draught.BaseCost + draught.BaseCost / 2, "Wares did not grow dearer after a purchase.");
+            int maxHealth = player.MaxHealth;
+            Require(shop.Buy(Offer(CrystalShop.Ware.HeartCrystal)) && player.MaxHealth == maxHealth + 1 && player.Health == player.MaxHealth, "The Heart Crystal did not raise max HP.");
+            int damage = player.Damage;
+            Require(shop.Buy(Offer(CrystalShop.Ware.Whetstone)) && shop.Buy(Offer(CrystalShop.Ware.Stoneskin)) && shop.Buy(Offer(CrystalShop.Ware.Quicksilver)),
+                "Arena boons could not be bought.");
+            Require(player.Damage == damage && pouch.SpeedMultiplier == 1f && pouch.PendingDamage == 1 && pouch.PendingWards == CrystalShop.StoneskinWards,
+                "Arena boons applied in the shop instead of waiting for the guardian.");
+            pouch.Spend(pouch.Crystals);
+            Require(!shop.CanBuy(Offer(CrystalShop.Ware.Whetstone)), "The shop sold a ware the hero could not afford.");
+            player.transform.position = (Vector2)run.Map.Centers[0];
+            Require(!shop.IsNear(player), "The merchant can be reached from the shop entrance.");
+            player.transform.position = shop.Counter + Vector2.down * 0.9f;
+            Require(shop.IsNear(player), "The merchant cannot be reached from his counter.");
+            ClearFloor(run);
+            int wards = player.Powerups.Count(PowerupType.Armor) + player.Powerups.Count(PowerupType.PaladinWard) + CrystalShop.StoneskinWards;
+            Require(!run.InShop && run.Floor == 5 && run.Shop == null, "The shop stairs did not lead to the boss.");
+            Require(player.Damage == damage + 1 && player.Powerups.ArmorCharges == wards && Mathf.Abs(pouch.SpeedMultiplier - 1.2f) < 0.001f,
+                "Arena boons did not apply in the boss arena.");
         }
 
         private static void TestEnemies(DungeonRun run)
@@ -469,9 +520,9 @@ namespace Slopgame.Editor
                 && GamblerAttack.JackpotSpeedFor(100) == 2.5f, "Jackpot prizes do not scale with coins as intended.");
             Require(player.Powerups.Add(PowerupType.HighRoller) && Mathf.Abs(coins.JackpotTime(1) - GamblerAttack.JackpotDuration - 2f) < 0.001f,
                 "High Roller did not lengthen the Jackpot buffs.");
-            int pickup = coins.PickupCoins;
             float toss = coins.ThrowRange, volley = coins.VolleyReach;
-            Require(player.Powerups.Add(PowerupType.LooseChange) && coins.PickupCoins == pickup + 1, "Loose Change did not add a coin per pickup.");
+            Require(coins.PickupCoinsForRoll(0f) == 1 && player.Powerups.Add(PowerupType.LooseChange)
+                && coins.PickupCoinsForRoll(0.049f) == 2 && coins.PickupCoinsForRoll(0.051f) == 1, "Loose Change did not give a 5% chance of an extra coin.");
             Require(player.Powerups.Add(PowerupType.LongToss) && Mathf.Abs(coins.ThrowRange - toss - 1f) < 0.001f
                 && Mathf.Abs(coins.VolleyReach - volley - 1f) < 0.001f, "Long Toss did not add coin range.");
         }

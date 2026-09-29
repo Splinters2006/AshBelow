@@ -14,9 +14,20 @@ namespace Slopgame
         public bool IsBossFloor => Floor > 0 && Floor % 5 == 0;
         public DungeonBoss Boss { get; private set; }
         public ArtifactPickup Artifact { get; private set; }
-        public string Objective => Artifact != null ? "Claim the glowing artifact  /  " + KeyBindings.Label(GameAction.Interact)
+        /// <summary>
+        /// True in the crystal shop between the floor before a boss and the boss arena. The shop keeps the floor
+        /// number of the floor before it, so the guardian's floor still comes next.
+        /// </summary>
+        public bool InShop { get; private set; }
+        public CrystalShop Shop { get; private set; }
+        public Vector2 Exit => exit;
+        public string Objective => InShop ? ShopObjective
+            : Artifact != null ? "Claim the glowing artifact  /  " + KeyBindings.Label(GameAction.Interact)
             : IsBossFloor && Enemies.Count > 0 ? "Defeat the arena guardian"
             : Enemies.Count == 0 ? "Find the gold stairs  /  " + KeyBindings.Label(GameAction.Interact) : "Clear the floor to unlock the stairs";
+        private string ShopObjective => Shop != null && Shop.IsNear(Player) ? "Trade crystals with the merchant  /  " + KeyBindings.Label(GameAction.Interact)
+            : IsNetworked ? "Spend crystals, then gather the party at the stairs to face the guardian"
+            : "Spend crystals at the merchant, then take the stairs to the guardian";
         private readonly List<PowerupDefinition> upgradeChoices = new List<PowerupDefinition>();
         public IReadOnlyList<PowerupDefinition> UpgradeChoices => upgradeChoices;
         public int Floor { get; private set; }
@@ -122,6 +133,8 @@ namespace Slopgame
             ChoosingArtifact = false;
             Boss = null;
             Artifact = null;
+            InShop = false;
+            Shop = null;
             Time.timeScale = 1f;
             ScreenFx.Clear();
             IsInMainMenu = true;
@@ -152,6 +165,7 @@ namespace Slopgame
             Seed = seed;
             PartySize = Mathf.Max(1, partySize);
             Floor = 0;
+            InShop = false;
             Kills = 0;
             RunAshEarned = 0;
             Player = DungeonVisuals.Create(SelectedCharacter.DisplayName, transform, Vector2.zero, Vector2.one * 0.65f,
@@ -174,21 +188,26 @@ namespace Slopgame
             ScreenFx.Clear();
             Boss = null;
             Artifact = null;
+            Shop = null;
             ChoosingArtifact = false;
             upgradeChoices.Clear();
             Player.Powerups.BeginFloor();
             Player.Weapon?.Hide();
             if (level != null) { level.gameObject.SetActive(false); Destroy(level.gameObject); }
             Enemies.Clear();
-            Floor++;
+            // The floor before every boss leads into the crystal shop, and the shop's stairs lead to the boss.
+            InShop = !InShop && IsShopNext(Floor);
+            if (!InShop) Floor++;
             floorRewardGranted = false;
-            Map = new DungeonMap(Seed + Floor * 7919, IsBossFloor);
-            level = new GameObject("Floor " + Floor).transform;
+            Map = InShop ? DungeonMap.Shop() : new DungeonMap(Seed + Floor * 7919, IsBossFloor);
+            level = new GameObject(InShop ? "Crystal shop" : "Floor " + Floor).transform;
             level.SetParent(transform);
-            DungeonVisuals.DrawMap(Map, level);
+            DungeonVisuals.DrawMap(Map, level, InShop);
+            Player.Crystals.BeginFloor(Floor, InShop);
             Player.transform.position = (Vector2)Map.Centers[0];
             exit = Map.Centers[Map.Centers.Count - 1];
             stairs = StairVisual.Create(level, exit);
+            if (InShop) Shop = CrystalShop.Create(this, level);
             if (IsBossFloor)
             {
                 var enemy = DungeonVisuals.Create("Guardian", level, exit, Vector2.one * 1.4f,
@@ -198,7 +217,7 @@ namespace Slopgame
                 Enemies.Add(enemy);
                 DungeonVisuals.DecorateArena(level);
             }
-            for (int room = 1; !IsBossFloor && room < Map.Centers.Count; room++)
+            for (int room = 1; !IsBossFloor && !InShop && room < Map.Centers.Count; room++)
             {
                 int count = Mathf.Min(4, 1 + Floor);
                 for (int i = 0; i < count; i++)
@@ -229,6 +248,9 @@ namespace Slopgame
             UpdatePaths();
         }
 
+        /// <summary>True when the floor after <paramref name="floor"/> is a boss floor, so the crystal shop comes first.</summary>
+        public static bool IsShopNext(int floor) => floor > 0 && (floor + 1) % 5 == 0;
+
         private void Update()
         {
             if (PlayerInput.DebugToggle) DebugMode.Toggle();
@@ -241,6 +263,11 @@ namespace Slopgame
             {
                 if (IsNetworked) Coop.RequestInteract(CoopChoice.Artifact);
                 else BeginArtifactChoice();
+                return;
+            }
+            if (Shop != null && canInteract && Shop.IsNear(Player))
+            {
+                Shop.Toggle();
                 return;
             }
             stairs.SetUnlocked(Enemies.Count == 0 && Artifact == null);
@@ -396,7 +423,7 @@ namespace Slopgame
         public void BeginUpgradeChoice()
         {
             if (!IsPlaying || Enemies.Count != 0 || Artifact != null) return;
-            if (IsBossFloor) { NextFloor(); return; }
+            if (IsBossFloor || InShop) { NextFloor(); return; }
             var pool = new List<PowerupDefinition>();
             foreach (var powerup in PowerupCatalog.All)
                 if (Player.Powerups.CanTake(powerup.Type)) pool.Add(powerup);

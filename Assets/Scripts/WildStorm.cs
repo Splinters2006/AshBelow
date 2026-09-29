@@ -6,7 +6,7 @@ namespace Slopgame
     /// <summary>
     /// The Wizard's class mechanic: every elemental effect he sets off (burn, freeze or shock) charges it. After 10
     /// a wild storm gathers over him for a while and keeps striking the nearest enemy, taking turns hurling a
-    /// fireball, a lightning bolt and an ice bolt.
+    /// fireball, a lightning bolt and an ice bolt. Every storm strike is guaranteed to set off its element.
     /// </summary>
     public sealed class WildStorm : ChargedMechanic
     {
@@ -91,16 +91,16 @@ namespace Slopgame
             switch (turn++ % 3)
             {
                 case 0:
-                    SpellProjectile.Spawn(Player, aim, damage, DamageElement.Fire, Color.white, Range + 1f, 0f, 0, origin);
+                    SpellProjectile.Spawn(Player, aim, damage, DamageElement.Fire, Color.white, Range + 1f, 0f, 0, origin, true);
                     break;
                 case 1:
                     CombatVfx.GlowBolt(run.ProjectileRoot, origin, at, AbilityCatalog.Ice);
                     CoopFx.Bolt(run, origin, at, AbilityCatalog.Ice, true);
                     HeroVfx.Sparks(run.ProjectileRoot, at, Color.Lerp(AbilityCatalog.Ice, Color.white, 0.4f), 7, 4f, 0.25f);
-                    CombatDamage.Apply(Player, target, damage, DamageElement.Lightning, origin);
+                    CombatDamage.Apply(Player, target, damage, DamageElement.Lightning, origin, guaranteedEffect: true);
                     break;
                 default:
-                    SpellProjectile.Spawn(Player, aim, damage, DamageElement.Ice, AbilityCatalog.Ice, Range + 1f, 0f, 0, origin);
+                    SpellProjectile.Spawn(Player, aim, damage, DamageElement.Ice, AbilityCatalog.Ice, Range + 1f, 0f, 0, origin, true);
                     break;
             }
         }

@@ -198,6 +198,9 @@ namespace Slopgame.Editor
                     Require(!storm.TryActivate(aim), "Wild Storm fired without charge.");
                     for (int i = 0; i < WildStorm.EffectsNeeded; i++) CombatDamage.ApplyEffect(player, enemies[2], DamageElement.Ice, 1);
                     Require(storm.IsCharged && storm.TryActivate(aim) && storm.IsRaging && storm.Charge == 0, "Wild Storm did not charge and summon.");
+                    // Storm strikes skip the effect roll, so even a 5% effect chance always burns.
+                    CombatDamage.Apply(player, enemies[1], 1, DamageElement.Fire, player.transform.position, 0f, guaranteedEffect: true);
+                    Require(enemies[1].IsBurning, "A guaranteed storm effect did not proc.");
                     watched = enemies[0];
                     waiting = true;
                     waitUntil = Time.time + 2f;

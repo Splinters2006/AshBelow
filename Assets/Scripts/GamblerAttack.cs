@@ -27,8 +27,11 @@ namespace Slopgame
         public int Coins => Mathf.Max(1, coins);
         public bool IsHeavyAttacking => false;
         public float HeavyCooldownRemaining => DebugMode.Cooldown(Mathf.Max(0f, volleyReadyAt - Time.time));
-        /// <summary>Coins gained from each gold coin picked up (Loose Change adds more).</summary>
-        public int PickupCoins => 1 + Player.Powerups.Count(PowerupType.LooseChange);
+        public const float LooseChangeChancePerRank = 0.05f;
+        /// <summary>Loose Change: the chance that a gold coin picked up is worth a second coin.</summary>
+        public float LooseChangeChance => LooseChangeChancePerRank * Player.Powerups.Count(PowerupType.LooseChange);
+        /// <summary>Coins gained from a gold coin picked up, given a 0-1 roll (Loose Change may add one more).</summary>
+        public int PickupCoinsForRoll(float roll) => roll < LooseChangeChance ? 2 : 1;
         /// <summary>Long Toss adds range to thrown coins and the volley.</summary>
         public float ThrowRange => CoinRange + Player.Powerups.Count(PowerupType.LongToss);
         public float VolleyReach => VolleyRange + Player.Powerups.Count(PowerupType.LongToss);

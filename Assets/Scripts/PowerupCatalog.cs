@@ -82,7 +82,7 @@ namespace Slopgame
             new PowerupDefinition(PowerupType.Bloodline, "Bloodline", "+1 second of Archdemon's Technique", 3, WeaponType.Tail, AbilityType.ArchdemonTechnique),
             new PowerupDefinition(PowerupType.BigPaws, "Good Boy", "+0.4 HEEEELP slam radius", 3, WeaponType.Tail, AbilityType.DemonPaw),
             new PowerupDefinition(PowerupType.HexMastery, "Hex Mastery", "+0.5 seconds of Demon Curse paralysis", 3, WeaponType.Tail, AbilityType.DemonCurse),
-            new PowerupDefinition(PowerupType.LooseChange, "Gambler: Loose Change", "+1 coin from every gold coin picked up", 3, WeaponType.Coins),
+            new PowerupDefinition(PowerupType.LooseChange, "Gambler: Loose Change", "+5% chance for a gold coin picked up to be worth an extra coin", 3, WeaponType.Coins),
             new PowerupDefinition(PowerupType.LongToss, "Gambler: Long Toss", "+1 coin throw and volley range", 3, WeaponType.Coins),
             new PowerupDefinition(PowerupType.MintCondition, "Mint Condition", "+2 coins from Windfall", 3, WeaponType.Coins, AbilityType.Windfall),
             new PowerupDefinition(PowerupType.RiggedOdds, "Rigged Odds", "+5% odds on All In", 3, WeaponType.Coins, AbilityType.AllIn),

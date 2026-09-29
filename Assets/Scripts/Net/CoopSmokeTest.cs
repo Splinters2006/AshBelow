@@ -195,6 +195,24 @@ namespace Slopgame
                     run.ChooseUpgrade(0);
                     if (seat != 0 && floor == 1) yield return Snap("waiting");
                 }
+                if (DungeonRun.IsShopNext(floor))
+                {
+                    // The crystal shop before the boss: the stairs only work once the whole party stands at them.
+                    yield return Wait("the crystal shop", () => run.InShop && run.IsPlaying);
+                    Require(run.Floor == floor && run.Enemies.Count == 0 && run.Shop != null, "The crystal shop was not built for everyone.");
+                    if (seat == 1)
+                    {
+                        run.Coop.RequestInteract(CoopChoice.Upgrade);
+                        yield return new WaitForSecondsRealtime(1f);
+                        Require(run.InShop, "The shop stairs left before the party gathered.");
+                    }
+                    run.Player.transform.position = run.Exit;
+                    for (float giveUp = Time.realtimeSinceStartup + 20f; run.InShop && Time.realtimeSinceStartup < giveUp; )
+                    {
+                        if (seat == 1) run.Coop.RequestInteract(CoopChoice.Upgrade);
+                        yield return new WaitForSecondsRealtime(0.5f);
+                    }
+                }
                 yield return Wait($"floor {floor + 1}", () => run.Floor == floor + 1 && run.IsPlaying);
             }
 

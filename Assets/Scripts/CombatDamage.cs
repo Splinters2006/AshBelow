@@ -45,8 +45,9 @@ namespace Slopgame
         /// An element carried by a physical hit (the Archer's Elemental Quiver): it still crits normally, and a critical
         /// hit also sets off that element's effect.
         /// </param>
+        /// <param name="guaranteedEffect">An elemental hit skips its effect roll and always sets off its element (Wild Storm).</param>
         public static void Apply(DungeonPlayer player, DungeonEnemy enemy, int damage, DamageElement element, Vector2 source, float knockback = 1f,
-            DamageElement infusion = DamageElement.Physical)
+            DamageElement infusion = DamageElement.Physical, bool guaranteedEffect = false)
         {
             if (enemy == null || enemy.Health <= 0) return;
             if (enemy.IsInvulnerable) { enemy.Hit(0, source); return; }
@@ -69,7 +70,7 @@ namespace Slopgame
             HitVfx(player, enemy.transform.position, source, ElementColor(element), false);
             enemy.Hit(damage, source, knockback);
             CreditBlessing(player);
-            if (Random.value < player.Powerups.ElementalEffectChance) ApplyEffect(player, enemy, element, damage);
+            if (guaranteedEffect || Random.value < player.Powerups.ElementalEffectChance) ApplyEffect(player, enemy, element, damage);
         }
 
         /// <summary>Hits dealt while blessed charge the Paladin who gave the blessing.</summary>

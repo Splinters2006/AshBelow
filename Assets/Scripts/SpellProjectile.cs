@@ -7,7 +7,7 @@ namespace Slopgame
     {
         private DungeonPlayer player;
         private DungeonRun run;
-        private bool ghost;
+        private bool ghost, guaranteedEffect;
         private Vector2 direction;
         private int damage, pierces;
         private float remaining, radius, pulsePhase, baseScale = 1f;
@@ -17,8 +17,10 @@ namespace Slopgame
         public bool IsSpent { get; private set; }
 
         /// <param name="origin">Where the spell starts; the caster's position by default (Wild Storm casts from its cloud).</param>
+        /// <param name="guaranteedEffect">Skip the effect roll: every hit sets off its element (Wild Storm).</param>
         public static SpellProjectile Spawn(DungeonPlayer player, Vector2 direction, int damage,
-            DamageElement element, Color color, float range = 6f, float radius = 0f, int pierces = 0, Vector2? origin = null)
+            DamageElement element, Color color, float range = 6f, float radius = 0f, int pierces = 0, Vector2? origin = null,
+            bool guaranteedEffect = false)
         {
             Vector2 from = origin ?? (Vector2)player.transform.position;
             CoopFx.Spell(player.Run, from, direction, color, range, radius, pierces);
@@ -26,6 +28,7 @@ namespace Slopgame
             shot.player = player;
             shot.damage = damage;
             shot.element = element;
+            shot.guaranteedEffect = guaranteedEffect;
             return shot;
         }
 
@@ -101,7 +104,7 @@ namespace Slopgame
                     if (hits.Contains(enemy) || Vector2.Distance(next, enemy.transform.position) > enemy.HitRadius) continue;
                     if (radius > 0f) { Explode(); return; }
                     hits.Add(enemy);
-                    if (!ghost) CombatDamage.Apply(player, enemy, damage, element, next - direction);
+                    if (!ghost) CombatDamage.Apply(player, enemy, damage, element, next - direction, guaranteedEffect: guaranteedEffect);
                     if (pierces-- <= 0) { Finish(); return; }
                 }
             }

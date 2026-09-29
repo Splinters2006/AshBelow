@@ -9,13 +9,16 @@ namespace Slopgame
         public int Health { get; private set; } = 6;
         public int BaseDamage { get; private set; } = 1;
         public int Damage => Mathf.Max(1, Mathf.RoundToInt((BaseDamage + (Blessing != null ? Blessing.BonusDamage : 0)
-            + (Mechanic != null ? Mechanic.BonusDamage : 0) + (Buffs != null ? Buffs.JackpotDamage : 0)) * (Buffs != null ? Buffs.DamageMultiplier : 1f)));
+            + (Mechanic != null ? Mechanic.BonusDamage : 0) + (Buffs != null ? Buffs.JackpotDamage : 0) + (Crystals != null ? Crystals.BonusDamage : 0))
+            * (Buffs != null ? Buffs.DamageMultiplier : 1f)));
         /// <summary>The class mechanic on R, or null if this hero has not bought it.</summary>
         public ClassMechanic Mechanic { get; private set; }
         /// <summary>Shield Taunt: enemies go for this Knight first.</summary>
         public bool DrawsAggro => Mechanic is ShieldTaunt taunt && taunt.DrawsAggro;
         public DamageBlessing Blessing { get; private set; }
         public HeroBuffs Buffs { get; private set; }
+        /// <summary>Crystals for the shop before each boss, and the boss boons bought there.</summary>
+        public CrystalPouch Crystals { get; private set; }
         /// <summary>True while a scripted move (such as Wild Leap) controls the hero; input is ignored.</summary>
         public bool IsBusy => Time.time < busyUntil;
         public float Speed { get; private set; } = 5f;
@@ -58,6 +61,8 @@ namespace Slopgame
             Blessing = gameObject.AddComponent<DamageBlessing>();
             Buffs = gameObject.AddComponent<HeroBuffs>();
             Buffs.Player = this;
+            Crystals = gameObject.AddComponent<CrystalPouch>();
+            Crystals.Player = this;
             Speed = character.MoveSpeed + Permanent.Speed;
             characterColor = character.Color;
             weaponType = character.Weapon;
@@ -149,7 +154,7 @@ namespace Slopgame
             Vector2 movement = MoveInput = PlayerInput.Movement;
             if (PlayerInput.Dodge) TryRoll(MobilityAim(AimDirection));
             Vector2 velocity = IsRolling ? rollDirection * Speed * 2.6f * Buffs.DodgeSpeedMultiplier
-                : movement * Speed * Buffs.MoveMultiplier * (Weapon.IsHeavyAttacking ? 0.55f : Charge.IsCharging ? 0.7f : 1f);
+                : movement * Speed * Buffs.MoveMultiplier * Crystals.SpeedMultiplier * (Weapon.IsHeavyAttacking ? 0.55f : Charge.IsCharging ? 0.7f : 1f);
             if (DebugMode.Enabled) velocity *= DebugMode.SpeedMultiplier;
             transform.position = Run.Map.Move(transform.position, velocity * Time.deltaTime);
             // Abilities and heavy attacks get the full offset to the cursor, so targeted and mobility moves
@@ -266,6 +271,13 @@ namespace Slopgame
         }
 
         public void Heal(int amount) { Health = Mathf.Min(MaxHealth, Health + amount); }
+        /// <summary>Raises maximum health and heals by the same amount (the crystal shop's Heart Crystal).</summary>
+        public void RaiseMaxHealth(int amount)
+        {
+            if (amount <= 0) return;
+            MaxHealth += amount;
+            Heal(amount);
+        }
         public void Protect(float duration) { invulnerableUntil = Mathf.Max(invulnerableUntil, Time.time + duration); }
         public void Veil(float duration) { veiledUntil = Mathf.Max(veiledUntil, Time.time + duration); }
 

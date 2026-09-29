@@ -49,7 +49,7 @@ namespace Slopgame
             new PermanentUpgradeDefinition("gambler_luck", "Lady Luck", "+4% odds on Double or Nothing, All In and Jackpot per rank", 3, 50, 40, WeaponType.Coins),
             Mechanic(WeaponType.Sword, "Shield Taunt", "R: raise a great shield for 1.5s. It blocks bolts in front (+1 ward each) and draws the enemies' attention"),
             Mechanic(WeaponType.Bow, "Elemental Quiver", "R: cycle fire, freeze and shock arrows. Critical hits set off the arrow's element"),
-            Mechanic(WeaponType.Staff, "Wild Storm", "R: after 10 elemental effects, summon a storm that hurls fire, lightning and ice"),
+            Mechanic(WeaponType.Staff, "Wild Storm", "R: after 10 elemental effects, summon a storm that hurls fire, lightning and ice, every strike sure to burn, shock or freeze"),
             Mechanic(WeaponType.Daggers, "Sharpened Dagger", "R: +1 damage for 7.5s; every backstab adds +1 more and refreshes it"),
             Mechanic(WeaponType.Hammer, "Heavenly Host", "R: after 50 blessed bonus damage, angels revive the longest-fallen ally or fully heal the weakest"),
             Mechanic(WeaponType.Fists, "Super Angry", "R: after taking 5 damage, erupt with huge speed, reach, charge speed and damage"),

@@ -518,6 +518,8 @@ namespace Slopgame
             if (choice == CoopChoice.Artifact && Run.Artifact == null) return;
             if (choice == CoopChoice.Upgrade && Run.Artifact != null) return;
             if (choice == CoopChoice.Upgrade && Run.IsBossFloor) { HostAdvance(); return; }
+            // Nobody is dragged out of the crystal shop mid-purchase: the party leaves together.
+            if (choice == CoopChoice.Upgrade && Run.InShop) { if (PartyAtStairs()) HostAdvance(); return; }
             openChoice = choice;
             choicesDone.Clear();
             using (var writer = NetSession.Writer(16))
@@ -527,6 +529,18 @@ namespace Slopgame
                 Session.Send(CoopMessages.Choice, writer);
             }
             OpenChoiceLocal(choice);
+        }
+
+        public const float GatherRadius = 2.5f;
+
+        /// <summary>True when every living hero stands near the stairs.</summary>
+        private bool PartyAtStairs()
+        {
+            var player = Run.Player;
+            if (player.Health > 0 && Vector2.Distance(player.transform.position, Run.Exit) > GatherRadius) return false;
+            foreach (var hero in remoteHeroes)
+                if (hero != null && hero.IsAlive && Vector2.Distance(hero.transform.position, Run.Exit) > GatherRadius) return false;
+            return true;
         }
 
         private void OnChoice(ulong sender, FastBufferReader reader)

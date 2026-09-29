@@ -71,6 +71,7 @@ namespace Slopgame.Editor
 
         private static void ClearNormalFloor(DungeonRun run)
         {
+            if (run.InShop) { run.BeginUpgradeChoice(); return; }
             while (run.Enemies.Count > 0) run.Enemies[0].Hit(100000);
             run.BeginUpgradeChoice();
             Require(run.ChoosingUpgrade, "Regular floor did not offer a boon.");

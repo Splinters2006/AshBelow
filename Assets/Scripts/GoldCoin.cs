@@ -80,7 +80,7 @@ namespace Slopgame
             }
 
             if (purse == null || player.Health <= 0 || Vector2.Distance(rest, hero) > PickupRadius) return;
-            purse.AddCoins(purse.PickupCoins);
+            purse.AddCoins(purse.PickupCoinsForRoll(Random.value));
             var root = run.ProjectileRoot;
             HeroVfx.Pulse(root, rest, 0.5f, new Color(1f, 0.85f, 0.35f, 0.7f), 0.2f);
             HeroVfx.Sparks(root, rest, GamblerAttack.Gold, 8, 3f, 0.3f, Vector2.up, 150f, 0.8f);

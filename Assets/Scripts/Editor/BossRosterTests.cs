@@ -51,8 +51,9 @@ namespace Slopgame.Editor
             while (run.Floor < floor)
             {
                 int before = run.Floor;
+                bool shop = !run.InShop && DungeonRun.IsShopNext(before);
                 run.DebugSkipRoom();
-                Require(run.Floor == before + 1, "Skip room did not advance the floor.");
+                Require(shop ? run.InShop && run.Floor == before : run.Floor == before + 1, "Skip room did not advance the floor.");
             }
         }
 
