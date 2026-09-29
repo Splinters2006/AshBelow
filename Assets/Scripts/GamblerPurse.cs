@@ -3,8 +3,9 @@ using UnityEngine;
 namespace Slopgame
 {
     /// <summary>
-    /// The Gambler's class mechanic: the key opens his purse, a small shop paid for in coins. Every coin spent here
-    /// is one fewer in his volley. The game keeps running while it is open.
+    /// The Gambler's class mechanic, bought in the Ash shop like the others: the key opens his purse, a small shop
+    /// paid for in coins. Every coin spent here is one fewer in his volley. The game keeps running while it is open.
+    /// The free coin he gets when he runs dry belongs to his weapon (GamblerAttack), not to this.
     /// </summary>
     public sealed class GamblerPurse : ClassMechanic
     {

@@ -19,14 +19,13 @@ namespace Slopgame
         public int StartingCoins { get; }
         /// <summary>Added to the Gambler's odds of winning a gamble.</summary>
         public float GambleLuck { get; }
-        /// <summary>The class mechanic on R, bought in the Ash shop. The Gambler's purse shop comes free.</summary>
+        /// <summary>The class mechanic on R, bought in the Ash shop.</summary>
         public bool MechanicUnlocked { get; }
 
         public PermanentBonuses(PermanentProgress progress, WeaponType weapon)
         {
-            MechanicUnlocked = weapon == WeaponType.Coins;
             if (progress == null) return;
-            MechanicUnlocked |= progress.Rank(PermanentUpgradeCatalog.MechanicId(weapon)) > 0;
+            MechanicUnlocked = progress.Rank(PermanentUpgradeCatalog.MechanicId(weapon)) > 0;
             Health = progress.Rank("health");
             Damage = progress.Rank("damage");
             Speed = progress.Rank("speed") * 0.2f;

@@ -3,8 +3,8 @@ using UnityEngine;
 namespace Slopgame
 {
     /// <summary>
-    /// A hero's class mechanic, used with the Mechanic key (R by default). Most are bought in the Ash shop once the
-    /// third guardian has fallen; the Gambler's purse shop comes free. Combat code reports events through the
+    /// A hero's class mechanic, used with the Mechanic key (R by default). Each is bought in the Ash shop once that
+    /// class has felled the third guardian. Combat code reports events through the
     /// On... hooks, which each mechanic uses to charge itself.
     /// </summary>
     public abstract class ClassMechanic : MonoBehaviour

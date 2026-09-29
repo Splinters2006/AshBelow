@@ -53,7 +53,8 @@ namespace Slopgame
             Mechanic(WeaponType.Daggers, "Sharpened Dagger", "R: +1 damage for 7.5s; every backstab adds +1 more and refreshes it"),
             Mechanic(WeaponType.Hammer, "Heavenly Host", "R: after 50 blessed bonus damage, angels revive the longest-fallen ally or fully heal the weakest"),
             Mechanic(WeaponType.Fists, "Super Angry", "R: after taking 5 damage, erupt with huge speed, reach, charge speed and damage"),
-            Mechanic(WeaponType.Tail, "Demonic Power", "R: after 7 paralyses, terrify everything nearby: they turn their backs and freeze in place")
+            Mechanic(WeaponType.Tail, "Demonic Power", "R: after 7 paralyses, terrify everything nearby: they turn their backs and freeze in place"),
+            Mechanic(WeaponType.Coins, "The Purse", "R: open your purse, a shop paid for in coins: healing, wards, loaded dice or double or nothing")
         };
 
         /// <summary>The Ash shop's hefty class mechanic (R), sold only once that class has felled the third guardian.</summary>

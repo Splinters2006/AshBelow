@@ -69,7 +69,7 @@ namespace Slopgame.Editor
                     run.Progress.AwardAsh(PermanentUpgradeCatalog.MechanicCost * Classes.Length);
                     foreach (var weapon in Classes) run.Progress.RecordGuardian(PermanentUpgradeCatalog.MechanicGuardians, weapon);
                     foreach (var weapon in Classes)
-                        if (weapon != WeaponType.Coins) Require(run.TryBuyUpgrade(PermanentUpgradeCatalog.MechanicId(weapon)), "Could not buy the mechanic for " + weapon);
+                        Require(run.TryBuyUpgrade(PermanentUpgradeCatalog.MechanicId(weapon)), "Could not buy the mechanic for " + weapon);
                     hero = 0;
                     StartHero(run);
                     return;

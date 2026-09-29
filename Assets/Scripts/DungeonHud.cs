@@ -150,7 +150,7 @@ namespace Slopgame
                 : player.ClassWeapon == WeaponType.Fists
                 ? $"{attack}  jab     HOLD / RELEASE {attack}  punch barrage     {KeyBindings.Label(GameAction.Special)}  empower     {interact}  interact"
                 : player.ClassWeapon == WeaponType.Coins
-                ? $"{attack}  throw a coin     HOLD / RELEASE {attack}  charged throw     {KeyBindings.Label(GameAction.Special)}  coin volley     {KeyBindings.Label(GameAction.Mechanic)}  purse     {interact}  interact"
+                ? $"{attack}  throw a coin     HOLD / RELEASE {attack}  charged throw     {KeyBindings.Label(GameAction.Special)}  coin volley     {(player.Mechanic != null ? KeyBindings.Label(GameAction.Mechanic) + "  purse     " : "")}{interact}  interact"
                 : player.ClassWeapon == WeaponType.Tail
                 ? $"{attack}  tail stab     HOLD / RELEASE {attack}  paralysing vital stab     {KeyBindings.Label(GameAction.Special)}  tail sweep     {interact}  interact"
                 : $"{KeyBindings.MovementLabel()}  move     HOLD / RELEASE {attack}  charge attack     {interact}  interact", 13, DungeonUi.Muted, TextAnchor.UpperCenter);
