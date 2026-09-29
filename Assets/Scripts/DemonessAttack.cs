@@ -28,7 +28,9 @@ namespace Slopgame
         public float HeavyCooldownRemaining => DebugMode.Cooldown(Mathf.Max(0f, sweepReadyAt - Time.time));
         public bool CanAttack => Player.Run.IsPlaying && !Player.IsRolling && !Player.IsBusy && Time.time >= readyAt;
         /// <summary>How long a vital stab (or Archdemon's tail whip) holds its victims.</summary>
-        public float ParalysisDuration => VitalParalysis + Player.Powerups.Count(PowerupType.NerveStrike) * 0.25f + Player.Permanent.ParalysisBonus;
+        public float ParalysisDuration => VitalParalysis + Player.Powerups.Count(PowerupType.NerveStrike) * 0.25f;
+        /// <summary>Pressure Points: extra damage on every hit against an already paralysed enemy.</summary>
+        public int ParalyzedBonusDamage => Player.Permanent.ParalyzedDamage;
         public float SweepReach => SweepRadius + Player.Powerups.Count(PowerupType.LongTail) * 0.3f;
         private float Interval => Player.Powerups.AttackIntervalMultiplier * Player.Buffs.AttackIntervalMultiplier;
         private Color TailColor => Player.Buffs.IsAscended ? HeroBuffs.AscendColor : Violet;
@@ -90,7 +92,7 @@ namespace Slopgame
             CoopFx.TailStab(Player.Run, origin, aim, length, color);
             if (victim == null) return;
             Vector2 hitPoint = victim.transform.position;
-            CombatDamage.Apply(Player, victim, damage, DamageElement.Physical, origin, vital ? 0.2f : 0.5f);
+            CombatDamage.Apply(Player, victim, WithPressurePoints(victim, damage), DamageElement.Physical, origin, vital ? 0.2f : 0.5f);
             if (!vital) return;
             if (victim.Health > 0) victim.Paralyze(paralysis);
             var root = Player.Run.ProjectileRoot;
@@ -114,7 +116,7 @@ namespace Slopgame
             foreach (var enemy in Player.Run.Enemies.ToArray())
             {
                 if (!InCone(enemy, origin, aim, WhipRadius, WhipCone)) continue;
-                CombatDamage.Apply(Player, enemy, damage, DamageElement.Physical, origin, 1.2f);
+                CombatDamage.Apply(Player, enemy, WithPressurePoints(enemy, damage), DamageElement.Physical, origin, 1.2f);
                 if (enemy.Health > 0) enemy.Paralyze(ParalysisDuration);
                 HeroVfx.Sparks(root, enemy.transform.position, Pale, 8, 4.5f, 0.3f, aim, 100f);
             }
@@ -140,12 +142,14 @@ namespace Slopgame
                     HeroVfx.Slash(root, enemy.transform.position, aim, 0.8f, 90f, Pale, 0.18f);
                     HeroVfx.Sparks(root, enemy.transform.position, Violet, 10, 4.5f, 0.35f);
                 }
-                CombatDamage.Apply(Player, enemy, damage, DamageElement.Physical, origin, paralyzed ? 0.3f : 1f);
+                CombatDamage.Apply(Player, enemy, WithPressurePoints(enemy, damage), DamageElement.Physical, origin, paralyzed ? 0.3f : 1f);
             }
             sweepReadyAt = Time.time + SweepCooldown;
             Player.Charge.Cancel();
             return true;
         }
+
+        private int WithPressurePoints(DungeonEnemy enemy, int damage) => enemy.IsParalyzed ? damage + ParalyzedBonusDamage : damage;
 
         private bool InCone(DungeonEnemy enemy, Vector2 origin, Vector2 aim, float reach, float cone)
         {
@@ -247,7 +251,7 @@ namespace Slopgame
             {
                 if (enemy == null || enemy.Health <= 0 || Vector2.Distance(center, enemy.transform.position) > radius + enemy.HitRadius
                     || !run.HasLineOfSight(center, enemy.transform.position)) continue;
-                CombatDamage.Apply(Player, enemy, damage, DamageElement.Physical, center + Vector2.up, 1.5f);
+                CombatDamage.Apply(Player, enemy, WithPressurePoints(enemy, damage), DamageElement.Physical, center + Vector2.up, 1.5f);
                 if (enemy.Health > 0) enemy.Paralyze(PawStun);
             }
         }
@@ -273,7 +277,7 @@ namespace Slopgame
                 enemy.Curse(CurseDuration);
                 enemy.Paralyze(hold);
                 // Cursed first, so the brand itself already bites harder.
-                CombatDamage.Apply(Player, enemy, Player.Damage + rank - 1, DamageElement.Physical, center, 0f);
+                CombatDamage.Apply(Player, enemy, WithPressurePoints(enemy, Player.Damage + rank - 1), DamageElement.Physical, center, 0f);
             }
         }
 

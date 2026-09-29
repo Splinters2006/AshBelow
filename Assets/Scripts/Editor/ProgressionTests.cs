@@ -154,8 +154,8 @@ namespace Slopgame.Editor
                         case WeaponType.Fists:
                             Require(player.Weapon is BrawlerAttack fists && fists.BarrageCount == BrawlerAttack.BarragePunches + 1, "Brawler barrage upgrade missing."); break;
                         case WeaponType.Tail:
-                            Require(player.Weapon is DemonessAttack tail && Mathf.Abs(tail.ParalysisDuration - DemonessAttack.VitalParalysis - 0.1f) < 0.001f,
-                                "Demoness paralysis upgrade missing."); break;
+                            Require(player.Weapon is DemonessAttack tail && tail.ParalyzedBonusDamage == 1
+                                && Mathf.Abs(tail.ParalysisDuration - DemonessAttack.VitalParalysis) < 0.001f, "Demoness Pressure Points upgrade missing."); break;
                     }
                     hero++;
                     if (hero < Classes.Length) { StartHero(run); return; }
