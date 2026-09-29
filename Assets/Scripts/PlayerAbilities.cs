@@ -154,6 +154,12 @@ namespace Slopgame
                     var gambler = Player.GetComponent<GamblerAttack>();
                     if (gambler == null || !gambler.CastArtifact(definition.Type, rank)) return false;
                     break;
+                case AbilityType.MicroMissiles:
+                case AbilityType.RocketBoost:
+                case AbilityType.SentryTurret:
+                    var augment = Player.GetComponent<CyborgAttack>();
+                    if (augment == null || !augment.CastArtifact(definition.Type, aim, rank, cursorDistance)) return false;
+                    break;
             }
             CombatVfx.Ring(Player.Run.ProjectileRoot, transform.position, 0.65f, definition.Color);
             CoopFx.Ring(Player.Run, transform.position, 0.65f, definition.Color);
@@ -172,7 +178,7 @@ namespace Slopgame
 
         /// <summary>Dashes and blinks travel the way the hero is moving (see <see cref="DungeonPlayer.MobilityAim"/>).</summary>
         public static bool IsMovementAbility(AbilityType type)
-            => type == AbilityType.ShieldRush || type == AbilityType.Windstep || type == AbilityType.Blink;
+            => type == AbilityType.ShieldRush || type == AbilityType.Windstep || type == AbilityType.Blink || type == AbilityType.RocketBoost;
 
         private void ForAllies(SupportKind kind, int amount, float duration)
         {

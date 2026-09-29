@@ -46,6 +46,7 @@ namespace Slopgame
                 WeaponType.Fists => player.gameObject.AddComponent<SuperAngry>(),
                 WeaponType.Tail => player.gameObject.AddComponent<DemonicPower>(),
                 WeaponType.Coins => player.gameObject.AddComponent<GamblerPurse>(),
+                WeaponType.Beam => player.gameObject.AddComponent<Overclock>(),
                 _ => null
             };
             if (mechanic != null) mechanic.Player = player;

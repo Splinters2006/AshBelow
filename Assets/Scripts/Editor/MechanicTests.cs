@@ -18,7 +18,8 @@ namespace Slopgame.Editor
         private static DungeonEnemy watched;
         private static readonly WeaponType[] Classes =
         {
-            WeaponType.Sword, WeaponType.Bow, WeaponType.Staff, WeaponType.Daggers, WeaponType.Hammer, WeaponType.Fists, WeaponType.Tail, WeaponType.Coins
+            WeaponType.Sword, WeaponType.Bow, WeaponType.Staff, WeaponType.Daggers, WeaponType.Hammer, WeaponType.Fists, WeaponType.Tail, WeaponType.Coins,
+            WeaponType.Beam
         };
 
         [InitializeOnLoadMethod]
@@ -97,7 +98,7 @@ namespace Slopgame.Editor
                 }
                 hero++;
                 if (hero < Classes.Length) { StartHero(run); return; }
-                Finish(!failed, "Burn / freeze / shock, Shield Taunt, Elemental Quiver, Wild Storm, Sharpened Dagger, Heavenly Host, Super Angry, Demonic Power and the Gambler");
+                Finish(!failed, "Burn / freeze / shock, Shield Taunt, Elemental Quiver, Wild Storm, Sharpened Dagger, Heavenly Host, Super Angry, Demonic Power, the Gambler and Overclock");
             }
             catch (Exception error) { Debug.LogException(error); Finish(false, error.Message); }
         }
@@ -261,6 +262,18 @@ namespace Slopgame.Editor
                     Vector2 away = (enemies[1].transform.position - player.transform.position).normalized;
                     Require(enemies[1].IsParalyzed && Vector2.Dot(enemies[1].Facing.Direction, away) > 0.99f && enemies[1].Facing.IsBehind(player.transform.position),
                         "Feared enemies did not turn their backs and freeze.");
+                    return false;
+                }
+                case WeaponType.Beam:
+                {
+                    var cannon = (CyborgAttack)player.Weapon;
+                    var overclock = (Overclock)player.Mechanic;
+                    Require(cannon.TryAttack(aim, 1f) && enemies[0].Health < 1000 && enemies[1].Health == 1000 && overclock.Charge == 1,
+                        "The plasma ray missed, strayed off its line, or did not charge Overclock.");
+                    for (int i = overclock.Charge; i < Overclock.HitsNeeded; i++) overclock.OnRayHits(1);
+                    Require(overclock.TryActivate(aim) && overclock.Charge == 0 && cannon.IsOverclocked && cannon.HeavyCooldownRemaining == 0f,
+                        "Overclock did not activate or vent the cannon.");
+                    Require(cannon.CannonCooldownTime < CyborgAttack.CannonCooldown, "Overclock did not speed up the cannon.");
                     return false;
                 }
                 case WeaponType.Coins:

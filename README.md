@@ -65,6 +65,7 @@ Enemies get tougher every floor. The **minimap** in the top-right corner fills i
 | **Brawler** | Fast jab (charge for a punch barrage) / Empower | Knuckle Sandwich, Wild Leap, Primal Rage |
 | **Demoness** | Tail stab (charge to strike the vitals and paralyse) / tail sweep that hits paralysed foes twice as hard | Archdemon's Technique, HEEEELP, Demon Curse |
 | **Gambler** | Throw a coin / a volley of one coin per coin you carry across a 90° cone | Windfall, All In, Jackpot |
+| **Augment** | Plasma ray that pierces every enemy in a line (charge it for a longer, wider, stronger ray) / hold to charge the arm cannon, release to fire a plasma orb that bursts in flame | Micro-Missiles, Rocket Boost, Sentry Turret |
 | **Admin** | Shadow rifts / Nightfall, which executes every nearby enemy | Eclipse, Soul Rend, Shadow Reign |
 
 **Admin** is deliberately overpowered, for when you just want to wreck things.
@@ -81,6 +82,13 @@ Enemies get tougher every floor. The **minimap** in the top-right corner fills i
 - **All In:** double or nothing on every coin you carry.
 - **Jackpot:** spend every coin. It always pays out: a slot reel over your head shows whether you won a speed buff, damage buff or heal that grows with each coin spent.
 
+**Augment:** a soldier rebuilt with steel and plasma. His ray is instant and stops only at walls, so line enemies up. Hold right click to charge the cannon: the longer you hold, the bigger and harder the blast, and a full charge always sets enemies burning. Rolling or using a relic cancels the charge without spending the cooldown.
+
+**Augment artifacts:**
+- **Micro-Missiles:** a fan of homing missiles that seek out the nearest enemies.
+- **Rocket Boost:** dash on your leg thrusters, ramming through enemies, and land in a burst of flame.
+- **Sentry Turret:** plant a turret that fires a piercing plasma ray at the nearest enemy for 6 seconds.
+
 ## Class mechanics (R)
 
 Once you have beaten the third guardian (floor 15) in a single descent, the Ash shop sells each hero's class mechanic for 600 Ash:
@@ -94,6 +102,7 @@ Once you have beaten the third guardian (floor 15) in a single descent, the Ash 
 | **Paladin** | **Heavenly Host:** after your blessings add 50 bonus damage (more in co-op), angels revive the ally who has been down longest with half health, or heal the weakest ally to full. |
 | **Brawler** | **Super Angry:** after taking 5 damage, go berserk with huge speed, reach, area, charge speed and damage for 8 s. |
 | **Demoness** | **Demonic Power:** after 7 paralyses, the Demon Lord's massive head rises behind you and roars, terrifying every enemy around you: they turn their backs and are paralysed. |
+| **Augment** | **Overclock:** after your plasma ray strikes 25 enemies, overclock for 8 s: every ray is fully charged and fires twice as fast, and the cannon is ready at once, fires fully charged and cools down twice as fast. |
 
 ## Ash and the Ash shop
 

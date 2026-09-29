@@ -157,7 +157,7 @@ namespace Slopgame.Editor
                     var player = run.Player;
                     var character = run.SelectedCharacter;
                     int expectedHealth = character.StartingHealth + 1 + (Classes[hero] == WeaponType.Sword || Classes[hero] == WeaponType.Hammer || Classes[hero] == WeaponType.Fists
-                        || Classes[hero] == WeaponType.Tail ? 1 : 0);
+                        || Classes[hero] == WeaponType.Tail || Classes[hero] == WeaponType.Beam ? 1 : 0);
                     Require(player.MaxHealth == expectedHealth && player.Health == expectedHealth, "Permanent HP did not apply or leaked between classes.");
                     Require(player.BaseDamage == character.StartingDamage + 1 + (Classes[hero] == WeaponType.Bow ? 1 : 0), "Permanent damage did not apply or leaked.");
                     Require(Mathf.Abs(player.Powerups.AttackIntervalMultiplier - 1f / 1.05f) < 0.001f, "Permanent attack speed missing.");
@@ -179,6 +179,9 @@ namespace Slopgame.Editor
                         case WeaponType.Coins:
                             Require(player.Weapon is GamblerAttack purse && purse.Coins == 2 && purse.Spend(2) && purse.Coins == 2 && Mathf.Abs(purse.Luck - 0.04f) < 0.001f
                                 && purse.DoubleOrNothing(0.52f), "Gambler Deep Pockets or Lady Luck upgrade missing."); break;
+                        case WeaponType.Beam:
+                            Require(player.Weapon is CyborgAttack augment && Mathf.Abs(augment.CannonCooldownTime - CyborgAttack.CannonCooldown * 0.9f) < 0.001f,
+                                "Augment Capacitor Bank upgrade missing."); break;
                     }
                     hero++;
                     if (hero < Classes.Length) { StartHero(run); return; }

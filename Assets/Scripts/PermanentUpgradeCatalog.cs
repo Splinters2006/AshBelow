@@ -47,6 +47,8 @@ namespace Slopgame
             new PermanentUpgradeDefinition("demoness_health", "Infernal Blood", "+1 Demoness maximum HP per rank", 3, 35, 25, WeaponType.Tail),
             new PermanentUpgradeDefinition("gambler_pockets", "Deep Pockets", "The Gambler's purse never lets him drop below +1 more coin per rank", 3, 35, 25, WeaponType.Coins),
             new PermanentUpgradeDefinition("gambler_luck", "Lady Luck", "+4% odds on Double or Nothing and All In per rank", 3, 50, 40, WeaponType.Coins),
+            new PermanentUpgradeDefinition("augment_capacitor", "Capacitor Bank", "10% shorter plasma cannon cooldown per rank", 3, 45, 35, WeaponType.Beam),
+            new PermanentUpgradeDefinition("augment_health", "Titanium Frame", "+1 Augment maximum HP per rank", 3, 35, 25, WeaponType.Beam),
             Mechanic(WeaponType.Sword, "Shield Taunt", "R: turn red with rage for 2.25s. You can walk; you block bolts from every side (+1 ward each) and draw the enemies' attention"),
             Mechanic(WeaponType.Bow, "Elemental Quiver", "R: cycle fire, freeze and shock arrows. Critical hits set off the arrow's element"),
             Mechanic(WeaponType.Staff, "Wild Storm", "R: after 10 elemental effects, summon a storm that hurls fire, lightning and ice, every strike sure to burn, shock or freeze"),
@@ -54,7 +56,8 @@ namespace Slopgame
             Mechanic(WeaponType.Hammer, "Heavenly Host", "R: after 50 blessed bonus damage, angels revive the longest-fallen ally or fully heal the weakest"),
             Mechanic(WeaponType.Fists, "Super Angry", "R: after taking 5 damage, erupt with huge speed, reach, charge speed and damage"),
             Mechanic(WeaponType.Tail, "Demonic Power", "R: after 7 paralyses, terrify everything nearby: they turn their backs and freeze in place"),
-            Mechanic(WeaponType.Coins, "The Purse", "R: open your purse, a shop paid for in coins: healing, wards, loaded dice or double or nothing")
+            Mechanic(WeaponType.Coins, "The Purse", "R: open your purse, a shop paid for in coins: healing, wards, loaded dice or double or nothing"),
+            Mechanic(WeaponType.Beam, "Overclock", "R: after your plasma ray strikes 25 enemies, overclock for 8s: fully charged rays at double speed and a vented, faster cannon")
         };
 
         /// <summary>The Ash shop's hefty class mechanic (R), sold only once that class has felled the third guardian.</summary>

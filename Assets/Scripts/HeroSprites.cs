@@ -18,6 +18,7 @@ namespace Slopgame
         // N demon horn / tail black, n horn sheen, V dark violet hair, U hair highlight, v glowing violet eyes,
         // T glowing tail tip, C pale skin, c pale skin shade.
         // The Gambler reuses G / g for his gold tooth, coins and purse.
+        // J glowing plasma, j deep plasma, O gunmetal (the Augment's implant eye, power core and arm cannon).
         private static readonly Dictionary<WeaponType, string[]> Grids = new Dictionary<WeaponType, string[]>
         {
             { WeaponType.Sword, new[] // Knight
@@ -75,6 +76,13 @@ namespace Slopgame
                 "..DDDDDDDDDDDD..", "....DHSSSSHD....", "....DSESSESD....", "....DSSSGSsD....",
                 "...DDsSSSSsDD...", "..DLWWFFFFWMD...", ".DLWWWFGFWWMD.G.", ".DWWWWFFFWMMDGgG",
                 ".DSDDbBBBbDSD.G.", "..DgGGgDMWMD....", "....DbbDbbD.....", "...DDDD.DDDD....",
+            } },
+            { WeaponType.Beam, new[] // Augment: a pale soldier with brown hair, a steel skull plate with a glowing implant eye, plated armour, a plasma core and an arm cannon
+            {
+                "...Q............", "...kDDDDDDD.....", "...DKHHHHHHD....", "..DQKKHHHHHHD...",
+                "..DKKKSSSSSSD...", "..DKJjSSSESSD...", "..DkKKSSSSSsD...", "...DkKkSSssD....",
+                "....DDOkDDD.....", "..DLWWWWWWMDkKKQ", ".DLWWjJjWWMkKKKJ", ".DWWWWWWWMMkOOkj",
+                ".DMDDOOOODDD....", "...DMWWDWWMD....", "...DKkD.DKkD....", "..DDDD..DDDD....",
             } },
         };
         // Drawn about 1.45 units tall before the hero's 0.65 scale, matching the old hero footprint.
@@ -161,6 +169,9 @@ namespace Slopgame
                 case 'T': return new Color(0.56f, 0.24f, 0.86f);
                 case 'C': return new Color(1f, 0.94f, 0.93f);
                 case 'c': return new Color(0.86f, 0.76f, 0.8f);
+                case 'J': return new Color(0.45f, 1f, 0.8f);
+                case 'j': return new Color(0.12f, 0.55f, 0.45f);
+                case 'O': return new Color(0.24f, 0.27f, 0.33f);
                 default: return Color.clear;
             }
         }

@@ -14,7 +14,7 @@ namespace Slopgame.Editor
         private static float waitUntil;
         private static bool variantsTested;
         private static bool failed, checkedChilledBoss;
-        private static readonly List<WeaponType> classes = new List<WeaponType> { WeaponType.Sword, WeaponType.Bow, WeaponType.Staff, WeaponType.Daggers, WeaponType.Hammer, WeaponType.Shadow, WeaponType.Fists, WeaponType.Tail, WeaponType.Coins };
+        private static readonly List<WeaponType> classes = new List<WeaponType> { WeaponType.Sword, WeaponType.Bow, WeaponType.Staff, WeaponType.Daggers, WeaponType.Hammer, WeaponType.Shadow, WeaponType.Fists, WeaponType.Tail, WeaponType.Coins, WeaponType.Beam };
         private static int classIndex;
         private static int abilityIndex;
         private static bool activeCast;
@@ -23,7 +23,8 @@ namespace Slopgame.Editor
 
         private static bool IsDelayed(AbilityType type) => type == AbilityType.ShieldRush || type == AbilityType.Earthshatter
             || type == AbilityType.Judgment || type == AbilityType.KnuckleSandwich || type == AbilityType.FrostNova
-            || type == AbilityType.VenomVial || type == AbilityType.DemonPaw || type == AbilityType.DemonCurse;
+            || type == AbilityType.VenomVial || type == AbilityType.DemonPaw || type == AbilityType.DemonCurse
+            || type == AbilityType.MicroMissiles;
 
         private static void VerifyDelayed(DungeonRun run, AbilityDefinition ability)
         {
@@ -84,7 +85,7 @@ namespace Slopgame.Editor
             {
                 if (stage == 0)
                 {
-                    Require(run.Characters.Count == 9, "Nine class assets must load.");
+                    Require(run.Characters.Count == 10, "Ten class assets must load.");
                     StartClass(run, WeaponType.Staff);
                     stage = 1;
                     return;
@@ -570,6 +571,7 @@ namespace Slopgame.Editor
             Require(Mathf.Abs(run.Player.Charge.Duration - baseCharge / 1.2f) < 0.001f, "Attack speed did not improve this class's charge speed.");
             if (type == WeaponType.Fists) TestBrawler(run);
             if (type == WeaponType.Tail) TestDemoness(run);
+            if (type == WeaponType.Beam) TestAugment(run);
             int slot = 0;
             foreach (var ability in AbilityCatalog.All)
             {
@@ -710,6 +712,33 @@ namespace Slopgame.Editor
             EditorApplication.Exit(success ? 0 : 1);
         }
 
+        private static void TestAugment(DungeonRun run)
+        {
+            var player = run.Player;
+            Require(player.Weapon is CyborgAttack && player.Shield == null && player.MaxHealth == 5, "Augment weapon/stats missing.");
+            var cannon = (CyborgAttack)player.Weapon;
+            var target = run.Enemies[0];
+            var bystander = run.Enemies[1];
+            // The plasma ray pierces: every enemy in its line is struck.
+            player.transform.position = OpenSpot(run, player.transform.position);
+            target.transform.position = player.transform.position + Vector3.right;
+            bystander.transform.position = player.transform.position + Vector3.right * 2.2f;
+            target.Health = bystander.Health = 100;
+            Require(player.Weapon.TryAttack(Vector2.right, 0f) && target.Health < 100 && bystander.Health < 100,
+                "The plasma ray did not pierce both enemies in its line.");
+            Require(!player.Weapon.TryAttack(Vector2.right, 0f), "The plasma ray ignored its attack interval.");
+            Require(cannon.RayReach(1f) > cannon.RayReach(0f) && CyborgAttack.RayWidthFor(1f) > CyborgAttack.RayWidthFor(0f)
+                && cannon.CannonDamage(1f) > cannon.CannonDamage(0f), "Charging did not strengthen the ray or the cannon.");
+            // The cannon charges while the button is held; cancelling it (a dodge or a relic) keeps it ready.
+            Require(player.Weapon.TryHeavyAttack(Vector2.right) && cannon.IsCannonCharging && player.Weapon.IsHeavyAttacking && !player.Weapon.CanAttack,
+                "The plasma cannon did not start charging.");
+            Require(!player.Weapon.TryHeavyAttack(Vector2.right), "The plasma cannon started a second charge.");
+            player.Weapon.Hide();
+            Require(!cannon.IsCannonCharging && player.Weapon.HeavyCooldownRemaining == 0f, "Cancelling the cannon spent its cooldown.");
+            // Rocket Boost needs a nearby target when it is cast as the class Q ability.
+            target.transform.position = player.transform.position + Vector3.right;
+        }
+
         private static Vector2 OpenSpot(DungeonRun run, Vector2 start)
         {
             for (int radius = 0; radius <= 6; radius++)
@@ -828,6 +857,12 @@ namespace Slopgame.Editor
                     player.Buffs.Clear(); break;
                 case AbilityType.DemonPaw:
                     Require(target.Health == 100 && run.ProjectileRoot.GetComponentInChildren<DemonPawVfx>() != null, "HEEEELP slammed without a portal windup."); break;
+                case AbilityType.MicroMissiles:
+                    Require(target.Health == 100 && run.ProjectileRoot.GetComponentsInChildren<MicroMissile>().Length >= CyborgAttack.BaseMissiles,
+                        "Micro-Missiles struck instantly instead of flying."); break;
+                case AbilityType.SentryTurret:
+                    var turret = run.ProjectileRoot.GetComponentInChildren<SentryTurret>();
+                    Require(turret != null && turret.Shots == 1 && target.Health < 100, "The Sentry Turret did not open fire as it landed."); break;
                 case AbilityType.DemonCurse:
                     Require(target.Health == 100 && run.ProjectileRoot.GetComponentInChildren<PentagramVfx>() != null, "Demon Curse struck without a pentagram."); break;
                 case AbilityType.Windfall:

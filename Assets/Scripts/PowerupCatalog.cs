@@ -12,7 +12,8 @@ namespace Slopgame
         Flurry, Adrenaline, ExtraFilling, CraterMaker, Bloodlust,
         NerveStrike, LongTail, Bloodline, BigPaws, HexMastery,
         LooseChange, LongToss, MintCondition, RiggedOdds, HighRoller,
-        NerveSnap, PyreBurst, Kindling, Massacre, Momentum, Bloodrush, StillHunter, Prospector, Haggler, MerchantsFavor
+        NerveSnap, PyreBurst, Kindling, Massacre, Momentum, Bloodrush, StillHunter, Prospector, Haggler, MerchantsFavor,
+        FocusedLens, Overcharge, Payload, Afterburner, ExtendedBattery
     }
 
     public sealed class PowerupDefinition
@@ -98,7 +99,13 @@ namespace Slopgame
             new PowerupDefinition(PowerupType.StillHunter, "Still Hunter", "Killing a paralysed or frozen enemy takes 0.5 seconds off all your cooldowns", 1),
             new PowerupDefinition(PowerupType.Prospector, "Prospector", "Kills have a 50% / 100% chance by rank to drop extra crystals", 2),
             new PowerupDefinition(PowerupType.Haggler, "Haggler", "Crystal shop prices 25% / 50% lower by rank", 2),
-            new PowerupDefinition(PowerupType.MerchantsFavor, "Merchant's Favor", "One free reroll of every crystal shop's wares", 1)
+            new PowerupDefinition(PowerupType.MerchantsFavor, "Merchant's Favor", "One free reroll of every crystal shop's wares", 1),
+            // The Augment's talents; they sit after the universal boons so the catalog keeps PowerupType's order.
+            new PowerupDefinition(PowerupType.FocusedLens, "Augment: Focused Lens", "+1 plasma ray range", 3, WeaponType.Beam),
+            new PowerupDefinition(PowerupType.Overcharge, "Augment: Overcharge", "+1 plasma cannon damage and +0.3 blast radius", 3, WeaponType.Beam),
+            new PowerupDefinition(PowerupType.Payload, "Payload", "+2 Micro-Missiles", 3, WeaponType.Beam, AbilityType.MicroMissiles),
+            new PowerupDefinition(PowerupType.Afterburner, "Afterburner", "+0.6 Rocket Boost distance", 3, WeaponType.Beam, AbilityType.RocketBoost),
+            new PowerupDefinition(PowerupType.ExtendedBattery, "Extended Battery", "+2 seconds of Sentry Turret", 3, WeaponType.Beam, AbilityType.SentryTurret)
         };
 
         public static PowerupDefinition Get(PowerupType type) => All[(int)type];

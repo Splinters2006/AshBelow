@@ -157,8 +157,17 @@ namespace Slopgame
                     ? player.Charge.Amount >= 1f ? "RELEASE FOR A TAIL WHIP" : $"WINDING UP TAIL WHIP  {player.Charge.Amount:P0}"
                     : player.ClassWeapon == WeaponType.Tail
                     ? player.Charge.Amount >= 1f ? "RELEASE TO STAB VITALS" : $"AIMING FOR VITALS  {player.Charge.Amount:P0}"
+                    : player.ClassWeapon == WeaponType.Beam
+                    ? player.Charge.Amount >= 1f ? "RELEASE TO FIRE A FULL RAY" : $"FOCUSING RAY  {player.Charge.Amount:P0}"
                     : player.Charge.Amount >= 1f ? "FULL CHARGE  /  RELEASE" : $"CHARGING  {player.Charge.Amount:P0}", 14, AbilityCatalog.Gold, TextAnchor.MiddleCenter);
                 DungeonUi.Bar(new Rect(500, 568, 280, 5), player.Charge.Amount, AbilityCatalog.Gold);
+            }
+            if (player.Weapon is CyborgAttack cannon && cannon.IsCannonCharging)
+            {
+                float cannonCharge = cannon.IsOverclocked ? 1f : cannon.CannonCharge;
+                DungeonUi.Label(new Rect(440, 535, 400, 24), cannonCharge >= 1f ? "RELEASE TO FIRE THE CANNON" : $"CHARGING PLASMA CANNON  {cannonCharge:P0}",
+                    14, CyborgAttack.Plasma, TextAnchor.MiddleCenter);
+                DungeonUi.Bar(new Rect(500, 568, 280, 5), cannonCharge, CyborgAttack.Plasma);
             }
             string attack = KeyBindings.Label(GameAction.Attack), interact = KeyBindings.Label(GameAction.Interact);
             DungeonUi.Label(new Rect(250, 690, 780, 22), player.ClassWeapon == WeaponType.Hammer
@@ -169,6 +178,8 @@ namespace Slopgame
                 ? $"{attack}  throw a coin     HOLD / RELEASE {attack}  charged throw     {KeyBindings.Label(GameAction.Special)}  coin volley     {(player.Mechanic != null ? KeyBindings.Label(GameAction.Mechanic) + "  purse     " : "")}{interact}  interact"
                 : player.ClassWeapon == WeaponType.Tail
                 ? $"{attack}  tail stab     HOLD / RELEASE {attack}  paralysing vital stab     {KeyBindings.Label(GameAction.Special)}  tail sweep     {interact}  interact"
+                : player.ClassWeapon == WeaponType.Beam
+                ? $"{attack}  plasma ray     HOLD / RELEASE {attack}  charged ray     HOLD / RELEASE {KeyBindings.Label(GameAction.Special)}  plasma cannon     {interact}  interact"
                 : $"{KeyBindings.MovementLabel()}  move     HOLD / RELEASE {attack}  charge attack     {interact}  interact", 13, DungeonUi.Muted, TextAnchor.UpperCenter);
         }
 

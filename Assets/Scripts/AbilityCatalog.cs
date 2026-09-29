@@ -7,7 +7,7 @@ namespace Slopgame
         None, ShieldRush, Earthshatter, Aegis, Volley, PiercingShot, Windstep,
         Fireball, FrostNova, Blink, FanOfKnives, VenomVial, ShadowVeil, HealingLight, Judgment, Sanctuary,
         Eclipse, SoulRend, ShadowReign, KnuckleSandwich, WildLeap, PrimalRage, ArchdemonTechnique, DemonPaw, DemonCurse,
-        Windfall, AllIn, Jackpot
+        Windfall, AllIn, Jackpot, MicroMissiles, RocketBoost, SentryTurret
     }
 
     public sealed class AbilityDefinition
@@ -60,7 +60,10 @@ namespace Slopgame
             new AbilityDefinition(AbilityType.DemonCurse, WeaponType.Tail, "Demon Curse", "Brand a pentagram at the cursor, even past walls: enemies on it are paralysed for 3 seconds and take 50% more damage for 6.", "*", 14f, DemonessAttack.Pale),
             new AbilityDefinition(AbilityType.Windfall, WeaponType.Coins, "Windfall", "Your purse coughs up 5 coins at once. Ranks add one more coin.", "$", 12f, GamblerAttack.Gold),
             new AbilityDefinition(AbilityType.AllIn, WeaponType.Coins, "All In", "Double or nothing on every coin you carry: a 50% chance to double them, or lose them all. Ranks tilt the odds 5% your way.", "x2", 10f, new Color(0.35f, 0.9f, 0.5f)),
-            new AbilityDefinition(AbilityType.Jackpot, WeaponType.Coins, "Jackpot", "Feed every coin you carry into the machine and always win a random speed buff, damage buff or heal that grows with every coin spent. Ranks lengthen the buffs.", "777", 18f, new Color(1f, 0.4f, 0.55f))
+            new AbilityDefinition(AbilityType.Jackpot, WeaponType.Coins, "Jackpot", "Feed every coin you carry into the machine and always win a random speed buff, damage buff or heal that grows with every coin spent. Ranks lengthen the buffs.", "777", 18f, new Color(1f, 0.4f, 0.55f)),
+            new AbilityDefinition(AbilityType.MicroMissiles, WeaponType.Beam, "Micro-Missiles", "Your shoulder pod fires a fan of 6 homing missiles that seek out the nearest enemies and burst on impact. Ranks add a missile and damage.", "^^", 9f, CyborgAttack.MissileColor),
+            new AbilityDefinition(AbilityType.RocketBoost, WeaponType.Beam, "Rocket Boost", "Blast forward on your leg thrusters, ramming through every enemy in your path, and land in a burst of flame that can set them burning. Briefly invulnerable.", ">>", 8f, CyborgAttack.MissileColor),
+            new AbilityDefinition(AbilityType.SentryTurret, WeaponType.Beam, "Sentry Turret", "Deploy a turret at the cursor (up to 4 units away). For 6 seconds it fires a piercing plasma ray at the nearest enemy. Ranks add a second and damage.", "T", 16f, CyborgAttack.Plasma)
         };
 
         public static AbilityDefinition Get(AbilityType type)

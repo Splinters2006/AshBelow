@@ -128,6 +128,12 @@ namespace Slopgame
                 coins.Player = this;
                 Weapon = coins;
             }
+            else if (weaponType == WeaponType.Beam)
+            {
+                var cannon = gameObject.AddComponent<CyborgAttack>();
+                cannon.Player = this;
+                Weapon = cannon;
+            }
             else if (weaponType == WeaponType.Staff)
             {
                 var staff = gameObject.AddComponent<WizardAttack>();

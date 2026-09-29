@@ -76,6 +76,15 @@ namespace Slopgame
         public static void Angel(DungeonRun run, Vector2 target) => Send(run, FxKind.Angel, target);
         public static void Jackpot(DungeonRun run, GamblerAttack.JackpotPrize prize) => Send(run, FxKind.Jackpot, default, default, null, 0f, 0f, (int)prize);
 
+        public static void PlasmaRay(DungeonRun run, Vector2 from, Vector2 to, Color color, float width)
+            => Send(run, FxKind.PlasmaRay, from, to, color, width);
+        public static void CannonShot(DungeonRun run, Vector2 origin, Vector2 direction, float radius, float charge)
+            => Send(run, FxKind.PlasmaOrb, origin, direction, null, radius, charge);
+        public static void Turret(DungeonRun run, Vector2 position, float duration) => Send(run, FxKind.SentryTurret, position, default, null, duration);
+        /// <summary>Teammates see the missile home in on where its target stood at launch.</summary>
+        public static void Missile(DungeonRun run, Vector2 origin, Vector2 direction, Vector2 goal)
+            => Send(run, FxKind.MicroMissile, origin, direction, null, goal.x, goal.y);
+
         private static RemoteHero FindHero(DungeonRun run, ulong id)
         {
             foreach (var hero in run.Coop.RemoteHeroes) if (hero != null && hero.Id == id) return hero;
@@ -150,6 +159,10 @@ namespace Slopgame
                         KeenEdgeAura.Show(root, assassin.transform, fx.N, fx.F1);
                     }
                     break;
+                case FxKind.PlasmaRay: CyborgVfx.Ray(root, fx.A, fx.B, color, fx.F1); break;
+                case FxKind.PlasmaOrb: PlasmaOrb.SpawnGhost(run, fx.A, fx.B, fx.F1, fx.F2); break;
+                case FxKind.SentryTurret: SentryTurret.SpawnGhost(run, fx.A, fx.F1); break;
+                case FxKind.MicroMissile: MicroMissile.SpawnGhost(run, fx.A, fx.B, new Vector2(fx.F1, fx.F2)); break;
                 case FxKind.Flurry:
                     var brawler = FindHero(run, fx.Origin);
                     if (brawler != null) BrawlerVfx.Flurry(root, brawler.transform, () => brawler != null ? brawler.Aim : Vector2.zero, fx.F1, fx.F2, color, fx.N / 1000f);
