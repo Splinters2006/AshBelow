@@ -57,12 +57,13 @@ namespace Slopgame.Editor
                 throw new BuildFailedException("Windows build failed: " + report.summary.result);
             File.Copy("scripts/update-game.py", Path.Combine(folder, "update-game.py"));
             File.Copy("scripts/Update.cmd", Path.Combine(folder, "Update.cmd"));
+            File.Copy("scripts/install-python.ps1", Path.Combine(folder, "install-python.ps1"));
             File.WriteAllText(Path.Combine(folder, "START-HERE.txt"),
                 "Extract the entire ZIP, then open AshBelow.exe. Keep all accompanying files and folders together.\r\n\r\n"
                 + "WASD / arrows: move | Mouse: aim | Hold/release left: charged attack | Right: class skill | Q/E: artifact abilities\r\n"
                 + "Space: dodge | F: interact / descend after clearing the floor | Alt+F4: quit\r\n\r\n"
                 + "Ash and shop upgrades are saved under %USERPROFILE%\\AppData\\LocalLow\\DefaultCompany\\Ash Below.\r\n"
-                + "To update: close the game, run Update.cmd (Python 3.10+ required), then launch the new version at the printed path.\r\n"
+                + "To update: close the game, run Update.cmd (it sets up Python by itself if needed), then launch the new version at the printed path.\r\n"
                 + "The updater backs up saves and retains the old installation for rollback. Do not delete your save folder.\r\n");
             string archive = Path.Combine(releases, release + ".zip");
             ZipFile.CreateFromDirectory(folder, archive, System.IO.Compression.CompressionLevel.Optimal, true);
