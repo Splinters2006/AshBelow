@@ -89,7 +89,7 @@ Once you have beaten the third guardian (floor 15) in a single descent, the Ash 
 | --- | --- |
 | **Knight** | **Shield Taunt:** plant a great shield for 1.5 s (no other actions). It blocks bolts in a 90° cone ahead and gives a ward for each one, and enemies go for you first. |
 | **Archer** | **Elemental Quiver:** cycle between fire, freeze and shock arrows. Arrows still crit, and a critical hit also sets off the arrow's element. |
-| **Wizard** | **Wild Storm:** after 10 elemental effects, summon a storm over you that takes turns hurling fireballs, lightning and ice bolts for 8 s. Every storm strike is sure to burn, shock or freeze. |
+| **Wizard** | **Wild Storm:** after 8 elemental effects, summon a storm over you that takes turns hurling fireballs, lightning and ice bolts for 10 s. Every storm strike is sure to burn, shock or freeze. |
 | **Assassin** | **Sharpened Dagger:** +1 damage for 7.5 s. Every hit on an enemy's back adds +1 more and refreshes it. |
 | **Paladin** | **Heavenly Host:** after your blessings add 50 bonus damage (more in co-op), angels revive the ally who has been down longest with half health, or heal the weakest ally to full. |
 | **Brawler** | **Super Angry:** after taking 5 damage, go berserk with huge speed, reach, area, charge speed and damage for 8 s. |

@@ -4,14 +4,14 @@ using UnityEngine;
 namespace Slopgame
 {
     /// <summary>
-    /// The Wizard's class mechanic: every elemental effect he sets off (burn, freeze or shock) charges it. After 10
+    /// The Wizard's class mechanic: every elemental effect he sets off (burn, freeze or shock) charges it. After 8
     /// a wild storm gathers over him for a while and keeps striking the nearest enemy, taking turns hurling a
     /// fireball, a lightning bolt and an ice bolt. Every storm strike is guaranteed to set off its element.
     /// </summary>
     public sealed class WildStorm : ChargedMechanic
     {
-        public const int EffectsNeeded = 10;
-        public const float Duration = 8f, Interval = 0.55f, Range = 7f, Height = 1.3f;
+        public const int EffectsNeeded = 8;
+        public const float Duration = 10f, Interval = 0.4f, Range = 8f, Height = 1.3f;
         public static readonly Color CloudColor = new Color(0.32f, 0.34f, 0.46f);
         private static Sprite cloudSprite;
         private float stormUntil;
@@ -87,7 +87,7 @@ namespace Slopgame
             var run = Player.Run;
             Vector2 at = target.transform.position;
             Vector2 aim = (at - origin).normalized;
-            int damage = Player.Damage + 1;
+            int damage = Player.Damage + 2;
             switch (turn++ % 3)
             {
                 case 0:
