@@ -38,6 +38,7 @@ namespace Slopgame.Editor
             smokeFailed = false;
             combatStage = 0;
             heavyStage = 0;
+            universalStage = 0;
             menuChecked = false;
             switchedToArcher = false;
             archerStage = 0;
@@ -113,7 +114,7 @@ namespace Slopgame.Editor
                 }
                 if (!CheckArcher(run)) return;
                 CheckPowerupsAndFacing(run);
-                CheckUniversalPowerups(run);
+                if (!CheckUniversalPowerups(run)) return;
                 run.ShowMainMenu();
                 if (!run.IsInMainMenu || run.IsPlaying || run.Player != null || run.Enemies.Count != 0)
                     throw new Exception("Returning to menu did not clear the run.");
@@ -432,77 +433,93 @@ namespace Slopgame.Editor
             if (run.Floor != 2) throw new Exception("Upgrade accepted outside the selection screen.");
         }
 
+        private static int universalStage;
+
         /// <summary>
         /// The universal boons: catalog order, kill-streak and paralysis resets, cooldown cuts, Kindling, Pyre Burst,
         /// Prospector and the crystal shop's Haggler prices and Merchant's Favor reroll. Each check starts a fresh run,
-        /// since every kill in one editor frame lands inside the same one-second streak.
+        /// since every kill in one editor frame lands inside the same one-second streak; the class-skill checks wait a
+        /// frame for the new hero's weapon. Returns true once every stage has passed.
         /// </summary>
-        private static void CheckUniversalPowerups(DungeonRun run)
+        private static bool CheckUniversalPowerups(DungeonRun run)
         {
-            foreach (var powerup in PowerupCatalog.All)
-                if (PowerupCatalog.Get(powerup.Type) != powerup) throw new Exception("Powerup catalog order does not match PowerupType.");
+            DungeonPlayer player;
+            switch (universalStage)
+            {
+                case 0:
+                    foreach (var powerup in PowerupCatalog.All)
+                        if (PowerupCatalog.Get(powerup.Type) != powerup) throw new Exception("Powerup catalog order does not match PowerupType.");
 
-            run.Restart();
-            var player = run.Player;
-            player.Upgrade((int)PowerupType.Momentum);
-            if (!player.TryRoll(Vector2.right)) throw new Exception("Could not roll for the Momentum check.");
-            player.Powerups.OnKill(player, null);
-            if (player.DodgeCooldownRemaining <= 0f) throw new Exception("Momentum reset the dodge after one kill.");
-            player.Powerups.OnKill(player, null);
-            if (player.DodgeCooldownRemaining > 0f) throw new Exception("Momentum did not reset the dodge after two quick kills.");
+                    run.Restart();
+                    player = run.Player;
+                    player.Upgrade((int)PowerupType.Momentum);
+                    if (!player.TryRoll(Vector2.right)) throw new Exception("Could not roll for the Momentum check.");
+                    player.Powerups.OnKill(player, null);
+                    if (player.DodgeCooldownRemaining <= 0f) throw new Exception("Momentum reset the dodge after one kill.");
+                    player.Powerups.OnKill(player, null);
+                    if (player.DodgeCooldownRemaining > 0f) throw new Exception("Momentum did not reset the dodge after two quick kills.");
 
-            run.Restart();
-            player = run.Player;
-            player.Upgrade((int)PowerupType.Bloodrush);
-            player.TryRoll(Vector2.right);
-            float dodge = player.DodgeCooldownRemaining;
-            player.Powerups.OnKill(player, null);
-            if (Mathf.Abs(dodge - player.DodgeCooldownRemaining - PlayerPowerups.KillCooldownCut) > 0.001f)
-                throw new Exception("Bloodrush did not take half a second off the dodge.");
+                    run.Restart();
+                    player = run.Player;
+                    player.Upgrade((int)PowerupType.Bloodrush);
+                    player.TryRoll(Vector2.right);
+                    float dodge = player.DodgeCooldownRemaining;
+                    player.Powerups.OnKill(player, null);
+                    if (Mathf.Abs(dodge - player.DodgeCooldownRemaining - PlayerPowerups.KillCooldownCut) > 0.001f)
+                        throw new Exception("Bloodrush did not take half a second off the dodge.");
 
-            run.Restart();
-            player = run.Player;
-            player.Upgrade((int)PowerupType.Massacre);
-            if (!player.Weapon.TryHeavyAttack(Vector2.right)) throw new Exception("Could not use the class skill for the Massacre check.");
-            for (int i = 0; i < PlayerPowerups.MassacreKills - 1; i++) player.Powerups.OnKill(player, null);
-            if (player.Weapon.HeavyCooldownRemaining <= 0f) throw new Exception("Massacre reset the class skill too early.");
-            player.Powerups.OnKill(player, null);
-            if (player.Weapon.HeavyCooldownRemaining > 0f) throw new Exception("Massacre did not reset the class skill.");
+                    run.Restart();
+                    player = run.Player;
+                    if (player.Powerups.RollExtraCrystals()) throw new Exception("Extra crystals dropped without Prospector.");
+                    player.Upgrade((int)PowerupType.Prospector);
+                    player.Upgrade((int)PowerupType.Prospector);
+                    if (!player.Powerups.RollExtraCrystals()) throw new Exception("Prospector rank two did not always drop extra crystals.");
 
-            run.Restart();
-            player = run.Player;
-            var enemy = run.Enemies[0];
-            var neighbour = run.Enemies[1];
-            enemy.Health = neighbour.Health = 50;
-            CombatDamage.ApplyEffect(player, enemy, DamageElement.Ice, 2);
-            if (enemy.IsBurning || !enemy.IsFrozen) throw new Exception("Ice set an enemy burning without Kindling.");
-            player.Upgrade((int)PowerupType.Kindling);
-            player.Upgrade((int)PowerupType.NerveSnap);
-            player.Upgrade((int)PowerupType.PyreBurst);
-            CombatDamage.ApplyEffect(player, enemy, DamageElement.Ice, 2);
-            if (!enemy.IsBurning) throw new Exception("Kindling did not set a frozen enemy burning.");
-            if (!player.Weapon.TryHeavyAttack(Vector2.right)) throw new Exception("Could not use the class skill for the Nerve Snap check.");
-            neighbour.transform.position = enemy.transform.position + Vector3.right * 0.8f;
-            enemy.Hit(1000);
-            if (player.Weapon.HeavyCooldownRemaining > 0f) throw new Exception("Nerve Snap did not reset the class skill on a frozen kill.");
-            if (neighbour.Health >= 50) throw new Exception("Pyre Burst did not hurt an enemy beside a burning kill.");
+                    var shop = CrystalShop.Create(run, new GameObject("Test shop").transform);
+                    var hone = Array.Find(CrystalShop.Offers, offer => offer.Ware == CrystalShop.Ware.EmberHone);
+                    if (shop.Cost(hone) != 60 || shop.RerollsLeft != 0 || shop.Reroll()) throw new Exception("Shop prices or rerolls changed without boons.");
+                    player.Upgrade((int)PowerupType.Haggler);
+                    player.Upgrade((int)PowerupType.MerchantsFavor);
+                    if (shop.Cost(hone) != 45) throw new Exception("Haggler did not take 25% off shop prices.");
+                    if (!shop.Reroll() || shop.RerollsLeft != 0 || shop.Stock.Count != 5) throw new Exception("Merchant's Favor reroll failed.");
+                    UnityEngine.Object.Destroy(shop.transform.parent.gameObject);
 
-            run.Restart();
-            player = run.Player;
-            if (player.Powerups.RollExtraCrystals()) throw new Exception("Extra crystals dropped without Prospector.");
-            player.Upgrade((int)PowerupType.Prospector);
-            player.Upgrade((int)PowerupType.Prospector);
-            if (!player.Powerups.RollExtraCrystals()) throw new Exception("Prospector rank two did not always drop extra crystals.");
-
-            var shop = CrystalShop.Create(run, new GameObject("Test shop").transform);
-            var hone = Array.Find(CrystalShop.Offers, offer => offer.Ware == CrystalShop.Ware.EmberHone);
-            if (shop.Cost(hone) != 60 || shop.RerollsLeft != 0 || shop.Reroll()) throw new Exception("Shop prices or rerolls changed without boons.");
-            player.Upgrade((int)PowerupType.Haggler);
-            player.Upgrade((int)PowerupType.MerchantsFavor);
-            if (shop.Cost(hone) != 45) throw new Exception("Haggler did not take 25% off shop prices.");
-            if (!shop.Reroll() || shop.RerollsLeft != 0 || shop.Stock.Count != 5) throw new Exception("Merchant's Favor reroll failed.");
-            UnityEngine.Object.Destroy(shop.transform.parent.gameObject);
-            run.Restart();
+                    run.Restart();
+                    universalStage = 1;
+                    return false;
+                case 1:
+                    player = run.Player;
+                    if (player.Weapon == null) return false;
+                    player.Upgrade((int)PowerupType.Massacre);
+                    if (!player.Weapon.TryHeavyAttack(Vector2.right)) throw new Exception("Could not use the class skill for the Massacre check.");
+                    for (int i = 0; i < PlayerPowerups.MassacreKills - 1; i++) player.Powerups.OnKill(player, null);
+                    if (player.Weapon.HeavyCooldownRemaining <= 0f) throw new Exception("Massacre reset the class skill too early.");
+                    player.Powerups.OnKill(player, null);
+                    if (player.Weapon.HeavyCooldownRemaining > 0f) throw new Exception("Massacre did not reset the class skill.");
+                    run.Restart();
+                    universalStage = 2;
+                    return false;
+                default:
+                    player = run.Player;
+                    if (player.Weapon == null) return false;
+                    var enemy = run.Enemies[0];
+                    var neighbour = run.Enemies[1];
+                    enemy.Health = neighbour.Health = 50;
+                    CombatDamage.ApplyEffect(player, enemy, DamageElement.Ice, 2);
+                    if (enemy.IsBurning || !enemy.IsFrozen) throw new Exception("Ice set an enemy burning without Kindling.");
+                    player.Upgrade((int)PowerupType.Kindling);
+                    player.Upgrade((int)PowerupType.NerveSnap);
+                    player.Upgrade((int)PowerupType.PyreBurst);
+                    CombatDamage.ApplyEffect(player, enemy, DamageElement.Ice, 2);
+                    if (!enemy.IsBurning) throw new Exception("Kindling did not set a frozen enemy burning.");
+                    if (!player.Weapon.TryHeavyAttack(Vector2.right)) throw new Exception("Could not use the class skill for the Nerve Snap check.");
+                    neighbour.transform.position = enemy.transform.position + Vector3.right * 0.8f;
+                    enemy.Hit(1000);
+                    if (player.Weapon.HeavyCooldownRemaining > 0f) throw new Exception("Nerve Snap did not reset the class skill on a frozen kill.");
+                    if (neighbour.Health >= 50) throw new Exception("Pyre Burst did not hurt an enemy beside a burning kill.");
+                    run.Restart();
+                    return true;
+            }
         }
 
         private static void CheckArrowRange(DungeonRun run)
