@@ -112,8 +112,11 @@ namespace Slopgame.Editor
                     switchedToArcher = true;
                     return;
                 }
-                if (!CheckArcher(run)) return;
-                CheckPowerupsAndFacing(run);
+                if (universalStage == 0)
+                {
+                    if (!CheckArcher(run)) return;
+                    CheckPowerupsAndFacing(run);
+                }
                 if (!CheckUniversalPowerups(run)) return;
                 run.ShowMainMenu();
                 if (!run.IsInMainMenu || run.IsPlaying || run.Player != null || run.Enemies.Count != 0)
@@ -121,7 +124,7 @@ namespace Slopgame.Editor
                 run.Restart();
                 if (run.IsInMainMenu || run.Player.Health != run.SelectedCharacter.StartingHealth || run.Floor != 1)
                     throw new Exception("Starting again from the menu failed.");
-                Debug.Log(smokeFailed ? "SLOPGAME_SMOKE_FAILED" : "SLOPGAME_SMOKE_OK: Knight/Archer combat, powerup effects/caps/offers/reset, enemy facing/turning/hit regions, menu, and progression passed.");
+                Debug.Log(smokeFailed ? "SLOPGAME_SMOKE_FAILED" : "SLOPGAME_SMOKE_OK: Knight/Archer combat, powerup effects/caps/offers/reset, universal boons, enemy facing/turning/hit regions, menu, and progression passed.");
                 EditorApplication.update -= CheckPlayMode;
                 SessionState.SetBool("SlopgameSmoke", false);
                 Application.logMessageReceived -= CaptureError;
@@ -489,7 +492,6 @@ namespace Slopgame.Editor
                     return false;
                 case 1:
                     player = run.Player;
-                    if (player.Weapon == null) return false;
                     player.Upgrade((int)PowerupType.Massacre);
                     if (!player.Weapon.TryHeavyAttack(Vector2.right)) throw new Exception("Could not use the class skill for the Massacre check.");
                     for (int i = 0; i < PlayerPowerups.MassacreKills - 1; i++) player.Powerups.OnKill(player, null);
@@ -501,7 +503,6 @@ namespace Slopgame.Editor
                     return false;
                 default:
                     player = run.Player;
-                    if (player.Weapon == null) return false;
                     var enemy = run.Enemies[0];
                     var neighbour = run.Enemies[1];
                     enemy.Health = neighbour.Health = 50;
