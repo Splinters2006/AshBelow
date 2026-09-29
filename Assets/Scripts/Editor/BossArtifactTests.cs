@@ -26,13 +26,15 @@ namespace Slopgame.Editor
         private static void VerifyDelayed(DungeonRun run, AbilityDefinition ability)
         {
             if (!IsDelayed(ability.Type)) return;
-            Require(activeTarget != null && activeTarget.Health < 100, ability.Name + " never landed after its windup.");
+            // Demon Curse deals no damage, so it has landed once the target is cursed.
+            Require(activeTarget != null && (ability.Type == AbilityType.DemonCurse ? activeTarget.IsCursed : activeTarget.Health < 100),
+                ability.Name + " never landed after its windup.");
             Require(!run.Player.IsBusy, ability.Name + " left the hero stuck.");
             if (ability.Type == AbilityType.FrostNova)
                 Require(activeTarget.ActionSpeedMultiplier == 0.5f, "Frost Nova did not chill.");
             if (ability.Type == AbilityType.DemonCurse)
-                Require(activeTarget.IsCursed && activeTarget.IsParalyzed && activeTarget.ActionSpeedMultiplier == 0f,
-                    "Demon Curse did not paralyse and curse the enemy on its pentagram.");
+                Require(activeTarget.IsCursed && activeTarget.IsParalyzed && activeTarget.ActionSpeedMultiplier == 0f && activeTarget.Health == 100,
+                    "Demon Curse did not paralyse and curse the enemy on its pentagram, or it dealt damage.");
             if (ability.Type == AbilityType.VenomVial)
                 Require(activeTarget.IsBurning, "Venom Vial's pool did not poison the enemy standing in it.");
             if (ability.Type == AbilityType.ShieldRush)

@@ -274,10 +274,9 @@ namespace Slopgame
             {
                 if (enemy == null || enemy.Health <= 0 || Vector2.Distance(center, enemy.transform.position) > radius + enemy.HitRadius
                     || !run.HasLineOfSight(center, enemy.transform.position)) continue;
+                // The brand deals no damage itself; it sets enemies up for her other attacks.
                 enemy.Curse(CurseDuration);
                 enemy.Paralyze(hold);
-                // Cursed first, so the brand itself already bites harder.
-                CombatDamage.Apply(Player, enemy, WithPressurePoints(enemy, Player.Damage + rank - 1), DamageElement.Physical, center, 0f);
             }
         }
 
