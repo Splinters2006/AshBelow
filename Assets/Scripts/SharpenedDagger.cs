@@ -32,7 +32,7 @@ namespace Slopgame
             if (!CanAct || IsActive || CooldownRemaining > 0f) return false;
             bonus = 1;
             until = Time.time + Duration;
-            Flash(1f);
+            Flash(true);
             return true;
         }
 
@@ -41,14 +41,18 @@ namespace Slopgame
             if (!IsActive) return;
             bonus++;
             until = Time.time + Duration;
-            Flash(0.7f);
+            Flash(false);
         }
 
-        private void Flash(float size)
+        /// <summary>The whetstone scrape over the Assassin's head and the circling blades; a backstab gets a quicker scrape.</summary>
+        private void Flash(bool full)
         {
-            var root = Player.Run.ProjectileRoot;
-            HeroVfx.Pulse(transform, transform.position, size, EdgeColor, 0.25f);
-            HeroVfx.Sparks(root, transform.position, EdgeColor, 6, 3f, 0.25f);
+            var run = Player.Run;
+            var root = run.ProjectileRoot;
+            SharpenVfx.Play(root, transform, full);
+            KeenEdgeAura.Show(root, transform, bonus, Duration);
+            HeroVfx.Sparks(root, transform.position, EdgeColor, full ? 10 : 6, 3.5f, 0.3f);
+            CoopFx.Sharpen(run, bonus, Duration, full);
         }
     }
 }
