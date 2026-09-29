@@ -22,9 +22,9 @@ namespace Slopgame
 
         public static readonly Offer[] Offers =
         {
-            new Offer(Ware.Draught, "Healing Draught", "Restore 2 HP", 4),
-            new Offer(Ware.Charm, "Lucky Charm", "+1 ward for this floor", 5),
-            new Offer(Ware.Dice, "Loaded Dice", "+1 damage until the next floor", 8),
+            new Offer(Ware.Draught, "Healing Draught", "Restore 2 HP", 40),
+            new Offer(Ware.Charm, "Lucky Charm", "+1 ward for this floor", 50),
+            new Offer(Ware.Dice, "Loaded Dice", "+1 damage until the next floor", 80),
             new Offer(Ware.DoubleOrNothing, "Double or Nothing", "Bet every coin: double them, or lose them all", 0),
         };
 

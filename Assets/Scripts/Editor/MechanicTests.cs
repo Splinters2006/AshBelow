@@ -302,9 +302,12 @@ namespace Slopgame.Editor
             Require(purse.TryActivate(Vector2.right) && purse.IsOpen, "R did not open the purse.");
             Require(purse.Buy(bet, 0.1f) && coins.Coins == 4, "Winning Double or Nothing did not double the coins.");
             Require(purse.Buy(bet, 0.9f) && coins.Coins == 1, "Losing Double or Nothing did not empty the purse to its last coin.");
-            coins.AddCoins(9);
+            var dice = GamblerPurse.Offers[(int)GamblerPurse.Ware.Dice];
+            coins.AddCoins(dice.Cost - 2);
+            Require(!purse.Buy(dice), "Loaded Dice sold without enough coins.");
+            coins.AddCoins(2);
             int damage = player.Damage;
-            Require(purse.Buy(GamblerPurse.Offers[(int)GamblerPurse.Ware.Dice]) && player.Damage == damage + 1 && coins.Coins == 2, "Loaded Dice failed.");
+            Require(purse.Buy(dice) && player.Damage == damage + 1 && coins.Coins == 2, "Loaded Dice failed.");
             Require(!purse.Buy(GamblerPurse.Offers[(int)GamblerPurse.Ware.Draught]), "A full-health Gambler bought a Healing Draught.");
         }
 
