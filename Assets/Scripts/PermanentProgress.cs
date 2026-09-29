@@ -16,6 +16,8 @@ namespace Slopgame
             public int ash;
             /// <summary>The most guardians beaten in a single descent (the third falls on floor 15).</summary>
             public int guardians;
+            /// <summary>The same record per hero class, keyed by weapon; class mechanics unlock from these.</summary>
+            public List<RankEntry> classGuardians;
             public List<RankEntry> upgrades;
         }
         private SaveData data = Fresh();
@@ -34,7 +36,16 @@ namespace Slopgame
             Load();
         }
 
-        private static SaveData Fresh() => new SaveData { version = 1, ash = 0, upgrades = new List<RankEntry>() };
+        private static SaveData Fresh() => new SaveData { version = 1, ash = 0, classGuardians = new List<RankEntry>(), upgrades = new List<RankEntry>() };
+        private static string ClassKey(WeaponType weapon) => weapon.ToString().ToLowerInvariant();
+
+        /// <summary>The most guardians beaten in a single descent as this class.</summary>
+        public int GuardiansDefeatedAs(WeaponType weapon)
+        {
+            string key = ClassKey(weapon);
+            var entry = data.classGuardians.Find(value => value.id == key);
+            return entry == null ? 0 : entry.rank;
+        }
         public int Rank(string id)
         {
             var entry = data.upgrades.Find(value => value.id == id);
@@ -50,6 +61,12 @@ namespace Slopgame
             foreach (var entry in loaded.upgrades)
                 if (entry == null || string.IsNullOrEmpty(entry.id) || entry.rank < 0 || !ids.Add(entry.id))
                     throw new InvalidDataException("Invalid upgrade data.");
+            // Saves from before per-class records simply start them at zero.
+            if (loaded.classGuardians == null) loaded.classGuardians = new List<RankEntry>();
+            ids.Clear();
+            foreach (var entry in loaded.classGuardians)
+                if (entry == null || string.IsNullOrEmpty(entry.id) || entry.rank < 0 || !ids.Add(entry.id))
+                    throw new InvalidDataException("Invalid guardian data.");
             return loaded;
         }
 
@@ -93,17 +110,32 @@ namespace Slopgame
             Changed?.Invoke();
         }
 
-        /// <summary>Records that the <paramref name="ordinal"/>-th guardian of a descent fell (1 = floor 5).</summary>
-        public void RecordGuardian(int ordinal)
+        /// <summary>
+        /// Records that the <paramref name="ordinal"/>-th guardian of a descent fell (1 = floor 5), and, when
+        /// <paramref name="weapon"/> is given, that this class felled it.
+        /// </summary>
+        public void RecordGuardian(int ordinal, WeaponType? weapon = null)
         {
-            if (IsReadOnly || ordinal <= data.guardians) return;
-            data.guardians = ordinal;
+            if (IsReadOnly) return;
+            bool changed = false;
+            if (ordinal > data.guardians) { data.guardians = ordinal; changed = true; }
+            if (weapon.HasValue && ordinal > GuardiansDefeatedAs(weapon.Value))
+            {
+                string key = ClassKey(weapon.Value);
+                var entry = data.classGuardians.Find(value => value.id == key);
+                if (entry == null) data.classGuardians.Add(new RankEntry { id = key, rank = ordinal });
+                else entry.rank = ordinal;
+                changed = true;
+            }
+            if (!changed) return;
             dirty = true;
             Save();
             Changed?.Invoke();
         }
 
-        public bool IsAvailable(PermanentUpgradeDefinition upgrade) => upgrade != null && data.guardians >= upgrade.RequiredGuardians;
+        /// <summary>Class upgrades gated behind guardians (the class mechanics) need that class to have beaten them.</summary>
+        public bool IsAvailable(PermanentUpgradeDefinition upgrade) => upgrade != null
+            && (upgrade.ClassWeapon.HasValue ? GuardiansDefeatedAs(upgrade.ClassWeapon.Value) : data.guardians) >= upgrade.RequiredGuardians;
 
         public bool TryPurchase(string id)
         {

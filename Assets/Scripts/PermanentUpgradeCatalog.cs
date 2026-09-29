@@ -11,7 +11,7 @@ namespace Slopgame
         public int BaseCost { get; }
         public int CostStep { get; }
         public WeaponType? ClassWeapon { get; }
-        /// <summary>How many guardians must have fallen in one descent before this can be bought.</summary>
+        /// <summary>How many guardians must have fallen in one descent (as this class, for a class upgrade) before this can be bought.</summary>
         public int RequiredGuardians { get; }
         public PermanentUpgradeDefinition(string id, string name, string description, int maxRank, int cost, int step, WeaponType? weapon = null,
             int requiredGuardians = 0)
@@ -45,6 +45,8 @@ namespace Slopgame
             new PermanentUpgradeDefinition("brawler_health", "Thick Fur", "+1 Brawler maximum HP per rank", 3, 35, 25, WeaponType.Fists),
             new PermanentUpgradeDefinition("demoness_paralysis", "Pressure Points", "+1 damage to paralysed enemies per rank", 3, 45, 35, WeaponType.Tail),
             new PermanentUpgradeDefinition("demoness_health", "Infernal Blood", "+1 Demoness maximum HP per rank", 3, 35, 25, WeaponType.Tail),
+            new PermanentUpgradeDefinition("gambler_pockets", "Deep Pockets", "The Gambler starts every descent with +2 coins per rank", 3, 35, 25, WeaponType.Coins),
+            new PermanentUpgradeDefinition("gambler_luck", "Lady Luck", "+4% odds on Double or Nothing, All In and Jackpot per rank", 3, 50, 40, WeaponType.Coins),
             Mechanic(WeaponType.Sword, "Shield Taunt", "R: raise a great shield for 1.5s. It blocks bolts in front (+1 ward each) and draws the enemies' attention"),
             Mechanic(WeaponType.Bow, "Elemental Quiver", "R: cycle fire, freeze and shock arrows. Critical hits set off the arrow's element"),
             Mechanic(WeaponType.Staff, "Wild Storm", "R: after 10 elemental effects, summon a storm that hurls fire, lightning and ice"),
@@ -54,7 +56,7 @@ namespace Slopgame
             Mechanic(WeaponType.Tail, "Demonic Power", "R: after 7 paralyses, terrify everything nearby: they turn their backs and freeze in place")
         };
 
-        /// <summary>The Ash shop's hefty class mechanic (R), sold only once the third guardian has fallen.</summary>
+        /// <summary>The Ash shop's hefty class mechanic (R), sold only once that class has felled the third guardian.</summary>
         public const int MechanicCost = 600, MechanicGuardians = 3;
         public static string MechanicId(WeaponType weapon) => "mechanic_" + weapon.ToString().ToLowerInvariant();
 

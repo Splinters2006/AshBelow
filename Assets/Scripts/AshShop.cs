@@ -4,11 +4,18 @@ namespace Slopgame
 {
     public sealed class AshShop
     {
+        private static string LockedText(PermanentUpgradeDefinition item)
+        {
+            string hero = item.ClassWeapon.HasValue ? Tabs[System.Array.IndexOf(Weapons, item.ClassWeapon)] : null;
+            string guardian = item.RequiredGuardians == 3 ? "the third guardian" : $"{item.RequiredGuardians} guardians in one descent";
+            return hero != null ? $"Defeat {guardian} as the {hero} to unlock" : $"Defeat {guardian} to unlock";
+        }
+
         private int tab;
         private Vector2 scroll;
         private string notice;
-        private static readonly string[] Tabs = { "All heroes", "Knight", "Archer", "Wizard", "Assassin", "Paladin", "Brawler", "Demoness" };
-        private static readonly WeaponType?[] Weapons = { null, WeaponType.Sword, WeaponType.Bow, WeaponType.Staff, WeaponType.Daggers, WeaponType.Hammer, WeaponType.Fists, WeaponType.Tail };
+        private static readonly string[] Tabs = { "All heroes", "Knight", "Archer", "Wizard", "Assassin", "Paladin", "Brawler", "Demoness", "Gambler" };
+        private static readonly WeaponType?[] Weapons = { null, WeaponType.Sword, WeaponType.Bow, WeaponType.Staff, WeaponType.Daggers, WeaponType.Hammer, WeaponType.Fists, WeaponType.Tail, WeaponType.Coins };
 
         public void Draw(DungeonRun run)
         {
@@ -36,7 +43,7 @@ namespace Slopgame
                     item.RequiredGuardians > 0 ? AbilityCatalog.Gold : (Color?)null);
                 if (!available)
                 {
-                    DungeonUi.Label(new Rect(884, y + 20, 196, 60), item.RequiredGuardians == 3 ? "Defeat the third guardian to unlock" : $"Defeat {item.RequiredGuardians} guardians in one descent to unlock", 14,
+                    DungeonUi.Label(new Rect(884, y + 20, 196, 60), LockedText(item), 14,
                         DungeonUi.Muted, TextAnchor.MiddleCenter);
                     continue;
                 }

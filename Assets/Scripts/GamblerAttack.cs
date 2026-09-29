@@ -12,8 +12,16 @@ namespace Slopgame
         public const float CoinRange = 6f, VolleyRange = 5.5f, VolleyCone = 90f, VolleyCooldown = 6f;
         public const int MaxVolley = 40;
         public static readonly Color Gold = new Color(1f, 0.82f, 0.3f);
-        public DungeonPlayer Player { get; set; }
+        private DungeonPlayer player;
+        /// <summary>Setting the hero fills the purse with the starting coins (Deep Pockets adds more).</summary>
+        public DungeonPlayer Player
+        {
+            get => player;
+            set { player = value; coins = 1 + (value != null && value.Permanent != null ? value.Permanent.StartingCoins : 0); }
+        }
         private int coins = 1;
+        /// <summary>Lady Luck: added to the odds of every gamble.</summary>
+        public float Luck => Player != null && Player.Permanent != null ? Player.Permanent.GambleLuck : 0f;
         private float readyAt, volleyReadyAt;
         /// <summary>Never below one: the magical purse refills an empty pocket.</summary>
         public int Coins => Mathf.Max(1, coins);
@@ -94,7 +102,7 @@ namespace Slopgame
         public bool DoubleOrNothing(float roll, float winChance = 0.5f)
         {
             int stake = Coins;
-            bool won = roll < winChance;
+            bool won = roll < winChance + Luck;
             if (won) AddCoins(stake);
             else Spend(stake);
             var root = Player.Run.ProjectileRoot;
@@ -104,7 +112,7 @@ namespace Slopgame
         }
 
         /// <summary>
-        /// Spends every coin. With <paramref name="roll"/> at or above one half nothing happens; otherwise
+        /// Spends every coin. With <paramref name="roll"/> at or above one half (plus Lady Luck) nothing happens; otherwise
         /// <paramref name="pick"/> chooses speed, damage or a heal, each growing with the coins spent.
         /// </summary>
         public JackpotPrize Jackpot(int rank, float roll, float pick)
@@ -112,7 +120,7 @@ namespace Slopgame
             int spent = Coins;
             Spend(spent);
             var root = Player.Run.ProjectileRoot;
-            if (roll >= 0.5f)
+            if (roll >= 0.5f + Luck)
             {
                 HeroVfx.Sparks(root, transform.position, new Color(0.5f, 0.45f, 0.4f), 10, 2.5f, 0.35f);
                 return JackpotPrize.Nothing;

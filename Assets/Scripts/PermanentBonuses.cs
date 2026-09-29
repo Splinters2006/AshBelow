@@ -16,6 +16,9 @@ namespace Slopgame
         public float BlessingDuration { get; }
         public int BarragePunches { get; }
         public int ParalyzedDamage { get; }
+        public int StartingCoins { get; }
+        /// <summary>Added to the Gambler's odds of winning a gamble.</summary>
+        public float GambleLuck { get; }
         /// <summary>The class mechanic on R, bought in the Ash shop. The Gambler's purse shop comes free.</summary>
         public bool MechanicUnlocked { get; }
 
@@ -52,6 +55,9 @@ namespace Slopgame
                 case WeaponType.Tail:
                     Health += progress.Rank("demoness_health");
                     ParalyzedDamage = progress.Rank("demoness_paralysis"); break;
+                case WeaponType.Coins:
+                    StartingCoins = progress.Rank("gambler_pockets") * 2;
+                    GambleLuck = progress.Rank("gambler_luck") * 0.04f; break;
             }
         }
     }

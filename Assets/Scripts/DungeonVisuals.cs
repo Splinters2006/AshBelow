@@ -56,6 +56,57 @@ namespace Slopgame
             return Sprite.Create(texture, new Rect(0, 0, width, height), Vector2.one * 0.5f, width);
         }
 
+        private static Sprite coinSprite, coinShadow, coinGlint;
+
+        /// <summary>A round gold coin with a bronze rim, a stamped mark and a bright highlight. Draw it untinted.</summary>
+        public static Sprite CoinSprite => coinSprite != null ? coinSprite : coinSprite = PaletteSprite("Gold coin", new[]
+        {
+            "...OOOO...", "..OYYYYO..", ".OYWWYYYO.", "OYWYYYYYDO", "OYYYSSYYDO",
+            "OYYYSSYYDO", "OYYYYYYYDO", ".OYYYYYDO.", "..ODDDDO..", "...OOOO..."
+        }, key => key switch
+        {
+            'O' => new Color(0.45f, 0.27f, 0.07f),
+            'Y' => new Color(1f, 0.8f, 0.26f),
+            'W' => new Color(1f, 0.98f, 0.82f),
+            'D' => new Color(0.8f, 0.52f, 0.12f),
+            'S' => new Color(0.72f, 0.46f, 0.1f),
+            _ => Color.clear
+        });
+
+        /// <summary>A soft oval shadow for things resting on the floor.</summary>
+        public static Sprite CoinShadow => coinShadow != null ? coinShadow : coinShadow = PaletteSprite("Coin shadow", new[]
+        {
+            "..SSSS..", ".SSSSSS.", "SSSSSSSS", ".SSSSSS.", "..SSSS.."
+        }, key => key == 'S' ? new Color(0f, 0f, 0f, 0.35f) : Color.clear);
+
+        /// <summary>A four-pointed twinkle.</summary>
+        public static Sprite CoinGlint => coinGlint != null ? coinGlint : coinGlint = PaletteSprite("Coin glint", new[]
+        {
+            "...W...", "...W...", "..WWW..", "WWWWWWW", "..WWW..", "...W...", "...W..."
+        }, key => key == 'W' ? Color.white : Color.clear);
+
+        private static Sprite PaletteSprite(string name, string[] rows, System.Func<char, Color> palette)
+        {
+            int width = rows[0].Length, height = rows.Length;
+            var texture = new Texture2D(width, height, TextureFormat.RGBA32, false)
+            { name = name, filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Clamp };
+            var pixels = new Color[width * height];
+            for (int y = 0; y < height; y++)
+                for (int x = 0; x < width; x++)
+                    pixels[(height - y - 1) * width + x] = palette(rows[y][x]);
+            texture.SetPixels(pixels);
+            texture.Apply(false, true);
+            return Sprite.Create(texture, new Rect(0, 0, width, height), Vector2.one * 0.5f, width);
+        }
+
+        /// <summary>A coin renderer one world unit across before scaling; set its localScale to the coin's size.</summary>
+        public static SpriteRenderer CreateCoin(string name, Transform parent, Vector2 position, float size, int order)
+        {
+            var renderer = Create(name, parent, position, Vector2.one * size, Color.white, order);
+            renderer.sprite = CoinSprite;
+            return renderer;
+        }
+
         public static SpriteRenderer CreateEmberBolt(Transform parent, Vector2 position)
         {
             if (emberBolt == null)

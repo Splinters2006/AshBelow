@@ -279,7 +279,7 @@ namespace Slopgame
             if (!Enemies.Remove(enemy)) return;
             Kills++;
             int reward = enemy.Boss != null ? 50 : 1;
-            if (enemy.Boss != null) Progress.RecordGuardian(Floor / 5);
+            if (enemy.Boss != null) Progress.RecordGuardian(Floor / 5, Player != null ? Player.ClassWeapon : (WeaponType?)null);
             if (Enemies.Count == 0 && !floorRewardGranted)
             { reward += 10; floorRewardGranted = true; }
             RunAshEarned += reward;

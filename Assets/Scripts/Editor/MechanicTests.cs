@@ -67,7 +67,7 @@ namespace Slopgame.Editor
                 {
                     Require(ContainsGambler(run), "The Gambler is missing from the hero list.");
                     run.Progress.AwardAsh(PermanentUpgradeCatalog.MechanicCost * Classes.Length);
-                    run.Progress.RecordGuardian(PermanentUpgradeCatalog.MechanicGuardians);
+                    foreach (var weapon in Classes) run.Progress.RecordGuardian(PermanentUpgradeCatalog.MechanicGuardians, weapon);
                     foreach (var weapon in Classes)
                         if (weapon != WeaponType.Coins) Require(run.TryBuyUpgrade(PermanentUpgradeCatalog.MechanicId(weapon)), "Could not buy the mechanic for " + weapon);
                     hero = 0;
@@ -276,7 +276,8 @@ namespace Slopgame.Editor
                     player.transform.position = drops[0].transform.position;
                     watched = null;
                     waiting = true;
-                    waitUntil = Time.time + 0.3f;
+                    // Long enough for the coin's pop-out hop to land and the purse to draw it in.
+                    waitUntil = Time.time + 0.8f;
                     return true;
                 }
             }
