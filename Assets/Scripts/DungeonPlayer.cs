@@ -143,6 +143,8 @@ namespace Slopgame
 
         private void Update()
         {
+            // Safety net: a hero with health must never stay hidden, however that health came back.
+            if (Health > 0 && hiddenRenderers.Count > 0) SetVisible(true);
             body.color = IsRolling ? new Color(0.4f, 0.65f, 1f) : IsInvulnerable ? Color.white : Buffs.Tint(characterColor);
             SetVeiledLook(IsVeiled);
             if (!Run.IsPlaying || Health <= 0 || IsBusy) { MoveInput = Vector2.zero; Charge.Tick(PlayerInput.Attack, false); return; }
@@ -256,7 +258,7 @@ namespace Slopgame
         {
             if (choice < 0 || choice >= PowerupCatalog.All.Count || !Powerups.Add((PowerupType)choice)) return;
             if (choice == 0) BaseDamage++;
-            if (choice == 1) { MaxHealth += 2; Health = MaxHealth; }
+            if (choice == 1) { MaxHealth += 2; if (Health > 0) Health = MaxHealth; }
             if (choice == 2) Speed += 0.7f;
             Heal(2);
         }
@@ -270,7 +272,16 @@ namespace Slopgame
             body.flipX = details.flipX = facingLeft;
         }
 
-        public void Heal(int amount) { Health = Mathf.Min(MaxHealth, Health + amount); }
+        /// <summary>
+        /// Restores health to a living hero. A fallen co-op hero is not healed: only <see cref="Revive"/> raises them,
+        /// so their sprites come back and the party stops counting them as dead. (Healing them here, for example through
+        /// the boon or artifact picked while spectating, left them alive but invisible on their own screen.)
+        /// </summary>
+        public void Heal(int amount)
+        {
+            if (Health <= 0) return;
+            Health = Mathf.Min(MaxHealth, Health + amount);
+        }
         /// <summary>Raises maximum health and heals by the same amount (the crystal shop's Heart Crystal).</summary>
         public void RaiseMaxHealth(int amount)
         {
