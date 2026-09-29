@@ -51,7 +51,7 @@ Enemies get tougher every floor. The **minimap** in the top-right corner fills i
 - **Enemies:** red ashlings chase you, armoured brutes are slow but tough, and hooded casters keep their distance and flash white just before they fire. From floor 2, small amber **ash skitters** rush you fast but die to a single hit. From floor 3, glowing **cinder husks** are slow and hardy. When one dies, its core flashes a warning ring and then bursts, hurting any other enemies nearby (never you). Kill husks next to their friends. Husks drop 2 crystals.
 - **Rear hits:** hitting an enemy from behind shows a pink double chevron. The Assassin deals double damage from behind.
 - **Critical hits:** every hero starts with a 5% chance of a physical critical hit, which deals double damage.
-- **Elemental effects:** fire sets enemies burning (three ticks, each half the hit's damage), ice freezes them solid, and lightning shocks every other enemy within 2 units for a quarter of the hit. Guardians thaw and shrug off freezes faster.
+- **Elemental effects:** fire sets enemies burning (three ticks, each half the hit's damage), ice freezes them solid, and lightning shocks every other enemy within 2 units for a quarter of the hit. The Wizard's Inferno Orb, chain lightning and Frost Nova always set off their element. Guardians thaw and shrug off freezes faster.
 
 ## Heroes
 

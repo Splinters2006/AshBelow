@@ -97,7 +97,7 @@ namespace Slopgame
                     Fan(aim, 3, BowAttack.SpreadAngle, Player.Damage + rank - 1, BowAttack.HeavyRange); break;
                 case AbilityType.Fireball:
                     SpellProjectile.Spawn(Player, aim, damage, DamageElement.Fire, definition.Color, 7f,
-                        1.7f + powers.Count(PowerupType.FireballRadius) * 0.4f); break;
+                        1.7f + powers.Count(PowerupType.FireballRadius) * 0.4f, guaranteedEffect: true); break;
                 case AbilityType.FrostNova:
                     StartCoroutine(ExpandingNova(transform.position, FrostNovaRadius, FrostNovaExpandTime, damage, definition.Color,
                         FrostNovaFreeze + powers.Count(PowerupType.FrostDuration) * 0.5f + (rank - 1) * 0.25f)); break;
@@ -318,7 +318,7 @@ namespace Slopgame
                     if (enemy != null && !hit.Contains(enemy) && InArea(enemy, center, r))
                     {
                         hit.Add(enemy);
-                        CombatDamage.Apply(Player, enemy, damage, DamageElement.Ice, center);
+                        CombatDamage.Apply(Player, enemy, damage, DamageElement.Ice, center, guaranteedEffect: true);
                         if (enemy.Health > 0) enemy.Freeze(freeze);
                     }
                 if (progress >= 1f)
@@ -334,7 +334,8 @@ namespace Slopgame
             && Vector2.Distance(center, enemy.transform.position) <= radius + enemy.HitRadius
             && Player.Run.HasLineOfSight(center, enemy.transform.position);
 
-        public void AreaAttack(Vector2 center, float radius, int damage, DamageElement element, Color color, float slow = 0f)
+        public void AreaAttack(Vector2 center, float radius, int damage, DamageElement element, Color color, float slow = 0f,
+            bool guaranteedEffect = false)
         {
             CombatVfx.Ring(Player.Run.ProjectileRoot, center, radius, color);
             HeroVfx.Pulse(Player.Run.ProjectileRoot, center, radius, color, 0.4f);
@@ -343,7 +344,7 @@ namespace Slopgame
             foreach (var enemy in Player.Run.Enemies.ToArray())
                 if (InArea(enemy, center, radius))
                 {
-                    CombatDamage.Apply(Player, enemy, damage, element, center);
+                    CombatDamage.Apply(Player, enemy, damage, element, center, guaranteedEffect: guaranteedEffect);
                     if (enemy.Health > 0 && slow > 0f) enemy.Chill(slow);
                 }
         }

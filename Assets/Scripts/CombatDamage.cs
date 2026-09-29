@@ -45,7 +45,7 @@ namespace Slopgame
         /// An element carried by a physical hit (the Archer's Elemental Quiver): it still crits normally, and a critical
         /// hit also sets off that element's effect.
         /// </param>
-        /// <param name="guaranteedEffect">An elemental hit skips its effect roll and always sets off its element (Wild Storm).</param>
+        /// <param name="guaranteedEffect">An elemental hit skips its effect roll and always sets off its element (Wild Storm, Inferno Orb, Lightning, Frost Nova).</param>
         public static void Apply(DungeonPlayer player, DungeonEnemy enemy, int damage, DamageElement element, Vector2 source, float knockback = 1f,
             DamageElement infusion = DamageElement.Physical, bool guaranteedEffect = false)
         {

@@ -42,7 +42,7 @@ namespace Slopgame
                 CoopFx.Bolt(Player.Run, origin, destination, AbilityCatalog.Ice, true);
                 HeroVfx.Sparks(Player.Run.ProjectileRoot, destination, Color.Lerp(AbilityCatalog.Ice, Color.white, 0.4f), 7, 4f, 0.25f);
                 CombatDamage.Apply(Player, target, Player.Damage + 1 + Player.Powerups.Count(PowerupType.LightningPower) + Player.Permanent.LightningDamage,
-                    DamageElement.Lightning, origin);
+                    DamageElement.Lightning, origin, guaranteedEffect: true);
                 origin = destination;
                 target = FindTarget(origin, aim, JumpRange, struck, false);
             }

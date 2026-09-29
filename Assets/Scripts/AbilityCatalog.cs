@@ -40,7 +40,7 @@ namespace Slopgame
             new AbilityDefinition(AbilityType.Volley, WeaponType.Bow, "Arrow Volley", "Call down a rain of 16 arrows from the sky onto the area around your cursor.", "///", 8f, Green),
             new AbilityDefinition(AbilityType.PiercingShot, WeaponType.Bow, "Piercing Shot", "A thundering arrow tears through every enemy in a long line. Range: 18 units.", "->", 9f, Gold),
             new AbilityDefinition(AbilityType.Windstep, WeaponType.Bow, "Windstep", "Dash in your aim direction and fire a tight, long-range three-arrow counterattack.", ">>", 10f, Green),
-            new AbilityDefinition(AbilityType.Fireball, WeaponType.Staff, "Inferno Orb", "Unlock an explosive fireball. Its elemental effect can ignite enemies.", "*", 8f, new Color(1f, 0.43f, 0.23f)),
+            new AbilityDefinition(AbilityType.Fireball, WeaponType.Staff, "Inferno Orb", "Unlock an explosive fireball that always ignites the enemies it hits.", "*", 8f, new Color(1f, 0.43f, 0.23f)),
             new AbilityDefinition(AbilityType.FrostNova, WeaponType.Staff, "Frost Nova", "A ring of ice slowly expands around you, damaging the enemies it reaches and freezing them solid for 2 seconds.", "+", 10f, Ice),
             new AbilityDefinition(AbilityType.Blink, WeaponType.Staff, "Arcane Blink", "Blink up to 6 units toward your aim, straight through walls.", "<>", 9f, Violet),
             new AbilityDefinition(AbilityType.FanOfKnives, WeaponType.Daggers, "Fan of Knives", "Throw a ring of piercing knives that fly back to you after 1 second, wherever you are, cutting through everything in their path. Each can critically strike.", "X", 8f, Violet),
