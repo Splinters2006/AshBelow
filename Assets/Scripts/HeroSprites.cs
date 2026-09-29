@@ -61,10 +61,10 @@ namespace Slopgame
                 "A..DLWWWWWFFRRRr", "AA.DLWWWWWMDRRRr", ".AADWWMWWWMD.rr.", "..DDDDgGgDDD....",
                 "...DMWWDWWMD....", "....DSSDSsD.....", "....DkkDkkD.....", "...DDDD.DDDD....",
             } },
-            { WeaponType.Tail, new[] // Demoness: a pale girl with black horns, long dark violet hair, glowing eyes and a spade-tipped tail
+            { WeaponType.Tail, new[] // Demoness: a pale girl with curled black ram horns, long dark violet hair, glowing eyes and a spade-tipped tail
             {
-                "..N..........N..", "..nN........nN..", "...nNNDDDDNNn...", "...DVUUUVVVVD...",
-                "..DVUVVVVVVVVD..", "..DVVVVVCCVVVD..", "..DVVVCCCCCCVD..", "..DVVCCEvCCEvD..",
+                "................", "..NNNn....nNNN..", ".NnnNNDDDDNNnnN.", "Nn.DVUUUVVVVD.nN",
+                "NnNVUVVVVVVVVNnN", ".NNVVVVVCCVVVNN.", "..DVVVCCCCCCVD..", "..DVVCCEvCCEvD..",
                 "..DVVCCCCCCCcD..", ".DVVVcCCCPCcD...", "TDVVVVDcCCcD....", "TTDVVDLWWWWWD...",
                 ".TNDVDLWFFWMCD..", "..NDDWWWMWWMcD..", "..NDWWWWWWWWWD..", "...NDDCcDDCcD...",
             } },
