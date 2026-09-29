@@ -303,9 +303,10 @@ namespace Slopgame.Editor
             Require(purse.Buy(bet, 0.1f) && coins.Coins == 4, "Winning Double or Nothing did not double the coins.");
             Require(purse.Buy(bet, 0.9f) && coins.Coins == 1, "Losing Double or Nothing did not empty the purse to its last coin.");
             var dice = GamblerPurse.Offers[(int)GamblerPurse.Ware.Dice];
+            // One coin left from the lost bet: one short of the price, then one over it.
             coins.AddCoins(dice.Cost - 2);
             Require(!purse.Buy(dice), "Loaded Dice sold without enough coins.");
-            coins.AddCoins(2);
+            coins.AddCoins(3);
             int damage = player.Damage;
             Require(purse.Buy(dice) && player.Damage == damage + 1 && coins.Coins == 2, "Loaded Dice failed.");
             Require(!purse.Buy(GamblerPurse.Offers[(int)GamblerPurse.Ware.Draught]), "A full-health Gambler bought a Healing Draught.");
