@@ -2,33 +2,36 @@ using UnityEngine;
 
 namespace Slopgame
 {
-    /// <summary>Rectangular punch effects for the Brawler: a flash of the hit area, a fist at its far edge and a spark spray.</summary>
+    /// <summary>Punch effects for the Brawler, shared by her own attacks and the copies teammates see.</summary>
     public static class BrawlerVfx
     {
         public static void Punch(Transform root, Vector2 origin, Vector2 aim, float length, float halfWidth, Color color, float duration = 0.16f)
         {
             if (root == null || aim.sqrMagnitude < 0.0001f) return;
-            aim.Normalize();
-            var holder = new GameObject("Punch");
-            holder.transform.SetParent(root, false);
-            holder.transform.position = origin;
-            holder.transform.rotation = Quaternion.Euler(0, 0, Mathf.Atan2(aim.y, aim.x) * Mathf.Rad2Deg);
-            float fist = Mathf.Clamp(halfWidth * 0.75f, 0.24f, 0.7f);
-            Part(holder.transform, "Punch area", new Vector2(length * 0.5f, 0f), new Vector2(length, halfWidth * 2f), Faded(color, 0.22f), 5);
-            Part(holder.transform, "Punch edge", new Vector2(length, 0f), new Vector2(0.07f, halfWidth * 2f), Faded(color, 0.75f), 6);
-            Part(holder.transform, "Fist", new Vector2(length - fist * 0.5f, 0f), Vector2.one * fist, Color.Lerp(color, Color.white, 0.25f), 7);
-            Part(holder.transform, "Knuckles", new Vector2(length - fist * 0.15f, 0f), new Vector2(fist * 0.3f, fist * 0.8f), Color.Lerp(color, Color.white, 0.6f), 8);
-            holder.AddComponent<FadingSprite>().Duration = duration;
-            HeroVfx.Sparks(root, origin + aim * length, Color.Lerp(color, Color.white, 0.5f), 5, 3.5f, 0.18f, aim, 70f, 0.8f);
+            // Short jabs still need a moment to read, so the glove lingers a touch longer than the hit.
+            PunchVfx.Play(root, PunchVfx.Style.Jab, origin, aim, length, halfWidth, color, Mathf.Max(0.2f, duration * 1.4f));
+            HeroVfx.Sparks(root, origin + aim.normalized * length, Color.Lerp(color, Color.white, 0.5f), 5, 3.5f, 0.18f, aim, 70f, 0.8f);
         }
 
-        private static Color Faded(Color color, float alpha) { color.a *= alpha; return color; }
-
-        private static void Part(Transform parent, string name, Vector2 localPosition, Vector2 size, Color color, int order)
+        /// <summary>Knuckle Sandwich's blow: a huge glove, cone shockwaves and cracked ground.</summary>
+        public static void HeavyPunch(Transform root, Vector2 origin, Vector2 aim, float length, float halfWidth, Color color)
         {
-            var part = DungeonVisuals.Create(name, parent, parent.position, size, color, order);
-            part.transform.localPosition = localPosition;
-            part.transform.localRotation = Quaternion.identity;
+            if (root == null || aim.sqrMagnitude < 0.0001f) return;
+            PunchVfx.Play(root, PunchVfx.Style.Heavy, origin, aim, length, halfWidth, color, 0.6f);
+        }
+
+        /// <summary>Knuckle Sandwich's windup, locked to the Brawler's position and to the aim she committed to.</summary>
+        public static PunchVfx Windup(Transform root, Transform hero, Vector2 aim, float length, float halfWidth, Color color, float duration)
+        {
+            if (root == null || hero == null) return null;
+            return PunchVfx.Play(root, PunchVfx.Style.Windup, hero.position, aim, length, halfWidth, color, duration)?.Follow(hero, null);
+        }
+
+        /// <summary>The barrage's blur of gloves; it follows the hero and their aim until it ends or is stopped.</summary>
+        public static PunchVfx Flurry(Transform root, Transform hero, System.Func<Vector2> aim, float length, float halfWidth, Color color, float duration)
+        {
+            if (root == null || hero == null) return null;
+            return PunchVfx.Play(root, PunchVfx.Style.Flurry, hero.position, aim(), length, halfWidth, color, duration)?.Follow(hero, aim);
         }
     }
 }

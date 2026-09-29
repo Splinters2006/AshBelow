@@ -22,7 +22,8 @@ namespace Slopgame
         private void Update()
         {
             if (!enemy.Run.IsPlaying || enemy.Health <= 0 || enemy.Run.IsGuest) return;
-            Vector2 target = enemy.Run.NearestHero(transform.position);
+            // A caster that cannot see anyone (Shadow Veil) has no aim: the offset stays zero and it never starts a new windup.
+            enemy.Run.TryNearestVisibleHero(transform.position, out Vector2 target);
             Vector2 offset = target - (Vector2)transform.position;
             if (IsCharging)
             {

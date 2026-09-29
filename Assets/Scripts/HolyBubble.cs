@@ -4,8 +4,9 @@ using UnityEngine;
 namespace Slopgame
 {
     /// <summary>
-    /// A shimmering bubble. Aegis wraps the Knight in one that follows them; Sanctuary plants a bubble of holy light
-    /// that stops every projectile crossing its edge, in either direction. Projectiles ask <see cref="Blocks"/> each step.
+    /// A shimmering bubble. Aegis wraps the Knight in one that follows them; Sanctuary surrounds the Paladin with a
+    /// bubble of holy light that moves with them and stops every projectile crossing its edge, in either direction.
+    /// Projectiles ask <see cref="Blocks"/> each step.
     /// </summary>
     public sealed class HolyBubble : MonoBehaviour
     {
@@ -25,9 +26,9 @@ namespace Slopgame
         public static HolyBubble Wrap(Transform root, Transform hero, float duration, Color color)
             => Create(root, hero, hero.position, 0.85f, duration, color, false);
 
-        /// <summary>A stationary bubble that blocks projectiles crossing its edge (Sanctuary).</summary>
-        public static HolyBubble Sanctuary(Transform root, Vector2 center, float radius, float duration)
-            => Create(root, null, center, radius, duration, Holy, true);
+        /// <summary>A bubble that blocks projectiles crossing its edge (Sanctuary). It follows the Paladin when one is given.</summary>
+        public static HolyBubble Sanctuary(Transform root, Vector2 center, float radius, float duration, Transform follow = null)
+            => Create(root, follow, center, radius, duration, Holy, true);
 
         private static HolyBubble Create(Transform root, Transform follow, Vector2 center, float radius, float duration, Color color, bool blocks)
         {

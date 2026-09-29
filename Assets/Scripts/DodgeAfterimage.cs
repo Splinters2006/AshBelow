@@ -34,9 +34,10 @@ namespace Slopgame
             var tint = Tint;
             tint.a = 0.5f;
             // Copy the whole silhouette (body plus class details) as one tinted ghost.
+            // Only what is actually showing: hidden helpers such as the Brawler's punch preview stay out of the ghost.
             foreach (var part in GetComponentsInChildren<SpriteRenderer>())
             {
-                if (part.sprite == null || part.color.a < 0.05f) continue;
+                if (!part.enabled || part.sprite == null || part.color.a < 0.05f) continue;
                 var copy = new GameObject(part.name).AddComponent<SpriteRenderer>();
                 copy.transform.SetParent(ghost, false);
                 copy.transform.position = part.transform.position;

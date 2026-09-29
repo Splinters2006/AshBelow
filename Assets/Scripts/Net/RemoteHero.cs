@@ -14,6 +14,7 @@ namespace Slopgame
         public bool IsRolling => (flags & PlayerStateMessage.Rolling) != 0;
         public bool IsEmpowered => (flags & PlayerStateMessage.Empowered) != 0;
         public bool IsBlessed => (moreFlags & PlayerStateMessage.Blessed) != 0;
+        public bool IsVeiled => (moreFlags & PlayerStateMessage.Veiled) != 0;
         public Vector2 Aim { get; private set; } = Vector2.right;
         private DungeonRun run;
         private SpriteRenderer body, details, shield;
@@ -73,6 +74,14 @@ namespace Slopgame
             else if (Aim.x > 0.15f) facingLeft = false;
             body.flipX = facingLeft;
             if (details != null) details.flipX = facingLeft;
+            // A teammate in Shadow Veil shows as a faint shadow.
+            if (IsVeiled)
+            {
+                float alpha = 0.3f + 0.08f * Mathf.Sin(Time.time * 6f);
+                body.color = new Color(body.color.r, body.color.g, body.color.b, alpha);
+                if (details != null) details.color = new Color(details.color.r, details.color.g, details.color.b, alpha);
+            }
+            else if (details != null && details.color.a < 1f) details.color = new Color(details.color.r, details.color.g, details.color.b, 1f);
             shield.enabled = blocking;
             if (blocking)
             {

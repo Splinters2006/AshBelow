@@ -16,13 +16,14 @@ namespace Slopgame
     public enum CoopDamageKind : byte { Hit, Burn, Chill }
     public enum CoopBoltEventKind : byte { Reflected, Consumed }
     public enum SupportKind : byte { Heal, Protect, Bless }
-    public enum FxKind : byte { Arrow, Spell, Slash, Bolt, GlowBolt, Ring, Pulse, Rift, Execution, Singularity, Punch, RearHit, Knife, PiercingShot, Aegis, Holy, Sanctuary }
+    public enum FxKind : byte { Arrow, Spell, Slash, Bolt, GlowBolt, Ring, Pulse, Rift, Execution, Singularity, Punch, RearHit, Knife, PiercingShot, Aegis, Holy, Sanctuary,
+        Windstep, Shadowstep, Stab, Quake, HolySword, Venom, HeavyPunch, Flurry }
 
     public struct PlayerStateMessage
     {
         public const byte Rolling = 1, Blocking = 2, Charging = 4, Dead = 8, Invulnerable = 16, Empowered = 32, Raging = 64, Tired = 128;
         /// <summary>Bits of <see cref="MoreFlags"/>.</summary>
-        public const byte Blessed = 1;
+        public const byte Blessed = 1, Veiled = 2;
         public ulong Id;
         public int Floor;
         public Vector2 Position, Aim;

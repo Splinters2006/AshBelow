@@ -280,15 +280,15 @@ namespace Slopgame
             DungeonUi.Label(new Rect(panel.x + 250, panel.y + 28, 230, 24), "BECOMES", 13, DungeonUi.Muted);
             DungeonUi.Label(new Rect(panel.x + 250, panel.y + 52, 230, 60), incoming.Name, 22, incoming.Color);
             DungeonUi.Label(new Rect(panel.x + 24, panel.y + 120, 452, 40), "Its rank is kept if a later relic lets you equip it again.", 15, DungeonUi.Muted);
-            if (DungeonUi.Button("confirmReplace", new Rect(panel.x + 24, panel.yMax - 64, 214, 44), $"Replace {key}", incoming.Color))
+            if (DungeonUi.Button("cancelReplace", new Rect(panel.x + 24, panel.yMax - 64, 214, 44), "Keep " + current.Name, DungeonUi.Muted))
+                pendingRelic = AbilityType.None;
+            else if (DungeonUi.Button("confirmReplace", new Rect(panel.xMax - 238, panel.yMax - 64, 214, 44), $"Replace {key}", incoming.Color))
             {
                 AbilityType type = pendingRelic;
                 int slot = pendingSlot;
                 pendingRelic = AbilityType.None;
                 Run.ChooseArtifact(type, slot);
             }
-            else if (DungeonUi.Button("cancelReplace", new Rect(panel.xMax - 238, panel.yMax - 64, 214, 44), "Keep " + current.Name, DungeonUi.Muted))
-                pendingRelic = AbilityType.None;
         }
 
         private void DrawDeath()

@@ -76,7 +76,13 @@ namespace Slopgame
             }
             if (Boss != null) return;
             Vector2 position = transform.position;
-            Vector2 target = Run.NearestHero(position);
+            // Heroes in Shadow Veil are invisible: with nobody to see, the enemy holds still and keeps its facing.
+            if (!Run.TryNearestVisibleHero(position, out Vector2 target))
+            {
+                UpdateColor();
+                if (!IsRanged) TryContactHit(HitRadius + 0.27f);
+                return;
+            }
             float distance = Vector2.Distance(position, target);
             bool visible = Run.HasLineOfSight(position, target);
             if (distance < 10f)

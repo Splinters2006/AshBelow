@@ -10,16 +10,17 @@ namespace Slopgame
     /// </summary>
     public sealed class BrawlerAttack : MonoBehaviour, IPlayerWeapon
     {
-        public const float ChargeDuration = 1.8f;
+        // 15% faster than the original 1.8 seconds.
+        public const float ChargeDuration = 1.8f / 1.15f;
         public const float JabLength = 1.5f, JabHalfWidth = 0.42f;
         public const float BarrageLength = 2.3f, BarrageHalfWidth = 0.85f;
         public const int BarragePunches = 6;
         public const float EmpowerCooldown = 10f, EmpowerDuration = 5f;
         public const float RageDuration = 10f, TiredDuration = 5f;
-        public const float LeapRange = 7f, LeapDuration = 0.26f;
+        public const float LeapRange = 7f, LeapDuration = 0.26f, LeapHeight = 1.6f;
         public const float SandwichWindup = 0.42f;
-        /// <summary>Wild Leap's slam grows by this much radius per unit travelled.</summary>
-        public const float LeapRadiusPerUnit = 0.3f;
+        /// <summary>Wild Leap's slam starts at this radius and grows by <see cref="LeapRadiusPerUnit"/> per unit travelled.</summary>
+        public const float LeapBaseRadius = 1.5f, LeapRadiusPerUnit = 0.22f;
         public static readonly Color Glove = new Color(0.95f, 0.3f, 0.26f);
         public DungeonPlayer Player { get; set; }
         public bool IsBarraging => barrage != null;
@@ -35,7 +36,7 @@ namespace Slopgame
         private Color PunchColor => Player.Buffs.IsRaging ? HeroBuffs.RageColor : Player.Buffs.IsEmpowered ? HeroBuffs.EmpowerColor : Glove;
         private float readyAt, empowerReadyAt;
         private Coroutine barrage, leap, sandwich;
-        private GameObject sandwichWindup;
+        private PunchVfx sandwichWindup, flurry;
         private Transform previewRoot;
         private SpriteRenderer preview;
 
@@ -79,8 +80,10 @@ namespace Slopgame
         {
             int count = BarrageCount;
             var root = Player.Run.ProjectileRoot;
-            BrawlerVfx.Punch(root, transform.position, Player.AimDirection, BarrageLength * Size, BarrageHalfWidth * Size,
-                PunchColor, count * 0.07f * Interval + 0.15f);
+            float flurryTime = count * 0.07f * Interval + 0.15f;
+            flurry = BrawlerVfx.Flurry(root, transform, () => Player.AimDirection, BarrageLength * Size, BarrageHalfWidth * Size, PunchColor, flurryTime);
+            CoopFx.Flurry(Player.Run, BarrageLength * Size, BarrageHalfWidth * Size, PunchColor, flurryTime);
+            ScreenFx.Shake(0.05f, flurryTime);
             for (int i = 0; i < count; i++)
             {
                 if (!Player.Run.IsPlaying || Player.Health <= 0 || root != Player.Run.ProjectileRoot) break;
@@ -93,9 +96,15 @@ namespace Slopgame
                 float fist = finisher ? halfWidth : 0.28f;
                 Vector2 lane = Vector2.Perpendicular(aim) * (finisher ? 0f : Random.Range(-1f, 1f) * (halfWidth - fist));
                 DrawPunch(origin + lane, aim, length, fist, finisher ? Color.Lerp(PunchColor, Color.white, 0.3f) : PunchColor, finisher ? 0.22f : 0.1f);
-                if (finisher) HeroVfx.Pulse(root, origin + aim * length, halfWidth, PunchColor, 0.3f);
+                if (finisher)
+                {
+                    HeroVfx.Pulse(root, origin + aim * length, halfWidth, PunchColor, 0.3f);
+                    HeroVfx.Sparks(root, origin + aim * length, Color.Lerp(PunchColor, Color.white, 0.4f), 14, 5f, 0.35f, aim, 120f, 1.2f);
+                    ScreenFx.Shake(0.15f, 0.15f);
+                }
                 yield return new WaitForSeconds(0.07f * Interval);
             }
+            StopFlurry();
             barrage = null;
             readyAt = Time.time + 0.25f * Interval;
         }
@@ -146,30 +155,13 @@ namespace Slopgame
             Color color = Color.Lerp(PunchColor, AbilityCatalog.Gold, 0.35f);
             Player.Occupy(SandwichWindup + 0.12f);
             Player.Charge.Cancel();
-            sandwichWindup = new GameObject("Knuckle Sandwich windup");
-            sandwichWindup.transform.SetParent(root, false);
-            var area = DungeonVisuals.Create("Windup area", sandwichWindup.transform, transform.position, Vector2.one, color, 5);
-            var edge = DungeonVisuals.Create("Windup edge", sandwichWindup.transform, transform.position, Vector2.one, Color.white, 6);
-            var fist = DungeonVisuals.Create("Drawn fist", sandwichWindup.transform, transform.position, Vector2.one * 0.3f, Glove, 7);
-            float angle = Mathf.Atan2(aim.y, aim.x) * Mathf.Rad2Deg;
+            // The fist is drawn back behind her and swells with power while the target area glows.
+            sandwichWindup = BrawlerVfx.Windup(root, transform, aim, length, halfWidth, color, SandwichWindup + 0.05f);
             for (float t = 0f; t < SandwichWindup; t += Time.deltaTime)
             {
                 if (!run.IsPlaying || root != run.ProjectileRoot || Player.Health <= 0) { EndSandwich(); yield break; }
-                float progress = t / SandwichWindup;
-                Vector2 origin = transform.position;
-                float reach = length * Mathf.Lerp(0.25f, 1f, progress);
-                area.transform.SetPositionAndRotation(origin + aim * reach * 0.5f, Quaternion.Euler(0, 0, angle));
-                area.transform.localScale = new Vector3(reach, halfWidth * 2f, 1f);
-                area.color = new Color(color.r, color.g, color.b, Mathf.Lerp(0.08f, 0.3f, progress) + 0.06f * Mathf.Sin(t * 40f));
-                edge.transform.SetPositionAndRotation(origin + aim * reach, Quaternion.Euler(0, 0, angle));
-                edge.transform.localScale = new Vector3(0.06f, halfWidth * 2f, 1f);
-                edge.color = new Color(1f, 1f, 1f, 0.3f + 0.5f * progress);
-                // The fist is drawn back behind her and swells with power.
-                fist.transform.position = origin - aim * Mathf.Lerp(0.2f, 0.55f, progress) + Vector2.Perpendicular(aim) * 0.15f;
-                fist.transform.localScale = Vector2.one * Mathf.Lerp(0.3f, 0.6f, progress);
-                fist.color = Color.Lerp(Glove, Color.white, 0.5f * progress + 0.2f * Mathf.Sin(t * 50f));
                 if (Random.value < 0.35f)
-                    HeroVfx.Sparks(root, fist.transform.position, color, 2, 1.6f, 0.2f, aim, 120f, 0.7f);
+                    HeroVfx.Sparks(root, (Vector2)transform.position - aim * 0.5f, color, 2, 1.6f, 0.2f, aim, 120f, 0.7f);
                 yield return null;
             }
             EndSandwich();
@@ -178,7 +170,8 @@ namespace Slopgame
             transform.position = run.Map.Move(start, aim * 0.4f);
             Vector2 from = transform.position, impact = from + aim * length;
             Strike(from, aim, length, halfWidth, Player.Damage * (4 + rank), 4f);
-            DrawPunch(from, aim, length, halfWidth, color, 0.4f);
+            BrawlerVfx.HeavyPunch(root, from, aim, length, halfWidth, color);
+            CoopFx.HeavyPunch(run, from, aim, length, halfWidth, color);
             HeroVfx.Pulse(root, impact, halfWidth * 1.6f, color, 0.45f);
             HeroVfx.Pulse(root, from + aim * length * 0.5f, length * 0.6f, Color.white, 0.2f);
             CombatVfx.Ring(root, impact, halfWidth * 1.4f, Color.white, 0.35f);
@@ -187,16 +180,22 @@ namespace Slopgame
                 HeroVfx.Sparks(root, from + aim * length * i / 4f, new Color(0.75f, 0.68f, 0.58f), 4, 3f, 0.35f, Vector2.Perpendicular(aim), 360f, 0.9f);
             CoopFx.Pulse(run, impact, halfWidth * 1.6f, color, 0.45f);
             CoopFx.Ring(run, impact, halfWidth * 1.4f, Color.white, 0.35f);
-            ScreenFx.Shake(0.4f, 0.35f);
-            ScreenFx.Flash(new Color(1f, 0.95f, 0.85f, 0.18f), 0.15f);
+            ScreenFx.Shake(0.5f, 0.4f);
+            ScreenFx.Flash(new Color(1f, 0.95f, 0.85f, 0.25f), 0.18f);
             sandwich = null;
         }
 
         private void EndSandwich()
         {
-            if (sandwichWindup != null) Destroy(sandwichWindup);
+            if (sandwichWindup != null) sandwichWindup.Stop();
             sandwichWindup = null;
             sandwich = null;
+        }
+
+        private void StopFlurry()
+        {
+            if (flurry != null) flurry.Stop();
+            flurry = null;
         }
 
         private void PrimalRage(int rank)
@@ -209,7 +208,7 @@ namespace Slopgame
             CoopFx.Pulse(Player.Run, transform.position, 2f, HeroBuffs.RageColor, 0.5f);
         }
 
-        /// <summary>Prefers enemies toward the aim, then nearer ones; any visible enemy in range can be chosen.</summary>
+        /// <summary>Prefers enemies toward the aim, then nearer ones. She leaps over walls, so any enemy in range can be chosen.</summary>
         private DungeonEnemy FindLeapTarget(Vector2 aim)
         {
             Vector2 origin = transform.position;
@@ -220,7 +219,7 @@ namespace Slopgame
                 if (enemy == null || enemy.Health <= 0) continue;
                 Vector2 offset = (Vector2)enemy.transform.position - origin;
                 float distance = offset.magnitude;
-                if (distance > LeapRange + enemy.HitRadius || !Player.Run.HasLineOfSight(origin, enemy.transform.position)) continue;
+                if (distance > LeapRange + enemy.HitRadius || !CanLandNear(enemy)) continue;
                 float alignment = distance < 0.01f ? 1f : Vector2.Dot(offset / distance, aim);
                 float score = distance * (2f - alignment);
                 if (score < bestScore) { bestScore = score; best = enemy; }
@@ -228,14 +227,28 @@ namespace Slopgame
             return best;
         }
 
-        private Vector2 LandingNear(Vector2 from, DungeonEnemy target)
+        private bool CanLandNear(DungeonEnemy target) => TryLandingNear(transform.position, target, out _);
+
+        /// <summary>A standable spot beside the target, preferring the side she leaps from. Walls in between do not matter.</summary>
+        private bool TryLandingNear(Vector2 from, DungeonEnemy target, out Vector2 landing)
         {
             Vector2 goal = target.transform.position;
             Vector2 toTarget = goal - from;
             Vector2 direction = toTarget.sqrMagnitude > 0.0001f ? toTarget.normalized : Player.AimDirection;
-            Vector2 spot = goal - direction * (target.HitRadius + 0.3f);
-            return Player.Run.Map.CanStand(spot) ? spot : Player.Run.Map.Move(from, spot - from);
+            float gap = target.HitRadius + 0.3f;
+            for (int i = 0; i < 8; i++)
+            {
+                // Try the near side first, then fan out around the target.
+                float turn = (i % 2 == 0 ? 1f : -1f) * ((i + 1) / 2) * 45f;
+                landing = goal - (Vector2)(Quaternion.Euler(0, 0, turn) * direction) * gap;
+                if (Player.Run.Map.CanStand(landing)) return true;
+            }
+            landing = goal;
+            return Player.Run.Map.CanStand(goal);
         }
+
+        private Vector2 LandingNear(Vector2 from, DungeonEnemy target, Vector2 fallback)
+            => TryLandingNear(from, target, out Vector2 landing) ? landing : fallback;
 
         private IEnumerator Leap(DungeonEnemy target, int rank)
         {
@@ -244,15 +257,16 @@ namespace Slopgame
             Player.Protect(LeapDuration + 0.25f);
             Player.Charge.Cancel();
             Vector2 from = transform.position;
-            Vector2 landing = LandingNear(from, target);
+            Vector2 landing = LandingNear(from, target, from);
             HeroVfx.Sparks(root, from + Vector2.down * 0.3f, new Color(0.7f, 0.66f, 0.6f, 0.8f), 8, 2.6f, 0.3f, from - landing, 120f, 0.9f);
             for (float t = 0f; t < LeapDuration; t += Time.deltaTime)
             {
                 if (!Player.Run.IsPlaying || root != Player.Run.ProjectileRoot) { leap = null; yield break; }
                 // Home in on the target while airborne; keep the last landing spot if it dies mid-leap.
-                if (target != null && target.Health > 0) landing = LandingNear(from, target);
+                if (target != null && target.Health > 0) landing = LandingNear(from, target, landing);
                 float progress = t / LeapDuration;
-                transform.position = Vector2.Lerp(from, landing, progress) + Vector2.up * Mathf.Sin(progress * Mathf.PI) * 1.1f;
+                // A high arc carries her clean over walls.
+                transform.position = Vector2.Lerp(from, landing, progress) + Vector2.up * Mathf.Sin(progress * Mathf.PI) * LeapHeight;
                 yield return null;
             }
             transform.position = landing;
@@ -260,7 +274,7 @@ namespace Slopgame
             leap = null;
         }
 
-        public static float SlamRadius(float travelled, int craterMakers) => 1.8f + craterMakers * 0.5f + Mathf.Max(0f, travelled) * LeapRadiusPerUnit;
+        public static float SlamRadius(float travelled, int craterMakers) => LeapBaseRadius + craterMakers * 0.5f + Mathf.Max(0f, travelled) * LeapRadiusPerUnit;
 
         private void Slam(Vector2 center, int rank, float travelled)
         {
@@ -305,6 +319,7 @@ namespace Slopgame
             if (barrage != null)
             {
                 StopCoroutine(barrage);
+                StopFlurry();
                 barrage = null;
                 readyAt = Time.time + 0.25f * Interval;
             }

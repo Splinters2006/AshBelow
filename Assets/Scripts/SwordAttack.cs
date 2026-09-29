@@ -6,6 +6,8 @@ namespace Slopgame
     {
         public const float Reach = 2.3f;
         public const float ConeAngle = 60f;
+        /// <summary>The Assassin stabs rather than sweeps, so her hit area is a narrow wedge.</summary>
+        public const float StabAngle = 40f;
         public bool ShowChargePreview { get; set; } = true;
         public bool IsHeavyAttacking => Player.Shield != null && Player.Shield.IsBlocking;
         public float HeavyCooldownRemaining => Player.Shield != null ? Player.Shield.CooldownRemaining : DebugMode.Cooldown(Mathf.Max(0f, shadowReadyAt - Time.time));
@@ -53,7 +55,7 @@ namespace Slopgame
                 (offset.sqrMagnitude < 0.0001f || Vector2.Dot(offset.normalized, aim.normalized) >= Mathf.Cos(coneAngle * 0.5f * Mathf.Deg2Rad));
         }
 
-        public float ChargedCone(float charge) => Mathf.Lerp(ConeAngle,
+        public float ChargedCone(float charge) => Mathf.Lerp(Player.ClassWeapon == WeaponType.Daggers ? StabAngle : ConeAngle,
             Player.ClassWeapon == WeaponType.Daggers ? 22f
                 : 120f + Player.Powerups.Count(PowerupType.SweepingEdge) * 15f, Mathf.Clamp01(charge));
 
@@ -69,11 +71,22 @@ namespace Slopgame
             SetArc(reach, cone, Player.ClassWeapon == WeaponType.Daggers
                 ? new Color(0.75f, 0.45f, 1f, 0.55f) : new Color(0.4f, 1f, 0.85f, 0.45f));
             readyAt = Time.time + 0.42f * Player.Powerups.AttackIntervalMultiplier;
-            visibleUntil = Time.time + 0.15f;
             FaceArc(aim);
-            arc.enabled = true;
-            HeroVfx.Slash(Player.Run.ProjectileRoot, transform.position, aim, reach, cone, SlashColor);
-            CoopFx.Slash(Player.Run, transform.position, aim, reach, cone, SlashColor);
+            if (Player.ClassWeapon == WeaponType.Daggers)
+            {
+                // A straight thrust: the dagger itself shows the reach, so the sweep cone stays hidden.
+                visibleUntil = 0f;
+                arc.enabled = false;
+                StabVfx.Play(Player.Run.ProjectileRoot, transform.position, aim, reach, SlashColor);
+                CoopFx.Stab(Player.Run, transform.position, aim, reach, SlashColor);
+            }
+            else
+            {
+                visibleUntil = Time.time + 0.15f;
+                arc.enabled = true;
+                HeroVfx.Slash(Player.Run.ProjectileRoot, transform.position, aim, reach, cone, SlashColor);
+                CoopFx.Slash(Player.Run, transform.position, aim, reach, cone, SlashColor);
+            }
             for (int i = Player.Run.Enemies.Count - 1; i >= 0; i--)
             {
                 var enemy = Player.Run.Enemies[i];

@@ -3,12 +3,15 @@ using UnityEngine;
 
 namespace Slopgame
 {
-    /// <summary>The Paladin's timed relic abilities: Judgment's holy smite after a windup, and Sanctuary's bubble.</summary>
+    /// <summary>The Paladin's timed relic abilities: Judgment's holy smite after a windup, and Sanctuary's moving bubble.</summary>
     public sealed class PaladinRelics : MonoBehaviour
     {
         public const float JudgmentRadius = 3f, JudgmentWindup = 0.7f;
         public const float SanctuaryRadius = 3f, SanctuaryDuration = 4f;
         public DungeonPlayer Player { get; set; }
+        private HolyBubble sanctuary;
+        /// <summary>The Paladin cannot attack while holding up their Sanctuary.</summary>
+        public bool IsSanctuaryActive => sanctuary != null && sanctuary.IsActive;
 
         /// <summary>Marks the ground where the Paladin stands; holy light smites it once the windup ends.</summary>
         public void Judgment(int damage, float slow)
@@ -34,12 +37,14 @@ namespace Slopgame
             }
         }
 
-        /// <summary>A bubble of holy light that stops every projectile crossing its edge, on every machine.</summary>
+        /// <summary>A bubble of holy light around the Paladin that moves with them and stops every projectile crossing its edge, on every machine.</summary>
         public HolyBubble Sanctuary(float duration)
         {
             Vector2 center = transform.position;
             CoopFx.Sanctuary(Player.Run, center, SanctuaryRadius, duration);
-            return HolyBubble.Sanctuary(Player.Run.ProjectileRoot, center, SanctuaryRadius, duration);
+            Player.Weapon?.Hide();
+            sanctuary = HolyBubble.Sanctuary(Player.Run.ProjectileRoot, center, SanctuaryRadius, duration, transform);
+            return sanctuary;
         }
     }
 }

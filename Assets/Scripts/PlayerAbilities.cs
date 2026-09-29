@@ -11,6 +11,10 @@ namespace Slopgame
         public const int MaxRank = 3;
         public const float ShadowstepDistance = 4f;
         public const float FrostNovaRadius = 3.1f, FrostNovaExpandTime = 0.75f;
+        public const float BlinkDistance = 6f;
+        /// <summary>Earthshatter is 25% bigger than its original 2.6-unit reach.</summary>
+        public const float EarthshatterRadius = 3.25f;
+        public const float VeilDuration = 3f, VeilProtection = 1.5f;
         private readonly AbilityType[] equipped = new AbilityType[SlotCount];
         private readonly float[] readyAt = new float[SlotCount];
         private readonly Dictionary<AbilityType, int> ranks = new Dictionary<AbilityType, int>();
@@ -38,14 +42,23 @@ namespace Slopgame
             return true;
         }
 
+        /// <summary>
+        /// Casts the ability in <paramref name="slot"/>. <paramref name="aim"/> points from the hero to the cursor;
+        /// its length is how far away the cursor is, which cursor-targeted abilities such as Venom Vial use.
+        /// </summary>
         public bool TryUse(int slot, Vector2 aim)
         {
             if (slot < 0 || slot >= SlotCount || !Player.Run.IsPlaying || Player.IsRolling || Player.IsBusy
                 || Time.time < castReadyAt || CooldownRemaining(slot) > 0f || aim.sqrMagnitude < 0.001f) return false;
             var definition = AbilityCatalog.Get(equipped[slot]);
             if (definition == null) return false;
-            Player.Weapon?.Hide();
+            float cursorDistance = aim.magnitude;
             aim.Normalize();
+            // Checked before anything is spent: Arcane Blink needs somewhere to land.
+            Vector2 blinkLanding = default;
+            if (definition.Type == AbilityType.Blink && !FindShadowstepLanding(Player.Run.Map, transform.position, aim,
+                    BlinkDistance + Player.Powerups.Count(PowerupType.BlinkDistance) * 0.5f, out blinkLanding)) return false;
+            Player.Weapon?.Hide();
             int rank = Rank(definition.Type);
             int damage = Player.Damage * 3 + rank - 1;
             var powers = Player.Powerups;
@@ -58,7 +71,7 @@ namespace Slopgame
                     if (knight == null || knight.IsRushing) return false;
                     if (definition.Type == AbilityType.ShieldRush) knight.ShieldRush(aim, damage * 2 + powers.Count(PowerupType.RushPower) * 2);
                     else if (definition.Type == AbilityType.Earthshatter)
-                        knight.Earthshatter(2.6f + powers.Count(PowerupType.ShatterRadius) * 0.4f, damage, definition.Color, 2f);
+                        knight.Earthshatter(EarthshatterRadius + powers.Count(PowerupType.ShatterRadius) * 0.5f, damage, definition.Color, 2f);
                     else knight.Aegis(2f + (rank - 1) * 0.3f + powers.Count(PowerupType.AegisDuration) * 0.4f);
                     break;
                 case AbilityType.Volley:
@@ -66,7 +79,7 @@ namespace Slopgame
                 case AbilityType.PiercingShot:
                     PiercingArrow.Fire(Player, aim, damage + 1 + powers.Count(PowerupType.PiercingPower) * 2); break;
                 case AbilityType.Windstep:
-                    Dash(aim, 3.5f + powers.Count(PowerupType.WindstepDistance) * 0.5f);
+                    Dash(aim, 3.5f + powers.Count(PowerupType.WindstepDistance) * 0.5f, 0, true);
                     Fan(aim, 3, BowAttack.SpreadAngle, Player.Damage + rank - 1, BowAttack.HeavyRange); break;
                 case AbilityType.Fireball:
                     SpellProjectile.Spawn(Player, aim, damage, DamageElement.Fire, definition.Color, 7f,
@@ -75,20 +88,22 @@ namespace Slopgame
                     StartCoroutine(ExpandingNova(transform.position, FrostNovaRadius, FrostNovaExpandTime, damage, definition.Color,
                         3f + powers.Count(PowerupType.FrostDuration) + (rank - 1) * 0.5f)); break;
                 case AbilityType.Blink:
-                    Dash(aim, 4f + powers.Count(PowerupType.BlinkDistance) * 0.5f);
-                    // A harmless icy pulse: it only slows enemies around the landing spot.
-                    FrostPulse(transform.position, 1.7f, definition.Color, 2f + (rank - 1) * 0.5f); break;
+                    Blink(blinkLanding, definition.Color); break;
                 case AbilityType.FanOfKnives:
                     int knives = 12 + powers.Count(PowerupType.KnifeCount) * 2;
                     for (int i = 0; i < knives; i++)
                         ReturningKnife.Throw(Player, Quaternion.Euler(0, 0, i * 360f / knives) * aim, Player.Damage + rank);
                     break;
-                case AbilityType.VenomStrike:
-                    foreach (var enemy in Player.Run.Enemies.ToArray())
-                        if (InArea(enemy, transform.position, 2.5f)) enemy.Burn(4 + powers.Count(PowerupType.VenomDuration), rank, AbilityCatalog.Green);
-                    AreaAttack(transform.position, 2.5f, damage, DamageElement.Physical, definition.Color); break;
+                case AbilityType.VenomVial:
+                    VenomVial.Throw(Player, VenomVial.FindLanding(Player.Run.Map, transform.position, aim, cursorDistance),
+                        VenomVial.Radius + (rank - 1) * 0.2f, VenomVial.PoolDuration + powers.Count(PowerupType.VenomDuration),
+                        Player.Damage + rank - 1, Player.Damage + rank); break;
                 case AbilityType.ShadowVeil:
-                    Player.Protect(1.5f + (rank - 1) * 0.3f + powers.Count(PowerupType.VeilDuration) * 0.4f); break;
+                    float veil = VeilDuration + (rank - 1) * 0.5f + powers.Count(PowerupType.VeilDuration) * 0.4f;
+                    Player.Veil(veil);
+                    Player.Protect(VeilProtection + (rank - 1) * 0.3f);
+                    ShadowstepVfx.Puff(Player.Run.ProjectileRoot, transform.position);
+                    CoopFx.Shadowstep(Player.Run, transform.position, transform.position); break;
                 case AbilityType.HealingLight:
                     ForAllies(SupportKind.Heal, 2 + rank - 1 + powers.Count(PowerupType.HealingPower), 0f); break;
                 case AbilityType.Judgment:
@@ -172,13 +187,9 @@ namespace Slopgame
             transform.position = landing;
             Player.Protect(0.35f);
             Vector2 travel = landing - from;
-            var color = new Color(0.7f, 0.35f, 1f);
-            CombatVfx.Bolt(Player.Run.ProjectileRoot, from, landing, color);
-            CoopFx.Bolt(Player.Run, from, landing, color);
-            CombatVfx.Ring(Player.Run.ProjectileRoot, from, 0.45f, color, 0.2f);
-            CombatVfx.Ring(Player.Run.ProjectileRoot, landing, 0.6f, color, 0.3f);
-            CoopFx.Ring(Player.Run, landing, 0.6f, color, 0.3f);
-            HeroVfx.Sparks(Player.Run.ProjectileRoot, landing, color, 10, 3.2f, 0.3f);
+            var color = ShadowstepVfx.Violet;
+            ShadowstepVfx.Play(Player.Run.ProjectileRoot, from, landing);
+            CoopFx.Shadowstep(Player.Run, from, landing);
             foreach (var enemy in Player.Run.Enemies.ToArray())
             {
                 Vector2 position = enemy.transform.position;
@@ -186,14 +197,14 @@ namespace Slopgame
                 Vector2 closest = from + travel * along;
                 float radius = enemy.HitRadius + 0.14f;
                 if (enemy.Health <= 0 || (position - closest).sqrMagnitude > radius * radius) continue;
-                CombatVfx.Bolt(Player.Run.ProjectileRoot, position + new Vector2(-0.4f, -0.5f),
-                    position + new Vector2(0.4f, 0.5f), color);
+                HeroVfx.Slash(Player.Run.ProjectileRoot, position - travel.normalized * 0.4f, travel, 0.7f, 70f, color, 0.18f);
                 CombatDamage.ApplyShadowstep(Player, enemy);
             }
             return true;
         }
 
-        public void Dash(Vector2 aim, float distance, int damage = 0)
+        /// <summary>Dashes along the ground, stopping at walls. A <paramref name="windy"/> dash is drawn as a gust of wind (Windstep).</summary>
+        public void Dash(Vector2 aim, float distance, int damage = 0, bool windy = false)
         {
             Vector2 from = transform.position;
             var hit = new HashSet<DungeonEnemy>();
@@ -210,9 +221,27 @@ namespace Slopgame
                     }
             }
             Player.Protect(0.35f);
+            if (windy)
+            {
+                WindstepVfx.Play(Player.Run.ProjectileRoot, from, transform.position);
+                CoopFx.Windstep(Player.Run, from, transform.position);
+                return;
+            }
             CombatVfx.GlowBolt(Player.Run.ProjectileRoot, from, transform.position, AbilityCatalog.Ice);
             CoopFx.Bolt(Player.Run, from, transform.position, AbilityCatalog.Ice, true);
             HeroVfx.Sparks(Player.Run.ProjectileRoot, transform.position, AbilityCatalog.Ice, 8, 3f, 0.3f, (Vector2)transform.position - from, 120f);
+        }
+
+        /// <summary>Arcane Blink: an instant jump to a spot that may lie beyond walls. It deals no damage.</summary>
+        private void Blink(Vector2 landing, Color color)
+        {
+            Vector2 from = transform.position;
+            transform.position = landing;
+            Player.Protect(0.35f);
+            CombatVfx.GlowBolt(Player.Run.ProjectileRoot, from, landing, color);
+            CoopFx.Bolt(Player.Run, from, landing, color, true);
+            HeroVfx.Sparks(Player.Run.ProjectileRoot, from, color, 8, 2.6f, 0.3f);
+            HeroVfx.Sparks(Player.Run.ProjectileRoot, landing, color, 8, 3f, 0.3f, landing - from, 120f);
         }
 
         /// <summary>Frost Nova: a ring of ice that grows outward, striking each enemy once as it reaches them.</summary>
@@ -250,16 +279,6 @@ namespace Slopgame
                 }
                 yield return null;
             }
-        }
-
-        private void FrostPulse(Vector2 center, float radius, Color color, float slow)
-        {
-            CombatVfx.Ring(Player.Run.ProjectileRoot, center, radius, color);
-            HeroVfx.Pulse(Player.Run.ProjectileRoot, center, radius, color, 0.4f);
-            CoopFx.Ring(Player.Run, center, radius, color);
-            CoopFx.Pulse(Player.Run, center, radius, color, 0.4f);
-            foreach (var enemy in Player.Run.Enemies.ToArray())
-                if (InArea(enemy, center, radius)) enemy.Chill(slow);
         }
 
         private bool InArea(DungeonEnemy enemy, Vector2 center, float radius) => enemy.Health > 0

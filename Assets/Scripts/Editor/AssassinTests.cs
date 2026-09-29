@@ -97,9 +97,9 @@ namespace Slopgame.Editor
                 Require(Mathf.Abs(player.Charge.Duration - 0.8f) < 0.001f, "Assassin charge is not 50% faster.");
                 Require(player.Charge.Damage(1f) == player.Damage * 5 && player.Charge.Damage(3f) == player.Charge.Damage(1f)
                     && player.Charge.Damage(-1f) == player.Damage, "Charge damage or cap is wrong.");
-                Require(player.Sword.ChargedCone(0f) == 60f && player.Sword.ChargedCone(1f) == 22f
-                    && player.Sword.ChargedCone(0.5f) < 60f, "Assassin charge did not narrow its cone.");
-                Vector2 side = new Vector2(Mathf.Cos(25f * Mathf.Deg2Rad), Mathf.Sin(25f * Mathf.Deg2Rad));
+                Require(player.Sword.ChargedCone(0f) == SwordAttack.StabAngle && player.Sword.ChargedCone(1f) == 22f
+                    && player.Sword.ChargedCone(0.5f) < SwordAttack.StabAngle, "Assassin charge did not narrow its stab.");
+                Vector2 side = new Vector2(Mathf.Cos(16f * Mathf.Deg2Rad), Mathf.Sin(16f * Mathf.Deg2Rad));
                 Require(SwordAttack.ContainsTarget(side, Vector2.right, SwordAttack.Reach, player.Sword.ChargedCone(0f))
                     && !SwordAttack.ContainsTarget(side, Vector2.right, SwordAttack.Reach, player.Sword.ChargedCone(1f)),
                     "Narrow cone did not exclude a target that the uncharged slash hits.");

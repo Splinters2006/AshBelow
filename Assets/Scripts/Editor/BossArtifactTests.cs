@@ -20,7 +20,8 @@ namespace Slopgame.Editor
         private static Vector2 activeOrigin;
 
         private static bool IsDelayed(AbilityType type) => type == AbilityType.ShieldRush || type == AbilityType.Earthshatter
-            || type == AbilityType.Judgment || type == AbilityType.KnuckleSandwich || type == AbilityType.FrostNova;
+            || type == AbilityType.Judgment || type == AbilityType.KnuckleSandwich || type == AbilityType.FrostNova
+            || type == AbilityType.VenomVial;
 
         private static void VerifyDelayed(DungeonRun run, AbilityDefinition ability)
         {
@@ -29,6 +30,8 @@ namespace Slopgame.Editor
             Require(!run.Player.IsBusy, ability.Name + " left the hero stuck.");
             if (ability.Type == AbilityType.FrostNova)
                 Require(activeTarget.ActionSpeedMultiplier == 0.5f, "Frost Nova did not chill.");
+            if (ability.Type == AbilityType.VenomVial)
+                Require(activeTarget.IsBurning, "Venom Vial's pool did not poison the enemy standing in it.");
             if (ability.Type == AbilityType.ShieldRush)
                 Require(Vector2.Distance(activeOrigin, run.Player.transform.position) > 0.5f && run.Map.CanStand(run.Player.transform.position),
                     "Shield Rush did not carry the Knight forward.");
@@ -205,6 +208,9 @@ namespace Slopgame.Editor
                     Require(run.Player.Weapon.TryAttack(Vector2.right, 0.5f), "Paladin early release did not swipe.");
                     Require((target.Health == 99 || target.Health == 98) && run.Player.Blessing.BonusDamage == 0,
                         "Partial charge gained heavy damage or granted a blessing.");
+                    Require(run.Player.Weapon.TryHeavyAttack(Vector2.right) && run.Player.Weapon.HeavyCooldownRemaining > PaladinAttack.HolySwordCooldown - 0.1f
+                        && run.ProjectileRoot.GetComponentInChildren<HolySwordVfx>() != null, "Holy Sword was not called down on a nearby enemy.");
+                    Require(!run.Player.Weapon.TryHeavyAttack(Vector2.right), "Holy Sword bypassed its cooldown.");
                     nearbyAlly = MakeAlly(run, 2f);
                     distantAlly = MakeAlly(run, 5f);
                     otherRunAlly = MakeAlly(run, 1f);
@@ -406,7 +412,8 @@ namespace Slopgame.Editor
                 CombatDamage.Apply(run.Player, enemy, 3, DamageElement.Physical, (Vector2)enemy.transform.position - enemy.Facing.Direction);
                 Require(enemy.Health == 94 || enemy.Health == 88, "Assassin backstab damage missing.");
             }
-            if (type == WeaponType.Hammer) Require(run.Player.Shield != null && run.Player.MaxHealth == 7, "Paladin shield/stats missing.");
+            if (type == WeaponType.Hammer)
+                Require(run.Player.Shield == null && run.Player.Weapon is PaladinAttack && run.Player.MaxHealth == 7, "Paladin weapon/stats wrong.");
         }
 
         private static void TestBrawler(DungeonRun run)
@@ -519,8 +526,15 @@ namespace Slopgame.Editor
                     break;
                 case AbilityType.FrostNova:
                     Require(target.Health == 100, "Frost Nova hit instantly instead of expanding."); break;
+                case AbilityType.VenomVial:
+                    var vial = run.ProjectileRoot.GetComponentInChildren<VenomVial>();
+                    Require(target.Health == 100 && vial != null && !vial.HasLanded, "Venom Vial struck before it landed.");
+                    Require(Vector2.Distance(vial.Landing, target.transform.position) < 0.2f, "Venom Vial did not land at the cursor.");
+                    break;
                 case AbilityType.ShadowVeil:
-                    Require(player.IsInvulnerable, "Protection ability did not protect: " + ability.Name); break;
+                    Require(player.IsInvulnerable && player.IsVeiled, "Shadow Veil did not hide and protect the Assassin.");
+                    Require(!run.TryNearestVisibleHero(target.transform.position, out _), "Enemies could still see the veiled Assassin.");
+                    break;
                 case AbilityType.HealingLight:
                     Require(player.Health == player.MaxHealth, "Healing Light did not heal."); break;
                 case AbilityType.WildLeap:
@@ -531,7 +545,9 @@ namespace Slopgame.Editor
                         "Primal Rage did not buff damage or started its cooldown before the rage ended."); break;
                 case AbilityType.Blink:
                 case AbilityType.Windstep:
-                    Require(Vector2.Distance(origin, player.transform.position) > 0.5f && run.Map.CanStand(player.transform.position), "Dash failed or passed through walls.");
+                    Require(Vector2.Distance(origin, player.transform.position) > 0.5f && run.Map.CanStand(player.transform.position), "Dash failed or landed in a wall.");
+                    Require(ability.Type != AbilityType.Blink || Vector2.Distance(origin, player.transform.position) <= PlayerAbilities.BlinkDistance + 0.01f,
+                        "Arcane Blink went past its range.");
                     Require(ability.Type != AbilityType.Blink || target.Health == 100, "Arcane Blink dealt damage.");
                     break;
                 default:

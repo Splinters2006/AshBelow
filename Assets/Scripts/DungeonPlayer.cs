@@ -17,6 +17,8 @@ namespace Slopgame
         public float Speed { get; private set; } = 5f;
         public bool IsRolling => Time.time < rollUntil;
         public bool IsInvulnerable => Time.time < invulnerableUntil || IsRolling;
+        /// <summary>Shadow Veil: enemies cannot see this hero, so they neither chase nor turn toward them.</summary>
+        public bool IsVeiled => Time.time < veiledUntil && Health > 0;
         public Vector2 AimDirection { get; private set; } = Vector2.right;
         private const float RollDuration = 0.25f;
         public const float RollCooldown = 1.4f;
@@ -26,7 +28,7 @@ namespace Slopgame
         public AttackCharge Charge { get; private set; }
         public KnightShield Shield { get; private set; }
         public PlayerAbilities Abilities { get; private set; }
-        private float invulnerableUntil, rollUntil, rollReady, busyUntil;
+        private float invulnerableUntil, rollUntil, rollReady, busyUntil, veiledUntil;
         private Vector2 rollDirection;
         private SpriteRenderer body, details;
         private bool facingLeft;
@@ -57,7 +59,7 @@ namespace Slopgame
             Powerups.Abilities = Abilities;
             Charge = gameObject.AddComponent<AttackCharge>();
             Charge.Player = this;
-            if (weaponType == WeaponType.Sword || weaponType == WeaponType.Hammer)
+            if (weaponType == WeaponType.Sword)
             {
                 Shield = gameObject.AddComponent<KnightShield>();
                 Shield.Player = this;
@@ -116,6 +118,7 @@ namespace Slopgame
         private void Update()
         {
             body.color = IsRolling ? new Color(0.4f, 0.65f, 1f) : IsInvulnerable ? Color.white : Buffs.Tint(characterColor);
+            SetVeiledLook(IsVeiled);
             if (!Run.IsPlaying || Health <= 0 || IsBusy) { Charge.Tick(PlayerInput.Attack, false); return; }
             Vector2 cursor = Run.View.ScreenToWorldPoint(new Vector3(PlayerInput.CursorPosition.x,
                 PlayerInput.CursorPosition.y, -Run.View.transform.position.z));
@@ -128,8 +131,10 @@ namespace Slopgame
                 : movement * Speed * Buffs.MoveMultiplier * (Weapon.IsHeavyAttacking ? 0.55f : Charge.IsCharging ? 0.7f : 1f);
             if (DebugMode.Enabled) velocity *= DebugMode.SpeedMultiplier;
             transform.position = Run.Map.Move(transform.position, velocity * Time.deltaTime);
-            bool usedAbility = PlayerInput.ActiveQ && Abilities.TryUse(0, AimDirection);
-            if (!usedAbility && PlayerInput.ActiveE) usedAbility = Abilities.TryUse(1, AimDirection);
+            // Abilities get the full offset to the cursor so targeted ones (Venom Vial) know how far to throw.
+            Vector2 toCursor = aim.sqrMagnitude > 0.001f ? aim : AimDirection;
+            bool usedAbility = PlayerInput.ActiveQ && Abilities.TryUse(0, toCursor);
+            if (!usedAbility && PlayerInput.ActiveE) usedAbility = Abilities.TryUse(1, toCursor);
             if (!usedAbility && !Run.IsPointerOverHud && PlayerInput.HeavyAttack && !IsRolling) Weapon.TryHeavyAttack(AimDirection);
             Charge.Tick(PlayerInput.Attack, !Run.IsPointerOverHud && !usedAbility && !IsRolling && !Weapon.IsHeavyAttacking && !PlayerInput.HeavyAttack);
         }
@@ -215,6 +220,19 @@ namespace Slopgame
 
         public void Heal(int amount) { Health = Mathf.Min(MaxHealth, Health + amount); }
         public void Protect(float duration) { invulnerableUntil = Mathf.Max(invulnerableUntil, Time.time + duration); }
+        public void Veil(float duration) { veiledUntil = Mathf.Max(veiledUntil, Time.time + duration); }
+
+        private bool veiledLook;
+
+        /// <summary>A veiled hero fades to a faint shadow so the player can still see where they are.</summary>
+        private void SetVeiledLook(bool veiled)
+        {
+            if (veiled == veiledLook && !veiled) return;
+            veiledLook = veiled;
+            float alpha = veiled ? 0.3f + 0.08f * Mathf.Sin(Time.time * 6f) : 1f;
+            body.color = new Color(body.color.r, body.color.g, body.color.b, alpha);
+            if (details != null) details.color = new Color(details.color.r, details.color.g, details.color.b, alpha);
+        }
         public void Occupy(float duration) { busyUntil = Mathf.Max(busyUntil, Time.time + duration); }
     }
 }

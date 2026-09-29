@@ -10,7 +10,7 @@ namespace Slopgame
         private bool ghost;
         private Vector2 direction;
         private int damage, pierces;
-        private float remaining, radius, pulsePhase;
+        private float remaining, radius, pulsePhase, baseScale = 1f;
         private DamageElement element;
         private Color color;
         private readonly HashSet<DungeonEnemy> hits = new HashSet<DungeonEnemy>();
@@ -48,7 +48,14 @@ namespace Slopgame
             shot.pierces = pierces;
             shot.pulsePhase = Random.value * Mathf.PI * 2f;
             shot.transform.rotation = Quaternion.Euler(0, 0, Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg);
-            CombatVfx.Trail(shot.gameObject, shot.GlowColor, radius > 0f ? 0.3f : 0.18f, 0.16f);
+            CombatVfx.Trail(shot.gameObject, shot.GlowColor, radius > 0f ? 0.45f : 0.18f, radius > 0f ? 0.28f : 0.16f);
+            if (radius > 0f)
+            {
+                // The Inferno Orb is a big, roaring ball of fire rather than a bolt.
+                shot.baseScale = 1.7f;
+                InfernoVfx.Wreathe(run.ProjectileRoot, shot.transform, direction, 0.22f);
+                HeroVfx.Sparks(run.ProjectileRoot, position, FlameMesh.Orange, 10, 4f, 0.3f, direction, 70f, 1.1f);
+            }
             return shot;
         }
 
@@ -58,7 +65,7 @@ namespace Slopgame
         private void Update()
         {
             Advance(Time.deltaTime);
-            if (!IsSpent) transform.localScale = Vector3.one * (1f + 0.12f * Mathf.Sin(Time.time * 30f + pulsePhase));
+            if (!IsSpent) transform.localScale = Vector3.one * baseScale * (1f + 0.12f * Mathf.Sin(Time.time * 30f + pulsePhase));
         }
 
         public void Advance(float deltaTime)
@@ -87,7 +94,17 @@ namespace Slopgame
 
         private void Explode()
         {
-            if (radius > 0f) { if (!ghost) player.Abilities.AreaAttack(transform.position, radius, damage, element, color); }
+            if (radius > 0f)
+            {
+                InfernoVfx.Blast(run.ProjectileRoot, transform.position, radius);
+                HeroVfx.Sparks(run.ProjectileRoot, transform.position, FlameMesh.Yellow, 24, 6.5f, 0.5f, null, 360f, 1.4f);
+                if (!ghost)
+                {
+                    player.Abilities.AreaAttack(transform.position, radius, damage, element, color);
+                    ScreenFx.Shake(0.28f, 0.28f);
+                    ScreenFx.Flash(new Color(1f, 0.55f, 0.2f, 0.12f), 0.12f);
+                }
+            }
             else
             {
                 CombatVfx.Ring(run.ProjectileRoot, transform.position, 0.25f, color, 0.18f);

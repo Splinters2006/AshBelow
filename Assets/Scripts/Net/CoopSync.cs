@@ -185,7 +185,8 @@ namespace Slopgame
             {
                 Id = LocalId, Floor = Run.Floor, Position = player.transform.position,
                 Aim = player.Shield != null && player.Shield.IsBlocking ? player.Shield.Direction : player.AimDirection,
-                Flags = flags, MoreFlags = player.Blessing != null && player.Blessing.BonusDamage > 0 ? PlayerStateMessage.Blessed : (byte)0,
+                Flags = flags, MoreFlags = (byte)((player.Blessing != null && player.Blessing.BonusDamage > 0 ? PlayerStateMessage.Blessed : 0)
+                    | (player.IsVeiled ? PlayerStateMessage.Veiled : 0)),
                 Health = (short)player.Health, MaxHealth = (short)player.MaxHealth
             };
             using var writer = NetSession.Writer(64);

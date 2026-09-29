@@ -321,6 +321,29 @@ namespace Slopgame
                 }
             return best;
         }
+
+        /// <summary>
+        /// The nearest hero enemies can see: heroes in Shadow Veil are skipped. False when every living hero is hidden,
+        /// in which case enemies should neither chase nor turn.
+        /// </summary>
+        public bool TryNearestVisibleHero(Vector2 from, out Vector2 best)
+        {
+            best = from;
+            float bestDistance = float.PositiveInfinity;
+            if (Player.Health > 0 && !Player.IsVeiled)
+            {
+                best = Player.transform.position;
+                bestDistance = Vector2.SqrMagnitude(best - from);
+            }
+            if (IsNetworked)
+                foreach (var hero in Coop.RemoteHeroes)
+                {
+                    if (hero == null || !hero.IsAlive || hero.IsVeiled) continue;
+                    float distance = Vector2.SqrMagnitude((Vector2)hero.transform.position - from);
+                    if (distance < bestDistance) { bestDistance = distance; best = hero.transform.position; }
+                }
+            return !float.IsPositiveInfinity(bestDistance);
+        }
         public void DropArtifact(Vector2 position)
         {
             if (Artifact == null) Artifact = ArtifactPickup.Spawn(level, position);

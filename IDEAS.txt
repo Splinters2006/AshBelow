@@ -1,15 +1,18 @@
-decrease width of the arrchers right click, increase the range,
-same for archer windstep
-improve the visuals for archer's piercing shot and make it have a lot of range, make it also feel more powerful
-make brawler knuckle sandwich feel more powerfull too, make it feel like a HEAVY punch with some windup
-make brawler wild leap go faster and increase its AOE the farther it travels
-lower knight parry cooldown
-make knight charge faster
-make knight shield rush not instant, but make it powerfull but slow
-make kniught eartshatter 5 rings pulsing outwards instead of one big one, ffirst the small ring, then a bigger then a bigger, to give it that earthquake feeling
-add a bubble vfx to knight when aegis is active
-make paladin blessing require 2/3 of its current charge time,
-give all units, including self affected by paladin blessing have yellow sparks floating around them to signify the blessing
-make paladins judgement have a windup and make it clear that its holy light
-increase paladins healing light to 30seconds cooldown
-rework paladins sanctuary to " form a bubble of holy light that blocks all projectiles from going in and out "
+make paladins sanctuary follow paladins movement, make paladin unable to attack during sanctuary
+replace paladins rightclick: make paladins right click call down a holy sword from the sky on any enemies in a medium radius, give it a decently long cooldown
+make archer windstep visuals less like a lightning blink and more like a windstep
+switch the keep and the replace options in the artifact menu keep should be left and replace should be right
+make assasin base attack a stab instead of sweep
+make assasin shadowstep look like a shadow step instead of a lightning blink
+make assasin shadow veil make the assasin invisible and stop enemies from turning towards him
+rework venom strike to venom vial, make it throw a potion that applies damage over time to enemies standing in the zone, throws on cursor, not too much range, doesnt go past walls
+make brawler barrage a LOT better looking, speed up the charging by 15%
+brawler shows their rectangle for punches when dodging, remove that
+make the knuckle sandwich also a lot better looking
+make wild leap able to go past, and over walls, tone down it's aoe a little bit
+tone down knight parry/reflect window to 0.25 seconds
+remove the lightning bolt on knight shield rush, make it 50% faster and keep the duration, the distance would thus be increased by 50% too
+update earthshatter vfx, make earthshatter 25% bigger overall
+make wizard inferno orb slighty more powerfull feeling]
+increase wizard arcane blink range by 2 units, let it go past walls, remove the circle aoe at the end of blink
+

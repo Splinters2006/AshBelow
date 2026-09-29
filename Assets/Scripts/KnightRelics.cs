@@ -5,12 +5,13 @@ using UnityEngine;
 namespace Slopgame
 {
     /// <summary>
-    /// The Knight's timed relic abilities: a slow, unstoppable Shield Rush, Earthshatter's five quake rings,
+    /// The Knight's timed relic abilities: an unstoppable Shield Rush, Earthshatter's five quake rings,
     /// and Aegis's bubble.
     /// </summary>
     public sealed class KnightRelics : MonoBehaviour
     {
-        public const float RushDistance = 4.5f, RushDuration = 0.8f, RushWidth = 1f;
+        // 50% faster than the original 4.5 units over the same 0.8 seconds, so it also goes 50% farther.
+        public const float RushDistance = 6.75f, RushDuration = 0.8f, RushWidth = 1f;
         public const int QuakeRings = 5;
         public const float QuakeInterval = 0.13f;
         private static readonly Color Dust = new Color(0.72f, 0.62f, 0.48f);
@@ -64,8 +65,6 @@ namespace Slopgame
             }
             if (shield != null) Destroy(shield.gameObject);
             Vector2 end = transform.position;
-            CombatVfx.GlowBolt(root, from, end, AbilityCatalog.Ice);
-            CoopFx.Bolt(run, from, end, AbilityCatalog.Ice, true);
             CombatVfx.Ring(root, end, 1.1f, AbilityCatalog.Ice, 0.35f);
             CoopFx.Ring(run, end, 1.1f, AbilityCatalog.Ice, 0.35f);
             rush = null;
@@ -79,14 +78,12 @@ namespace Slopgame
             var run = Player.Run;
             var root = run.ProjectileRoot;
             var hit = new HashSet<DungeonEnemy>();
+            QuakeVfx.Play(root, center, radius, QuakeRings, QuakeInterval, color);
+            CoopFx.Quake(run, center, radius, QuakeRings, QuakeInterval, color);
             for (int ring = 1; ring <= QuakeRings; ring++)
             {
                 if (!run.IsPlaying || root != run.ProjectileRoot) yield break;
                 float r = radius * ring / QuakeRings;
-                CombatVfx.Ring(root, center, r, color, 0.35f);
-                HeroVfx.Pulse(root, center, r, Color.Lerp(color, Dust, 0.5f), 0.3f);
-                CoopFx.Ring(run, center, r, color, 0.35f);
-                CoopFx.Pulse(run, center, r, Color.Lerp(color, Dust, 0.5f), 0.3f);
                 for (int i = 0; i < 5; i++)
                 {
                     float angle = Random.value * Mathf.PI * 2f;

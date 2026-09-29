@@ -37,8 +37,24 @@ namespace Slopgame
         public static void PiercingShot(DungeonRun run, Vector2 origin, Vector2 direction) => Send(run, FxKind.PiercingShot, origin, direction);
         public static void Aegis(DungeonRun run, float duration) => Send(run, FxKind.Aegis, default, default, null, duration);
         public static void Holy(DungeonRun run, Vector2 center, float radius, float windup) => Send(run, FxKind.Holy, center, default, null, radius, windup);
-        /// <summary>Sanctuary is more than a picture: every machine plants a real bubble, since each judges its own bolts.</summary>
+        /// <summary>
+        /// Sanctuary is more than a picture: every machine plants a real bubble that follows the Paladin, since each
+        /// judges its own bolts.
+        /// </summary>
         public static void Sanctuary(DungeonRun run, Vector2 center, float radius, float duration) => Send(run, FxKind.Sanctuary, center, default, null, radius, duration);
+        public static void Windstep(DungeonRun run, Vector2 from, Vector2 to) => Send(run, FxKind.Windstep, from, to);
+        public static void Shadowstep(DungeonRun run, Vector2 from, Vector2 to) => Send(run, FxKind.Shadowstep, from, to);
+        public static void Stab(DungeonRun run, Vector2 origin, Vector2 aim, float reach, Color color) => Send(run, FxKind.Stab, origin, aim, color, reach);
+        public static void Quake(DungeonRun run, Vector2 center, float radius, int rings, float interval, Color color)
+            => Send(run, FxKind.Quake, center, default, color, radius, interval, rings);
+        public static void HolySword(DungeonRun run, Vector2 target) => Send(run, FxKind.HolySword, target);
+        public static void Venom(DungeonRun run, Vector2 from, Vector2 landing, float radius, float duration)
+            => Send(run, FxKind.Venom, from, landing, null, radius, duration);
+        public static void HeavyPunch(DungeonRun run, Vector2 origin, Vector2 aim, float length, float halfWidth, Color color)
+            => Send(run, FxKind.HeavyPunch, origin, aim, color, length, halfWidth);
+        /// <summary>The barrage blur follows the teammate who threw it; its duration travels in milliseconds.</summary>
+        public static void Flurry(DungeonRun run, float length, float halfWidth, Color color, float duration)
+            => Send(run, FxKind.Flurry, default, default, color, length, halfWidth, Mathf.RoundToInt(duration * 1000f));
 
         private static RemoteHero FindHero(DungeonRun run, ulong id)
         {
@@ -78,7 +94,18 @@ namespace Slopgame
                     if (knight != null) HolyBubble.Wrap(root, knight.transform, fx.F1, AbilityCatalog.Ice);
                     break;
                 case FxKind.Holy: HolyLightVfx.Play(root, fx.A, fx.F1, fx.F2); break;
-                case FxKind.Sanctuary: HolyBubble.Sanctuary(root, fx.A, fx.F1, fx.F2); break;
+                case FxKind.Sanctuary: HolyBubble.Sanctuary(root, fx.A, fx.F1, fx.F2, FindHero(run, fx.Origin)?.transform); break;
+                case FxKind.Windstep: WindstepVfx.Play(root, fx.A, fx.B); break;
+                case FxKind.Shadowstep: ShadowstepVfx.Play(root, fx.A, fx.B); break;
+                case FxKind.Stab: StabVfx.Play(root, fx.A, fx.B, fx.F1, color); break;
+                case FxKind.Quake: QuakeVfx.Play(root, fx.A, fx.F1, fx.N, fx.F2, color); break;
+                case FxKind.HolySword: HolySwordVfx.Play(root, fx.A); break;
+                case FxKind.Venom: VenomVial.SpawnGhost(run, fx.A, fx.B, fx.F1, fx.F2); break;
+                case FxKind.HeavyPunch: BrawlerVfx.HeavyPunch(root, fx.A, fx.B, fx.F1, fx.F2, color); break;
+                case FxKind.Flurry:
+                    var brawler = FindHero(run, fx.Origin);
+                    if (brawler != null) BrawlerVfx.Flurry(root, brawler.transform, () => brawler != null ? brawler.Aim : Vector2.zero, fx.F1, fx.F2, color, fx.N / 1000f);
+                    break;
             }
         }
     }
