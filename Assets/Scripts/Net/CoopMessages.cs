@@ -16,11 +16,11 @@ namespace Slopgame
     public enum CoopDamageKind : byte { Hit, Burn, Chill }
     public enum CoopBoltEventKind : byte { Reflected, Consumed }
     public enum SupportKind : byte { Heal, Protect, Bless }
-    public enum FxKind : byte { Arrow, Spell, Slash, Bolt, GlowBolt, Ring, Pulse, Rift, Execution, Singularity }
+    public enum FxKind : byte { Arrow, Spell, Slash, Bolt, GlowBolt, Ring, Pulse, Rift, Execution, Singularity, Punch, RearHit }
 
     public struct PlayerStateMessage
     {
-        public const byte Rolling = 1, Blocking = 2, Charging = 4, Dead = 8, Invulnerable = 16;
+        public const byte Rolling = 1, Blocking = 2, Charging = 4, Dead = 8, Invulnerable = 16, Empowered = 32, Raging = 64, Tired = 128;
         public ulong Id;
         public int Floor;
         public Vector2 Position, Aim;
@@ -69,21 +69,21 @@ namespace Slopgame
         public ushort Enemy;
         public CoopDamageKind Kind;
         public int Amount, Ticks;
-        public float Duration;
+        public float Duration, Knockback;
         public Vector2 Source;
         public Color32 Color;
 
         public void Write(FastBufferWriter w)
         {
             w.WriteValueSafe(Floor); w.WriteValueSafe(Enemy); w.WriteValueSafe(Kind); w.WriteValueSafe(Amount);
-            w.WriteValueSafe(Ticks); w.WriteValueSafe(Duration); w.WriteValueSafe(Source); w.WriteValueSafe(Color);
+            w.WriteValueSafe(Ticks); w.WriteValueSafe(Duration); w.WriteValueSafe(Knockback); w.WriteValueSafe(Source); w.WriteValueSafe(Color);
         }
 
         public static DamageMessage Read(FastBufferReader r)
         {
             var m = new DamageMessage();
             r.ReadValueSafe(out m.Floor); r.ReadValueSafe(out m.Enemy); r.ReadValueSafe(out m.Kind); r.ReadValueSafe(out m.Amount);
-            r.ReadValueSafe(out m.Ticks); r.ReadValueSafe(out m.Duration); r.ReadValueSafe(out m.Source); r.ReadValueSafe(out m.Color);
+            r.ReadValueSafe(out m.Ticks); r.ReadValueSafe(out m.Duration); r.ReadValueSafe(out m.Knockback); r.ReadValueSafe(out m.Source); r.ReadValueSafe(out m.Color);
             return m;
         }
     }

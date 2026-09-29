@@ -23,7 +23,8 @@ namespace Slopgame.Editor
                 TestFlowField();
                 TestScaling();
                 TestDeterminism();
-                Debug.Log("COOP_TESTS_OK: message round trips, multi-hero flow field, party health scaling, seed determinism");
+                TestP2pAddresses();
+                Debug.Log("COOP_TESTS_OK: message round trips, multi-hero flow field, party health scaling, seed determinism, P2P address parsing");
                 if (Application.isBatchMode) EditorApplication.Exit(0);
             }
             catch (Exception error)
@@ -35,6 +36,24 @@ namespace Slopgame.Editor
 
         private static void Require(bool condition, string message) { if (!condition) throw new Exception(message); }
 
+        private static void TestP2pAddresses()
+        {
+            Require(PortMapper.TryParseEndpoint(" 203.0.113.7:7788 ", 7777, out string host, out ushort port) && host == "203.0.113.7" && port == 7788,
+                "IP:port did not parse.");
+            Require(PortMapper.TryParseEndpoint("192.168.1.20", 7777, out host, out port) && host == "192.168.1.20" && port == 7777, "Bare IP lost the default port.");
+            Require(PortMapper.TryParseEndpoint("[2001:db8::1]:9000", 7777, out host, out port) && host == "2001:db8::1" && port == 9000, "IPv6 did not parse.");
+            Require(PortMapper.TryParseEndpoint("2001:db8::1", 7777, out host, out port) && host == "2001:db8::1" && port == 7777, "Bare IPv6 did not parse.");
+            Require(PortMapper.TryParseEndpoint("friend.example.com:7777", 1, out host, out port) && host == "friend.example.com" && port == 7777, "Hostname did not parse.");
+            Require(!PortMapper.TryParseEndpoint("1.2.3.4:99999", 7777, out _, out _) && !PortMapper.TryParseEndpoint("  ", 7777, out _, out _)
+                && !PortMapper.TryParseEndpoint("1.2.3.4:0", 7777, out _, out _), "Bad addresses were accepted.");
+            Require(PortMapper.IsPrivate(System.Net.IPAddress.Parse("192.168.0.4")) && PortMapper.IsPrivate(System.Net.IPAddress.Parse("100.72.1.1"))
+                && PortMapper.IsPrivate(System.Net.IPAddress.Parse("10.0.0.1")) && PortMapper.IsPrivate(System.Net.IPAddress.Parse("172.20.0.1"))
+                && !PortMapper.IsPrivate(System.Net.IPAddress.Parse("203.0.113.7")) && !PortMapper.IsPrivate(System.Net.IPAddress.Parse("172.32.0.1")),
+                "Private / CGNAT address detection is wrong.");
+            Require(PortMapper.SsdpLocation("HTTP/1.1 200 OK\r\nCACHE-CONTROL: max-age=120\r\nLocation: http://192.168.1.1:5000/rootDesc.xml\r\n\r\n")
+                == "http://192.168.1.1:5000/rootDesc.xml", "SSDP location was not read.");
+        }
+
         private static T RoundTrip<T>(T value, Action<T, FastBufferWriter> write, Func<FastBufferReader, T> read)
         {
             using var writer = NetSession.Writer();
@@ -45,20 +64,21 @@ namespace Slopgame.Editor
 
         private static void TestMessages()
         {
-            var state = new PlayerStateMessage { Id = 3, Floor = 7, Position = new Vector2(1.5f, -2f), Aim = Vector2.up, Flags = 9, Health = 4, MaxHealth = 8 };
+            byte buffFlags = PlayerStateMessage.Rolling | PlayerStateMessage.Dead | PlayerStateMessage.Raging | PlayerStateMessage.Tired;
+            var state = new PlayerStateMessage { Id = 3, Floor = 7, Position = new Vector2(1.5f, -2f), Aim = Vector2.up, Flags = buffFlags, Health = 4, MaxHealth = 8 };
             var stateBack = RoundTrip(state, (m, w) => m.Write(w), PlayerStateMessage.Read);
             Require(stateBack.Id == 3 && stateBack.Floor == 7 && stateBack.Position == state.Position && stateBack.Aim == Vector2.up
-                && stateBack.Flags == 9 && stateBack.Health == 4 && stateBack.MaxHealth == 8, "Player state did not round-trip.");
+                && stateBack.Flags == buffFlags && stateBack.Health == 4 && stateBack.MaxHealth == 8, "Player state did not round-trip.");
 
             var enemy = new EnemySnapshot { Id = 12, Position = new Vector2(20f, 9f), Facing = Vector2.left, Health = 31, Flags = EnemySnapshot.Burning | EnemySnapshot.Charging };
             var enemyBack = RoundTrip(enemy, (m, w) => m.Write(w), EnemySnapshot.Read);
             Require(enemyBack.Id == 12 && enemyBack.Position == enemy.Position && enemyBack.Facing == Vector2.left && enemyBack.Health == 31
                 && enemyBack.Flags == enemy.Flags, "Enemy snapshot did not round-trip.");
 
-            var damage = new DamageMessage { Floor = 2, Enemy = 5, Kind = CoopDamageKind.Burn, Amount = 3, Ticks = 4, Duration = 1.5f, Source = Vector2.one, Color = new Color32(1, 2, 3, 4) };
+            var damage = new DamageMessage { Floor = 2, Enemy = 5, Kind = CoopDamageKind.Burn, Amount = 3, Ticks = 4, Duration = 1.5f, Knockback = 0.1f, Source = Vector2.one, Color = new Color32(1, 2, 3, 4) };
             var damageBack = RoundTrip(damage, (m, w) => m.Write(w), DamageMessage.Read);
             Require(damageBack.Floor == 2 && damageBack.Enemy == 5 && damageBack.Kind == CoopDamageKind.Burn && damageBack.Amount == 3 && damageBack.Ticks == 4
-                && Mathf.Approximately(damageBack.Duration, 1.5f) && damageBack.Source == Vector2.one && damageBack.Color.Equals(damage.Color), "Damage did not round-trip.");
+                && Mathf.Approximately(damageBack.Duration, 1.5f) && Mathf.Approximately(damageBack.Knockback, 0.1f) && damageBack.Source == Vector2.one && damageBack.Color.Equals(damage.Color), "Damage did not round-trip.");
 
             var fx = new FxMessage { Origin = 1, Floor = 3, Kind = FxKind.Spell, A = Vector2.right, B = Vector2.down, Color = new Color32(9, 8, 7, 255), F1 = 7f, F2 = 1.7f, N = 4 };
             var fxBack = RoundTrip(fx, (m, w) => m.Write(w), FxMessage.Read);

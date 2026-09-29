@@ -492,9 +492,12 @@ namespace Slopgame.Editor
                 "a holy warrior who would die for his allies");
             EnsureHero("Admin", WeaponType.Shadow, 12, 6.4f, new Color(0.58f, 0.25f, 0.95f),
                 "An unbound shadow sovereign. Tear through enemies with charged rifts. Nightfall instantly executes visible enemies, even guardians. Intentionally overpowered.", 32);
+            EnsureHero("Brawler", WeaponType.Fists, 6, 5.3f, new Color(0.98f, 0.62f, 0.42f), BrawlerDescription);
             AssetDatabase.SaveAssets();
-            Debug.Log("CHARACTER_ASSETS_OK: Six classes ready.");
+            Debug.Log("CHARACTER_ASSETS_OK: Seven classes ready.");
         }
+
+        private const string BrawlerDescription = "A scrappy puppygirl pit-fighter in red gloves. Jab fast, wind up a slow barrage of punches, and Empower to hit harder, faster and wider.";
 
         private static void EnsureHero(string name, WeaponType weapon, int health, float speed, Color color, string description, int damage = 1)
         {

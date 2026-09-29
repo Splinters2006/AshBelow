@@ -10,7 +10,8 @@ namespace Slopgame
         private bool wasHeld, fullPinged;
         public float Duration => (Player.ClassWeapon == WeaponType.Bow
             ? Player.Powerups.DrawTimeMultiplier : Player.ClassWeapon == WeaponType.Hammer ? PaladinAttack.ChargeDuration
-            : Player.ClassWeapon == WeaponType.Daggers ? 1.2f / 1.5f : 1.2f) * Player.Powerups.AttackIntervalMultiplier;
+            : Player.ClassWeapon == WeaponType.Daggers ? 1.2f / 1.5f : Player.ClassWeapon == WeaponType.Fists ? BrawlerAttack.ChargeDuration : 1.2f)
+            * Player.Powerups.AttackIntervalMultiplier * Player.Buffs.ChargeDurationMultiplier;
         public float Amount => IsCharging ? Mathf.Clamp01((Time.time - startedAt) / Duration) : 0f;
 
         public void Tick(bool held, bool allowed)

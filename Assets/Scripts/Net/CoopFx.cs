@@ -30,6 +30,12 @@ namespace Slopgame
         public static void Singularity(DungeonRun run, Vector2 center, float radius, float duration = 1.1f)
             => Send(run, FxKind.Singularity, center, default, null, radius, duration);
 
+        public static void Punch(DungeonRun run, Vector2 origin, Vector2 aim, float length, float halfWidth, Color color)
+            => Send(run, FxKind.Punch, origin, aim, color, length, halfWidth);
+
+        public static void RearHit(DungeonRun run, Vector2 position, Vector2 facing, float hitRadius)
+            => Send(run, FxKind.RearHit, position, facing, null, hitRadius);
+
         public static void Play(DungeonRun run, FxMessage fx)
         {
             var root = run.ProjectileRoot;
@@ -46,6 +52,8 @@ namespace Slopgame
                 case FxKind.Rift: ShadowVfx.Rift(root, fx.A, fx.B, fx.F1); break;
                 case FxKind.Execution: ShadowVfx.Execution(root, fx.A, fx.F1); break;
                 case FxKind.Singularity: ShadowVfx.Singularity(root, fx.A, fx.F1, fx.F2); break;
+                case FxKind.Punch: BrawlerVfx.Punch(root, fx.A, fx.B, fx.F1, fx.F2, color); break;
+                case FxKind.RearHit: RearHitMarker.Draw(root, fx.A, fx.B, fx.F1); break;
             }
         }
     }

@@ -7,14 +7,15 @@ namespace Slopgame
         private int tab;
         private Vector2 scroll;
         private string notice;
-        private static readonly string[] Tabs = { "All heroes", "Knight", "Archer", "Wizard", "Assassin", "Paladin" };
-        private static readonly WeaponType?[] Weapons = { null, WeaponType.Sword, WeaponType.Bow, WeaponType.Staff, WeaponType.Daggers, WeaponType.Hammer };
+        private static readonly string[] Tabs = { "All heroes", "Knight", "Archer", "Wizard", "Assassin", "Paladin", "Brawler" };
+        private static readonly WeaponType?[] Weapons = { null, WeaponType.Sword, WeaponType.Bow, WeaponType.Staff, WeaponType.Daggers, WeaponType.Hammer, WeaponType.Fists };
 
         public void Draw(DungeonRun run)
         {
             var progress = run.Progress;
+            float step = 1152f / Tabs.Length;
             for (int i = 0; i < Tabs.Length; i++)
-                if (DungeonUi.Button("shopTab" + i, new Rect(70 + i * 192, 250, 180, 42), Tabs[i], tab == i ? AbilityCatalog.Gold : DungeonUi.Muted))
+                if (DungeonUi.Button("shopTab" + i, new Rect(70 + i * step, 250, step - 12, 42), Tabs[i], tab == i ? AbilityCatalog.Gold : DungeonUi.Muted))
                 { tab = i; scroll = Vector2.zero; notice = null; }
             int count = 0;
             foreach (var item in PermanentUpgradeCatalog.All) if (item.ClassWeapon == Weapons[tab]) count++;

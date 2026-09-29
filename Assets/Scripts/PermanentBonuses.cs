@@ -14,6 +14,7 @@ namespace Slopgame
         public float EffectChance { get; }
         public float PhysicalCritChance { get; }
         public float BlessingDuration { get; }
+        public int BarragePunches { get; }
 
         public PermanentBonuses(PermanentProgress progress, WeaponType weapon)
         {
@@ -40,6 +41,9 @@ namespace Slopgame
                 case WeaponType.Hammer:
                     Health += progress.Rank("paladin_health");
                     BlessingDuration = progress.Rank("paladin_blessing"); break;
+                case WeaponType.Fists:
+                    Health += progress.Rank("brawler_health");
+                    BarragePunches = progress.Rank("brawler_barrage"); break;
             }
         }
     }

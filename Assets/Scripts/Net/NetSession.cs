@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Net;
+using System.Net.Http;
 using System.Threading.Tasks;
 using Unity.Collections;
 using Unity.Netcode;
@@ -22,8 +24,9 @@ namespace Slopgame
     public enum NetState { Offline, Connecting, Lobby, InRun }
 
     /// <summary>
-    /// Owns the Netcode connection (Unity Relay join codes or direct IP), the lobby roster and message plumbing.
-    /// The host is a listen server: guests only ever talk to the host, which relays to the other guests.
+    /// Owns the Netcode connection (Unity Relay join codes or direct peer-to-peer IP), the lobby roster and message
+    /// plumbing. The host is a listen server: guests only ever talk to the host, which relays to the other guests.
+    /// Direct hosts open their router port automatically through <see cref="PortMapper"/> when the router allows it.
     /// </summary>
     public sealed class NetSession : MonoBehaviour
     {
@@ -36,6 +39,13 @@ namespace Slopgame
         public ulong LocalId => manager != null ? manager.LocalClientId : 0;
         public string JoinCode { get; private set; }
         public string Status { get; set; }
+        /// <summary>Direct hosts only: the "ip:port" friends on the internet join, once it is known.</summary>
+        public string PublicAddress { get; private set; }
+        /// <summary>Direct hosts only: the "ip:port" players on the same network join.</summary>
+        public string LanAddress { get; private set; }
+        /// <summary>Direct hosts only: how reachable the party is from the internet, for the lobby.</summary>
+        public string PortStatus { get; private set; }
+        public bool IsDirect => State != NetState.Offline && session == null;
         public IReadOnlyList<CoopPeer> Peers => peers;
         public string LocalName { get; set; } = "Player";
         public int LocalClassIndex { get; private set; }
@@ -49,6 +59,7 @@ namespace Slopgame
         private UnityTransport transport;
         private ISession session;
         private bool servicesReady;
+        private PortMapper portMapper;
 
         public CoopPeer Peer(ulong id) => peers.Find(peer => peer.Id == id);
 
@@ -164,24 +175,78 @@ namespace Slopgame
             catch (Exception error) { Fail("Could not join " + code, error); }
         }
 
-        public void HostDirect(ushort port = DefaultPort)
+        /// <summary>Hosts a peer-to-peer party on <paramref name="port"/>, reachable on the LAN and, when the router allows it, the internet.</summary>
+        public void HostDirect(ushort port = DefaultPort, bool openRouterPort = true)
         {
             EnsureManager();
             State = NetState.Connecting;
             transport.SetConnectionData("127.0.0.1", port, "0.0.0.0");
             JoinCode = null;
-            if (!manager.StartHost()) Drop("Could not host on port " + port + ".");
-            else Status = "Hosting on port " + port + ". Friends join with your IP address.";
+            var local = PortMapper.LocalAddress();
+            LanAddress = local != null ? $"{local}:{port}" : null;
+            PublicAddress = null;
+            if (!manager.StartHost()) { Drop("Could not host on port " + port + ". Is another copy of the game already hosting?"); return; }
+            Status = null;
+            PortStatus = openRouterPort ? "Opening a port on your router…" : "Same network only.";
+            if (openRouterPort) OpenRouterPort(port);
         }
 
-        public void JoinDirect(string address, ushort port = DefaultPort)
+        private async void OpenRouterPort(ushort port)
         {
+            var mapper = portMapper = new PortMapper();
+            PortMapResult result;
+            try { result = await mapper.OpenAsync(port); }
+            catch (Exception error) { result = new PortMapResult { Problem = error.Message }; }
+            if (mapper != portMapper || State == NetState.Offline) { _ = mapper.CloseAsync(); return; }
+            ushort shared = result.Opened ? result.ExternalPort : port;
+            var external = result.ExternalAddress != null && !PortMapper.IsPrivate(result.ExternalAddress)
+                ? result.ExternalAddress : await LookUpPublicAddress();
+            if (mapper != portMapper || State == NetState.Offline) return;
+            PublicAddress = external != null ? $"{external}:{shared}" : null;
+            if (result.Opened && result.ExternalAddress != null && PortMapper.IsPrivate(result.ExternalAddress))
+                PortStatus = "Your router opened the port, but it sits behind another router or your provider's shared address (CGNAT), "
+                    + "so internet friends probably can't reach you. Use Host a party (online) instead.";
+            else if (result.Opened)
+                PortStatus = $"Router port opened automatically ({(result.Method == PortMapMethod.Upnp ? "UPnP" : "NAT-PMP")}). Friends anywhere can join.";
+            else
+                PortStatus = $"{result.Problem} Same-network friends can still join; for internet friends, forward UDP port {port} "
+                    + "to this PC or use Host a party (online).";
+        }
+
+        /// <summary>Asks a public "what is my IP" service; only used when the router did not report a usable address.</summary>
+        private static async Task<IPAddress> LookUpPublicAddress()
+        {
+            try
+            {
+                using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(4) };
+                string text = (await http.GetStringAsync("https://api.ipify.org")).Trim();
+                return IPAddress.TryParse(text, out var address) && !PortMapper.IsPrivate(address) ? address : null;
+            }
+            catch { return null; }
+        }
+
+        /// <summary>Joins a direct host. Accepts "ip", "ip:port", "hostname:port" or "[ipv6]:port".</summary>
+        public async void JoinDirect(string address, ushort port = DefaultPort)
+        {
+            if (string.IsNullOrWhiteSpace(address)) address = "127.0.0.1";
+            if (!PortMapper.TryParseEndpoint(address, port, out string host, out port)) { Status = "That address doesn't look right. Use IP or IP:PORT."; return; }
             EnsureManager();
             State = NetState.Connecting;
-            transport.SetConnectionData(string.IsNullOrWhiteSpace(address) ? "127.0.0.1" : address.Trim(), port);
             JoinCode = null;
-            Status = "Connecting…";
-            if (!manager.StartClient()) Drop("Could not connect to " + address + ".");
+            Status = "Connecting to " + host + "…";
+            if (!IPAddress.TryParse(host, out var ip))
+            {
+                try
+                {
+                    var found = await Dns.GetHostAddressesAsync(host);
+                    ip = Array.Find(found, a => a.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork) ?? (found.Length > 0 ? found[0] : null);
+                }
+                catch { ip = null; }
+                if (State != NetState.Connecting) return;
+                if (ip == null) { Drop("Could not find " + host + "."); return; }
+            }
+            transport.SetConnectionData(ip.ToString(), port);
+            if (!manager.StartClient()) Drop("Could not connect to " + address.Trim() + ".");
         }
 
         private async Task<bool> BeginConnecting()
@@ -234,8 +299,10 @@ namespace Slopgame
             session = null;
             if (leaving != null) _ = LeaveSession(leaving);
             if (manager != null && !manager.ShutdownInProgress) manager.Shutdown();
+            ClosePort(false);
             peers.Clear();
             JoinCode = null;
+            PublicAddress = LanAddress = PortStatus = null;
             State = NetState.Offline;
         }
 
@@ -253,7 +320,21 @@ namespace Slopgame
             if (wasConnected) Disconnected?.Invoke();
         }
 
-        private void OnApplicationQuit() { Leave(); }
+        private void ClosePort(bool wait)
+        {
+            var mapper = portMapper;
+            portMapper = null;
+            if (mapper == null) return;
+            var closing = mapper.CloseAsync();
+            // PortMapper never needs the main thread, so a short blocking wait on quit cannot deadlock.
+            if (wait) try { closing.Wait(1500); } catch { /* Best effort; the lease expires anyway. */ }
+        }
+
+        private void OnApplicationQuit()
+        {
+            ClosePort(true);
+            Leave();
+        }
 
         // ---------------------------------------------------------------- messaging
 

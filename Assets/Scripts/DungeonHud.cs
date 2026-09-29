@@ -89,16 +89,34 @@ namespace Slopgame
             Slot(new Rect(836, 596, 180, 78), "SPACE", "Dodge", player.DodgeCooldownRemaining, DungeonPlayer.RollCooldown, DungeonUi.Teal);
             if (player.Blessing.BonusDamage > 0)
                 DungeonUi.Label(new Rect(440, 505, 400, 24), $"BLESSED  +{player.Blessing.BonusDamage} DAMAGE  /  {player.Blessing.Remaining:0.0}s", 14, AbilityCatalog.Gold, TextAnchor.MiddleCenter);
+            string buff = BuffStatus(player.Buffs);
+            if (buff != null)
+                DungeonUi.Label(new Rect(440, 475, 400, 24), buff, 14, player.Buffs.IsRaging ? HeroBuffs.RageColor
+                    : player.Buffs.IsTired ? HeroBuffs.TiredColor : HeroBuffs.EmpowerColor, TextAnchor.MiddleCenter);
             if (player.Charge.IsCharging)
             {
                 DungeonUi.Label(new Rect(440, 535, 400, 24), player.ClassWeapon == WeaponType.Hammer
                     ? player.Charge.Amount >= 1f ? "RELEASE TO BLESS ALLIES" : $"CHARGING BLESSING  {player.Charge.Amount:P0}"
+                    : player.ClassWeapon == WeaponType.Fists
+                    ? player.Charge.Amount >= 1f ? "RELEASE FOR A BARRAGE" : $"WINDING UP BARRAGE  {player.Charge.Amount:P0}"
                     : player.Charge.Amount >= 1f ? "FULL CHARGE  /  RELEASE" : $"CHARGING  {player.Charge.Amount:P0}", 14, AbilityCatalog.Gold, TextAnchor.MiddleCenter);
                 DungeonUi.Bar(new Rect(500, 568, 280, 5), player.Charge.Amount, AbilityCatalog.Gold);
             }
             DungeonUi.Label(new Rect(250, 690, 780, 22), player.ClassWeapon == WeaponType.Hammer
                 ? "LMB  weak swipe     HOLD / RELEASE LMB  bless allies     F  interact"
+                : player.ClassWeapon == WeaponType.Fists
+                ? "LMB  jab     HOLD / RELEASE LMB  punch barrage     RMB  empower     F  interact"
                 : "WASD  move     HOLD / RELEASE LMB  charge attack     F  interact", 13, DungeonUi.Muted, TextAnchor.UpperCenter);
+        }
+
+        private static string BuffStatus(HeroBuffs buffs)
+        {
+            if (buffs == null) return null;
+            var parts = new System.Collections.Generic.List<string>();
+            if (buffs.IsRaging) parts.Add($"PRIMAL RAGE  {buffs.RageRemaining:0.0}s");
+            if (buffs.IsTired) parts.Add($"TIRED  {buffs.TiredRemaining:0.0}s");
+            if (buffs.IsEmpowered) parts.Add($"EMPOWERED  {buffs.EmpowerRemaining:0.0}s");
+            return parts.Count == 0 ? null : string.Join("  /  ", parts);
         }
 
         private static void Slot(Rect rect, string key, string name, float cooldown, float total, Color accent, bool locked = false)

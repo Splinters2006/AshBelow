@@ -8,8 +8,12 @@ namespace Slopgame
         public int MaxHealth { get; private set; } = 6;
         public int Health { get; private set; } = 6;
         public int BaseDamage { get; private set; } = 1;
-        public int Damage => BaseDamage + (Blessing != null ? Blessing.BonusDamage : 0);
+        public int Damage => Mathf.Max(1, Mathf.RoundToInt((BaseDamage + (Blessing != null ? Blessing.BonusDamage : 0))
+            * (Buffs != null ? Buffs.DamageMultiplier : 1f)));
         public DamageBlessing Blessing { get; private set; }
+        public HeroBuffs Buffs { get; private set; }
+        /// <summary>True while a scripted move (such as Wild Leap) controls the hero; input is ignored.</summary>
+        public bool IsBusy => Time.time < busyUntil;
         public float Speed { get; private set; } = 5f;
         public bool IsRolling => Time.time < rollUntil;
         public bool IsInvulnerable => Time.time < invulnerableUntil || IsRolling;
@@ -22,7 +26,7 @@ namespace Slopgame
         public AttackCharge Charge { get; private set; }
         public KnightShield Shield { get; private set; }
         public PlayerAbilities Abilities { get; private set; }
-        private float invulnerableUntil, rollUntil, rollReady;
+        private float invulnerableUntil, rollUntil, rollReady, busyUntil;
         private Vector2 rollDirection;
         private SpriteRenderer body, details;
         private bool facingLeft;
@@ -42,6 +46,8 @@ namespace Slopgame
             MaxHealth = Health = character.StartingHealth + Permanent.Health;
             BaseDamage = character.StartingDamage + Permanent.Damage;
             Blessing = gameObject.AddComponent<DamageBlessing>();
+            Buffs = gameObject.AddComponent<HeroBuffs>();
+            Buffs.Player = this;
             Speed = character.MoveSpeed + Permanent.Speed;
             characterColor = character.Color;
             weaponType = character.Weapon;
@@ -78,6 +84,12 @@ namespace Slopgame
                 Weapon = bow;
                 gameObject.AddComponent<ArrowRangeIndicator>().Player = this;
             }
+            else if (weaponType == WeaponType.Fists)
+            {
+                var fists = gameObject.AddComponent<BrawlerAttack>();
+                fists.Player = this;
+                Weapon = fists;
+            }
             else if (weaponType == WeaponType.Staff)
             {
                 var staff = gameObject.AddComponent<WizardAttack>();
@@ -100,8 +112,8 @@ namespace Slopgame
 
         private void Update()
         {
-            body.color = IsRolling ? new Color(0.4f, 0.65f, 1f) : IsInvulnerable ? Color.white : characterColor;
-            if (!Run.IsPlaying || Health <= 0) { Charge.Tick(PlayerInput.Attack, false); return; }
+            body.color = IsRolling ? new Color(0.4f, 0.65f, 1f) : IsInvulnerable ? Color.white : Buffs.Tint(characterColor);
+            if (!Run.IsPlaying || Health <= 0 || IsBusy) { Charge.Tick(PlayerInput.Attack, false); return; }
             Vector2 cursor = Run.View.ScreenToWorldPoint(new Vector3(PlayerInput.CursorPosition.x,
                 PlayerInput.CursorPosition.y, -Run.View.transform.position.z));
             Vector2 aim = cursor - (Vector2)transform.position;
@@ -109,7 +121,8 @@ namespace Slopgame
             FaceAim();
             Vector2 movement = PlayerInput.Movement;
             if (PlayerInput.Dodge) TryRoll(movement.sqrMagnitude > 0 ? movement : AimDirection);
-            Vector2 velocity = IsRolling ? rollDirection * Speed * 2.6f : movement * Speed * (Weapon.IsHeavyAttacking ? 0.55f : Charge.IsCharging ? 0.7f : 1f);
+            Vector2 velocity = IsRolling ? rollDirection * Speed * 2.6f * Buffs.DodgeSpeedMultiplier
+                : movement * Speed * Buffs.MoveMultiplier * (Weapon.IsHeavyAttacking ? 0.55f : Charge.IsCharging ? 0.7f : 1f);
             if (DebugMode.Enabled) velocity *= DebugMode.SpeedMultiplier;
             transform.position = Run.Map.Move(transform.position, velocity * Time.deltaTime);
             bool usedAbility = PlayerInput.ActiveQ && Abilities.TryUse(0, AimDirection);
@@ -120,10 +133,11 @@ namespace Slopgame
 
         public bool TryRoll(Vector2 direction)
         {
-            if (!Run.IsPlaying || IsRolling || DodgeCooldownRemaining > 0f || direction.sqrMagnitude < 0.001f) return false;
+            if (!Run.IsPlaying || IsRolling || IsBusy || DodgeCooldownRemaining > 0f || direction.sqrMagnitude < 0.001f) return false;
             rollDirection = direction.normalized;
             rollUntil = Time.time + RollDuration;
-            rollReady = Time.time + RollCooldown * Powerups.DodgeCooldownMultiplier;
+            rollReady = Time.time + Mathf.Max(0.2f, RollCooldown * Powerups.DodgeCooldownMultiplier * Buffs.DodgeCooldownMultiplier
+                - Buffs.DodgeCooldownReduction);
             Weapon?.Hide();
             Charge.Cancel();
             return true;
@@ -198,5 +212,6 @@ namespace Slopgame
 
         public void Heal(int amount) { Health = Mathf.Min(MaxHealth, Health + amount); }
         public void Protect(float duration) { invulnerableUntil = Mathf.Max(invulnerableUntil, Time.time + duration); }
+        public void Occupy(float duration) { busyUntil = Mathf.Max(busyUntil, Time.time + duration); }
     }
 }

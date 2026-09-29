@@ -137,7 +137,7 @@ namespace Slopgame.Editor
                 {
                     var player = run.Player;
                     var character = run.SelectedCharacter;
-                    int expectedHealth = character.StartingHealth + 1 + (Classes[hero] == WeaponType.Sword || Classes[hero] == WeaponType.Hammer ? 1 : 0);
+                    int expectedHealth = character.StartingHealth + 1 + (Classes[hero] == WeaponType.Sword || Classes[hero] == WeaponType.Hammer || Classes[hero] == WeaponType.Fists ? 1 : 0);
                     Require(player.MaxHealth == expectedHealth && player.Health == expectedHealth, "Permanent HP did not apply or leaked between classes.");
                     Require(player.BaseDamage == character.StartingDamage + 1 + (Classes[hero] == WeaponType.Bow ? 1 : 0), "Permanent damage did not apply or leaked.");
                     Require(Mathf.Abs(player.Powerups.AttackIntervalMultiplier - 1f / 1.05f) < 0.001f, "Permanent attack speed missing.");
@@ -150,6 +150,8 @@ namespace Slopgame.Editor
                         case WeaponType.Daggers: Require(Mathf.Abs(player.Powerups.PhysicalCritChance - 0.18f) < 0.001f && Mathf.Abs(player.Speed - character.MoveSpeed - 0.35f) < 0.001f, "Assassin upgrades missing."); break;
                         case WeaponType.Hammer:
                             Require(player.Weapon.TryAttack(Vector2.right, 1f) && player.Blessing.Remaining > 8.9f, "Paladin permanent blessing upgrade missing."); break;
+                        case WeaponType.Fists:
+                            Require(player.Weapon is BrawlerAttack fists && fists.BarrageCount == BrawlerAttack.BarragePunches + 1, "Brawler barrage upgrade missing."); break;
                     }
                     hero++;
                     if (hero < Classes.Length) { StartHero(run); return; }

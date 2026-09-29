@@ -34,7 +34,9 @@ namespace Slopgame
             new PermanentUpgradeDefinition("assassin_crit", "Lethal Training", "+3% physical critical chance per rank", 3, 45, 35, WeaponType.Daggers),
             new PermanentUpgradeDefinition("assassin_speed", "Silent Stride", "+0.15 Assassin movement speed per rank", 3, 35, 25, WeaponType.Daggers),
             new PermanentUpgradeDefinition("paladin_blessing", "Enduring Faith", "+1 second to the damage blessing per rank", 3, 45, 35, WeaponType.Hammer),
-            new PermanentUpgradeDefinition("paladin_health", "Selfless Guardian", "+1 Paladin maximum HP per rank", 3, 35, 25, WeaponType.Hammer)
+            new PermanentUpgradeDefinition("paladin_health", "Selfless Guardian", "+1 Paladin maximum HP per rank", 3, 35, 25, WeaponType.Hammer),
+            new PermanentUpgradeDefinition("brawler_barrage", "Heavy Bag Drills", "+1 punch per charged barrage per rank", 2, 60, 50, WeaponType.Fists),
+            new PermanentUpgradeDefinition("brawler_health", "Thick Fur", "+1 Brawler maximum HP per rank", 3, 35, 25, WeaponType.Fists)
         };
 
         public static PermanentUpgradeDefinition Get(string id)

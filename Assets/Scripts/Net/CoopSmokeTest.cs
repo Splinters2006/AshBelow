@@ -122,7 +122,7 @@ namespace Slopgame
             if (host)
             {
                 session.RenameLocal("SmokeHost");
-                session.HostDirect(Port);
+                session.HostDirect(Port, openRouterPort: false);
             }
             else
             {
@@ -149,17 +149,29 @@ namespace Slopgame
             for (int floor = 1; floor <= 5; floor++)
             {
                 int kills = run.Kills, enemies = run.Enemies.Count;
+                if (floor == 1 && seat > 0 && run.Player.Weapon is BrawlerAttack fists)
+                {
+                    // A guest Brawler, in whichever seat: a real jab (forwarded with its knockback) and an Empower the host must see.
+                    var target = run.Enemies.FirstOrDefault(enemy => enemy != null && enemy.Health > 0);
+                    if (target != null) target.transform.position = run.Player.transform.position + Vector3.right;
+                    Require(fists.TryAttack(Vector2.right, 0f), "The guest Brawler could not jab.");
+                    Require(fists.TryHeavyAttack(Vector2.right) && run.Player.Buffs.IsEmpowered, "The guest Brawler could not Empower.");
+                }
                 if (seat == 1)
                 {
                     yield return new WaitForSecondsRealtime(0.5f);
                     run.Player.transform.position = (Vector2)run.Map.Centers[0] + Vector2.right;
                     if (floor == 1) yield return Snap("floor");
+                    // Leave any Brawler's Empower time to reach the host before the floor clears.
+                    if (floor == 1) yield return new WaitForSecondsRealtime(0.5f);
                     foreach (var enemy in run.Enemies.ToArray()) enemy.Hit(9999, enemy.transform.position + Vector3.left);
                 }
                 else if (floor == 1 && seat == 0)
                 {
                     run.Player.transform.position = (Vector2)run.Map.Centers[0] + Vector2.left;
                     yield return Snap("floor");
+                    if (run.Coop.RemoteHeroes.Any(hero => hero.Character.Weapon == WeaponType.Fists))
+                        yield return Wait("a Brawler teammate's Empower", () => run.Coop.RemoteHeroes.Any(hero => hero.IsEmpowered));
                 }
                 yield return Wait($"floor {floor} cleared", () => run.Enemies.Count == 0);
                 Require(run.Kills - kills == enemies, $"Floor {floor}: kills were not counted exactly once.");

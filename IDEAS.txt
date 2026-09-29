@@ -1,3 +1,8 @@
-add debug admin mode, which gives infinite hp damage, no roll cooldown etc, and double movespeed
-make vfx on all characters better, not as extreme as the admin class but also not as boring and bland as they are now
-add indicator for showing how far arrows will fly on archer
+add a visual indicator for rear hits
+add a new character: brawler,
+normal attack are fast, punches in a rectangle, charged attack charges slow and releases a barrage of punches, in a bigger rectangle
+secondary attack empowers the character to move faster, attack faster and charge faster, also increases the attack size by a tiny bit, and reduces roll cooldown by 0.5 seconds for 5 seconds
+artifacts: knuckle sandwich: empower your fist and deliver a massive punch in a big rectangle in front, ranks increase size and damage
+wild leap: jump to an enemy and slam down on them dealing massive damage, eyeframes during leap, long cooldown
+primal rage: gain a huge damage, charge speed, movespeed, and roll buff, but become tired afterwards and gain a debuff to all (buff lasts 10 seconds, debuff 5 seconds, cooldown starts ticking down after debuff ends)
+this character is a puppygirl so make her look as such but make it obvious shes a fistfighter

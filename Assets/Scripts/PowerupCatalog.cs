@@ -8,7 +8,8 @@ namespace Slopgame
         LightningRange, LightningPower, LightningChains, RushPower, ShatterRadius, AegisDuration, VolleyCount, PiercingPower,
         WindstepDistance, FireballRadius, FrostDuration, BlinkDistance, Backstab, AssassinCrit, KnifeCount, VenomDuration,
         VeilDuration, PaladinWard, HealingPower, JudgmentPower, SanctuaryDuration,
-        RiftReach, AbyssalPower, EclipseRadius, SoulRendPower, ReignDuration
+        RiftReach, AbyssalPower, EclipseRadius, SoulRendPower, ReignDuration,
+        Flurry, Adrenaline, ExtraFilling, CraterMaker, Bloodlust
     }
 
     public sealed class PowerupDefinition
@@ -68,7 +69,12 @@ namespace Slopgame
             new PowerupDefinition(PowerupType.AbyssalPower, "Abyssal Power", "+16 shadow rift damage before charge scaling", 3, WeaponType.Shadow),
             new PowerupDefinition(PowerupType.EclipseRadius, "Event Horizon", "+1 Eclipse execution radius", 3, WeaponType.Shadow, AbilityType.Eclipse),
             new PowerupDefinition(PowerupType.SoulRendPower, "Soul Devourer", "+1x fully charged damage to Soul Rend", 3, WeaponType.Shadow, AbilityType.SoulRend),
-            new PowerupDefinition(PowerupType.ReignDuration, "Eternal Reign", "+1 second of Shadow Reign", 3, WeaponType.Shadow, AbilityType.ShadowReign)
+            new PowerupDefinition(PowerupType.ReignDuration, "Eternal Reign", "+1 second of Shadow Reign", 3, WeaponType.Shadow, AbilityType.ShadowReign),
+            new PowerupDefinition(PowerupType.Flurry, "Brawler: Flurry", "+1 punch per charged barrage", 3, WeaponType.Fists),
+            new PowerupDefinition(PowerupType.Adrenaline, "Brawler: Adrenaline", "+1 second of Empower", 3, WeaponType.Fists),
+            new PowerupDefinition(PowerupType.ExtraFilling, "Extra Filling", "+0.4 Knuckle Sandwich length and width", 3, WeaponType.Fists, AbilityType.KnuckleSandwich),
+            new PowerupDefinition(PowerupType.CraterMaker, "Crater Maker", "+0.5 Wild Leap slam radius", 3, WeaponType.Fists, AbilityType.WildLeap),
+            new PowerupDefinition(PowerupType.Bloodlust, "Bloodlust", "+1 second of Primal Rage", 3, WeaponType.Fists, AbilityType.PrimalRage)
         };
 
         public static PowerupDefinition Get(PowerupType type) => All[(int)type];

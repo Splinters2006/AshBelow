@@ -6,7 +6,7 @@ namespace Slopgame
     {
         None, ShieldRush, Earthshatter, Aegis, Volley, PiercingShot, Windstep,
         Fireball, FrostNova, Blink, FanOfKnives, VenomStrike, ShadowVeil, HealingLight, Judgment, Sanctuary,
-        Eclipse, SoulRend, ShadowReign
+        Eclipse, SoulRend, ShadowReign, KnuckleSandwich, WildLeap, PrimalRage
     }
 
     public sealed class AbilityDefinition
@@ -50,7 +50,10 @@ namespace Slopgame
             new AbilityDefinition(AbilityType.Sanctuary, WeaponType.Hammer, "Sanctuary", "Protect yourself and nearby allies with temporary invulnerability.", "O", 16f, Ice),
             new AbilityDefinition(AbilityType.Eclipse, WeaponType.Shadow, "Eclipse", "A vast black sun executes every visible enemy within 11 units, including guardians. Ranks widen its reach.", "O", 6f, Violet),
             new AbilityDefinition(AbilityType.SoulRend, WeaponType.Shadow, "Soul Rend", "Tear open a 14-unit shadow corridor for triple fully charged damage. Ranks multiply its damage.", "///", 3f, Ice),
-            new AbilityDefinition(AbilityType.ShadowReign, WeaponType.Shadow, "Shadow Reign", "Detonate nearby shadows. Become invulnerable and double rift damage for 3 seconds. Ranks extend the reign.", "*", 8f, Violet)
+            new AbilityDefinition(AbilityType.ShadowReign, WeaponType.Shadow, "Shadow Reign", "Detonate nearby shadows. Become invulnerable and double rift damage for 3 seconds. Ranks extend the reign.", "*", 8f, Violet),
+            new AbilityDefinition(AbilityType.KnuckleSandwich, WeaponType.Fists, "Knuckle Sandwich", "Empower your fist and deliver a massive punch in a big rectangle ahead. Ranks increase its size and damage.", "[]", 7f, BrawlerAttack.Glove),
+            new AbilityDefinition(AbilityType.WildLeap, WeaponType.Fists, "Wild Leap", "Pounce onto an enemy and slam down for massive damage. Invulnerable while airborne.", "^", 16f, Gold),
+            new AbilityDefinition(AbilityType.PrimalRage, WeaponType.Fists, "Primal Rage", "10 seconds of huge damage, charge, movement and dodge buffs, then 5 seconds tired. Cooldown starts once rested.", "!!", 25f, new Color(1f, 0.25f, 0.2f))
         };
 
         public static AbilityDefinition Get(AbilityType type)

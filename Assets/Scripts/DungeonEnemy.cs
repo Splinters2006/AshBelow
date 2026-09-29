@@ -140,7 +140,7 @@ namespace Slopgame
             Hit(damage, Run.Player.transform.position);
         }
 
-        public void Hit(int damage, Vector2 source)
+        public void Hit(int damage, Vector2 source, float knockback = 1f)
         {
             if (Health <= 0) return;
             if (DebugMode.Enabled) damage = Mathf.Max(damage, Health);
@@ -149,7 +149,7 @@ namespace Slopgame
             if (Run.IsGuest)
             {
                 // Show the hit now; the host applies it and confirms any kill.
-                Run.Coop.ReportDamage(this, CoopDamageKind.Hit, damage, source);
+                Run.Coop.ReportDamage(this, CoopDamageKind.Hit, damage, source, knockback: knockback);
                 Health = Mathf.Max(0, Health - damage);
                 hitUntil = Time.time + 0.15f;
                 if (Health <= 0) SetVisible(false);
@@ -164,7 +164,8 @@ namespace Slopgame
                 return;
             }
             Vector2 away = ((Vector2)transform.position - source).normalized;
-            if (Boss == null) transform.position = Run.Map.Move(transform.position, away * (IsTank ? 0.2f : 0.65f), MoveRadius);
+            if (Boss == null && knockback > 0f)
+                transform.position = Run.Map.Move(transform.position, away * (IsTank ? 0.2f : 0.65f) * knockback, MoveRadius);
         }
 
         private void SetVisible(bool value)

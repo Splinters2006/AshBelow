@@ -12,7 +12,7 @@ namespace Slopgame.Editor
         private static int stage;
         private static float waitUntil;
         private static bool failed, checkedChilledBoss;
-        private static readonly List<WeaponType> classes = new List<WeaponType> { WeaponType.Sword, WeaponType.Bow, WeaponType.Staff, WeaponType.Daggers, WeaponType.Hammer, WeaponType.Shadow };
+        private static readonly List<WeaponType> classes = new List<WeaponType> { WeaponType.Sword, WeaponType.Bow, WeaponType.Staff, WeaponType.Daggers, WeaponType.Hammer, WeaponType.Shadow, WeaponType.Fists };
         private static int classIndex;
         private static int abilityIndex;
         private static DungeonEnemy burnTarget;
@@ -56,7 +56,7 @@ namespace Slopgame.Editor
             {
                 if (stage == 0)
                 {
-                    Require(run.Characters.Count == 6, "Six class assets must load.");
+                    Require(run.Characters.Count == 7, "Seven class assets must load.");
                     StartClass(run, WeaponType.Staff);
                     stage = 1;
                     return;
@@ -241,7 +241,7 @@ namespace Slopgame.Editor
                     run.Player.Blessing.Apply(2, 8f);
                     run.Restart();
                     Require(run.Player.Blessing.BonusDamage == 0, "New run retained blessing.");
-                    Finish(!failed, "Bosses, artifacts, six classes, active abilities, status effects, Paladin swipe/charge/allies/range/refresh/expiration/reset");
+                    Finish(!failed, "Bosses, artifacts, seven classes, Brawler jab/empower/rage/leap, rear-hit markers, active abilities, status effects, Paladin swipe/charge/allies/range/refresh/expiration/reset");
                 }
             }
             catch (Exception error) { Debug.LogException(error); Finish(false, error.Message); }
@@ -356,6 +356,7 @@ namespace Slopgame.Editor
             float baseCharge = run.Player.Charge.Duration;
             run.Player.Powerups.Add(PowerupType.AttackSpeed);
             Require(Mathf.Abs(run.Player.Charge.Duration - baseCharge / 1.2f) < 0.001f, "Attack speed did not improve this class's charge speed.");
+            if (type == WeaponType.Fists) TestBrawler(run);
             int slot = 0;
             foreach (var ability in AbilityCatalog.All)
             {
@@ -375,6 +376,34 @@ namespace Slopgame.Editor
                 Require(enemy.Health == 94 || enemy.Health == 88, "Assassin backstab damage missing.");
             }
             if (type == WeaponType.Hammer) Require(run.Player.Shield != null && run.Player.MaxHealth == 7, "Paladin shield/stats missing.");
+        }
+
+        private static void TestBrawler(DungeonRun run)
+        {
+            var player = run.Player;
+            Require(player.Weapon is BrawlerAttack && player.Shield == null && player.MaxHealth == 6, "Brawler weapon/stats missing.");
+            Require(BrawlerAttack.InRectangle(new Vector2(1f, 0.3f), Vector2.right, 1.5f, 0.42f)
+                && !BrawlerAttack.InRectangle(new Vector2(1f, 0.9f), Vector2.right, 1.5f, 0.42f)
+                && !BrawlerAttack.InRectangle(new Vector2(-0.5f, 0f), Vector2.right, 1.5f, 0.42f), "Punch rectangle is wrong.");
+            var target = run.Enemies[0];
+            var bystander = run.Enemies[1];
+            target.transform.position = player.transform.position + Vector3.right;
+            bystander.transform.position = player.transform.position + Vector3.up * 1.4f;
+            target.Health = bystander.Health = 100;
+            Require(player.Weapon.TryAttack(Vector2.right, 0f) && (target.Health == 99 || target.Health == 98) && bystander.Health == 100,
+                "Jab did not hit only inside its rectangle.");
+            Require(!player.Weapon.TryAttack(Vector2.right, 0f), "Jab ignored its attack interval.");
+            float charge = player.Charge.Duration;
+            Require(player.Weapon.TryHeavyAttack(Vector2.right) && player.Buffs.IsEmpowered
+                && Mathf.Abs(player.Charge.Duration - charge * 0.7f) < 0.001f, "Empower did not speed up charging.");
+            Require(!player.Weapon.TryHeavyAttack(Vector2.right), "Empower bypassed its cooldown.");
+            // A hit from behind shows the rear-hit marker.
+            int markers = run.ProjectileRoot.GetComponentsInChildren<FadingSprite>().Length;
+            CombatDamage.Apply(player, target, 1, DamageElement.Physical, (Vector2)target.transform.position - target.Facing.Direction);
+            Require(run.ProjectileRoot.GetComponentsInChildren<FadingSprite>().Length > markers, "Rear hit showed no indicator.");
+            player.Buffs.Clear();
+            // Wild Leap needs a nearby target when it is cast as the class Q ability.
+            target.transform.position = player.transform.position + Vector3.right * 2f;
         }
 
         private static void Finish(bool success, string message)
@@ -409,6 +438,12 @@ namespace Slopgame.Editor
                     Require(player.IsInvulnerable, "Protection ability did not protect: " + ability.Name); break;
                 case AbilityType.HealingLight:
                     Require(player.Health == player.MaxHealth, "Healing Light did not heal."); break;
+                case AbilityType.WildLeap:
+                    Require(player.IsBusy && player.IsInvulnerable, "Wild Leap did not start an invulnerable leap."); break;
+                case AbilityType.PrimalRage:
+                    Require(player.Buffs.IsRaging && player.Damage == player.BaseDamage * 2
+                        && Mathf.Abs(player.Abilities.CooldownRemaining(0) - ability.Cooldown) < 0.01f,
+                        "Primal Rage did not buff damage or started its cooldown before the rage ended."); break;
                 case AbilityType.Blink:
                 case AbilityType.Windstep:
                     Require(Vector2.Distance(origin, player.transform.position) > 0.5f && run.Map.CanStand(player.transform.position), "Dash failed or passed through walls."); break;

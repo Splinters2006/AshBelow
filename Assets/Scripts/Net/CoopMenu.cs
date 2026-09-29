@@ -40,12 +40,13 @@ namespace Slopgame
             DungeonUi.Label(new Rect(100, 530, 480, 44), "Hosts get a short join code to share with friends.", 15, DungeonUi.Muted);
 
             DungeonUi.Panel(new Rect(650, 250, 560, 336), DungeonUi.PanelColor);
-            DungeonUi.Label(new Rect(680, 270, 500, 24), "LAN  /  DIRECT IP", 14, DungeonUi.Teal);
-            DungeonUi.Label(new Rect(680, 300, 500, 70), $"Same network, or a host who forwards port {NetSession.DefaultPort}. Works without an internet service.", 16, DungeonUi.Muted);
-            if (DungeonUi.Button("coopHostLan", new Rect(680, 394, 500, 52), "Host on this network", DungeonUi.Teal)) session.HostDirect();
+            DungeonUi.Label(new Rect(680, 270, 500, 24), "DIRECT P2P  /  INTERNET OR LAN", 14, DungeonUi.Teal);
+            DungeonUi.Label(new Rect(680, 300, 500, 70), $"Connect straight to the host, no online service. The game opens UDP port {NetSession.DefaultPort} on the host's router automatically when it can.", 16, DungeonUi.Muted);
+            if (DungeonUi.Button("coopHostLan", new Rect(680, 394, 500, 52), "Host P2P", DungeonUi.Teal)) session.HostDirect();
             string typed = DungeonUi.TextField("coopAddress", new Rect(680, 468, 330, 52), address, 64, 22);
             if (typed != address) { address = typed; Save(AddressKey, address); }
             if (DungeonUi.Button("coopJoinLan", new Rect(1024, 468, 156, 52), "Join IP", DungeonUi.Teal)) session.JoinDirect(address);
+            DungeonUi.Label(new Rect(680, 530, 500, 44), "Paste the address the host shares, e.g. 203.0.113.7:7777.", 15, DungeonUi.Muted);
         }
 
         private static void DrawConnecting(NetSession session)
@@ -64,10 +65,11 @@ namespace Slopgame
                 DungeonUi.Label(new Rect(100, 290, 330, 54), session.JoinCode, 40, AbilityCatalog.Gold);
                 if (DungeonUi.Button("coopCopy", new Rect(450, 290, 130, 44), "Copy", DungeonUi.Teal)) GUIUtility.systemCopyBuffer = session.JoinCode;
             }
+            else if (session.IsHost) DrawDirectHost(session);
             else
             {
-                DungeonUi.Label(new Rect(100, 268, 480, 24), "LAN PARTY", 14, DungeonUi.Muted);
-                DungeonUi.Label(new Rect(100, 296, 480, 50), session.IsHost ? $"Friends join with this PC's IP address, port {NetSession.DefaultPort}." : "Connected to the host.", 16, DungeonUi.Text);
+                DungeonUi.Label(new Rect(100, 268, 480, 24), "P2P PARTY", 14, DungeonUi.Muted);
+                DungeonUi.Label(new Rect(100, 296, 480, 50), "Connected directly to the host.", 16, DungeonUi.Text);
             }
             DungeonUi.Label(new Rect(100, 360, 480, 24), $"PARTY  {session.Peers.Count} / {NetSession.MaxPlayers}", 14, DungeonUi.Muted);
             for (int i = 0; i < session.Peers.Count; i++)
@@ -99,6 +101,20 @@ namespace Slopgame
                 if (DungeonUi.Button("coopBegin", new Rect(860, 598, 350, 48), "Begin descent", AbilityCatalog.Gold)) run.Coop.HostBeginRun();
             }
             else DungeonUi.Label(new Rect(860, 608, 350, 30), "Waiting for the host to begin…", 17, DungeonUi.Muted, TextAnchor.MiddleRight);
+        }
+
+        /// <summary>The share panel of a direct host: the internet address with a copy button, the LAN one and the router result.</summary>
+        private static void DrawDirectHost(NetSession session)
+        {
+            string shared = session.PublicAddress ?? session.LanAddress;
+            DungeonUi.Label(new Rect(100, 262, 330, 22), session.PublicAddress != null ? "SHARE THIS ADDRESS" : "LAN ADDRESS", 14, DungeonUi.Muted);
+            DungeonUi.Label(new Rect(100, 282, 340, 40), shared ?? "Finding your address…", shared != null ? 26 : 18, AbilityCatalog.Gold);
+            if (shared != null && DungeonUi.Button("coopCopy", new Rect(450, 280, 130, 40), "Copy", DungeonUi.Teal)) GUIUtility.systemCopyBuffer = shared;
+            if (session.PublicAddress != null && session.LanAddress != null)
+                DungeonUi.Label(new Rect(100, 318, 480, 20), "Same network: " + session.LanAddress, 13, DungeonUi.Muted);
+            // Below the panels, where the status line would go (a lobby host has no status).
+            if (!string.IsNullOrEmpty(session.PortStatus) && string.IsNullOrEmpty(session.Status))
+                DungeonUi.Label(new Rect(70, 596, 770, 50), session.PortStatus, 14, DungeonUi.Muted);
         }
 
         /// <summary>Starts the party with the hero last picked on the solo screen.</summary>

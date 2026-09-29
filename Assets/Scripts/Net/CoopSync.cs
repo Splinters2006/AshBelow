@@ -174,6 +174,12 @@ namespace Slopgame
             if (player.Charge != null && player.Charge.IsCharging) flags |= PlayerStateMessage.Charging;
             if (player.Health <= 0) flags |= PlayerStateMessage.Dead;
             if (player.IsInvulnerable) flags |= PlayerStateMessage.Invulnerable;
+            if (player.Buffs != null)
+            {
+                if (player.Buffs.IsEmpowered) flags |= PlayerStateMessage.Empowered;
+                if (player.Buffs.IsRaging) flags |= PlayerStateMessage.Raging;
+                if (player.Buffs.IsTired) flags |= PlayerStateMessage.Tired;
+            }
             var message = new PlayerStateMessage
             {
                 Id = LocalId, Floor = Run.Floor, Position = player.transform.position,
@@ -234,11 +240,12 @@ namespace Slopgame
         // ---------------------------------------------------------------- enemy damage and kills
 
         /// <summary>Guest only: forwards a hit, burn or chill on an enemy to the host.</summary>
-        public void ReportDamage(DungeonEnemy enemy, CoopDamageKind kind, int amount, Vector2 source, int ticks = 0, float duration = 0f, Color? color = null)
+        public void ReportDamage(DungeonEnemy enemy, CoopDamageKind kind, int amount, Vector2 source, int ticks = 0, float duration = 0f,
+            Color? color = null, float knockback = 1f)
         {
             var message = new DamageMessage
             {
-                Floor = Run.Floor, Enemy = enemy.NetId, Kind = kind, Amount = amount, Ticks = ticks, Duration = duration,
+                Floor = Run.Floor, Enemy = enemy.NetId, Kind = kind, Amount = amount, Ticks = ticks, Duration = duration, Knockback = knockback,
                 Source = source, Color = color ?? new Color(1f, 0.4f, 0.16f)
             };
             using var writer = NetSession.Writer(64);
@@ -254,7 +261,7 @@ namespace Slopgame
             Attacker = sender;
             try
             {
-                if (message.Kind == CoopDamageKind.Hit) enemy.Hit(message.Amount, message.Source);
+                if (message.Kind == CoopDamageKind.Hit) enemy.Hit(message.Amount, message.Source, message.Knockback);
                 else if (message.Kind == CoopDamageKind.Burn) enemy.Burn(message.Ticks, message.Amount, message.Color);
                 else enemy.Chill(message.Duration);
             }
