@@ -72,6 +72,7 @@ namespace Slopgame
             => Send(run, FxKind.Sharpen, default, default, null, duration, full ? 1f : 0f, bonus);
         public static void CoinFlip(DungeonRun run, bool won) => Send(run, FxKind.CoinFlip, default, default, null, 0f, 0f, won ? 1 : 0);
         public static void CoinRain(DungeonRun run, Vector2 center) => Send(run, FxKind.CoinRain, center);
+        public static void Angel(DungeonRun run, Vector2 target) => Send(run, FxKind.Angel, target);
 
         private static RemoteHero FindHero(DungeonRun run, ulong id)
         {
@@ -134,6 +135,7 @@ namespace Slopgame
                     if (gambler != null) CoinFlipVfx.Play(root, gambler.transform, fx.N == 1);
                     break;
                 case FxKind.CoinRain: CoinRainVfx.Play(root, fx.A); break;
+                case FxKind.Angel: AngelVfx.Play(root, fx.A); break;
                 case FxKind.Sharpen:
                     var assassin = FindHero(run, fx.Origin);
                     if (assassin != null)

@@ -70,6 +70,8 @@ namespace Slopgame
             var run = Player.Run;
             var root = run.ProjectileRoot;
             HolyLightVfx.Play(root, target, 1.4f, 0.35f);
+            AngelVfx.Play(root, target);
+            CoopFx.Angel(run, target);
             CoopFx.Holy(run, target, 1.4f, 0.35f);
             HeroVfx.Motes(root, target, 1.1f, AbilityCatalog.Gold, 30, 1.4f);
             HeroVfx.Pulse(root, target, 1.8f, Color.white, 0.5f);
