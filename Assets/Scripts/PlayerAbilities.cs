@@ -88,7 +88,8 @@ namespace Slopgame
                     else knight.Aegis(2f + (rank - 1) * 0.3f + powers.Count(PowerupType.AegisDuration) * 0.4f);
                     break;
                 case AbilityType.Volley:
-                    Fan(aim, 7 + powers.Count(PowerupType.VolleyCount) * 2, 10f, Player.Damage + rank - 1); break;
+                    ArrowRain.Cast(Player, FindGroundLanding(Player.Run.Map, transform.position, aim, Mathf.Min(ArrowRain.Range, cursorDistance)),
+                        ArrowRain.BaseArrows + powers.Count(PowerupType.VolleyCount) * ArrowRain.ArrowsPerRank, Player.Damage + rank - 1); break;
                 case AbilityType.PiercingShot:
                     PiercingArrow.Fire(Player, aim, damage + 1 + powers.Count(PowerupType.PiercingPower) * 2); break;
                 case AbilityType.Windstep:

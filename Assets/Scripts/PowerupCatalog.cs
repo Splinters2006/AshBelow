@@ -53,7 +53,7 @@ namespace Slopgame
             new PowerupDefinition(PowerupType.RushPower, "Battering Ram", "+2 Shield Rush damage", 3, WeaponType.Sword, AbilityType.ShieldRush),
             new PowerupDefinition(PowerupType.ShatterRadius, "Fault Line", "+0.5 Earthshatter radius", 3, WeaponType.Sword, AbilityType.Earthshatter),
             new PowerupDefinition(PowerupType.AegisDuration, "Unbroken", "+0.4 seconds of Aegis protection", 3, WeaponType.Sword, AbilityType.Aegis),
-            new PowerupDefinition(PowerupType.VolleyCount, "Rain of Arrows", "+2 arrows per Volley", 3, WeaponType.Bow, AbilityType.Volley),
+            new PowerupDefinition(PowerupType.VolleyCount, "Rain of Arrows", "+4 arrows in each Arrow Volley", 3, WeaponType.Bow, AbilityType.Volley),
             new PowerupDefinition(PowerupType.PiercingPower, "Armor Breaker", "+2 Piercing Shot damage", 3, WeaponType.Bow, AbilityType.PiercingShot),
             new PowerupDefinition(PowerupType.WindstepDistance, "Tailwind", "+0.5 Windstep distance", 3, WeaponType.Bow, AbilityType.Windstep),
             new PowerupDefinition(PowerupType.FireballRadius, "Wildfire", "+0.4 Inferno Orb explosion radius", 3, WeaponType.Staff, AbilityType.Fireball),

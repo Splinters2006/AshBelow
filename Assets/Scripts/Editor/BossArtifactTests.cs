@@ -798,6 +798,12 @@ namespace Slopgame.Editor
                     Require(far.ReturnedHome, "A knife did not return to a distant Assassin.");
                     player.transform.position = origin;
                     break;
+                case AbilityType.Volley:
+                    var rain = run.ProjectileRoot.GetComponentInChildren<ArrowRain>();
+                    Require(target.Health == 100 && rain != null, "Arrow Volley struck instantly instead of raining from the sky.");
+                    for (int step = 0; step < 30 && !rain.IsFinished; step++) rain.Advance(0.1f);
+                    Require(target.Health < 100, "Arrow Volley's rain did not hit the enemy under the cursor.");
+                    break;
                 case AbilityType.FrostNova:
                     Require(target.Health == 100, "Frost Nova hit instantly instead of expanding."); break;
                 case AbilityType.VenomVial:
