@@ -10,6 +10,8 @@ namespace Slopgame
     public sealed class DemonHeadVfx : MonoBehaviour
     {
         private const float RiseTime = 0.22f, RoarStart = 0.3f, RoarEnd = 0.8f, Lifetime = 1.1f;
+        // The animation above is authored on a 1.1s timeline and played back squeezed into this many real seconds.
+        private const float Duration = 0.1f;
         private const float PixelsPerUnit = 24f;
         private static readonly Color Soulfire = new Color(0.6f, 0.12f, 1f);
 
@@ -50,7 +52,7 @@ namespace Slopgame
 
         private void LateUpdate()
         {
-            age += Time.deltaTime;
+            age += Time.deltaTime * (Lifetime / Duration);
             if (age >= Lifetime) { Destroy(gameObject); return; }
             float rise = EaseOut(age / RiseTime);
             float roar = Mathf.Clamp01((age - RoarStart) / (RoarEnd - RoarStart));
