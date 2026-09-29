@@ -11,6 +11,7 @@ namespace Slopgame
         public const float ChargedRangeBonus = 1f;
         public static float RangeForCharge(float charge) => PlayerProjectile.MaxRange + ChargedRangeBonus * Mathf.Clamp01(charge);
         public DungeonPlayer Player { get; set; }
+        public float ArrowRange(float charge) => RangeForCharge(charge) + Player.Powerups.Count(PowerupType.Farshot);
         public bool IsHeavyAttacking => false;
         public float HeavyCooldownRemaining => DebugMode.Cooldown(Mathf.Max(0, heavyReadyAt - Time.time));
         public void ReduceHeavyCooldown(float seconds) => heavyReadyAt = Cooldowns.Shorten(heavyReadyAt, seconds);
@@ -23,7 +24,7 @@ namespace Slopgame
         public bool TryAttack(Vector2 aim, float charge = 0f)
         {
             if (!CanFire(aim)) return false;
-            Fire(aim.normalized, Player.Charge.Damage(charge), RangeForCharge(charge));
+            Fire(aim.normalized, Player.Charge.Damage(charge), ArrowRange(charge));
             readyAt = Time.time + 0.35f * Player.Powerups.AttackIntervalMultiplier;
             return true;
         }
@@ -33,8 +34,8 @@ namespace Slopgame
             if (!CanFire(aim) || HeavyCooldownRemaining > 0) return false;
             Player.Charge.Cancel();
             for (int i = -1; i <= 1; i++)
-                Fire(Quaternion.Euler(0, 0, SpreadAngle * i) * aim.normalized, Player.Damage, HeavyRange);
-            heavyReadyAt = Time.time + HeavyCooldown;
+                Fire(Quaternion.Euler(0, 0, SpreadAngle * i) * aim.normalized, Player.Damage, HeavyRange + Player.Powerups.Count(PowerupType.Farshot));
+            heavyReadyAt = Time.time + HeavyCooldown * Player.Powerups.SkillCooldownMultiplier;
             readyAt = Time.time + 0.35f * Player.Powerups.AttackIntervalMultiplier;
             return true;
         }

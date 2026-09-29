@@ -67,7 +67,7 @@ namespace Slopgame
             bool charging = Player.Charge.IsCharging;
             Vector2 origin = transform.position;
             Vector2 aim = Player.AimDirection.sqrMagnitude > 0.0001f ? Player.AimDirection.normalized : Vector2.right;
-            float range = BowAttack.RangeForCharge(charge);
+            float range = BowAttack.RangeForCharge(charge) + Player.Powerups.Count(PowerupType.Farshot);
             float distance = FlightDistance(Player.Run.Map, origin, aim, range, out bool blocked);
             if (distance <= StartOffset + 0.05f && !blocked) return;
 
@@ -92,7 +92,7 @@ namespace Slopgame
             endTick.startColor = endTick.endColor = tip;
 
             // While charging, a ghost tick shows where a full charge would reach.
-            float full = BowAttack.RangeForCharge(1f);
+            float full = BowAttack.RangeForCharge(1f) + Player.Powerups.Count(PowerupType.Farshot);
             if (charging && charge < 1f && !blocked)
             {
                 float fullDistance = FlightDistance(Player.Run.Map, origin, aim, full, out _);

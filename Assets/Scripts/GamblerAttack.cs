@@ -21,7 +21,7 @@ namespace Slopgame
         }
         private int coins = 1;
         /// <summary>Lady Luck: added to the odds of every gamble.</summary>
-        public float Luck => Player != null && Player.Permanent != null ? Player.Permanent.GambleLuck : 0f;
+        public float Luck => Player != null && Player.Permanent != null ? Player.Permanent.GambleLuck + Player.Powerups.Count(PowerupType.LuckyStreak) * 0.03f : 0f;
         private float readyAt, volleyReadyAt;
         /// <summary>The fewest coins he can hold: one, plus one per rank of Deep Pockets.</summary>
         public int MinCoins => 1 + (player != null && player.Permanent != null ? player.Permanent.PurseFloor : 0);
@@ -77,7 +77,7 @@ namespace Slopgame
                 PlayerProjectile.Spawn(Player.Run, transform.position, Quaternion.Euler(0, 0, angle) * aim, Player.Damage, VolleyReach, ProjectileStyle.Coin);
             }
             HeroVfx.Sparks(Player.Run.ProjectileRoot, transform.position, Gold, 10, 3.5f, 0.3f, aim, VolleyCone);
-            volleyReadyAt = Time.time + VolleyCooldown;
+            volleyReadyAt = Time.time + VolleyCooldown * Player.Powerups.SkillCooldownMultiplier;
             readyAt = Time.time + 0.3f * Player.Powerups.AttackIntervalMultiplier;
             return true;
         }

@@ -230,7 +230,7 @@ namespace Slopgame
                 WorldBannerUntil = Time.time + 4f;
                 HeroVfx.Pulse(level, Player.transform.position, 3f, World.Accent, 0.9f);
             }
-            // Plain ashlings (or drones) may turn out to be skitters (from floor 2) or cinder husks (from floor 3), from the run seed.
+            // Seeded variants: skitters from floor 2, husks and world specialists from floor 3.
             var variants = new System.Random(Seed + Floor * 6151);
             for (int room = 1; !IsBossFloor && !InShop && room < Map.Centers.Count; room++)
             {
@@ -255,7 +255,11 @@ namespace Slopgame
                     else
                     {
                         double roll = variants.NextDouble();
-                        EnemyVariant variant = Floor >= 3 && roll < HuskChance ? enemy.gameObject.AddComponent<CinderHusk>()
+                        // Introduce one specialist in the first combat room, then seed additional ones.
+                        bool specialist = Floor >= 3 && ((room == 1 && i == 2) || roll >= HuskChance + SkitterChance && roll < HuskChance + SkitterChance + SpecialistChance);
+                        EnemyVariant variant = specialist
+                            ? (World.HighTech ? (EnemyVariant)enemy.gameObject.AddComponent<NeonLancer>() : enemy.gameObject.AddComponent<EmberFanatic>())
+                            : Floor >= 3 && roll < HuskChance ? enemy.gameObject.AddComponent<CinderHusk>()
                             : Floor >= 2 && roll < HuskChance + SkitterChance ? enemy.gameObject.AddComponent<AshSkitter>() : null;
                         variant?.Configure(enemy);
                     }
@@ -272,8 +276,8 @@ namespace Slopgame
 
         /// <summary>True when the floor after <paramref name="floor"/> is a boss floor, so the crystal shop comes first.</summary>
         public static bool IsShopNext(int floor) => floor > 0 && (floor + 1) % 5 == 0;
-        /// <summary>Chances for a plain ashling to spawn as a cinder husk (floor 3 on) or an ash skitter (floor 2 on).</summary>
-        public const double HuskChance = 0.2, SkitterChance = 0.3;
+        /// <summary>Variant chances for eligible basic enemies; the first combat room also guarantees a specialist from floor 3.</summary>
+        public const double HuskChance = 0.2, SkitterChance = 0.3, SpecialistChance = 0.18;
 
         private void Update()
         {

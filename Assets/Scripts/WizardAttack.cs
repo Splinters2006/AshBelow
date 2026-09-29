@@ -46,7 +46,7 @@ namespace Slopgame
                 origin = destination;
                 target = FindTarget(origin, aim, JumpRange, struck, false);
             }
-            lightningReadyAt = Time.time + 3f;
+            lightningReadyAt = Time.time + 3f * Player.Powerups.SkillCooldownMultiplier;
             readyAt = Time.time + 0.25f;
             return true;
         }

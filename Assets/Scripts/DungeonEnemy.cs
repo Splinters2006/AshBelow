@@ -11,7 +11,7 @@ namespace Slopgame
         private float hitUntil;
         private SpriteRenderer body;
         private EnemyShooter shooter;
-        /// <summary>The special kind of floor enemy this is (Ash skitter, Cinder husk), or null for the basic three.</summary>
+        /// <summary>The special kind of floor enemy this is (including world-specific specialists), or null for the basic three.</summary>
         public EnemyVariant Variant => variant != null ? variant : variant = GetComponent<EnemyVariant>();
         private EnemyVariant variant;
         public DungeonBoss Boss { get; set; }
@@ -62,7 +62,7 @@ namespace Slopgame
             body = GetComponent<SpriteRenderer>();
             shooter = GetComponent<EnemyShooter>();
             var world = Run.World;
-            if (IsRanged) gameObject.name = world.CasterName;
+            if (IsRanged && Variant == null) gameObject.name = world.CasterName;
             tactics = GetComponent<EnemyTactics>();
             if (Boss == null) body.sprite = Variant != null ? Variant.Sprite
                 : world.HighTech ? NeonSprites.Enemy(IsRanged, IsTank) : DungeonVisuals.EnemySprite(IsRanged, IsTank);
@@ -119,6 +119,12 @@ namespace Slopgame
             }
             float distance = Vector2.Distance(position, target);
             bool visible = Run.HasLineOfSight(position, target);
+            if (Variant != null && Variant.Move(this, target, visible))
+            {
+                UpdateColor();
+                if (!IsRanged) TryContactHit(HitRadius + 0.27f);
+                return;
+            }
             if (distance < 14f)
             {
                 if (!IsRanged || !shooter.IsCharging) Facing.TurnToward(target - position, Time.deltaTime * ActionSpeedMultiplier);

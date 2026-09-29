@@ -30,5 +30,8 @@ namespace Slopgame
 
         /// <summary>Runs on every machine as the enemy dies.</summary>
         public virtual void OnDeath(DungeonEnemy enemy) { }
+
+        /// <summary>Host-side movement override, evaluated only while alive, playing and not held.</summary>
+        public virtual bool Move(DungeonEnemy enemy, Vector2 target, bool visible) => false;
     }
 }

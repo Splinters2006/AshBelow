@@ -32,7 +32,7 @@ namespace Slopgame
         public void ReduceHeavyCooldown(float seconds) => empowerReadyAt = Cooldowns.Shorten(empowerReadyAt, seconds);
         public bool CanAttack => Player.Run.IsPlaying && !Player.IsRolling && !Player.IsBusy && !IsBarraging && Time.time >= readyAt;
         public int BarrageCount => BarragePunches + Player.Powerups.Count(PowerupType.Flurry) + Player.Permanent.BarragePunches;
-        private float Size => Player.Buffs.AttackSizeMultiplier;
+        private float Size => Player.Buffs.AttackSizeMultiplier * (1f + Player.Powerups.Count(PowerupType.HeavyGloves) * 0.1f);
         private float Interval => Player.Powerups.AttackIntervalMultiplier * Player.Buffs.AttackIntervalMultiplier;
         private Color PunchColor => Player.Buffs.IsRaging ? HeroBuffs.RageColor : Player.Buffs.IsEmpowered ? HeroBuffs.EmpowerColor : Glove;
         private float readyAt, empowerReadyAt;
@@ -114,7 +114,7 @@ namespace Slopgame
         {
             if (!Player.Run.IsPlaying || Player.IsRolling || Player.IsBusy || HeavyCooldownRemaining > 0f) return false;
             Player.Buffs.Empower(EmpowerDuration + Player.Powerups.Count(PowerupType.Adrenaline));
-            empowerReadyAt = Time.time + EmpowerCooldown;
+            empowerReadyAt = Time.time + EmpowerCooldown * Player.Powerups.SkillCooldownMultiplier;
             var root = Player.Run.ProjectileRoot;
             HeroVfx.Pulse(root, transform.position, 1.3f, HeroBuffs.EmpowerColor, 0.4f);
             HeroVfx.Sparks(root, transform.position, HeroBuffs.EmpowerColor, 12, 4f, 0.35f);

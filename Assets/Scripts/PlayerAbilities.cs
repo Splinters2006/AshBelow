@@ -169,7 +169,7 @@ namespace Slopgame
                 HeroVfx.Sparks(Player.Run.ProjectileRoot, transform.position, definition.Color, 10, 3.5f, 0.35f);
             }
             // Primal Rage's and Archdemon's Technique's cooldowns only start once their effects have ended.
-            readyAt[slot] = Time.time + definition.Cooldown
+            readyAt[slot] = Time.time + definition.Cooldown * Player.Powerups.RelicCooldownMultiplier
                 + (definition.Type == AbilityType.PrimalRage ? Player.Buffs.RageCycleRemaining
                     : definition.Type == AbilityType.ArchdemonTechnique ? Player.Buffs.AscendRemaining : 0f);
             castReadyAt = Time.time + 0.2f;

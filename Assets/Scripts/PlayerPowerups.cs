@@ -6,7 +6,7 @@ namespace Slopgame
     public sealed class PlayerPowerups : MonoBehaviour
     {
         private readonly Dictionary<PowerupType, int> stacks = new Dictionary<PowerupType, int>();
-        private int harvestKills;
+        private int harvestKills, soulShieldKills;
         public WeaponType ClassWeapon { get; set; }
         public PermanentBonuses Permanent { get; set; } = new PermanentBonuses(null, WeaponType.Sword);
         public PlayerAbilities Abilities { get; set; }
@@ -17,7 +17,7 @@ namespace Slopgame
         public float AttackIntervalMultiplier => 1f / (1f + 0.2f * Count(PowerupType.AttackSpeed) + Permanent.AttackSpeed);
         /// <summary>The Wizard starts with a 15% base chance (crits and elemental effects); everyone else with 5%.</summary>
         public float CritChance => (ClassWeapon == WeaponType.Staff ? 0.15f : 0.05f) + Count(PowerupType.CriticalHits) * 0.1f;
-        public float ElementalEffectChance => Mathf.Min(0.9f, CritChance + Permanent.EffectChance);
+        public float ElementalEffectChance => Mathf.Min(0.9f, CritChance + Permanent.EffectChance + Count(PowerupType.Stormcraft) * 0.05f);
         public float PhysicalCritChance => Mathf.Min(0.9f, CritChance + Permanent.PhysicalCritChance
             + (ClassWeapon == WeaponType.Daggers ? 0.1f + Count(PowerupType.AssassinCrit) * 0.05f : 0f));
         public float DodgeCooldownMultiplier => (1f - 0.1f * Count(PowerupType.DodgeRecovery)) * Permanent.DodgeMultiplier;
@@ -35,7 +35,23 @@ namespace Slopgame
             return true;
         }
 
-        public int DamageForRoll(int damage, float roll) => roll < PhysicalCritChance ? damage * 2 : damage;
+        public float CriticalMultiplier => 2f + Count(PowerupType.DeadlyPrecision) * 0.25f;
+        public float RelicCooldownMultiplier => 1f - Count(PowerupType.RelicTraining) * 0.08f;
+        public float SkillCooldownMultiplier => 1f - 0.1f * Count(ClassWeapon switch
+        {
+            WeaponType.Sword => PowerupType.GuardDrills,
+            WeaponType.Bow => PowerupType.VolleyDrills,
+            WeaponType.Staff => PowerupType.StormRhythm,
+            WeaponType.Daggers => PowerupType.ShadowDance,
+            WeaponType.Hammer => PowerupType.DivineCadence,
+            WeaponType.Fists => PowerupType.SecondRound,
+            WeaponType.Tail => PowerupType.TailRhythm,
+            WeaponType.Coins => PowerupType.QuickDeal,
+            WeaponType.Beam => PowerupType.HeatSink,
+            _ => PowerupType.NightCycle
+        });
+        public int CriticalDamage(int damage) => Mathf.RoundToInt(damage * CriticalMultiplier);
+        public int DamageForRoll(int damage, float roll) => roll < PhysicalCritChance ? CriticalDamage(damage) : damage;
         public int RollDamage(int damage) => DamageForRoll(damage, Random.value);
         public void BeginFloor() { ArmorCharges = Count(PowerupType.Armor) + Count(PowerupType.PaladinWard); }
         /// <summary>An extra ward for the rest of this floor (Shield Taunt blocks, the Gambler's Lucky Charm).</summary>
@@ -54,6 +70,11 @@ namespace Slopgame
         /// <summary>Kill talents, applied only on the killer's machine (<paramref name="enemy"/> is still in place, statuses intact).</summary>
         public void OnKill(DungeonPlayer player, DungeonEnemy enemy)
         {
+            if (Count(PowerupType.SoulShield) > 0 && ++soulShieldKills >= 8)
+            {
+                soulShieldKills = 0;
+                if (ArmorCharges < 3) AddWard();
+            }
             int rank = Count(PowerupType.LifeSteal);
             if (rank > 0 && ++harvestKills >= 6 - rank) { harvestKills = 0; player.Heal(1); }
 

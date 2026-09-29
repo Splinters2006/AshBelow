@@ -44,7 +44,7 @@ namespace Slopgame
         public float BlastRadius(float charge) => 1.1f + 0.9f * Mathf.Clamp01(charge) + 0.3f * Player.Powerups.Count(PowerupType.Overcharge);
         /// <summary>Capacitor Bank (Ash shop) shortens the cooldown; Overclock halves it.</summary>
         public float CannonCooldownTime => CannonCooldown * (Player.Permanent != null ? Player.Permanent.CannonCooldownMultiplier : 1f)
-            * (IsOverclocked ? 0.5f : 1f);
+            * (IsOverclocked ? 0.5f : 1f) * Player.Powerups.SkillCooldownMultiplier;
 
         public bool TryAttack(Vector2 aim, float charge = 0f)
         {
@@ -52,7 +52,7 @@ namespace Slopgame
             if (IsOverclocked) charge = 1f;
             charge = Mathf.Clamp01(charge);
             aim.Normalize();
-            int hits = FireRay(Player, Muzzle(aim), aim, RayReach(charge), RayWidthFor(charge), Player.Charge.Damage(charge));
+            int hits = FireRay(Player, Muzzle(aim), aim, RayReach(charge), RayWidthFor(charge) + Player.Powerups.Count(PowerupType.WideBeam) * 0.08f, Player.Charge.Damage(charge));
             (Player.Mechanic as Overclock)?.OnRayHits(hits);
             if (charge >= 1f) ScreenFx.Shake(0.06f, 0.1f);
             readyAt = Time.time + RayInterval * Player.Powerups.AttackIntervalMultiplier * (IsOverclocked ? 0.5f : 1f);

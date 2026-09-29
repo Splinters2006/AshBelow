@@ -34,9 +34,9 @@ namespace Slopgame
         {
             if (!CanAttack || HeavyCooldownRemaining > 0f || aim.sqrMagnitude < 0.001f) return false;
             Player.Charge.Cancel();
-            ExecuteArea(NightfallRadius);
+            ExecuteArea(NightfallRadius + Player.Powerups.Count(PowerupType.DarkHorizon));
             Player.Protect(0.7f);
-            nightfallReadyAt = Time.time + NightfallCooldown;
+            nightfallReadyAt = Time.time + NightfallCooldown * Player.Powerups.SkillCooldownMultiplier;
             readyAt = Time.time + 0.2f;
             return true;
         }

@@ -60,6 +60,8 @@ namespace Slopgame
                 (offset.sqrMagnitude < 0.0001f || Vector2.Dot(offset.normalized, aim.normalized) >= Mathf.Cos(coneAngle * 0.5f * Mathf.Deg2Rad));
         }
 
+        public float AttackReach => Reach + 0.25f * (Player.Powerups.Count(PowerupType.Longsword) + Player.Powerups.Count(PowerupType.LongDaggers));
+
         public float ChargedCone(float charge) => Mathf.Lerp(Player.ClassWeapon == WeaponType.Daggers ? StabAngle : ConeAngle,
             Player.ClassWeapon == WeaponType.Daggers ? 22f
                 : 120f + Player.Powerups.Count(PowerupType.SweepingEdge) * 15f, Mathf.Clamp01(charge));
@@ -67,7 +69,7 @@ namespace Slopgame
         public bool TryAttack(Vector2 aim, float charge = 0f)
         {
             if (!CanAttack || aim.sqrMagnitude < 0.001f) return false;
-            return TrySwipe(aim, Player.Charge.Damage(charge), Reach, ChargedCone(charge));
+            return TrySwipe(aim, Player.Charge.Damage(charge), AttackReach, ChargedCone(charge));
         }
 
         public bool TrySwipe(Vector2 aim, int damage, float reach, float cone)
@@ -117,7 +119,7 @@ namespace Slopgame
                 Player.Abilities.Dash(aim, Mathf.Min(3f, aim.magnitude));
             }
             Player.Charge.Cancel();
-            shadowReadyAt = Time.time + 4f;
+            shadowReadyAt = Time.time + 4f * Player.Powerups.SkillCooldownMultiplier;
             return true;
         }
 
@@ -164,7 +166,7 @@ namespace Slopgame
             else if (ShowChargePreview && Player.Charge.IsCharging)
             {
                 FaceArc(Player.AimDirection);
-                SetArc(Reach, ChargedCone(Player.Charge.Amount),
+                SetArc(AttackReach, ChargedCone(Player.Charge.Amount),
                     Player.ClassWeapon == WeaponType.Daggers
                         ? Color.Lerp(new Color(0.6f, 0.3f, 1f, 0.12f), new Color(0.9f, 0.65f, 1f, 0.5f), Player.Charge.Amount)
                         : Color.Lerp(new Color(0.4f, 1f, 0.85f, 0.12f), new Color(1f, 0.8f, 0.25f, 0.3f), Player.Charge.Amount));

@@ -19,7 +19,7 @@ namespace Slopgame
             if (!Player.Run.IsPlaying || Player.IsRolling || CooldownRemaining > 0f || aim.sqrMagnitude < 0.001f) return false;
             Direction = aim.normalized;
             blockingUntil = Time.time + Duration;
-            readyAt = Time.time + Cooldown;
+            readyAt = Time.time + Cooldown * Player.Powerups.SkillCooldownMultiplier;
             Player.Charge.Cancel();
             HeroVfx.Pulse(Player.transform, Player.transform.position, 0.95f, new Color(0.4f, 0.75f, 1f), 0.25f);
             return true;

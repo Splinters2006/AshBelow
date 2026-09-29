@@ -10,7 +10,7 @@ namespace Slopgame
         {
             int backstab = player.Charge.Damage(1f) * 2 + player.Powerups.Count(PowerupType.Backstab);
             float chance = Mathf.Clamp01(player.Powerups.PhysicalCritChance * 2f);
-            return roll < chance ? backstab * 2 : backstab;
+            return roll < chance ? player.Powerups.CriticalDamage(backstab) : backstab;
         }
 
         public static void ApplyShadowstep(DungeonPlayer player, DungeonEnemy enemy)
@@ -102,8 +102,8 @@ namespace Slopgame
             bool kindle = element != DamageElement.Fire && player.Powerups.Count(PowerupType.Kindling) > 0;
             if (element == DamageElement.Lightning) Shock(player, enemy.transform.position, enemy, hit);
             if (enemy.Health <= 0) return;
-            if (element == DamageElement.Fire || kindle) enemy.Burn(BurnTicks, BurnTickDamage(hit));
-            if (element == DamageElement.Ice) enemy.Freeze(FreezeDuration);
+            if (element == DamageElement.Fire || kindle) enemy.Burn(BurnTicks + player.Powerups.Count(PowerupType.SlowBurn), BurnTickDamage(hit));
+            if (element == DamageElement.Ice) enemy.Freeze(FreezeDuration + player.Powerups.Count(PowerupType.Permafrost) * 0.3f);
         }
 
         /// <summary>Lightning bolts leap from <paramref name="center"/> to every other enemy in range. The shock does not chain further.</summary>
@@ -111,12 +111,13 @@ namespace Slopgame
         {
             var run = player.Run;
             int damage = ShockDamage(hit);
-            HeroVfx.Pulse(run.ProjectileRoot, center, ShockRadius, ShockColor, 0.2f);
-            CoopFx.Pulse(run, center, ShockRadius, ShockColor, 0.2f);
+            float radius = ShockRadius + player.Powerups.Count(PowerupType.StaticField) * 0.4f;
+            HeroVfx.Pulse(run.ProjectileRoot, center, radius, ShockColor, 0.2f);
+            CoopFx.Pulse(run, center, radius, ShockColor, 0.2f);
             foreach (var enemy in run.Enemies.ToArray())
             {
                 if (enemy == null || enemy == origin || enemy.Health <= 0
-                    || Vector2.Distance(center, enemy.transform.position) > ShockRadius + enemy.HitRadius
+                    || Vector2.Distance(center, enemy.transform.position) > radius + enemy.HitRadius
                     || !run.HasLineOfSight(center, enemy.transform.position)) continue;
                 Vector2 target = enemy.transform.position;
                 CombatVfx.Bolt(run.ProjectileRoot, center, target, ShockColor);

@@ -31,7 +31,7 @@ namespace Slopgame
         /// <summary>How long a vital stab (or Archdemon's tail whip) holds its victims.</summary>
         public float ParalysisDuration => VitalParalysis + Player.Powerups.Count(PowerupType.NerveStrike) * 0.25f;
         /// <summary>Pressure Points: extra damage on every hit against an already paralysed enemy.</summary>
-        public int ParalyzedBonusDamage => Player.Permanent.ParalyzedDamage;
+        public int ParalyzedBonusDamage => Player.Permanent.ParalyzedDamage + Player.Powerups.Count(PowerupType.CruelTouch);
         public float SweepReach => SweepRadius + Player.Powerups.Count(PowerupType.LongTail) * 0.3f;
         private float Interval => Player.Powerups.AttackIntervalMultiplier * Player.Buffs.AttackIntervalMultiplier;
         private Color TailColor => Player.Buffs.IsAscended ? HeroBuffs.AscendColor : Violet;
@@ -145,7 +145,7 @@ namespace Slopgame
                 }
                 CombatDamage.Apply(Player, enemy, WithPressurePoints(enemy, damage), DamageElement.Physical, origin, paralyzed ? 0.3f : 1f);
             }
-            sweepReadyAt = Time.time + SweepCooldown;
+            sweepReadyAt = Time.time + SweepCooldown * Player.Powerups.SkillCooldownMultiplier;
             Player.Charge.Cancel();
             return true;
         }

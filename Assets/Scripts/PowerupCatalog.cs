@@ -13,7 +13,11 @@ namespace Slopgame
         NerveStrike, LongTail, Bloodline, BigPaws, HexMastery,
         LooseChange, LongToss, MintCondition, RiggedOdds, HighRoller,
         NerveSnap, PyreBurst, Kindling, Massacre, Momentum, Bloodrush, StillHunter, Prospector, Haggler, MerchantsFavor,
-        FocusedLens, Overcharge, Payload, Afterburner, ExtendedBattery
+        FocusedLens, Overcharge, Payload, Afterburner, ExtendedBattery,
+        DeadlyPrecision, SlowBurn, Permafrost, StaticField, RelicTraining, SoulShield,
+        GuardDrills, Longsword, VolleyDrills, Farshot, StormRhythm, Stormcraft, ShadowDance, LongDaggers,
+        DivineCadence, PatientFaith, SecondRound, HeavyGloves, TailRhythm, CruelTouch, QuickDeal, LuckyStreak,
+        HeatSink, WideBeam, NightCycle, DarkHorizon
     }
 
     public sealed class PowerupDefinition
@@ -105,7 +109,33 @@ namespace Slopgame
             new PowerupDefinition(PowerupType.Overcharge, "Augment: Overcharge", "+1 plasma cannon damage and +0.3 blast radius", 3, WeaponType.Beam),
             new PowerupDefinition(PowerupType.Payload, "Payload", "+2 Micro-Missiles", 3, WeaponType.Beam, AbilityType.MicroMissiles),
             new PowerupDefinition(PowerupType.Afterburner, "Afterburner", "+0.6 Rocket Boost distance", 3, WeaponType.Beam, AbilityType.RocketBoost),
-            new PowerupDefinition(PowerupType.ExtendedBattery, "Extended Battery", "+2 seconds of Sentry Turret", 3, WeaponType.Beam, AbilityType.SentryTurret)
+            new PowerupDefinition(PowerupType.ExtendedBattery, "Extended Battery", "+2 seconds of Sentry Turret", 3, WeaponType.Beam, AbilityType.SentryTurret),
+            new PowerupDefinition(PowerupType.DeadlyPrecision, "Deadly Precision", "Physical critical hits deal +25% of base hit damage per rank", 3),
+            new PowerupDefinition(PowerupType.SlowBurn, "Slow Burn", "Elemental burns last +1 tick per rank", 3),
+            new PowerupDefinition(PowerupType.Permafrost, "Permafrost", "Elemental freezes last +0.3 seconds per rank", 3),
+            new PowerupDefinition(PowerupType.StaticField, "Static Field", "Lightning shock splash reaches +0.4 farther per rank", 3),
+            new PowerupDefinition(PowerupType.RelicTraining, "Relic Training", "Equipped relic cooldowns are 8% shorter per rank", 3),
+            new PowerupDefinition(PowerupType.SoulShield, "Soul Shield", "Every 8 kills grants a ward; stores up to 3 wards", 1),
+            new PowerupDefinition(PowerupType.GuardDrills, "Knight: Guard Drills", "Shield cooldown is 10% shorter per rank", 3, WeaponType.Sword),
+            new PowerupDefinition(PowerupType.Longsword, "Knight: Longsword", "Basic slash reach +0.25 per rank", 3, WeaponType.Sword),
+            new PowerupDefinition(PowerupType.VolleyDrills, "Archer: Volley Drills", "Triple Shot cooldown is 10% shorter per rank", 3, WeaponType.Bow),
+            new PowerupDefinition(PowerupType.Farshot, "Archer: Farshot", "Basic arrows and Triple Shot travel +1 farther per rank", 3, WeaponType.Bow),
+            new PowerupDefinition(PowerupType.StormRhythm, "Wizard: Storm Rhythm", "Lightning cooldown is 10% shorter per rank", 3, WeaponType.Staff),
+            new PowerupDefinition(PowerupType.Stormcraft, "Wizard: Stormcraft", "Elemental effect chance +5% per rank", 3, WeaponType.Staff),
+            new PowerupDefinition(PowerupType.ShadowDance, "Assassin: Shadow Dance", "Shadowstep cooldown is 10% shorter per rank", 3, WeaponType.Daggers),
+            new PowerupDefinition(PowerupType.LongDaggers, "Assassin: Long Daggers", "Basic stab reach +0.25 per rank", 3, WeaponType.Daggers),
+            new PowerupDefinition(PowerupType.DivineCadence, "Paladin: Divine Cadence", "Holy Swords cooldown is 10% shorter per rank", 3, WeaponType.Hammer),
+            new PowerupDefinition(PowerupType.PatientFaith, "Paladin: Patient Faith", "Damage blessings last +1 second per rank", 3, WeaponType.Hammer),
+            new PowerupDefinition(PowerupType.SecondRound, "Brawler: Second Round", "Empower cooldown is 10% shorter per rank", 3, WeaponType.Fists),
+            new PowerupDefinition(PowerupType.HeavyGloves, "Brawler: Heavy Gloves", "Punch, barrage and Knuckle Sandwich hit areas are 10% larger per rank", 3, WeaponType.Fists),
+            new PowerupDefinition(PowerupType.TailRhythm, "Demoness: Tail Rhythm", "Tail Sweep cooldown is 10% shorter per rank", 3, WeaponType.Tail),
+            new PowerupDefinition(PowerupType.CruelTouch, "Demoness: Cruel Touch", "Vital stabs deal +1 damage to paralysed enemies per rank", 3, WeaponType.Tail),
+            new PowerupDefinition(PowerupType.QuickDeal, "Gambler: Quick Deal", "Coin Volley cooldown is 10% shorter per rank", 3, WeaponType.Coins),
+            new PowerupDefinition(PowerupType.LuckyStreak, "Gambler: Lucky Streak", "Gamble win chance +3% per rank", 3, WeaponType.Coins),
+            new PowerupDefinition(PowerupType.HeatSink, "Augment: Heat Sink", "Plasma Cannon cooldown is 10% shorter per rank", 3, WeaponType.Beam),
+            new PowerupDefinition(PowerupType.WideBeam, "Augment: Wide Beam", "Plasma ray width +0.08 per rank", 3, WeaponType.Beam),
+            new PowerupDefinition(PowerupType.NightCycle, "Admin: Night Cycle", "Nightfall cooldown is 10% shorter per rank", 3, WeaponType.Shadow),
+            new PowerupDefinition(PowerupType.DarkHorizon, "Admin: Dark Horizon", "Nightfall radius +1 per rank", 3, WeaponType.Shadow)
         };
 
         public static PowerupDefinition Get(PowerupType type) => All[(int)type];

@@ -424,9 +424,13 @@ namespace Slopgame.Editor
             run.BeginUpgradeChoice();
             var seen = new HashSet<PowerupType>();
             if (run.UpgradeChoices.Count != 3) throw new Exception("Missing powerup offers.");
+            bool hasClassTalent = false;
             foreach (var choice in run.UpgradeChoices)
+            {
                 if (!seen.Add(choice.Type) || !powers.CanTake(choice.Type)) throw new Exception("Duplicate or capped boon offered.");
-            if (!seen.Contains(PowerupType.QuickDraw) && !seen.Contains(PowerupType.Bodkin))
+                if (choice.ClassWeapon == powers.ClassWeapon) hasClassTalent = true;
+            }
+            if (!hasClassTalent)
                 throw new Exception("Upgrade offers missing available class talent.");
             var selected = run.UpgradeChoices[0].Type;
             int previous = powers.Count(selected);

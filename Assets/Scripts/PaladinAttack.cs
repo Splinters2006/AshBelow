@@ -45,12 +45,12 @@ namespace Slopgame
             {
                 if (ally.Run != Player.Run || ally.Health <= 0
                     || Vector2.Distance(transform.position, ally.transform.position) > BlessingRadius) continue;
-                ally.Blessing.Apply(BlessingDamage, BlessingDuration + Player.Permanent.BlessingDuration, Player);
+                ally.Blessing.Apply(BlessingDamage, BlessingDuration + Player.Permanent.BlessingDuration + Player.Powerups.Count(PowerupType.PatientFaith), Player);
                 CombatVfx.Ring(Player.Run.ProjectileRoot, ally.transform.position, 0.6f, AbilityCatalog.Gold);
                 HeroVfx.Motes(Player.Run.ProjectileRoot, ally.transform.position, 0.6f, AbilityCatalog.Gold, 14, 1f);
             }
             Player.Run.Coop?.SupportAllies(transform.position, BlessingRadius, SupportKind.Bless, BlessingDamage,
-                BlessingDuration + Player.Permanent.BlessingDuration);
+                BlessingDuration + Player.Permanent.BlessingDuration + Player.Powerups.Count(PowerupType.PatientFaith));
             CombatVfx.Ring(Player.Run.ProjectileRoot, transform.position, BlessingRadius, AbilityCatalog.Gold, 0.6f);
             HeroVfx.Pulse(Player.Run.ProjectileRoot, transform.position, BlessingRadius, AbilityCatalog.Gold, 0.55f);
             CoopFx.Ring(Player.Run, transform.position, BlessingRadius, AbilityCatalog.Gold, 0.6f);
@@ -72,7 +72,7 @@ namespace Slopgame
             targets.Sort((a, b) => Vector2.SqrMagnitude((Vector2)a.transform.position - origin)
                 .CompareTo(Vector2.SqrMagnitude((Vector2)b.transform.position - origin)));
             if (targets.Count > HolySwordTargets) targets.RemoveRange(HolySwordTargets, targets.Count - HolySwordTargets);
-            swordReadyAt = Time.time + HolySwordCooldown;
+            swordReadyAt = Time.time + HolySwordCooldown * Player.Powerups.SkillCooldownMultiplier;
             Player.Charge.Cancel();
             int damage = Player.Damage * HolySwordDamageMultiplier;
             for (int i = 0; i < targets.Count; i++) StartCoroutine(HolySword(targets[i], i * HolySwordStagger, damage));
