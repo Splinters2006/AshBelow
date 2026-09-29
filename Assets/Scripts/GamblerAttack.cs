@@ -106,13 +106,21 @@ namespace Slopgame
             AddCoins(WindfallCoinsFor(rank));
             HeroVfx.Sparks(Player.Run.ProjectileRoot, transform.position, Gold, 16, 4f, 0.4f, Vector2.up, 120f);
             HeroVfx.Motes(Player.Run.ProjectileRoot, transform.position, 0.6f, Gold, 14, 0.8f);
+            CoinRainVfx.Play(Player.Run.ProjectileRoot, transform.position);
+            CoopFx.CoinRain(Player.Run, transform.position);
         }
 
         /// <summary>Windfall's coins: ranks add one, Mint Condition two per stack.</summary>
         public int WindfallCoinsFor(int rank) => WindfallCoins + rank - 1 + Player.Powerups.Count(PowerupType.MintCondition) * 2;
 
         /// <summary>Double or nothing on every coin carried. True on a win.</summary>
-        public bool AllIn(int rank, float roll) => DoubleOrNothing(roll, AllInOdds(rank));
+        public bool AllIn(int rank, float roll)
+        {
+            bool won = DoubleOrNothing(roll, AllInOdds(rank));
+            CoinFlipVfx.Play(Player.Run.ProjectileRoot, transform, won);
+            CoopFx.CoinFlip(Player.Run, won);
+            return won;
+        }
         /// <summary>All In's base odds: ranks and Rigged Odds each add 5% (Lady Luck is added on top).</summary>
         public float AllInOdds(int rank) => 0.5f + 0.05f * (rank - 1) + 0.05f * Player.Powerups.Count(PowerupType.RiggedOdds);
 
