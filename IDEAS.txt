@@ -1,0 +1,8 @@
+add new character
+demoness: main attack, stab enemies with your pointy tail end
+charge: charge up to stab the enemy's vitals and leave them paralyzed for 1.5 seconds
+right click, sweep your tail in a half circle, slashing and dealing increased damage to paralyzed targets
+artifact 1: archdemons technique: gain the powers of your father, the demon lord and change your main attack, clicking acts as if previously fully charged, charging lets you charge up a devastatin tail whip that is a small cone and has the same properties as the charged one but more damage
+artifact 2: HEEEELP: open a portal and call your Demonic pet (giant beast) to slam one of its huge claws/paws down on an enemy
+artifact 3: demon curse: cast a curse (pentagram) on enemies that paralyzes them for 3 seconds and makes them take 50% more damage for 6
+theme: purple white and black, casting demonic spells
