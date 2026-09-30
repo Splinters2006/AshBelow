@@ -65,9 +65,9 @@ namespace Slopgame
             } },
             { WeaponType.Tail, new[] // Demoness: a pale girl with curled black ram horns, long dark violet hair, glowing eyes, a spade-tipped tail and bat wings
             {
-                "........................", "......NNNn....nNNN......", ".N...NnnNNDDDDNNnnN...N.", "NVN.Nn.DVUUUVVVVD.nN.NVN",
-                "NVVNNnNVUVVVVVVVVNnNNVVN", "NVUVNNNVVVVVCCVVVNNNVUVN", "NVUUVNDVVVCCCCCCVDNVUUVN", "NUVUUNDVVCCEvCCEvDNUUVUN",
-                "NVNUVNDVVCCCCCCCcDNVUNVN", "N.NVUDVVVcCCCPCcD.NUVN.N", "...NTDVVVVDcCCcD..NVN...", "....TTDVVDLWWWWWD.NN....",
+                "........................", "......NNNn....nNNN......", ".y...NnnNNDDDDNNnnN...y.", "YXY.Nn.DVUUUVVVVD.nN.YXY",
+                "YXxYNnNVUVVVVVVVVNnNYxXY", "YXZXYNNVVVVVCCVVVNNYXZXY", "YxXZXYDVVVCCCCCCVDYXZXxY", "YXxXZYDVVCCEvCCEvDYZXxXY",
+                "YXYxXYDVVCCCCCCCcDYXxYXY", "Y.YXxDVVVcCCCPCcD.YxXY.Y", "...YTDVVVVDcCCcD..YXY...", "....TTDVVDLWWWWWD.YY....",
                 ".....TNDVDLWFFWMCD......", "......NDDWWWMWWMcD......", "......NDWWWWWWWWWD......", ".......NDDCcDDCcD.......",
             } },
             { WeaponType.Coins, new[] // Gambler: a travelling merchant in a wide-brimmed hat, gold-toothed grin, fat coin purse and a flipped coin
@@ -173,6 +173,12 @@ namespace Slopgame
                 case 'J': return new Color(0.45f, 1f, 0.8f);
                 case 'j': return new Color(0.12f, 0.55f, 0.45f);
                 case 'O': return new Color(0.24f, 0.27f, 0.33f);
+                // The Demoness's bat wings: dark oxblood leather with lighter creases, veins and near-black bone.
+                case 'X': return new Color(0.13f, 0.05f, 0.07f);
+                case 'x': return new Color(0.23f, 0.1f, 0.11f);
+                case 'Z': return new Color(0.07f, 0.025f, 0.04f);
+                case 'Y': return new Color(0.04f, 0.02f, 0.03f);
+                case 'y': return new Color(0.6f, 0.54f, 0.48f);
                 default: return Color.clear;
             }
         }
