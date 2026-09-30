@@ -9,7 +9,9 @@ namespace Slopgame
     public sealed class InfernalJudgeBoss : InfernalBossBehaviour
     {
         public const float GridSpacing = 5f, GavelInterval = 0.6f;
-        public override string Title => "VASSAGO, THE INFERNAL JUDGE";
+        /// <summary>The guardian's name (the encyclopedia reads it outside a fight).</summary>
+        public const string FixedTitle = "VASSAGO, THE INFERNAL JUDGE";
+        public override string Title => FixedTitle;
         protected override Color Accent => new Color(1f, 0.75f, 0.3f);
         protected override Sprite Body => InfernalBossSprites.Judge;
         protected override Sprite Details => InfernalBossSprites.JudgeDetails;

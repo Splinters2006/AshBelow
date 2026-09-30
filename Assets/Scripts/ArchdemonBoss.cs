@@ -27,7 +27,9 @@ namespace Slopgame
         private Vector2 ground, descendFrom, landing, safeCenter;
         private HellfireAura aura;
 
-        public override string Title => HighTech ? "OMEGA, THE REACTOR TITAN" : "MALPHAS, THE HELLFIRE ARCHDEMON";
+        public override string Title => TitleFor(HighTech);
+        /// <summary>The guardian's name in a high-tech world or not (the encyclopedia reads it outside a fight).</summary>
+        public static string TitleFor(bool highTech) => highTech ? "OMEGA, THE REACTOR TITAN" : "MALPHAS, THE HELLFIRE ARCHDEMON";
         // Hurls hellfire only in the fire worlds; elsewhere it borrows the world's element (plasma, frost, steel, venom).
         protected override BoltKind Bolts => Run.World.Bolts;
         protected override HazardStyle Hazards => HighTech ? HazardStyle.Plasma : Run.World.Element;

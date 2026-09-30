@@ -28,7 +28,9 @@ namespace Slopgame
         private FlameMesh marks;
         private GameObject markObject;
 
-        public override string Title => HighTech ? "UNIT-7, THE CHROME DUELIST" : "THE STEEL DUELIST";
+        public override string Title => TitleFor(HighTech);
+        /// <summary>The guardian's name in a high-tech world or not (the encyclopedia reads it outside a fight).</summary>
+        public static string TitleFor(bool highTech) => highTech ? "UNIT-7, THE CHROME DUELIST" : "THE STEEL DUELIST";
         // Pure steel: thrown blades and cuts of blade light, never fire.
         protected override BoltKind Bolts => BoltKind.Blade;
         protected override HazardStyle Hazards => HazardStyle.Steel;

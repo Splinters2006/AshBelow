@@ -5,7 +5,8 @@ namespace Slopgame
 {
     /// <summary>
     /// The main menu's encyclopedia: every hero, talent, ability, guardian and world, revealed once it has turned up in
-    /// any descent. Discoveries are saved in <see cref="PermanentProgress"/> under the stable ids built here.
+    /// any descent. Discoveries are saved in <see cref="PermanentProgress"/> under the stable ids built here. Debug admin
+    /// mode (F1) reveals every entry for developers without writing anything to the save.
     /// </summary>
     public sealed class Encyclopedia
     {
@@ -48,6 +49,9 @@ namespace Slopgame
                 listTop = 342;
             }
             Build(run);
+            bool revealAll = DebugMode.Enabled;
+            if (revealAll)
+                for (int i = 0; i < entries.Count; i++) { var entry = entries[i]; entry.Found = true; entries[i] = entry; }
             int found = 0;
             foreach (var entry in entries) if (entry.Found) found++;
 
@@ -59,8 +63,11 @@ namespace Slopgame
             if (entries.Count == 0) DungeonUi.Label(new Rect(0, 0, 1100, 40), "Nothing here for this hero.", 17, DungeonUi.Muted);
             GUI.EndScrollView();
 
-            DungeonUi.Label(new Rect(365, 608, 845, 30), $"{PageNames[(int)page].ToUpperInvariant()}  {found} / {entries.Count} DISCOVERED", 17,
-                found == entries.Count && entries.Count > 0 ? AbilityCatalog.Gold : DungeonUi.Muted);
+            if (revealAll)
+                DungeonUi.Label(new Rect(365, 608, 845, 30), "DEBUG ADMIN MODE  /  EVERY ENTRY REVEALED  /  F1 TO TURN OFF", 17, DungeonHud.DebugColor);
+            else
+                DungeonUi.Label(new Rect(365, 608, 845, 30), $"{PageNames[(int)page].ToUpperInvariant()}  {found} / {entries.Count} DISCOVERED", 17,
+                    found == entries.Count && entries.Count > 0 ? AbilityCatalog.Gold : DungeonUi.Muted);
         }
 
         private void DrawHeroFilter(DungeonRun run, Rect row)
@@ -152,23 +159,21 @@ namespace Slopgame
             }
         }
 
-        /// <summary>
-        /// Guardians have no catalog of their own (their titles live on the fight scripts), so found ones are listed by the
-        /// title they bore and the rest are counted from the worlds' rosters: three per world, themed high-tech or not.
-        /// </summary>
+        /// <summary>Every guardian in world order: three per world, named for the world's theme (a name is listed once).</summary>
         private void BuildGuardians(PermanentProgress progress)
         {
-            var roster = new HashSet<(BossKind, bool)>();
+            var listed = new HashSet<string>();
             foreach (var world in WorldCatalog.All)
-                for (int i = 0; i < 3; i++) roster.Add(((BossKind)((int)world.FirstGuardian + i), world.HighTech));
-            var found = new List<string>();
-            foreach (var id in progress.Discovered)
-                if (id.StartsWith("guardian:")) found.Add(id.Substring("guardian:".Length));
-            found.Sort(string.CompareOrdinal);
-            foreach (var title in found)
-                entries.Add(new Entry { Found = true, Name = title, Tag = "DEFEATED", Description = "Felled in an arena on your descent.", Glyph = "!", Color = AbilityCatalog.Gold });
-            for (int i = found.Count; i < roster.Count; i++)
-                entries.Add(new Entry { Found = false, Tag = "GUARDIAN" });
+                for (int i = 0; i < 3; i++)
+                {
+                    string title = DungeonBoss.TitleFor((BossKind)((int)world.FirstGuardian + i), world.HighTech);
+                    if (!listed.Add(title)) continue;
+                    entries.Add(new Entry
+                    {
+                        Found = progress.IsDiscovered(GuardianId(title)), Name = title, Tag = $"WORLD {world.Index + 1}  /  GUARDIAN {i + 1}",
+                        Description = $"Guards {(world.IsWaveWorld ? "level" : "floor")} {(i + 1) * 5} of {world.Name}.", Glyph = "!", Color = world.Accent
+                    });
+                }
         }
 
         private static string HeroName(DungeonRun run, WeaponType weapon)

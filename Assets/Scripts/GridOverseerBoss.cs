@@ -5,7 +5,9 @@ namespace Slopgame
     /// <summary>Locks corridors in sequence; the gaps between scan lines are always traversable.</summary>
     public sealed class GridOverseerBoss : NeonBossBehaviour
     {
-        public override string Title => "GRID OVERSEER";
+        /// <summary>The guardian's name (the encyclopedia reads it outside a fight).</summary>
+        public const string FixedTitle = "GRID OVERSEER";
+        public override string Title => FixedTitle;
         protected override Color Accent => WorldCatalog.Neon;
         protected override Sprite Chassis => GuardianSprites.Overseer;
         protected override Sprite Details => GuardianSprites.OverseerDetails;
