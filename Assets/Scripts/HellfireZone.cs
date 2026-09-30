@@ -27,7 +27,9 @@ namespace Slopgame
         Plasma,
         Circuit,
         Artillery,
-        Void
+        Void,
+        /// <summary>The Savage Wilds' toxic spores: green, flame-like fumes.</summary>
+        Venom
     }
 
     /// <summary>Everything needed to rebuild a hazard on another machine.</summary>
@@ -64,6 +66,8 @@ namespace Slopgame
             new Color(0.45f, 0.95f, 1f), new Color(0.2f, 0.45f, 0.62f), new Color(0.08f, 0.15f, 0.22f));
         private static readonly Palette PlasmaPalette = new Palette(new Color(1f, 0.95f, 1f), new Color(1f, 0.6f, 0.95f),
             new Color(1f, 0.25f, 0.8f), new Color(0.5f, 0.1f, 0.6f), new Color(0.15f, 0.03f, 0.22f));
+        private static readonly Palette VenomPalette = new Palette(new Color(0.95f, 1f, 0.85f), new Color(0.75f, 1f, 0.35f),
+            new Color(0.4f, 0.85f, 0.2f), new Color(0.18f, 0.45f, 0.1f), new Color(0.06f, 0.15f, 0.04f));
 
         private DungeonRun run;
         private HazardSpec spec;
@@ -88,7 +92,7 @@ namespace Slopgame
             spec.Direction = spec.Direction.sqrMagnitude > 0.0001f ? spec.Direction.normalized : Vector2.right;
             zone.spec = spec;
             zone.colors = spec.Style == HazardStyle.Frost ? FrostPalette : spec.Style == HazardStyle.Steel ? SteelPalette
-                : spec.Style == HazardStyle.Plasma ? PlasmaPalette : HellfirePalette;
+                : spec.Style == HazardStyle.Plasma ? PlasmaPalette : spec.Style == HazardStyle.Venom ? VenomPalette : HellfirePalette;
             if (spec.Style == HazardStyle.Circuit || spec.Style == HazardStyle.Artillery || spec.Style == HazardStyle.Void)
             {
                 Color tint = spec.Style == HazardStyle.Circuit ? WorldCatalog.Neon

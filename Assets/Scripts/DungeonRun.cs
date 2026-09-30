@@ -294,6 +294,8 @@ namespace Slopgame
             }
             // Urns and crates to smash for crystals (and the odd heart).
             if (!IsBossFloor && !InShop) Breakable.Scatter(this, level, Map, World, Vector2Int.RoundToInt(exit), Seed + Floor * 4409);
+            // The world's environmental traps: fire vents, plasma lasers, frost runes, ...
+            if (!IsBossFloor && !InShop) EnvironmentHazard.Plant(this, level, Map, World, Floor, exit, Seed + Floor * 2203);
             lastHeroCells.Clear();
             ChoosingUpgrade = false;
             IsPlaying = true;

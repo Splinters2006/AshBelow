@@ -75,6 +75,7 @@ namespace Slopgame.Editor
                 {
                     TestAsh(run);
                     TestBreakables(run);
+                    TestHazards(run);
                     TestUniversalEffects(run);
                     DebugMode.Set(true);
                     while (run.Floor < 15) run.DebugSkipRoom();
@@ -84,7 +85,7 @@ namespace Slopgame.Editor
                     return;
                 }
                 TestNeon(run);
-                Finish(!failed, "26 talent caps/class gates; crit, burn, freeze, shock, ward effects; world-cleared screen; both world spawns; breakables; spread fire, freeze/pause, charge/recovery/walls");
+                Finish(!failed, "26 talent caps/class gates; crit, burn, freeze, shock, ward effects; world-cleared screen; both world spawns; breakables; environmental traps; spread fire, freeze/pause, charge/recovery/walls");
             }
             catch (Exception error) { Debug.LogException(error); Finish(false, error.Message); }
         }
@@ -131,6 +132,24 @@ namespace Slopgame.Editor
             Require(run.ProjectileRoot.GetComponentsInChildren<HealthPickup>().Length > 0, "Urn dropped no heart");
             Require(Breakable.SmashAt(run, behind.transform.position, 0.1f) && !Breakable.Active.Contains(behind), "Touch did not smash the urn");
             Require(WorldCatalog.All[0].Layout == MapLayout.Dungeon && WorldCatalog.All[1].Layout != MapLayout.Dungeon, "World layouts wrong");
+        }
+
+        private static void TestHazards(DungeonRun run)
+        {
+            foreach (var world in WorldCatalog.All) Require(world.Traps.Length > 0, "World without traps: " + world.Name);
+            Require(EnvironmentHazard.CountForFloor(1) == 0 && EnvironmentHazard.CountForFloor(3) > 0, "Wrong trap counts");
+            Require(EnvironmentHazard.Active.Count > 0, "No traps on a combat floor");
+            foreach (var trap in EnvironmentHazard.Active)
+                Require(Vector2.Distance(trap.transform.position, run.Map.Centers[0]) >= EnvironmentHazard.StartClearance - 1f, "Trap at the arrival point");
+            // A vent under the hero burns them once its warning ends.
+            Vector2 hero = run.Map.Centers[0];
+            run.Player.transform.position = hero;
+            var spec = new HazardSpec { Shape = HazardShape.Pool, Style = HazardStyle.Venom, Center = hero, Radius = 1f, Telegraph = 0f, Duration = 1f };
+            var vent = EnvironmentHazard.Create(run, run.ProjectileRoot, run.World, run.World.Traps[0], spec, 4f, 0f);
+            var zone = vent.Fire();
+            Require(zone != null && zone.Contains(hero) && !zone.Contains(hero + Vector2.right * 2f), "Trap strike missed its area");
+            UnityEngine.Object.Destroy(zone.gameObject);
+            UnityEngine.Object.Destroy(vent.gameObject);
         }
 
         private static void TestAsh(DungeonRun run)
