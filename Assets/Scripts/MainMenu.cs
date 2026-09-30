@@ -4,14 +4,24 @@ namespace Slopgame
 {
     public sealed class MainMenu : MonoBehaviour
     {
+        private const int AshMotes = 70;
+        private static readonly Color Ember = new Color(1f, 0.46f, 0.2f);
+
         public DungeonRun Run { get; set; }
         private bool selecting, shopping, coop, controls;
         private Vector2 heroScroll;
+        private Texture2D gradient, glow;
         private readonly AshShop shop = new AshShop();
         private readonly CoopMenu coopMenu = new CoopMenu();
         private readonly KeybindMenu keybindMenu = new KeybindMenu();
         public void ResetPage(bool showCoop = false) { selecting = false; shopping = false; controls = false; coop = showCoop; keybindMenu.Cancel(); }
         public void ShowCoop() => ResetPage(true);
+
+        private void OnDestroy()
+        {
+            if (gradient != null) Destroy(gradient);
+            if (glow != null) Destroy(glow);
+        }
 
         private void OnGUI()
         {
@@ -19,19 +29,8 @@ namespace Slopgame
             Matrix4x4 previous = DungeonUi.Begin();
             try
             {
-                DungeonUi.Panel(new Rect(-2000, -2000, 6000, 6000), DungeonUi.Background);
-                for (int i = 0; i < 8; i++)
-                {
-                    float offset = Mathf.Sin(Time.unscaledTime * 0.2f + i) * 20f;
-                    DungeonUi.Panel(new Rect(700 + i * 45 + offset, 70 + i * 65, 130, 2), new Color(0.21f, 0.3f, 0.33f, 0.22f));
-                }
-                DungeonUi.Label(new Rect(70, 52, 900, 25), "A ROGUELIKE DESCENT", 14, AbilityCatalog.Gold);
-                DungeonUi.Label(new Rect(65, 88, 1100, 94), shopping ? "ASH SHOP" : controls ? "CONTROLS" : coop ? "CO-OP" : "ASH / BELOW", 66);
-                DungeonUi.Label(new Rect(70, 188, 1100, 42), shopping ? "Spend the ash you carry home. Grow stronger with every descent."
-                    : controls ? "Rebind every action to the keys and mouse buttons you like. Changes save instantly."
-                    : coop ? "Descend with up to three friends. Fallen heroes rise again on the next floor."
-                    : selecting ? "Choose your hero. Shape your build. Claim the relics below." : "Nine heroes. Two relic abilities. One life in the ash.", 20, DungeonUi.Muted);
-                DungeonUi.Label(new Rect(930, 55, 280, 32), Run.Progress.IsReadOnly ? "SAVE UNAVAILABLE" : $"{Run.Progress.Ash} ASH", 23, AbilityCatalog.Gold, TextAnchor.UpperRight);
+                DrawBackdrop();
+                DrawHeader();
                 if (shopping)
                 {
                     shop.Draw(Run);
@@ -53,34 +52,145 @@ namespace Slopgame
                         if (!inParty) coop = false;
                     }
                 }
-                else if (!selecting)
-                {
-                    DungeonUi.Panel(new Rect(70, 275, 610, 258), DungeonUi.PanelColor);
-                    DungeonUi.Label(new Rect(102, 307, 530, 55), "POWER HAS A PRICE", 29, DungeonUi.Teal);
-                    DungeonUi.Label(new Rect(102, 374, 530, 130), "Charge your attacks. Read the enemy.\nEvery fifth floor, face an arena guardian.\nTake its artifact and choose your own power.", 22, DungeonUi.Muted);
-                    if (DungeonUi.Button("chooseClass", new Rect(755, 290, 420, 60), "Choose your hero", AbilityCatalog.Gold)) selecting = true;
-                    if (DungeonUi.Button("coop", new Rect(755, 362, 420, 48), "Co-op", AbilityCatalog.Gold)) coop = true;
-                    if (DungeonUi.Button("shop", new Rect(755, 422, 205, 48), "Ash shop", DungeonUi.Teal)) shopping = true;
-                    if (DungeonUi.Button("controls", new Rect(970, 422, 205, 48), "Controls", DungeonUi.Teal)) controls = true;
-                    if (DungeonUi.Button("debugMode", new Rect(755, 545, 420, 42),
-                        DebugMode.Enabled ? "Debug admin mode: ON  (F1)" : "Debug admin mode: OFF  (F1)",
-                        DebugMode.Enabled ? DungeonHud.DebugColor : DungeonUi.Muted)) DebugMode.Toggle();
-                    if (DungeonUi.Button("quit", new Rect(755, 482, 420, 48), "Quit", DungeonUi.Muted))
-                    {
-#if UNITY_EDITOR
-                        UnityEditor.EditorApplication.isPlaying = false;
-#else
-                        Application.Quit();
-#endif
-                    }
-                }
+                else if (!selecting) DrawLanding();
                 else DrawSelection();
                 if (!string.IsNullOrEmpty(Run.Progress.LastError))
                     DungeonUi.Label(new Rect(70, 645, 1140, 24), Run.Progress.LastError, 14, AbilityCatalog.Gold);
-                DungeonUi.Label(new Rect(70, 672, 1100, 24), $"{KeyBindings.MovementLabel()}  move     HOLD / RELEASE {KeyBindings.Label(GameAction.Attack)}  attack     "
+                DungeonUi.Panel(new Rect(70, 666, 1140, 1), new Color(DungeonUi.Muted.r, DungeonUi.Muted.g, DungeonUi.Muted.b, 0.18f));
+                DungeonUi.Label(new Rect(70, 676, 1140, 24), $"{KeyBindings.MovementLabel()}  move     HOLD / RELEASE {KeyBindings.Label(GameAction.Attack)}  attack     "
                     + $"{KeyBindings.Label(GameAction.Special)}  class skill     {KeyBindings.Label(GameAction.AbilityQ)} / {KeyBindings.Label(GameAction.AbilityE)}  relic abilities", 14, DungeonUi.Muted);
             }
             finally { GUI.matrix = previous; }
+        }
+
+        /// <summary>Dark gradient, a smouldering glow from below, and ash drifting down through rising embers.</summary>
+        private void DrawBackdrop()
+        {
+            EnsureTextures();
+            float t = Time.unscaledTime;
+            DungeonUi.Panel(new Rect(-2000, -2000, 6000, 6000), DungeonUi.Background);
+            if (Event.current.type != EventType.Repaint) return;
+            Color previousColor = GUI.color;
+            GUI.DrawTexture(new Rect(-400, 0, DungeonUi.Width + 800, DungeonUi.Height), gradient);
+            float pulse = 0.8f + Mathf.Sin(t * 0.7f) * 0.2f;
+            GUI.color = new Color(Ember.r, Ember.g, Ember.b, 0.2f * pulse);
+            GUI.DrawTexture(new Rect(560, 360, 900, 620), glow);
+            GUI.color = new Color(DungeonUi.Teal.r, DungeonUi.Teal.g, DungeonUi.Teal.b, 0.07f);
+            GUI.DrawTexture(new Rect(-260, -260, 900, 640), glow);
+
+            for (int i = 0; i < AshMotes; i++)
+            {
+                float seed = Hash(i), seed2 = Hash(i + 101), seed3 = Hash(i + 211);
+                bool ember = i % 5 == 0;
+                // Ash falls; every fifth mote is an ember rising and fading out near the top.
+                float speed = ember ? 22f + seed2 * 26f : 10f + seed2 * 18f;
+                float travel = Mathf.Repeat(seed3 * DungeonUi.Height + t * speed, DungeonUi.Height + 40f);
+                float y = ember ? DungeonUi.Height + 20f - travel : travel - 20f;
+                float x = seed * (DungeonUi.Width + 200f) - 100f + Mathf.Sin(t * (0.3f + seed2 * 0.4f) + i) * (18f + seed3 * 24f);
+                float size = ember ? 2f + seed3 * 2f : 1.5f + seed * 2.5f;
+                float alpha = ember ? Mathf.Clamp01(y / DungeonUi.Height) * (0.55f + Mathf.Sin(t * 5f + i) * 0.3f) : 0.1f + seed2 * 0.18f;
+                GUI.color = ember ? new Color(Ember.r, Ember.g * 1.2f, Ember.b, alpha) : new Color(0.75f, 0.78f, 0.84f, alpha);
+                GUI.DrawTexture(new Rect(x, y, size, size), Texture2D.whiteTexture);
+            }
+            GUI.color = previousColor;
+        }
+
+        private void DrawHeader()
+        {
+            float t = Time.unscaledTime;
+            DungeonUi.Panel(new Rect(70, 62, 36, 2), AbilityCatalog.Gold);
+            DungeonUi.Label(new Rect(118, 52, 700, 25), "A ROGUELIKE DESCENT", 14, AbilityCatalog.Gold);
+            string title = shopping ? "ASH SHOP" : controls ? "CONTROLS" : coop ? "CO-OP" : "ASH / BELOW";
+            // Soft ember glow and a hard drop shadow give the title some depth.
+            float flicker = 0.1f + Mathf.PerlinNoise(t * 1.4f, 0.3f) * 0.12f;
+            DungeonUi.Label(new Rect(63, 86, 1100, 94), title, 66, new Color(Ember.r, Ember.g, Ember.b, flicker));
+            DungeonUi.Label(new Rect(67, 90, 1100, 94), title, 66, new Color(Ember.r, Ember.g, Ember.b, flicker));
+            DungeonUi.Label(new Rect(69, 93, 1100, 94), title, 66, new Color(0f, 0f, 0f, 0.6f));
+            DungeonUi.Label(new Rect(65, 88, 1100, 94), title, 66);
+            DungeonUi.Label(new Rect(70, 188, 1100, 42), shopping ? "Spend the ash you carry home. Grow stronger with every descent."
+                : controls ? "Rebind every action to the keys and mouse buttons you like. Changes save instantly."
+                : coop ? "Descend with up to three friends. Fallen heroes rise again on the next floor."
+                : selecting ? "Choose your hero. Shape your build. Claim the relics below." : "Nine heroes. Two relic abilities. One life in the ash.", 20, DungeonUi.Muted);
+
+            bool readOnly = Run.Progress.IsReadOnly;
+            DungeonUi.Panel(new Rect(990, 50, 220, 44), DungeonUi.PanelColor);
+            DungeonUi.Panel(new Rect(990, 91, 220, 3), readOnly ? DungeonUi.Muted : AbilityCatalog.Gold);
+            DungeonUi.Label(new Rect(1008, 50, 90, 44), readOnly ? "SAVE" : "ASH", 13, DungeonUi.Muted, TextAnchor.MiddleLeft);
+            DungeonUi.Label(new Rect(1040, 50, 152, 44), readOnly ? "UNAVAILABLE" : Run.Progress.Ash.ToString(), readOnly ? 16 : 25,
+                readOnly ? DungeonUi.Muted : AbilityCatalog.Gold, TextAnchor.MiddleRight);
+        }
+
+        private void DrawLanding()
+        {
+            DungeonUi.Panel(new Rect(70, 262, 610, 190), DungeonUi.PanelColor);
+            DungeonUi.Panel(new Rect(70, 262, 4, 190), DungeonUi.Teal);
+            DungeonUi.Label(new Rect(102, 286, 530, 40), "POWER HAS A PRICE", 27, DungeonUi.Teal);
+            DungeonUi.Label(new Rect(102, 336, 550, 110), "Charge your attacks. Read the enemy.\nEvery fifth floor, face an arena guardian.\nTake its artifact and choose your own power.", 20, DungeonUi.Muted);
+            DrawHeroParade(new Rect(70, 470, 610, 116));
+
+            DungeonUi.Label(new Rect(755, 244, 420, 20), "MENU", 12, DungeonUi.Muted);
+            if (DungeonUi.Button("chooseClass", new Rect(755, 266, 420, 64), "Choose your hero", AbilityCatalog.Gold)) selecting = true;
+            if (DungeonUi.Button("coop", new Rect(755, 342, 420, 48), "Co-op", AbilityCatalog.Gold)) coop = true;
+            if (DungeonUi.Button("shop", new Rect(755, 402, 205, 48), "Ash shop", DungeonUi.Teal)) shopping = true;
+            if (DungeonUi.Button("controls", new Rect(970, 402, 205, 48), "Controls", DungeonUi.Teal)) controls = true;
+            if (DungeonUi.Button("quit", new Rect(755, 462, 420, 48), "Quit", DungeonUi.Muted))
+            {
+#if UNITY_EDITOR
+                UnityEditor.EditorApplication.isPlaying = false;
+#else
+                Application.Quit();
+#endif
+            }
+            if (DungeonUi.Button("debugMode", new Rect(755, 548, 420, 38),
+                DebugMode.Enabled ? "Debug admin mode: ON  (F1)" : "Debug admin mode: OFF  (F1)",
+                DebugMode.Enabled ? DungeonHud.DebugColor : DungeonUi.Muted)) DebugMode.Toggle();
+        }
+
+        /// <summary>The roster standing in a bobbing line; clicking a hero jumps straight to them on the selection page.</summary>
+        private void DrawHeroParade(Rect area)
+        {
+            DungeonUi.Panel(area, new Color(DungeonUi.PanelColor.r, DungeonUi.PanelColor.g, DungeonUi.PanelColor.b, 0.6f));
+            int count = Run.Characters.Count;
+            if (count == 0) return;
+            float slot = Mathf.Min(64f, (area.width - 24f) / count);
+            float startX = area.x + (area.width - slot * count) / 2f;
+            string hoveredName = null;
+            Color hoveredColor = DungeonUi.Muted;
+            for (int i = 0; i < count; i++)
+            {
+                var hero = Run.Characters[i];
+                Rect cell = new Rect(startX + i * slot, area.y + 12, slot, 64);
+                bool hovered = cell.Contains(Event.current.mousePosition);
+                float bob = Mathf.Sin(Time.unscaledTime * 2.2f + i * 0.8f) * 2.5f - (hovered ? 5f : 0f);
+                float size = Mathf.Min(slot - 8f, 52f) * (hovered ? 1.12f : 1f);
+                Rect frame = new Rect(cell.center.x - size / 2f, cell.y + 58 - size + bob, size, size);
+                // A small shadow on the "floor" keeps everyone grounded while they bob.
+                DungeonUi.Panel(new Rect(cell.center.x - size * 0.3f, cell.y + 60, size * 0.6f, 3), new Color(0, 0, 0, 0.45f));
+                DrawPortrait(frame, hero, hovered ? 1f : 0.82f);
+                if (hovered) { hoveredName = hero.DisplayName; hoveredColor = hero.Color; }
+                if (GUI.Button(cell, GUIContent.none, GUIStyle.none)) { Run.SelectCharacter(hero); selecting = true; }
+            }
+            DungeonUi.Label(new Rect(area.x, area.y + 84, area.width, 24), hoveredName ?? $"{count} HEROES AWAIT", 15,
+                hoveredName != null ? hoveredColor : DungeonUi.Muted, TextAnchor.MiddleCenter);
+        }
+
+        private static void DrawPortrait(Rect frame, CharacterDefinition character, float brightness = 1f)
+        {
+            var portrait = character.Weapon == WeaponType.Shadow ? DungeonVisuals.ShadowHeroSprite : HeroSprites.Body(character.Weapon);
+            if (portrait == null)
+            {
+                string glyph = character.Weapon == WeaponType.Shadow ? "///" : character.Weapon == WeaponType.Staff ? "*" : character.Weapon == WeaponType.Bow ? ">" : character.Weapon == WeaponType.Daggers ? "//" : character.Weapon == WeaponType.Fists ? "[]" : character.Weapon == WeaponType.Tail ? "~>" : character.Weapon == WeaponType.Coins ? "$" : character.Weapon == WeaponType.Beam ? "=>" : "+";
+                DungeonUi.Label(frame, glyph, Mathf.RoundToInt(frame.height * 0.55f), character.Color, TextAnchor.MiddleCenter);
+                return;
+            }
+            // Pixel-art portrait: tinted body layer, then the fixed-colour details on top.
+            Color previousColor = GUI.color;
+            GUI.color = new Color(character.Color.r * brightness, character.Color.g * brightness, character.Color.b * brightness, character.Color.a);
+            GUI.DrawTexture(frame, portrait.texture, ScaleMode.ScaleToFit, true);
+            var details = HeroSprites.Accent(character.Weapon);
+            GUI.color = new Color(brightness, brightness, brightness, 1f);
+            if (details != null) GUI.DrawTexture(frame, details.texture, ScaleMode.ScaleToFit, true);
+            GUI.color = previousColor;
         }
 
         private void DrawSelection()
@@ -99,28 +209,62 @@ namespace Slopgame
             var character = Run.SelectedCharacter;
             var permanent = new PermanentBonuses(Run.Progress, character.Weapon);
             DungeonUi.Panel(new Rect(368, 268, 842, 312), DungeonUi.PanelColor);
-            DungeonUi.Panel(new Rect(402, 302, 104, 104), new Color(character.Color.r * 0.25f, character.Color.g * 0.25f, character.Color.b * 0.25f));
-            string glyph = character.Weapon == WeaponType.Shadow ? "///" : character.Weapon == WeaponType.Staff ? "*" : character.Weapon == WeaponType.Bow ? ">" : character.Weapon == WeaponType.Daggers ? "//" : character.Weapon == WeaponType.Fists ? "[]" : character.Weapon == WeaponType.Tail ? "~>" : character.Weapon == WeaponType.Coins ? "$" : character.Weapon == WeaponType.Beam ? "=>" : "+";
-            var portrait = character.Weapon == WeaponType.Shadow ? DungeonVisuals.ShadowHeroSprite : HeroSprites.Body(character.Weapon);
-            if (portrait != null)
+            DungeonUi.Panel(new Rect(368, 268, 4, 312), character.Color);
+            if (Event.current.type == EventType.Repaint)
             {
-                // Pixel-art portrait: tinted body layer, then the fixed-colour details on top.
-                Rect frame = new Rect(412, 312, 84, 84);
                 Color previousColor = GUI.color;
-                GUI.color = character.Color;
-                GUI.DrawTexture(frame, portrait.texture, ScaleMode.ScaleToFit, true);
-                var details = HeroSprites.Accent(character.Weapon);
-                GUI.color = Color.white;
-                if (details != null) GUI.DrawTexture(frame, details.texture, ScaleMode.ScaleToFit, true);
+                GUI.color = new Color(character.Color.r, character.Color.g, character.Color.b, 0.18f);
+                GUI.DrawTexture(new Rect(344, 244, 220, 220), glow);
                 GUI.color = previousColor;
             }
-            else DungeonUi.Label(new Rect(402, 302, 104, 104), glyph, 58, character.Color, TextAnchor.MiddleCenter);
+            DungeonUi.Panel(new Rect(402, 302, 104, 104), new Color(character.Color.r * 0.25f, character.Color.g * 0.25f, character.Color.b * 0.25f));
+            float bob = Mathf.Sin(Time.unscaledTime * 2f) * 2f;
+            DrawPortrait(new Rect(412, 312 + bob, 84, 84), character);
             DungeonUi.Label(new Rect(536, 300, 630, 52), character.DisplayName, 38, character.Color);
-            DungeonUi.Label(new Rect(538, 361, 610, 32), $"{character.StartingHealth + permanent.Health} HP     {character.StartingDamage + permanent.Damage} DAMAGE     {character.MoveSpeed + permanent.Speed:0.#} SPEED", 16, DungeonUi.Muted);
+            DrawStat(new Rect(538, 360, 120, 36), "HP", character.StartingHealth + permanent.Health);
+            DrawStat(new Rect(666, 360, 120, 36), "DAMAGE", character.StartingDamage + permanent.Damage);
+            DrawStat(new Rect(794, 360, 120, 36), "SPEED", character.MoveSpeed + permanent.Speed);
             DungeonUi.Label(new Rect(402, 434, 766, 80), character.Description, 20);
             DungeonUi.Label(new Rect(402, 535, 766, 28), $"{KeyBindings.Label(GameAction.Special)}  {DungeonUi.SpecialName(character.Weapon)}     /     {KeyBindings.Label(GameAction.AbilityQ)} + {KeyBindings.Label(GameAction.AbilityE)} unlock from boss artifacts", 16, character.Color);
             if (DungeonUi.Button("back", new Rect(70, 598, 268, 48), "Back", DungeonUi.Muted)) selecting = false;
             if (DungeonUi.Button("begin", new Rect(860, 598, 350, 48), "Begin descent", character.Color)) Run.Restart();
         }
+
+        private static void DrawStat(Rect rect, string name, float value)
+        {
+            DungeonUi.Panel(rect, new Color(0.02f, 0.03f, 0.045f, 0.9f));
+            DungeonUi.Label(new Rect(rect.x + 10, rect.y, 60, rect.height), name, 11, DungeonUi.Muted, TextAnchor.MiddleLeft);
+            DungeonUi.Label(new Rect(rect.x, rect.y, rect.width - 10, rect.height), value.ToString("0.#"), 18, DungeonUi.Text, TextAnchor.MiddleRight);
+        }
+
+        private void EnsureTextures()
+        {
+            if (gradient == null)
+            {
+                // Night-blue at the top warming to a faint ash-red at the floor.
+                gradient = new Texture2D(1, 64, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, hideFlags = HideFlags.HideAndDontSave };
+                for (int y = 0; y < 64; y++)
+                {
+                    float k = y / 63f;
+                    gradient.SetPixel(0, y, Color.Lerp(new Color(0.09f, 0.035f, 0.03f, 0.9f), new Color(0.02f, 0.035f, 0.07f, 0f), Mathf.SmoothStep(0f, 1f, k)));
+                }
+                gradient.Apply();
+            }
+            if (glow == null)
+            {
+                const int size = 64;
+                glow = new Texture2D(size, size, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, hideFlags = HideFlags.HideAndDontSave };
+                for (int y = 0; y < size; y++)
+                    for (int x = 0; x < size; x++)
+                    {
+                        float d = Vector2.Distance(new Vector2(x, y), new Vector2(31.5f, 31.5f)) / 31.5f;
+                        float a = Mathf.Clamp01(1f - d);
+                        glow.SetPixel(x, y, new Color(1f, 1f, 1f, a * a));
+                    }
+                glow.Apply();
+            }
+        }
+
+        private static float Hash(int i) => Mathf.Repeat(Mathf.Sin(i * 127.1f + 311.7f) * 43758.5453f, 1f);
     }
 }
