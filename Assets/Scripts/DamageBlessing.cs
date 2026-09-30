@@ -18,7 +18,13 @@ namespace Slopgame
             Extend(damage, duration);
             blesser = from;
             fromTeammate = false;
+            if (from != null && from.Powerups.Count(PowerupType.Shepherd) > 0) hastedUntil = Mathf.Max(hastedUntil, Time.time + duration);
         }
+
+        /// <summary>Shepherd: a Paladin's blessing that also quickens the step.</summary>
+        public bool IsHasted => BonusDamage > 0 && Time.time < hastedUntil;
+        public const float ShepherdSpeed = 1.1f;
+        private float hastedUntil;
 
         /// <summary>A blessing from a Paladin on another machine.</summary>
         public void ApplyFromTeammate(int damage, float duration, ulong from)

@@ -10,7 +10,7 @@ namespace Slopgame
         Eclipse, SoulRend, ShadowReign, KnuckleSandwich, WildLeap, PrimalRage, ArchdemonTechnique, DemonPaw, DemonCurse,
         Windfall, AllIn, Jackpot, MicroMissiles, RocketBoost, SentryTurret,
         // The talents & abilities expansion.
-        ShieldThrow, Whirlwind, WarBanner, NetShot, RicochetArrow, BearTrap, IceWall, BallLightning, LightningStorm, SmokeBomb, DeathMark, ShadowClone
+        ShieldThrow, Whirlwind, WarBanner, NetShot, RicochetArrow, BearTrap, IceWall, BallLightning, LightningStorm, SmokeBomb, DeathMark, ShadowClone, HolyLance, Consecration, DivineIntervention
     }
 
     public sealed class AbilityDefinition
@@ -83,6 +83,9 @@ namespace Slopgame
             new AbilityDefinition(AbilityType.SmokeBomb, WeaponType.Daggers, "Smoke Bomb", "A smoke cloud for 4 seconds: inside it enemies lose track of you, and your hits on enemies inside always count as backstabs. Ranks make it last longer.", "~", 12f, new Color(0.62f, 0.62f, 0.7f)),
             new AbilityDefinition(AbilityType.DeathMark, WeaponType.Daggers, "Death Mark", "Mark the enemy nearest your cursor. After 3 seconds it takes all the damage it took while marked a second time.", "+", 14f, new Color(0.85f, 0.2f, 0.3f), true),
             new AbilityDefinition(AbilityType.ShadowClone, WeaponType.Daggers, "Shadow Clone", "For 7.5 seconds, every backstab you land summons a shadow clone behind the victim that backstabs it again. Ranks lengthen it.", "&", 16f, ShadowstepVfx.Violet, true),
+            new AbilityDefinition(AbilityType.HolyLance, WeaponType.Hammer, "Holy Lance", "Throw a spear of light that pierces a line with holy damage and stuns the first enemy for 1 second. Ranks add damage.", "|", 8f, Gold),
+            new AbilityDefinition(AbilityType.Consecration, WeaponType.Hammer, "Consecration", "Sanctify the ground around you for 5 seconds: enemies inside take holy damage every second, and allies inside are blessed. Ranks make it last longer.", "#", 14f, Gold),
+            new AbilityDefinition(AbilityType.DivineIntervention, WeaponType.Hammer, "Divine Intervention", "Mark the ally nearest your cursor (or yourself). If they fall in the next 5 seconds they rise at 25% HP, untouchable and +2 damage for 2 seconds.", "+", 20f, new Color(1f, 0.95f, 0.7f), true),
             new AbilityDefinition(AbilityType.WarBanner, WeaponType.Sword, "War Banner", "Plant a banner for 6 seconds. You and allies inside deal +1 damage, and everyone inside gains a ward when it's planted. Ranks extend it.", "F", 18f, new Color(0.9f, 0.2f, 0.25f), true)
         };
 

@@ -28,7 +28,9 @@ namespace Slopgame
         // Wizard.
         ElementalClash, ArcaneEcho, Shatter, Pyromancer, StormChargedOrb, Frostblink,
         // Assassin.
-        Bleed, Vanish, Ambush, Poisoner, BloodTrail, VenomKnives
+        Bleed, Vanish, Ambush, Poisoner, BloodTrail, VenomKnives,
+        // Paladin.
+        Zeal, HolyGround, Retribution, Shepherd, BlessedJudgment, HealingSanctuary
     }
 
     public sealed class PowerupDefinition
@@ -183,6 +185,12 @@ namespace Slopgame
             new PowerupDefinition(PowerupType.Poisoner, "Assassin: Poisoner", "Enemies suffering damage over time (burning, bleeding, poisoned) take +1 from your stabs", 1, WeaponType.Daggers),
             new PowerupDefinition(PowerupType.BloodTrail, "Assassin: Blood Trail", "Every 10 critical hits heal 1 HP", 1, WeaponType.Daggers),
             new PowerupDefinition(PowerupType.VenomKnives, "Venom Knives", "Fan of Knives poisons everything it cuts", 1, WeaponType.Daggers, AbilityType.FanOfKnives),
+            new PowerupDefinition(PowerupType.Zeal, "Paladin: Zeal", "Each hit adds a stack of zeal; at 10 stacks your next blessing spends them all and gives everyone blessed double the bonus", 1, WeaponType.Hammer),
+            new PowerupDefinition(PowerupType.HolyGround, "Paladin: Holy Ground", "Holy Sword strikes leave glowing ground that slows enemies", 1, WeaponType.Hammer),
+            new PowerupDefinition(PowerupType.Retribution, "Paladin: Retribution", "After you're hit, your next swipe smites in a wide arc for +3", 1, WeaponType.Hammer),
+            new PowerupDefinition(PowerupType.Shepherd, "Paladin: Shepherd", "Your blessings also give +10% movement speed", 1, WeaponType.Hammer),
+            new PowerupDefinition(PowerupType.BlessedJudgment, "Blessed Judgment", "Judgment also blesses everyone standing near the mark", 1, WeaponType.Hammer, AbilityType.Judgment),
+            new PowerupDefinition(PowerupType.HealingSanctuary, "Healing Sanctuary", "Dropping Sanctuary heals you and allies inside for 1 HP", 1, WeaponType.Hammer, AbilityType.Sanctuary),
             new PowerupDefinition(PowerupType.AegisBurst, "Aegis Burst", "When Aegis ends, it blasts nearby enemies back and damages them once per hit it blocked", 1, WeaponType.Sword, AbilityType.Aegis)
         };
 

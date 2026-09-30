@@ -175,9 +175,10 @@ namespace Slopgame
             }
         }
 
-        /// <summary>Hits dealt while blessed charge the Paladin who gave the blessing.</summary>
+        /// <summary>Hits dealt while blessed charge the Paladin who gave the blessing; the Paladin's own hits build Zeal.</summary>
         private static void CreditBlessing(DungeonPlayer player)
         {
+            if (player != null && player.ClassWeapon == WeaponType.Hammer) player.Powerups.AddZeal();
             if (player != null && player.Blessing != null && player.Blessing.BonusDamage > 0) player.Blessing.Credit(player);
         }
 

@@ -159,6 +159,12 @@ namespace Slopgame
                     break;
                 case AbilityType.ShadowClone:
                     ShadowClone.Activate(Player, ShadowClone.Duration + (rank - 1) * 1.5f); break;
+                case AbilityType.HolyLance:
+                    HolyLance(aim, Player.Damage * 2 + rank - 1); break;
+                case AbilityType.Consecration:
+                    Consecration.Sanctify(Player, Consecration.Duration + (rank - 1) * 1f, Mathf.Max(1, Player.Damage / 2) + rank - 1); break;
+                case AbilityType.DivineIntervention:
+                    Intervene((Vector2)transform.position + aim * Mathf.Min(cursorDistance, 8f)); break;
                 case AbilityType.NetShot:
                     NetShot(aim, 2f + (rank - 1) * 0.5f, Player.Damage + rank - 1); break;
                 case AbilityType.RicochetArrow:
@@ -276,6 +282,51 @@ namespace Slopgame
                 if (distance <= bestDistance) { best = enemy; bestDistance = distance; }
             }
             return best;
+        }
+
+        public const float LanceRange = 10f, LanceWidth = 0.35f, InterventionTime = 5f;
+
+        /// <summary>Holy Lance: a spear of light pierces a line with holy damage; the first enemy it meets is stunned.</summary>
+        private void HolyLance(Vector2 aim, int damage)
+        {
+            var run = Player.Run;
+            Vector2 from = transform.position;
+            Vector2 to = FindGroundLanding(run.Map, from, aim, LanceRange);
+            CombatVfx.GlowBolt(run.ProjectileRoot, from, to, AbilityCatalog.Gold);
+            CoopFx.Bolt(run, from, to, AbilityCatalog.Gold, true);
+            var line = new List<DungeonEnemy>();
+            float length = Vector2.Distance(from, to);
+            foreach (var enemy in run.Enemies)
+            {
+                if (enemy == null || enemy.Health <= 0) continue;
+                Vector2 offset = (Vector2)enemy.transform.position - from;
+                float along = Vector2.Dot(offset, aim);
+                if (along < 0f || along > length + enemy.HitRadius || Mathf.Abs(Vector2.Dot(offset, Vector2.Perpendicular(aim))) > LanceWidth + enemy.HitRadius) continue;
+                line.Add(enemy);
+            }
+            line.Sort((a, b) => Vector2.Dot((Vector2)a.transform.position - from, aim).CompareTo(Vector2.Dot((Vector2)b.transform.position - from, aim)));
+            for (int i = 0; i < line.Count; i++)
+            {
+                CombatDamage.Apply(Player, line[i], damage, DamageElement.Holy, from, 0.6f);
+                if (i == 0 && line[i] != null && line[i].Health > 0) line[i].Stun(1f);
+            }
+        }
+
+        /// <summary>Divine Intervention: the ally nearest the cursor (the Paladin, if none is closer) is watched over for a few seconds.</summary>
+        private void Intervene(Vector2 cursor)
+        {
+            var run = Player.Run;
+            Vector2 target = transform.position;
+            RemoteHero chosen = null;
+            if (run.IsNetworked)
+                foreach (var hero in run.Coop.RemoteHeroes)
+                    if (hero != null && hero.IsAlive && Vector2.Distance(cursor, hero.transform.position) < Vector2.Distance(cursor, target))
+                    { chosen = hero; target = hero.transform.position; }
+            if (chosen == null) Player.Intercede(InterventionTime);
+            else run.Coop.SupportAllies(target, 0.6f, SupportKind.Intervention, 0, InterventionTime);
+            HeroVfx.Motes(run.ProjectileRoot, target, 0.7f, new Color(1f, 0.95f, 0.7f), 16, 1f);
+            CombatVfx.Ring(run.ProjectileRoot, target, 0.8f, new Color(1f, 0.95f, 0.7f), 0.5f);
+            CoopFx.Ring(run, target, 0.8f, new Color(1f, 0.95f, 0.7f), 0.5f);
         }
 
         public const float NetRange = 5f, NetCone = 70f;

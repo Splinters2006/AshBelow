@@ -201,7 +201,7 @@ namespace Slopgame
             // A roll can be steered: it keeps its speed and length but follows the movement keys.
             if (IsRolling && movement.sqrMagnitude > 0.01f) rollDirection = movement.normalized;
             Vector2 velocity = IsRolling ? rollDirection * Speed * 2.6f * Buffs.DodgeSpeedMultiplier
-                : movement * Speed * Buffs.MoveMultiplier * Crystals.SpeedMultiplier * (IsPoisoned ? PoisonSlow : 1f) * Powerups.MoveMultiplier(this) * (Weapon.IsHeavyAttacking ? 0.55f : Charge.IsCharging ? 0.7f : 1f);
+                : movement * Speed * Buffs.MoveMultiplier * Crystals.SpeedMultiplier * (IsPoisoned ? PoisonSlow : 1f) * Powerups.MoveMultiplier(this) * (Blessing.IsHasted ? DamageBlessing.ShepherdSpeed : 1f) * (Weapon.IsHeavyAttacking ? 0.55f : Charge.IsCharging ? 0.7f : 1f);
             if (DebugMode.Enabled) velocity *= DebugMode.SpeedMultiplier;
             transform.position = Run.Map.Move(transform.position, velocity * Time.deltaTime);
             // Rolling into an urn smashes it.
@@ -326,6 +326,22 @@ namespace Slopgame
             return true;
         }
         private bool backupDriveSpent, wasVeiled;
+        private float interventionUntil;
+
+        /// <summary>Divine Intervention: for a while, a killing blow is turned aside.</summary>
+        public void Intercede(float duration) => interventionUntil = Mathf.Max(interventionUntil, Time.time + duration);
+
+        /// <summary>Saved by Divine Intervention: back at a quarter of max HP, untouchable and empowered for 2 seconds.</summary>
+        private void Rescue()
+        {
+            interventionUntil = 0f;
+            Health = Mathf.Max(1, Mathf.CeilToInt(MaxHealth * 0.25f));
+            Protect(2f);
+            Blessing.Apply(2, 2f);
+            HeroVfx.Pulse(Run.ProjectileRoot, transform.position, 2f, new Color(1f, 0.95f, 0.7f), 0.6f);
+            HeroVfx.Motes(Run.ProjectileRoot, transform.position, 1f, AbilityCatalog.Gold, 24, 1.2f);
+            ScreenFx.Flash(new Color(1f, 0.95f, 0.7f, 0.45f), 0.5f);
+        }
 
         /// <summary>Standing in burning ground: one damage per second, however many fires overlap.</summary>
         public void Burn()
@@ -343,7 +359,8 @@ namespace Slopgame
             if (!warded)
             {
                 // Cheat Death (once per world), then the Ash shop's Backup Drive (once per descent), turn a killing blow into 1 HP.
-                if (Health == 1 && TryDefyDeath()) { }
+                if (Health == 1 && Time.time < interventionUntil) Rescue();
+                else if (Health == 1 && TryDefyDeath()) { }
                 else Health--;
                 Mechanic?.OnDamaged();
             }
@@ -403,6 +420,7 @@ namespace Slopgame
             if (kind == SupportKind.Heal) Heal(amount);
             else if (kind == SupportKind.Protect) Protect(duration);
             else if (kind == SupportKind.Ward) Powerups.AddWard();
+            else if (kind == SupportKind.Intervention) Intercede(duration);
             else if (kind == SupportKind.Bless)
             {
                 if (teammate.HasValue) Blessing.ApplyFromTeammate(amount, duration, teammate.Value);

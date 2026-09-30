@@ -70,6 +70,17 @@ namespace Slopgame
         private int rhythmCount, spellbladeStrikes;
         private bool elementalPrimed, inBasicAttack, rhythmBeat, spellbladeActive;
         private float closeCallReadyAt;
+        public const int ZealStacks = 10;
+        /// <summary>Zeal: stacks from the Paladin's hits; a full count doubles the next blessing.</summary>
+        public int Zeal { get; private set; }
+        public void AddZeal() { if (Count(PowerupType.Zeal) > 0 && Zeal < ZealStacks) Zeal++; }
+        public bool ConsumeZeal()
+        {
+            if (Zeal < ZealStacks) return false;
+            Zeal = 0;
+            return true;
+        }
+
         /// <summary>Ambush: the next hit after the hero was hidden deals double damage.</summary>
         public bool AmbushReady { get; set; }
         private int bloodTrailCrits;
