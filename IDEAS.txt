@@ -1,0 +1,219 @@
+Universal talents
+Glass Cannon:
++2 damage, −2 max HP
+rework to 1.5x dmg, halved max hp (scales so if you get +2 max hp you get +1 instead)
+
+Last Stand:
+While at 1 HP, deal double damage and move 20% faster
+good
+
+Berserker:
++1 damage for each HP you're missing (up to +3)
+rework to +1% dmg per 1% of hp missing, incentivises low max hp characters
+
+Opening Strike:
+Your first hit on an enemy at full health is always a crit
+good
+
+Executioner:
++50% damage to enemies below 25% health
+good
+
+Rhythm:
+Every 4th basic attack deals double damage (make right click also have the basic attack tag so you can left click 3 times and then right click)
+good
+
+Spellblade:
+Using a Q or E ability makes your next 3 basic attacks deal +2 
+good
+
+
+Overkill:
+Damage left over from a killing blow hits the nearest enemy
+good but make it small, make radius scale with level of overkill
+
+Static Kills:
+Every kill shocks enemies within 2 units
+way too overpowered, also shock deals damage based on initial hit rework to -> killing an enemy makes your next elemental damage apply their element
+rename to elemental kills
+
+Thorns
+When you're hit, deal your damage to every enemy within 1.5 units
+change to 1 unit
+
+Close Call
+Rolling through an enemy bolt gives +1 ward (once every 5 s)
+good
+
+Cheat Death
+Once per run, a hit that would kill you leaves you at 1 HP
+refreshes after changing worlds
+
+
+
+
+KNIGHT
+remove bulwark charge, too similar to shield charge
+rest is fine
+
+talents:
+retaliation: make ur slash charge instantly instead of buffing dmg
+counterweight: fine
+cleave: rework: increase aoe of fully charged slashes
+bastion: instead of standing still make it on parry, increase cd to 15 seconds
+heavy armor: remove this bullshit
+glacial rush: fine
+aegis burst: fine
+
+
+ARCHER
+net shot: make root also count as immobilize, update things that previously required paralysis/freeze to just require immobilize (only for universal talents, leave class specifics untouched)
+ricochet arrow:fine, make it pierce enemies too
+blast arrow: remove
+bear trap: fine
+
+talents:
+hunters mark: fine
+sniper: fine
+point blanki:fine
+steady aim: remove
+quick nock: fine
+storm volley: rework: volley now deals +1 damage for each consecutive hit on a target, for example 3 enemies each take their own extra damage when being hit
+splitting shot: fine
+
+wizard:
+all wizard abilities have guaranteed elemental effects
+ice wall: enemies who hit the wall break it (has certain amount of health) the wall that breaks freezes enemies very close to it
+ball lightning: fine
+meteor: remove
+time warp: rework into lightning strikes from above
+
+elemental clash: rework: just make it apply the first applied element in a 2 unit radius
+arcane echo: fine
+shatter: fine
+pyromancer: fine
+focus: REMOVE THIS SHIT WE DONT WANT TO STAND STILL
+storm charged orb: fine
+frostblink: fine
+
+
+ASSASSIN:
+smoke bomb: fine
+grappling hook: remove
+death mark: fine
+shadow clone: rework to: everytime you land a backstab for the next 7.5 seconds a clone appears and backstabs again
+
+talents:
+bleed: fine
+vanish: fine
+ambush: double instead of triple
+poisoner: rework: enemies affected by a dot (burn/bleed/poison etc)
+blood trail: fine
+venom knives: fine
+toxic exit: remove
+
+
+paladin:
+holy lance: fine
+consecration: fine (add holy and demonic damage types)
+radiant spin: remove
+divine intervention: rework to put a mark on an ally, if the ally dies in the next 5 seconds they get revived at 25% health and  become immortal and get a +2 damage boost for 2 seconds
+
+zeal: rework: make each hit give you a stack of zeal, on 10 stacks, your next blessing consumes all 5 and gives everyone blessed double the buffs
+holy ground: fine
+retribution: fine
+shepherd: fine
+smite the wicked: remove
+blessed judgement: fine
+healing sanctuary: fine
+
+
+BRAWLER
+thunder clap: fine, make stun count as immobilize too
+haymaker dash: fine
+suplex: fine
+iron body: remove
+
+combo counter: rework to each punch landed in one barrage makes the final punch deal +1 damage
+roll punch: change to footwork: rolling has extended iframes
+brawl: fine, remove the limit and give +3 for bosses instead
+knockout: fine
+pain tolerance: remove
+meteor leap: fine
+sandwich special: fine
+
+
+DEMONESS
+wing dash: fine, make paralysis last 1 seconds instead
+soul siphon: fine, 1 hp per enemy per second, since paral doesnt last long
+hellchains: remove
+imp summon: completely rework: consume paralysis on nearby enemies, removing it and making them take more more damage the longer the paralysis wouldve laster
+
+
+chain paralysis: remove
+lingering terror: fine
+torment: fine but remove limit
+dread aura: fine but make it 3 units
+blood pact: fine
+cursed paw: very good but rework heelps sprite
+infernal technique: fine
+
+
+GAMBLER
+card toss: remove the crit part, also make them able to apply paralysis
+dice bomb: fine
+roulette: remove
+insurance: fine
+
+ricochet: fine
+gold coin: rework to instead of 5x make it amount of coins x damage
+compound interest: keep
+heads or tails: keep
+tip jar: keep
+gold rush: remove
+snake eyes: rework to: losing in all in makes you even more greedy, empowering doubling your damage for 5 seconds
+
+
+AUGMENT
+EMP Pulse: fine
+grappe arm: remove the pulling yourself to wall, only keep enemy pulling, wouldnt work on bosses
+orbital strike: rename to orbital laser
+nano repair: remove
+
+thermal vent: fine
+overheat: fine
+targetting arary: fine
+reactive plating: fine
+coolant: fine
+cryo payload: remove
+sentry turret: fine
+
+
+
+
+
+
+
+
+
+
+
+
+ASH SHOP
+waystone: remove
+ember heart: fine, but make it talent
+backup drive: make it 1hp
+targeting chip: fine
+infernal pact: fine but rework to 10% extra damage and 10% reduced max hp, and make it increasable to 90% max health will stay 90% reduced, not only starting max hp
+soul tithe: fine
+third hand: remove
+sholars reroll: fine
+black market pass: fine
+smugglers stash: fine but make limit it to 100
+pilgirms grace remove since sunken cathedral is gone
+sanctified relics, move to arcane spire
+wild growth: fine
+apex predator: fine but increazse price
+high stakes and golden ticket: remove
+
+
