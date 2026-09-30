@@ -91,6 +91,10 @@ namespace Slopgame
             return null;
         }
 
+        /// <summary>Every machine raises its own Ice Wall, so the host's enemies are really held back.</summary>
+        public static void IceWall(DungeonRun run, Vector2 center, Vector2 along, float halfLength, float duration, int health)
+            => Send(run, FxKind.IceWall, center, along, null, halfLength, duration, health);
+
         public static void RearHit(DungeonRun run, Vector2 position, Vector2 facing, float hitRadius)
             => Send(run, FxKind.RearHit, position, facing, null, hitRadius);
 
@@ -101,6 +105,7 @@ namespace Slopgame
             switch (fx.Kind)
             {
                 case FxKind.Arrow: PlayerProjectile.SpawnGhost(run, fx.A, fx.B, fx.F1); break;
+                case FxKind.IceWall: Slopgame.IceWall.Create(run, fx.A, fx.B, fx.F1, fx.F2, fx.N); break;
                 case FxKind.Coin: PlayerProjectile.SpawnGhost(run, fx.A, fx.B, fx.F1, ProjectileStyle.Coin); break;
                 case FxKind.Spell: SpellProjectile.SpawnGhost(run, fx.A, fx.B, color, fx.F1, fx.F2, fx.N); break;
                 case FxKind.Slash: HeroVfx.Slash(root, fx.A, fx.B, fx.F1, fx.F2, color); break;

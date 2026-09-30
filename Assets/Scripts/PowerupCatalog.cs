@@ -24,7 +24,9 @@ namespace Slopgame
         // Knight.
         Retaliation, Counterweight, Cleave, Bastion, GlacialRush, AegisBurst,
         // Archer.
-        HuntersMark, Sniper, PointBlank, QuickNock, StormVolley, SplittingShot
+        HuntersMark, Sniper, PointBlank, QuickNock, StormVolley, SplittingShot,
+        // Wizard.
+        ElementalClash, ArcaneEcho, Shatter, Pyromancer, StormChargedOrb, Frostblink
     }
 
     public sealed class PowerupDefinition
@@ -167,6 +169,12 @@ namespace Slopgame
             new PowerupDefinition(PowerupType.QuickNock, "Archer: Quick Nock", "Every 5th arrow fires fully charged instantly", 1, WeaponType.Bow),
             new PowerupDefinition(PowerupType.StormVolley, "Storm Volley", "Each Arrow Volley arrow that strikes the same enemy again deals +1 more than the last", 1, WeaponType.Bow, AbilityType.Volley),
             new PowerupDefinition(PowerupType.SplittingShot, "Splitting Shot", "After the first enemy, Piercing Shot splits into 3 arrows", 1, WeaponType.Bow, AbilityType.PiercingShot),
+            new PowerupDefinition(PowerupType.ElementalClash, "Wizard: Elemental Clash", "Hitting a burning or frozen enemy with another element spreads its first element to enemies within 2 units", 1, WeaponType.Staff),
+            new PowerupDefinition(PowerupType.ArcaneEcho, "Wizard: Arcane Echo", "Every 5th fireball fires a second copy", 1, WeaponType.Staff),
+            new PowerupDefinition(PowerupType.Shatter, "Wizard: Shatter", "A fully charged fireball on a frozen enemy shatters the ice for double damage", 1, WeaponType.Staff),
+            new PowerupDefinition(PowerupType.Pyromancer, "Wizard: Pyromancer", "Burning enemies take +1 from your lightning", 1, WeaponType.Staff),
+            new PowerupDefinition(PowerupType.StormChargedOrb, "Storm-Charged Orb", "Hold Inferno Orb's key to charge it; at full charge its blast burns and shocks everything it hits", 1, WeaponType.Staff, AbilityType.Fireball),
+            new PowerupDefinition(PowerupType.Frostblink, "Frostblink", "Arcane Blink leaves a Frost Nova where you started", 1, WeaponType.Staff, AbilityType.Blink),
             new PowerupDefinition(PowerupType.AegisBurst, "Aegis Burst", "When Aegis ends, it blasts nearby enemies back and damages them once per hit it blocked", 1, WeaponType.Sword, AbilityType.Aegis)
         };
 

@@ -185,7 +185,8 @@ namespace Slopgame
             {
                 if (!IsRanged || !shooter.IsCharging) Facing.TurnToward(target - position, Time.deltaTime * ActionSpeedMultiplier);
                 Vector2 direction = tactics.Direction(target, visible, IsRanged && shooter.IsCharging);
-                transform.position = Run.Map.Move(position, direction * Speed * MoveMultiplier * Time.deltaTime, MoveRadius);
+                Vector2 step = Run.Map.Move(position, direction * Speed * MoveMultiplier * Time.deltaTime, MoveRadius);
+                if (!IceWall.BlocksEnemy(this, position, step)) transform.position = step;
             }
             UpdateColor();
             if (!IsRanged) TryContactHit(HitRadius + 0.27f);
@@ -405,6 +406,9 @@ namespace Slopgame
             if (away.sqrMagnitude > 0.0001f) Facing.Face(away.normalized);
             return Paralyze(duration);
         }
+
+        /// <summary>Breaks the enemy out of its ice at once (Shatter).</summary>
+        public void Thaw() { if (!Run.IsGuest) frozenUntil = Mathf.Min(frozenUntil, Time.time); }
 
         /// <summary>Stuns the enemy: held like paralysis. Guardians are stunned half as long and then resist for a while.</summary>
         public bool Stun(float duration)

@@ -10,7 +10,7 @@ namespace Slopgame
         Eclipse, SoulRend, ShadowReign, KnuckleSandwich, WildLeap, PrimalRage, ArchdemonTechnique, DemonPaw, DemonCurse,
         Windfall, AllIn, Jackpot, MicroMissiles, RocketBoost, SentryTurret,
         // The talents & abilities expansion.
-        ShieldThrow, Whirlwind, WarBanner, NetShot, RicochetArrow, BearTrap
+        ShieldThrow, Whirlwind, WarBanner, NetShot, RicochetArrow, BearTrap, IceWall, BallLightning, LightningStorm
     }
 
     public sealed class AbilityDefinition
@@ -77,6 +77,9 @@ namespace Slopgame
             new AbilityDefinition(AbilityType.NetShot, WeaponType.Bow, "Net Shot", "Fire a net in a cone that roots every enemy it catches for 2 seconds. Ranks hold them longer.", "#", 9f, new Color(0.8f, 0.75f, 0.55f)),
             new AbilityDefinition(AbilityType.RicochetArrow, WeaponType.Bow, "Ricochet Arrow", "An arrow that pierces enemies and bounces off walls up to 3 times, dealing more damage with each bounce. Ranks add damage.", "/\\", 8f, new Color(1f, 0.85f, 0.45f)),
             new AbilityDefinition(AbilityType.BearTrap, WeaponType.Bow, "Bear Trap", "Set a trap at the cursor (up to 2 at once). The first enemy to step in is held for 2 seconds and takes damage. Ranks hold longer and hurt more.", "W", 6f, new Color(0.62f, 0.62f, 0.68f), true),
+            new AbilityDefinition(AbilityType.IceWall, WeaponType.Staff, "Ice Wall", "Raise a wall of ice across your aim for 4 seconds that blocks enemies and their bolts. Enough blows break it, and the shards freeze enemies right beside it. Ranks make it last longer and tougher.", "||", 11f, new Color(0.7f, 0.92f, 1f)),
+            new AbilityDefinition(AbilityType.BallLightning, WeaponType.Staff, "Ball Lightning", "A slow orb of lightning drifts forward for 4 seconds, zapping and shocking every enemy it passes. Ranks add damage and time.", "o", 9f, CombatDamage.ShockColor),
+            new AbilityDefinition(AbilityType.LightningStorm, WeaponType.Staff, "Lightning Storm", "For 3 seconds, lightning strikes down from above onto enemies around you, shocking each one it hits. Ranks lengthen the storm.", "!", 16f, new Color(0.6f, 0.8f, 1f), true),
             new AbilityDefinition(AbilityType.WarBanner, WeaponType.Sword, "War Banner", "Plant a banner for 6 seconds. You and allies inside deal +1 damage, and everyone inside gains a ward when it's planted. Ranks extend it.", "F", 18f, new Color(0.9f, 0.2f, 0.25f), true)
         };
 

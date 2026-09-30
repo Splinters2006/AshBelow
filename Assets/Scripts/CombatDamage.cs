@@ -112,15 +112,41 @@ namespace Slopgame
                 if (enemy.Health <= 0) Overkill(player, enemy, rolled - healthBefore);
                 return;
             }
+            // Pyromancer: burning enemies take +1 from lightning.
+            if (element == DamageElement.Lightning && enemy.IsBurning && player.Powerups.Count(PowerupType.Pyromancer) > 0) damage++;
+            bool wasBurning = enemy.IsBurning, wasFrozen = enemy.IsFrozen;
             HitVfx(player, enemy.transform.position, source, ElementColor(element), false);
             enemy.Hit(damage, source, knockback);
             CreditBlessing(player);
             if (enemy.Health <= 0) Overkill(player, enemy, damage - healthBefore);
+            if (player.Powerups.Count(PowerupType.ElementalClash) > 0 && HasEffect(element))
+            {
+                if (wasBurning && element != DamageElement.Fire) Clash(player, enemy, DamageElement.Fire, damage);
+                else if (wasFrozen && element != DamageElement.Ice) Clash(player, enemy, DamageElement.Ice, damage);
+            }
             // Holy and demonic damage have no status effect; the rest roll for one instead of critical damage.
             if (!HasEffect(element)) return;
             // Elemental Kills' charge is spent on the next elemental hit, even one that would have set off anyway.
             bool primed = player.Powerups.ConsumeElementalPrime();
             if (guaranteedEffect || primed || opening || Random.value < player.Powerups.ElementalEffectChance) ApplyEffect(player, enemy, element, damage);
+        }
+
+        public const float ClashRadius = 2f;
+
+        /// <summary>Elemental Clash: a second element on a burning or frozen enemy spreads the first to everything within 2 units.</summary>
+        private static void Clash(DungeonPlayer player, DungeonEnemy origin, DamageElement first, int hit)
+        {
+            var run = player.Run;
+            Vector2 center = origin.transform.position;
+            var color = ElementColor(first);
+            HeroVfx.Pulse(run.ProjectileRoot, center, ClashRadius, color, 0.3f);
+            CoopFx.Pulse(run, center, ClashRadius, color, 0.3f);
+            foreach (var enemy in run.Enemies.ToArray())
+            {
+                if (enemy == null || enemy == origin || enemy.Health <= 0 || Vector2.Distance(center, enemy.transform.position) > ClashRadius + enemy.HitRadius) continue;
+                if (first == DamageElement.Fire) enemy.Burn(BurnTicks + player.Powerups.Count(PowerupType.SlowBurn), BurnTickDamage(hit));
+                else enemy.Freeze(FreezeDuration + player.Powerups.Count(PowerupType.Permafrost) * 0.3f);
+            }
         }
 
         /// <summary>Hits dealt while blessed charge the Paladin who gave the blessing.</summary>

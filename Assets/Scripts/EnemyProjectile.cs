@@ -64,7 +64,7 @@ namespace Slopgame
             for (int i = 0; i < steps; i++)
             {
                 Vector2 next = (Vector2)transform.position + movement / steps;
-                if (!run.Map.CanStand(next, 0.11f) || HolyBubble.Blocks(transform.position, next)) { Consume(); return; }
+                if (!run.Map.CanStand(next, 0.11f) || HolyBubble.Blocks(transform.position, next) || (!IsReflected && IceWall.StopsBolt(transform.position, next))) { Consume(); return; }
                 transform.position = next;
                 if (IsReflected)
                 {

@@ -94,6 +94,14 @@ namespace Slopgame
         /// </summary>
         public bool TryUse(int slot, Vector2 aim)
         {
+            // Storm-Charged Orb: Inferno Orb charges while its key is held and flies on release.
+            if (slot >= 0 && slot < SlotCount && equipped[slot] == AbilityType.Fireball && Player.Powerups.Count(PowerupType.StormChargedOrb) > 0
+                && orbChargeSlot < 0 && orbCharge < 0f && Player.Run.IsPlaying && CooldownRemaining(slot) <= 0f)
+            {
+                orbChargeSlot = slot;
+                orbChargeStarted = Time.time;
+                return true;
+            }
             // Recasting an active Sanctuary drops it; its cooldown keeps running from the original cast.
             if (slot >= 0 && slot < SlotCount && equipped[slot] == AbilityType.Sanctuary && Player.Run.IsPlaying)
             {
@@ -134,6 +142,12 @@ namespace Slopgame
                     Whirlwind.Spin(Player, Whirlwind.Duration + (rank - 1) * 0.4f, Player.Damage + rank - 1); break;
                 case AbilityType.WarBanner:
                     WarBanner.Plant(Player, WarBanner.Duration + (rank - 1) * 1.5f); break;
+                case AbilityType.IceWall:
+                    IceWall.Raise(Player, aim, IceWall.Duration + (rank - 1) * 0.75f, IceWall.BaseHealth + (rank - 1) * 3); break;
+                case AbilityType.BallLightning:
+                    BallLightning.Launch(Player, aim, BallLightning.Duration + (rank - 1) * 0.5f, Player.Damage + rank - 1); break;
+                case AbilityType.LightningStorm:
+                    LightningStorm.Call(Player, LightningStorm.Duration + (rank - 1) * 0.75f, Player.Damage * 2 + rank - 1); break;
                 case AbilityType.NetShot:
                     NetShot(aim, 2f + (rank - 1) * 0.5f, Player.Damage + rank - 1); break;
                 case AbilityType.RicochetArrow:
@@ -150,13 +164,21 @@ namespace Slopgame
                     Dash(aim, Mathf.Min(3.5f + powers.Count(PowerupType.WindstepDistance) * 0.5f, cursorDistance), 0, true);
                     Fan(aim, 3, BowAttack.SpreadAngle, Player.Damage + rank - 1, BowAttack.HeavyRange); break;
                 case AbilityType.Fireball:
-                    SpellProjectile.Spawn(Player, aim, damage, DamageElement.Fire, definition.Color, 7f,
-                        1.7f + powers.Count(PowerupType.FireballRadius) * 0.4f, guaranteedEffect: true); break;
+                    var orb = SpellProjectile.Spawn(Player, aim, damage, DamageElement.Fire, definition.Color, 7f,
+                        1.7f + powers.Count(PowerupType.FireballRadius) * 0.4f, guaranteedEffect: true);
+                    // Storm-Charged Orb: held to full charge, the blast shocks everything it burns.
+                    if (orbCharge >= 1f) { orb.StormCharged = true; HeroVfx.Pulse(Player.Run.ProjectileRoot, transform.position, 1f, CombatDamage.ShockColor, 0.3f); }
+                    break;
                 case AbilityType.FrostNova:
                     StartCoroutine(ExpandingNova(transform.position, FrostNovaRadius, FrostNovaExpandTime, damage, definition.Color,
                         FrostNovaFreeze + powers.Count(PowerupType.FrostDuration) * 0.5f + (rank - 1) * 0.25f)); break;
                 case AbilityType.Blink:
-                    Blink(blinkLanding, definition.Color); break;
+                    Vector2 blinkFrom = transform.position;
+                    Blink(blinkLanding, definition.Color);
+                    // Frostblink: a Frost Nova bursts where the Wizard vanished.
+                    if (powers.Count(PowerupType.Frostblink) > 0)
+                        StartCoroutine(ExpandingNova(blinkFrom, FrostNovaRadius, FrostNovaExpandTime, Player.Damage * 2, AbilityCatalog.Ice, FrostNovaFreeze));
+                    break;
                 case AbilityType.FanOfKnives:
                     int knives = 12 + powers.Count(PowerupType.KnifeCount) * 2;
                     for (int i = 0; i < knives; i++)
@@ -248,6 +270,27 @@ namespace Slopgame
                 if (enemy.Health > 0) enemy.Root(hold);
                 HeroVfx.Sparks(run.ProjectileRoot, enemy.transform.position, color, 6, 2f, 0.3f);
             }
+        }
+
+        public const float OrbChargeTime = 1f;
+        private int orbChargeSlot = -1;
+        private float orbChargeStarted, orbCharge = -1f;
+        /// <summary>How full Storm-Charged Orb's charge is (0-1), or -1 when not charging.</summary>
+        public float OrbCharge => orbChargeSlot >= 0 ? Mathf.Clamp01((Time.time - orbChargeStarted) / OrbChargeTime) : -1f;
+
+        private void Update()
+        {
+            if (orbChargeSlot < 0) return;
+            if (!Player.Run.IsPlaying || Player.Health <= 0 || equipped[orbChargeSlot] != AbilityType.Fireball) { orbChargeSlot = -1; return; }
+            if (OrbCharge >= 1f && Time.frameCount % 6 == 0)
+                HeroVfx.Sparks(Player.Run.ProjectileRoot, transform.position, CombatDamage.ShockColor, 2, 2f, 0.2f);
+            if (KeyBindings.IsHeld(orbChargeSlot == 0 ? GameAction.AbilityQ : GameAction.AbilityE)) return;
+            // Released: the orb flies with whatever charge it built.
+            int slot = orbChargeSlot;
+            orbCharge = OrbCharge;
+            orbChargeSlot = -1;
+            try { TryUse(slot, Player.AimDirection * 6f); }
+            finally { orbCharge = -1f; }
         }
 
         /// <summary>Dashes and blinks travel the way the hero is moving (see <see cref="DungeonPlayer.MobilityAim"/>).</summary>
