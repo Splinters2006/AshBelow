@@ -18,12 +18,22 @@ namespace Slopgame
         private static readonly Dictionary<int, GUIStyle> fields = new Dictionary<int, GUIStyle>();
         private static readonly Dictionary<string, Vector2> scrolls = new Dictionary<string, Vector2>();
 
-        public static Matrix4x4 Begin()
+        private static readonly Dictionary<string, float> drags = new Dictionary<string, float>();
+
+        /// <summary>Fits the 1280x720 canvas to the screen, shrunk about the centre by the player's UI size (see <see cref="GameSettings"/>).</summary>
+        public static Matrix4x4 Begin(float size = 1f)
         {
             var previous = GUI.matrix;
-            float scale = Mathf.Min(Screen.width / Width, Screen.height / Height);
+            float scale = Mathf.Min(Screen.width / Width, Screen.height / Height) * size;
             GUI.matrix = Matrix4x4.TRS(new Vector3((Screen.width - Width * scale) / 2f, (Screen.height - Height * scale) / 2f), Quaternion.identity, Vector3.one * scale);
             return previous;
+        }
+
+        /// <summary>Converts a screen pixel position (origin bottom-left) to canvas coordinates under <see cref="Begin"/> with the same size.</summary>
+        public static Vector2 ScreenToCanvas(Vector2 screen, float size = 1f)
+        {
+            float scale = Mathf.Min(Screen.width / Width, Screen.height / Height) * size;
+            return new Vector2(screen.x - (Screen.width - Width * scale) / 2f, Screen.height - screen.y - (Screen.height - Height * scale) / 2f) / scale;
         }
 
         private static void Initialize()
@@ -96,7 +106,7 @@ namespace Slopgame
                 Label(new Rect(rect.x, rect.yMax, innerWidth, 16), "scroll for more  ▾", 11, Muted, TextAnchor.UpperRight);
         }
 
-        public static bool Button(string id, Rect rect, string text, Color accent, bool enabled = true)
+        public static bool Button(string id, Rect rect, string text, Color accent, bool enabled = true, int size = 18)
         {
             Initialize();
             bool hovered = enabled && rect.Contains(Event.current.mousePosition);
@@ -108,12 +118,59 @@ namespace Slopgame
             }
             Panel(rect, Color.Lerp(PanelColor, new Color(accent.r * 0.35f, accent.g * 0.35f, accent.b * 0.35f, 1f), hover));
             Panel(new Rect(rect.x, rect.y + rect.height - 3, rect.width, 3), enabled ? accent : Muted * 0.5f);
-            Label(rect, text, 18, enabled ? Text : Muted, TextAnchor.MiddleCenter);
+            Label(rect, text, size, enabled ? Text : Muted, TextAnchor.MiddleCenter);
             bool previous = GUI.enabled;
             GUI.enabled = previous && enabled;
             bool clicked = GUI.Button(rect, GUIContent.none, invisible);
             GUI.enabled = previous;
             return clicked;
+        }
+
+        /// <summary>
+        /// A horizontal slider snapped to <paramref name="step"/>. The new value only lands in <paramref name="value"/> when the
+        /// drag is released (so a slider that resizes the UI doesn't move under the cursor); returns true then.
+        /// </summary>
+        public static bool Slider(string id, Rect rect, ref float value, float min, float max, float step, Color accent)
+        {
+            Initialize();
+            int control = GUIUtility.GetControlID(id.GetHashCode(), FocusType.Passive, rect);
+            Event e = Event.current;
+            if (!drags.TryGetValue(id, out float shown)) shown = value;
+            bool released = false;
+            switch (e.GetTypeForControl(control))
+            {
+                case EventType.MouseDown when e.button == 0 && rect.Contains(e.mousePosition):
+                    GUIUtility.hotControl = control;
+                    drags[id] = shown = SliderValue(rect, e.mousePosition.x, min, max, step);
+                    e.Use();
+                    break;
+                case EventType.MouseDrag when GUIUtility.hotControl == control:
+                    drags[id] = shown = SliderValue(rect, e.mousePosition.x, min, max, step);
+                    e.Use();
+                    break;
+                case EventType.MouseUp when GUIUtility.hotControl == control:
+                    GUIUtility.hotControl = 0;
+                    drags.Remove(id);
+                    released = !Mathf.Approximately(shown, value);
+                    value = shown;
+                    e.Use();
+                    break;
+            }
+            float t = Mathf.InverseLerp(min, max, shown);
+            float x = rect.x + 8 + t * (rect.width - 16);
+            Panel(new Rect(rect.x, rect.center.y - 2, rect.width, 4), Muted * 0.4f);
+            Panel(new Rect(rect.x, rect.center.y - 2, x - rect.x, 4), accent);
+            Panel(new Rect(x - 6, rect.center.y - 11, 12, 22), drags.ContainsKey(id) ? Text : accent);
+            return released;
+        }
+
+        /// <summary>The value a slider shows: the one being dragged, or else <paramref name="value"/>.</summary>
+        public static float SliderShown(string id, float value) => drags.TryGetValue(id, out float shown) ? shown : value;
+
+        private static float SliderValue(Rect rect, float x, float min, float max, float step)
+        {
+            float value = Mathf.Lerp(min, max, Mathf.Clamp01((x - rect.x - 8) / (rect.width - 16)));
+            return Mathf.Clamp(Mathf.Round(value / step) * step, min, max);
         }
 
         /// <summary>A single-line text box in the menu style.</summary>

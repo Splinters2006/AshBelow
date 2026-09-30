@@ -3,12 +3,12 @@ using UnityEngine;
 namespace Slopgame
 {
     /// <summary>
-    /// The controls page of the main menu. Click a binding, then press a key or mouse button to rebind it
+    /// The controls section of the settings page. Click a binding, then press a key or mouse button to rebind it
     /// (clicking the highlighted binding itself binds that mouse button). ESC cancels; DELETE or BACKSPACE clears.
     /// </summary>
     public sealed class KeybindMenu
     {
-        private const float Top = 256, RowStep = 52, ColumnStep = 580;
+        private const float Top = 258, RowStep = 50, ColumnStep = 580;
         private int capturingAction = -1, capturingSlot;
 
         public bool IsCapturing => capturingAction >= 0;
@@ -17,12 +17,12 @@ namespace Slopgame
         private static int PerColumn => (KeyBindings.Actions.Length + 1) / 2;
 
         private static Rect RowRect(int index) =>
-            new Rect(70 + index / PerColumn * ColumnStep, Top + index % PerColumn * RowStep, 560, 46);
+            new Rect(70 + index / PerColumn * ColumnStep, Top + index % PerColumn * RowStep, 560, 44);
 
         private static Rect SlotRect(int index, int slot)
         {
             Rect row = RowRect(index);
-            return new Rect(row.x + 220 + slot * 168, row.y + 5, 158, 36);
+            return new Rect(row.x + 220 + slot * 168, row.y + 4, 158, 36);
         }
 
         public void Draw()

@@ -27,6 +27,9 @@ namespace Slopgame
         }
 
         private const float RowHeight = 92f, CardWidth = 549f;
+        // Ten heroes share the filter row, so its labels are smaller than a normal button's (long names like Demoness wrapped).
+        private const int FilterFont = 15;
+        private const string Separator = "  ·  ";
         private Page page;
         // Talents and abilities can be narrowed to one hero. With filterAll off, a null hero means the general talents
         // any hero can take (they get their own section so they don't crowd the top of every hero's list).
@@ -40,7 +43,7 @@ namespace Slopgame
         {
             float step = 1152f / PageNames.Length;
             for (int i = 0; i < PageNames.Length; i++)
-                if (DungeonUi.Button("codexTab" + i, new Rect(70 + i * step, 250, step - 12, 42), PageNames[i], (int)page == i ? AbilityCatalog.Gold : DungeonUi.Muted))
+                if (DungeonUi.Button("codexTab" + i, new Rect(70 + i * step, 180, step - 12, 40), PageNames[i], (int)page == i ? AbilityCatalog.Gold : DungeonUi.Muted))
                 {
                     page = (Page)i;
                     scroll = Vector2.zero;
@@ -49,11 +52,11 @@ namespace Slopgame
                 }
 
             bool filtered = page == Page.Talents || page == Page.Abilities;
-            float listTop = 306;
+            float listTop = 234;
             if (filtered)
             {
-                DrawHeroFilter(run, new Rect(70, 302, 1140, 30));
-                listTop = 342;
+                DrawHeroFilter(run, new Rect(70, 232, 1140, 32));
+                listTop = 276;
             }
             Build(run);
             bool revealAll = DebugMode.Enabled;
@@ -81,12 +84,12 @@ namespace Slopgame
         {
             // "All" and "General" are short, so they get narrow buttons and the heroes share what is left.
             float x = row.x;
-            if (DungeonUi.Button("codexAll", new Rect(x, row.y, 64, row.height), "All", filterAll ? DungeonUi.Teal : DungeonUi.Muted))
+            if (DungeonUi.Button("codexAll", new Rect(x, row.y, 64, row.height), "All", filterAll ? DungeonUi.Teal : DungeonUi.Muted, size: FilterFont))
             { filterAll = true; heroFilter = null; scroll = Vector2.zero; }
             x += 72;
             if (page == Page.Talents)
             {
-                if (DungeonUi.Button("codexGeneral", new Rect(x, row.y, 96, row.height), "General", GeneralOnly ? DungeonUi.Teal : DungeonUi.Muted))
+                if (DungeonUi.Button("codexGeneral", new Rect(x, row.y, 96, row.height), "General", GeneralOnly ? DungeonUi.Teal : DungeonUi.Muted, size: FilterFont))
                 { filterAll = false; heroFilter = null; scroll = Vector2.zero; }
                 x += 104;
             }
@@ -95,7 +98,7 @@ namespace Slopgame
             {
                 var hero = run.Characters[i];
                 bool selected = !filterAll && heroFilter == hero.Weapon;
-                if (DungeonUi.Button("codexHero" + i, new Rect(x + i * step, row.y, step - 8, row.height), hero.DisplayName, selected ? hero.Color : DungeonUi.Muted))
+                if (DungeonUi.Button("codexHero" + i, new Rect(x + i * step, row.y, step - 8, row.height), hero.DisplayName, selected ? hero.Color : DungeonUi.Muted, size: FilterFont))
                 { filterAll = false; heroFilter = hero.Weapon; scroll = Vector2.zero; }
             }
         }
@@ -126,7 +129,7 @@ namespace Slopgame
                         {
                             // Heroes who beat a guardian before the encyclopedia existed count as played.
                             Found = progress.IsDiscovered(HeroId(hero.Weapon)) || progress.GuardiansDefeatedAs(hero.Weapon) > 0,
-                            Name = hero.DisplayName, Tag = $"{hero.StartingHealth} HP  /  {hero.StartingDamage} DMG  /  {hero.MoveSpeed:0.#} SPEED",
+                            Name = hero.DisplayName, Tag = $"{hero.StartingHealth} HP{Separator}{hero.StartingDamage} DMG{Separator}{hero.MoveSpeed:0.#} SPEED",
                             Description = hero.Description, Glyph = GlyphFor(hero.Weapon), Color = hero.Color
                         });
                     break;
@@ -134,12 +137,15 @@ namespace Slopgame
                     foreach (var talent in PowerupCatalog.All)
                     {
                         if (!filterAll && talent.ClassWeapon != heroFilter) continue;
-                        string tag = talent.ClassWeapon.HasValue ? HeroName(run, talent.ClassWeapon.Value) : "ANY HERO";
-                        if (talent.RequiredAbility != AbilityType.None) tag += "  /  NEEDS " + AbilityCatalog.Get(talent.RequiredAbility)?.Name.ToUpperInvariant();
-                        if (talent.MaxStacks < int.MaxValue && talent.MaxStacks > 1) tag += $"  /  MAX {talent.MaxStacks}";
+                        var tag = new List<string>();
+                        // The hero is already picked in the filter (and shown by the card colour), so only the full list names it.
+                        if (filterAll) tag.Add(talent.ClassWeapon.HasValue ? HeroName(run, talent.ClassWeapon.Value) : "ANY HERO");
+                        if (talent.RequiredAbility != AbilityType.None) tag.Add("NEEDS " + AbilityCatalog.Get(talent.RequiredAbility)?.Name.ToUpperInvariant());
+                        if (talent.MaxStacks < int.MaxValue && talent.MaxStacks > 1) tag.Add($"MAX {talent.MaxStacks}");
                         entries.Add(new Entry
                         {
-                            Found = progress.IsDiscovered(TalentId(talent.Type)), Name = talent.Name, Tag = tag, Description = talent.Description,
+                            Found = progress.IsDiscovered(TalentId(talent.Type)), Name = TalentName(talent), Tag = string.Join(Separator, tag),
+                            Description = talent.Description,
                             Glyph = talent.ClassWeapon.HasValue ? GlyphFor(talent.ClassWeapon.Value) : "+",
                             Color = talent.ClassWeapon.HasValue ? HeroColor(run, talent.ClassWeapon.Value) : DungeonUi.Teal
                         });
@@ -152,7 +158,7 @@ namespace Slopgame
                         entries.Add(new Entry
                         {
                             Found = progress.IsDiscovered(AbilityId(ability.Type)), Name = ability.Name,
-                            Tag = HeroName(run, ability.ClassWeapon) + $"  /  {ability.Cooldown:0.#}s" + (ability.ShopUnlock ? "  /  ASH SHOP" : ""),
+                            Tag = (filterAll ? HeroName(run, ability.ClassWeapon) + Separator : "") + $"{ability.Cooldown:0.#}s" + (ability.ShopUnlock ? Separator + "ASH SHOP" : ""),
                             Description = ability.Description, Glyph = ability.Glyph, Color = ability.Color
                         });
                     }
@@ -165,7 +171,7 @@ namespace Slopgame
                         entries.Add(new Entry
                         {
                             Found = progress.IsDiscovered(WorldId(world.Index)) || progress.HasClearedWorld(world.Index), Name = world.Name,
-                            Tag = $"WORLD {world.Index + 1}" + (world.IsWaveWorld ? "  /  WAVES" : "") + (world.HighTech ? "  /  HIGH TECH" : ""),
+                            Tag = $"WORLD {world.Index + 1}" + (world.IsWaveWorld ? Separator + "WAVES" : "") + (world.HighTech ? Separator + "HIGH TECH" : ""),
                             Description = $"Home of the {world.BasicName}, the {world.CasterName} and the {world.BruteName}."
                                 + (progress.HasClearedWorld(world.Index) ? "  Cleared." : ""),
                             Glyph = (world.Index + 1).ToString(), Color = world.Accent
@@ -185,10 +191,17 @@ namespace Slopgame
                     if (!listed.Add(title)) continue;
                     entries.Add(new Entry
                     {
-                        Found = progress.IsDiscovered(GuardianId(title)), Name = title, Tag = $"WORLD {world.Index + 1}  /  GUARDIAN {i + 1}",
+                        Found = progress.IsDiscovered(GuardianId(title)), Name = title, Tag = $"WORLD {world.Index + 1}{Separator}GUARDIAN {i + 1}",
                         Description = $"Guards {(world.IsWaveWorld ? "level" : "floor")} {(i + 1) * 5} of {world.Name}.", Glyph = "!", Color = world.Accent
                     });
                 }
+        }
+
+        /// <summary>Class talents are named "Hero: Talent" for the in-run picker; the card already shows the hero, so drop the prefix.</summary>
+        private static string TalentName(PowerupDefinition talent)
+        {
+            int colon = talent.Name.IndexOf(": ");
+            return talent.ClassWeapon.HasValue && colon >= 0 ? talent.Name.Substring(colon + 2) : talent.Name;
         }
 
         private static string HeroName(DungeonRun run, WeaponType weapon)

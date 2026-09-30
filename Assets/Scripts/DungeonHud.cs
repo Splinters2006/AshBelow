@@ -28,9 +28,7 @@ namespace Slopgame
 
         public bool BlocksPointer(Vector2 screenPosition)
         {
-            float scale = Mathf.Min(Screen.width / DungeonUi.Width, Screen.height / DungeonUi.Height);
-            Vector2 point = new Vector2(screenPosition.x - (Screen.width - DungeonUi.Width * scale) / 2f,
-                Screen.height - screenPosition.y - (Screen.height - DungeonUi.Height * scale) / 2f) / scale;
+            Vector2 point = DungeonUi.ScreenToCanvas(screenPosition, GameSettings.HudScale);
             return !Run.IsPlaying || new Rect(1020, 24, 236, 40).Contains(point)
                 || ((Run.CanSkipRoom || CanRestartCoop) && RestartRect.Contains(point))
                 || (showTalents && new Rect(922, 82, 334, 470).Contains(point))
@@ -54,7 +52,7 @@ namespace Slopgame
         private void OnGUI()
         {
             if (Run == null || Run.IsInMainMenu || Run.Player == null) return;
-            Matrix4x4 previous = DungeonUi.Begin();
+            Matrix4x4 previous = DungeonUi.Begin(GameSettings.HudScale);
             try
             {
                 var flash = ScreenFx.FlashColor;
@@ -418,9 +416,7 @@ namespace Slopgame
                 if (!hero.IsAlive || Run.View == null) continue;
                 Vector3 screen = Run.View.WorldToScreenPoint(hero.transform.position + Vector3.up * 0.75f);
                 if (screen.z < 0f) continue;
-                float scale = Mathf.Min(Screen.width / DungeonUi.Width, Screen.height / DungeonUi.Height);
-                Vector2 point = new Vector2(screen.x - (Screen.width - DungeonUi.Width * scale) / 2f,
-                    Screen.height - screen.y - (Screen.height - DungeonUi.Height * scale) / 2f) / scale;
+                Vector2 point = DungeonUi.ScreenToCanvas(screen, GameSettings.HudScale);
                 DungeonUi.Label(new Rect(point.x - 90, point.y - 24, 180, 20), hero.PlayerName, 13, hero.Character.Color, TextAnchor.MiddleCenter);
             }
             if (Run.Player.Health <= 0 && Run.IsPlaying)
