@@ -78,6 +78,7 @@ namespace Slopgame.Editor
                     TestHazards(run);
                     TestBestiary(run);
                     TestUniversalEffects(run);
+                    TestHoldTalents(run);
                     TestExpansion(run);
                     DebugMode.Set(true);
                     while (run.Floor < 15) run.DebugSkipRoom();
@@ -358,6 +359,38 @@ namespace Slopgame.Editor
             powers.Add(PowerupType.StaticField);
             CombatDamage.Shock(player, enemy.transform.position, enemy, 4);
             Require(target.Health == 999, "Static Field did not expand shock damage");
+        }
+
+        /// <summary>The immobilize talents; they are taken off again afterwards so later checks see a clean talent sheet.</summary>
+        private static void TestHoldTalents(DungeonRun run)
+        {
+            var player = run.Player;
+            var powers = player.Powerups;
+            var enemy = run.Enemies.Find(e => e.Boss == null && e.Health > 0);
+            var target = run.Enemies.Find(e => e != enemy && e.Boss == null && e.Health > 0);
+            Require(enemy != null && target != null, "No enemies for the hold talent checks");
+            Vector2 center = run.Map.Centers[1];
+            enemy.transform.position = center + Vector2.left;
+            target.transform.position = center + Vector2.right * 0.5f;
+            enemy.Health = target.Health = 1000;
+            foreach (var field in new[] { "frozenUntil", "stunnedUntil", "rootedUntil", "paralyzedUntil", "chilledUntil" })
+                typeof(DungeonEnemy).GetField(field, PrivateInstance).SetValue(enemy, 0f);
+            typeof(DungeonEnemy).GetField("burnTicks", PrivateInstance).SetValue(enemy, 0);
+            var added = new[] { PowerupType.IronGrip, PowerupType.SearingHold, PowerupType.StaticHold, PowerupType.NumbingHold, PowerupType.SittingDuck };
+            Require(CombatDamage.ScaleForTarget(player, enemy, 10) == 10, "Sitting Duck fired without the talent");
+            foreach (var type in added) Require(powers.Add(type), "Could not take " + type);
+            Require(CombatDamage.ScaleForTarget(player, enemy, 10) == 10, "Sitting Duck fired on a free enemy");
+            Require(enemy.Root(1f), "Root did not take");
+            Near(Field<float>(enemy, "rootedUntil") - Time.time, 1.25f, "Iron Grip did not lengthen the root");
+            Require(Field<int>(enemy, "burnTicks") > 0, "Searing Hold did not set the enemy burning");
+            Require(target.Health < 1000, "Static Hold did not shock the enemy nearby");
+            Near(Field<float>(enemy, "chilledUntil") - Time.time, 1.25f + PlayerPowerups.NumbingChill, "Numbing Hold did not outlast the hold");
+            Require(CombatDamage.ScaleForTarget(player, enemy, 10) == 13, "Sitting Duck did not add 30% on a held enemy");
+            int shocked = target.Health;
+            enemy.Stun(1f);
+            Require(target.Health == shocked, "A repeat hold on a held enemy set the hold talents off again");
+            var stacks = Field<System.Collections.Generic.Dictionary<PowerupType, int>>(powers, "stacks");
+            foreach (var type in added) stacks.Remove(type);
         }
 
         /// <summary>The first world's third guardian: its stairs open the world-cleared screen, and Next world carries on into world 2.</summary>

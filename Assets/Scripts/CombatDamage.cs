@@ -50,12 +50,15 @@ namespace Slopgame
         /// <summary>Fire, lightning and ice: the elements with a status effect.</summary>
         public static bool HasEffect(DamageElement element) => element == DamageElement.Fire || element == DamageElement.Lightning || element == DamageElement.Ice;
 
-        /// <summary>Damage bonuses that depend on the target: Executioner and the Ash shop's Apex Predator.</summary>
+        public const float SittingDuckMultiplier = 1.3f;
+
+        /// <summary>Damage bonuses that depend on the target: Executioner, Sitting Duck and the Ash shop's Apex Predator.</summary>
         public static int ScaleForTarget(DungeonPlayer player, DungeonEnemy enemy, int damage)
         {
             if (player == null) return damage;
             float multiplier = 1f;
             if (player.Powerups.Count(PowerupType.Executioner) > 0 && enemy.HealthFraction < 0.25f) multiplier *= 1.5f;
+            if (player.Powerups.Count(PowerupType.SittingDuck) > 0 && enemy.IsImmobilized) multiplier *= SittingDuckMultiplier;
             if (enemy.Boss != null || enemy.IsTank) multiplier *= 1f + player.Permanent.GuardianDamage;
             return multiplier == 1f ? damage : Mathf.Max(1, Mathf.RoundToInt(damage * multiplier));
         }

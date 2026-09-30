@@ -38,7 +38,9 @@ namespace Slopgame
         // Gambler.
         Ricochet, GoldCoin, CompoundInterest, HeadsOrTails, TipJar, SnakeEyes,
         // Augment.
-        ThermalVent, Overheat, TargetingArray, ReactivePlating, Coolant, MissileTurret
+        ThermalVent, Overheat, TargetingArray, ReactivePlating, Coolant, MissileTurret,
+        // Universal talents built around immobilized enemies (paralysed, frozen, stunned or rooted).
+        SittingDuck, IronGrip, SearingHold, StaticHold, NumbingHold, Domino
     }
 
     public sealed class PowerupDefinition
@@ -104,7 +106,7 @@ namespace Slopgame
             new PowerupDefinition(PowerupType.ExtraFilling, "Extra Filling", "+0.4 Knuckle Sandwich length and width", 3, WeaponType.Fists, AbilityType.KnuckleSandwich),
             new PowerupDefinition(PowerupType.CraterMaker, "Crater Maker", "+0.5 Wild Leap slam radius", 3, WeaponType.Fists, AbilityType.WildLeap),
             new PowerupDefinition(PowerupType.Bloodlust, "Bloodlust", "+1 second of Primal Rage", 3, WeaponType.Fists, AbilityType.PrimalRage),
-            new PowerupDefinition(PowerupType.NerveStrike, "Demoness: Nerve Strike", "+0.25 seconds of vital stab paralysis", 3, WeaponType.Tail),
+            new PowerupDefinition(PowerupType.NerveStrike, "Demoness: Nerve Strike", "+0.25 seconds on all your paralysis", 3, WeaponType.Tail),
             new PowerupDefinition(PowerupType.LongTail, "Demoness: Long Tail", "+0.3 tail sweep reach", 3, WeaponType.Tail),
             new PowerupDefinition(PowerupType.Bloodline, "Bloodline", "+1 second of Archdemon's Technique", 3, WeaponType.Tail, AbilityType.ArchdemonTechnique),
             new PowerupDefinition(PowerupType.BigPaws, "Good Boy", "+0.4 HEEEELP slam radius", 3, WeaponType.Tail, AbilityType.DemonPaw),
@@ -209,7 +211,7 @@ namespace Slopgame
             new PowerupDefinition(PowerupType.LingeringTerror, "Demoness: Lingering Terror", "When your paralysis wears off, the enemy stays 40% slower for 2 seconds", 1, WeaponType.Tail),
             new PowerupDefinition(PowerupType.Torment, "Demoness: Torment", "Each vital stab on the same enemy deals +1 more than the last", 1, WeaponType.Tail),
             new PowerupDefinition(PowerupType.DreadAura, "Demoness: Dread Aura", "Enemies within 3 units act and attack 25% slower", 1, WeaponType.Tail),
-            new PowerupDefinition(PowerupType.BloodPact, "Demoness: Blood Pact", "-1 max HP, but vital stabs paralyse 0.5 seconds longer", 1, WeaponType.Tail),
+            new PowerupDefinition(PowerupType.BloodPact, "Demoness: Blood Pact", "-1 max HP, but all your paralysis lasts 0.5 seconds longer", 1, WeaponType.Tail),
             new PowerupDefinition(PowerupType.CursedPaw, "Cursed Paw", "HEEEELP's slam leaves a Demon Curse where it lands", 1, WeaponType.Tail, AbilityType.DemonPaw),
             new PowerupDefinition(PowerupType.InfernalTechnique, "Infernal Technique", "During Archdemon's Technique, tail whips set enemies burning", 1, WeaponType.Tail, AbilityType.ArchdemonTechnique),
             new PowerupDefinition(PowerupType.Ricochet, "Gambler: Ricochet", "Thrown coins bounce on to a second enemy", 1, WeaponType.Coins),
@@ -223,7 +225,14 @@ namespace Slopgame
             new PowerupDefinition(PowerupType.TargetingArray, "Augment: Targeting Array", "Your ray deals +1 to enemies more than 6 units away", 1, WeaponType.Beam),
             new PowerupDefinition(PowerupType.ReactivePlating, "Augment: Reactive Plating", "When you're hit, a plasma burst goes off around you", 1, WeaponType.Beam),
             new PowerupDefinition(PowerupType.Coolant, "Augment: Coolant", "Rolling vents 30% of the plasma cannon's remaining cooldown", 1, WeaponType.Beam),
-            new PowerupDefinition(PowerupType.MissileTurret, "Missile Turret", "Sentry Turret also fires a micro-missile every 2 seconds", 1, WeaponType.Beam, AbilityType.SentryTurret)
+            new PowerupDefinition(PowerupType.MissileTurret, "Missile Turret", "Sentry Turret also fires a micro-missile every 2 seconds", 1, WeaponType.Beam, AbilityType.SentryTurret),
+            // Universal: any hero can hold enemies in place, and these reward doing it.
+            new PowerupDefinition(PowerupType.SittingDuck, "Sitting Duck", "+30% damage to immobilized enemies (paralysed, frozen, stunned or rooted)", 1),
+            new PowerupDefinition(PowerupType.IronGrip, "Iron Grip", "Your paralysis, freezes, stuns and roots last 25% longer", 1),
+            new PowerupDefinition(PowerupType.SearingHold, "Searing Hold", "Immobilizing an enemy sets it burning", 1),
+            new PowerupDefinition(PowerupType.StaticHold, "Static Hold", "Immobilizing an enemy shocks every enemy near it", 1),
+            new PowerupDefinition(PowerupType.NumbingHold, "Numbing Hold", "Immobilizing an enemy chills it, so it stays slowed for 2 seconds after it breaks free", 1),
+            new PowerupDefinition(PowerupType.Domino, "Domino", "When an immobilized enemy dies, enemies within 1.5 units are stunned for 0.75 seconds", 1)
         };
 
         private static readonly Dictionary<PowerupType, PowerupDefinition> byType = BuildLookup();

@@ -24,7 +24,8 @@ namespace Slopgame
                 && Vector2.Distance(center, enemy.transform.position) <= Radius + enemy.HitRadius);
             if (targets.Count == 0) return false;
             // The fear is not a paralysing strike of her own, so it does not feed the next Demonic Power.
-            foreach (var enemy in targets) enemy.Fear(center, Paralysis);
+            float paralysis = Paralysis + (Player.Weapon is DemonessAttack tail ? tail.ParalysisBonus : 0f);
+            foreach (var enemy in targets) enemy.Fear(center, paralysis);
             var root = run.ProjectileRoot;
             // The Demon Lord's head rises behind her and roars the fear out over everything nearby.
             DemonHeadVfx.Play(root, center, Radius);

@@ -177,6 +177,36 @@ namespace Slopgame
                     CombatDamage.Apply(player, enemy, player.Damage, DamageElement.Physical, center, 0.8f);
         }
 
+        public const float IronGripMultiplier = 1.25f, NumbingChill = 2f, DominoRadius = 1.5f, DominoStun = 0.75f;
+        /// <summary>Iron Grip: how much longer every paralysis, freeze, stun and root the hero inflicts lasts.</summary>
+        public float HoldDurationMultiplier => Count(PowerupType.IronGrip) > 0 ? IronGripMultiplier : 1f;
+
+        /// <summary>
+        /// The hero just immobilized an enemy that was moving freely (repeat holds on an already held enemy do not count):
+        /// Searing Hold, Static Hold and Numbing Hold set off their elements. <paramref name="duration"/> is the hold's length.
+        /// </summary>
+        public void OnImmobilized(DungeonPlayer player, DungeonEnemy enemy, float duration)
+        {
+            int hit = player.Damage;
+            if (Count(PowerupType.StaticHold) > 0) CombatDamage.ApplyEffect(player, enemy, DamageElement.Lightning, hit);
+            if (enemy.Health <= 0) return;
+            if (Count(PowerupType.SearingHold) > 0) CombatDamage.ApplyEffect(player, enemy, DamageElement.Fire, hit);
+            // The chill runs out past the hold, so the enemy crawls for a while once it breaks free.
+            if (Count(PowerupType.NumbingHold) > 0) enemy.Chill(duration + NumbingChill);
+        }
+
+        /// <summary>Domino: a held enemy's death stuns everything close around it, which may set off the hold talents again.</summary>
+        private static void Domino(DungeonPlayer player, DungeonEnemy dead)
+        {
+            var run = player.Run;
+            Vector2 center = dead.transform.position;
+            HeroVfx.Pulse(run.ProjectileRoot, center, DominoRadius, DungeonEnemy.StunnedTint, 0.3f);
+            CoopFx.Pulse(run, center, DominoRadius, DungeonEnemy.StunnedTint, 0.3f);
+            foreach (var enemy in run.Enemies.ToArray())
+                if (enemy != null && enemy != dead && enemy.Health > 0 && Vector2.Distance(center, enemy.transform.position) <= DominoRadius + enemy.HitRadius)
+                    enemy.Stun(DominoStun);
+        }
+
         public const float KillStreakWindow = 1f, KillCooldownCut = 0.5f, PyreRadius = 2f;
         public const int MassacreKills = 5, MomentumKills = 2;
         private readonly Queue<float> recentKills = new Queue<float>();
@@ -198,7 +228,7 @@ namespace Slopgame
             if (recentKills.Count == MomentumKills && Count(PowerupType.Momentum) > 0) player.ResetDodge();
             if (recentKills.Count == MassacreKills && Count(PowerupType.Massacre) > 0) player.ResetClassSkill();
 
-            // Nerve Snap and Still Hunter count any immobilized enemy: paralysed, frozen, stunned or rooted.
+            // Nerve Snap, Still Hunter and Domino count any immobilized enemy: paralysed, frozen, stunned or rooted.
             bool held = enemy != null && enemy.IsImmobilized;
             if (Count(PowerupType.ElementalKills) > 0) elementalPrimed = true;
             if (held && Count(PowerupType.NerveSnap) > 0) player.ResetClassSkill();
@@ -206,6 +236,7 @@ namespace Slopgame
             if (cut > 0f) player.ReduceCooldowns(cut);
 
             if (enemy != null && enemy.IsBurning && Count(PowerupType.PyreBurst) > 0) PyreBurst(player, enemy);
+            if (held && Count(PowerupType.Domino) > 0) Domino(player, enemy);
         }
 
         /// <summary>A burning enemy bursts into flame: fire damage to everything around it, which may light them too.</summary>
