@@ -43,7 +43,11 @@ namespace Slopgame
         // Empower: faster movement, attacks and charging, slightly larger attacks and 0.5s off the dodge cooldown.
         // Primal Rage: huge damage, charge, movement and dodge buffs; Tired: all of those turned into penalties.
         // Super Angry: massive speed, reach and area, much faster charging and double damage.
-        public float MoveMultiplier => (IsEmpowered ? 1.25f : 1f) * (IsRaging ? 1.35f : IsTired ? 0.7f : 1f) * (IsFurious ? 1.5f : 1f) * JackpotSpeed;
+        public float MoveMultiplier => (IsEmpowered ? 1.25f : 1f) * (IsRaging ? 1.35f : IsTired ? 0.7f : 1f) * (IsFurious ? 1.5f : 1f) * JackpotSpeed
+            * (Time.time < ventedUntil ? 1.2f : 1f);
+        /// <summary>Thermal Vent: +20% speed for a moment after the plasma cannon fires.</summary>
+        public void Vent(float duration) => ventedUntil = Mathf.Max(ventedUntil, Time.time + duration);
+        private float ventedUntil;
         public float AttackIntervalMultiplier => (IsEmpowered ? 0.7f : 1f) * (IsFurious ? 0.7f : 1f);
         public float ChargeDurationMultiplier => (IsEmpowered ? 0.7f : 1f) * (IsRaging ? 0.5f : IsTired ? 1.5f : 1f) * (IsFurious ? 0.4f : 1f);
         public float AttackSizeMultiplier => (IsEmpowered ? 1.1f : 1f) * (IsFurious ? 1.5f : 1f);

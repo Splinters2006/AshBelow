@@ -58,6 +58,7 @@ namespace Slopgame
             AbilityUnlock(AbilityType.Suplex, 160),
             AbilityUnlock(AbilityType.NightmareSnap, 180),
             AbilityUnlock(AbilityType.Insurance, 160),
+            AbilityUnlock(AbilityType.OrbitalLaser, 200),
             Mechanic(WeaponType.Sword, "Shield Taunt", "R: turn red with rage for 2.25s. You can walk; you block bolts from every side (+1 ward each) and draw the enemies' attention"),
             Mechanic(WeaponType.Bow, "Elemental Quiver", "R: cycle fire, freeze and shock arrows. Critical hits set off the arrow's element"),
             Mechanic(WeaponType.Staff, "Wild Storm", "R: after 10 elemental effects, summon a storm that hurls fire, lightning and ice, every strike sure to burn, shock or freeze"),

@@ -171,6 +171,12 @@ namespace Slopgame
                     DiceBomb.Toss(Player, FindGroundLanding(Player.Run.Map, transform.position, aim, Mathf.Min(DiceBomb.Range, cursorDistance)), Player.Damage + rank - 1); break;
                 case AbilityType.Insurance:
                     Player.Insure(DungeonPlayer.InsuranceTime + (rank - 1) * 1.5f); break;
+                case AbilityType.EmpPulse:
+                    EmpPulse(EmpRadius, EmpStun + (rank - 1) * 0.3f); break;
+                case AbilityType.GrappleArm:
+                    StartCoroutine(Grapple(aim, Player.Damage + rank)); break;
+                case AbilityType.OrbitalLaser:
+                    OrbitalLaser.Call(Player, (Vector2)transform.position + aim * Mathf.Min(cursorDistance, 6f), OrbitalLaser.Duration + (rank - 1) * 0.75f, Player.Damage + rank - 1); break;
                 case AbilityType.NetShot:
                     NetShot(aim, 2f + (rank - 1) * 0.5f, Player.Damage + rank - 1); break;
                 case AbilityType.RicochetArrow:
@@ -339,6 +345,61 @@ namespace Slopgame
             HeroVfx.Motes(run.ProjectileRoot, target, 0.7f, new Color(1f, 0.95f, 0.7f), 16, 1f);
             CombatVfx.Ring(run.ProjectileRoot, target, 0.8f, new Color(1f, 0.95f, 0.7f), 0.5f);
             CoopFx.Ring(run, target, 0.8f, new Color(1f, 0.95f, 0.7f), 0.5f);
+        }
+
+        public const float EmpRadius = 4f, EmpStun = 1.5f, GrappleRange = 7f;
+
+        /// <summary>EMP Pulse: stuns every enemy nearby and fries the enemy bolts around the Augment.</summary>
+        private void EmpPulse(float radius, float stun)
+        {
+            var run = Player.Run;
+            Vector2 at = transform.position;
+            HeroVfx.Pulse(run.ProjectileRoot, at, radius, WorldCatalog.Neon, 0.4f);
+            CombatVfx.Ring(run.ProjectileRoot, at, radius, WorldCatalog.Neon, 0.4f);
+            CoopFx.Pulse(run, at, radius, WorldCatalog.Neon, 0.4f);
+            ScreenFx.Flash(FlameMesh.Alpha(WorldCatalog.Neon, 0.15f), 0.2f);
+            foreach (var enemy in run.Enemies.ToArray())
+                if (enemy != null && enemy.Health > 0 && Vector2.Distance(at, enemy.transform.position) <= radius + enemy.HitRadius) enemy.Stun(stun);
+            foreach (var bolt in run.ProjectileRoot.GetComponentsInChildren<EnemyProjectile>())
+            {
+                if (bolt.IsSpent || bolt.IsReflected || Vector2.Distance(at, bolt.transform.position) > radius) continue;
+                HeroVfx.Sparks(run.ProjectileRoot, bolt.transform.position, WorldCatalog.Neon, 4, 2f, 0.2f);
+                if (run.IsNetworked) run.Coop.ReportBolt(bolt, CoopBoltEventKind.Consumed);
+                bolt.Consume();
+            }
+        }
+
+        /// <summary>Grapple Arm: the hook flies out, snags the first enemy in line and hauls it in (guardians only take the hit).</summary>
+        private IEnumerator Grapple(Vector2 aim, int damage)
+        {
+            var run = Player.Run;
+            Vector2 from = transform.position;
+            Vector2 end = FindGroundLanding(run.Map, from, aim, GrappleRange);
+            DungeonEnemy caught = null;
+            float nearest = float.MaxValue;
+            foreach (var enemy in run.Enemies)
+            {
+                if (enemy == null || enemy.Health <= 0) continue;
+                Vector2 offset = (Vector2)enemy.transform.position - from;
+                float along = Vector2.Dot(offset, aim);
+                if (along < 0f || along > Vector2.Distance(from, end) + enemy.HitRadius || Mathf.Abs(Vector2.Dot(offset, Vector2.Perpendicular(aim))) > enemy.HitRadius + 0.2f) continue;
+                if (along < nearest) { nearest = along; caught = enemy; }
+            }
+            Vector2 hook = caught != null ? (Vector2)caught.transform.position : end;
+            var chain = new Color(0.7f, 0.75f, 0.85f);
+            CombatVfx.Bolt(run.ProjectileRoot, from, hook, chain);
+            CoopFx.Bolt(run, from, hook, chain);
+            if (caught == null) yield break;
+            CombatDamage.Apply(Player, caught, damage, DamageElement.Physical, from, 0f);
+            if (caught == null || caught.Health <= 0 || caught.Boss != null) yield break;
+            Vector2 start = caught.transform.position, goal = FindGroundLanding(run.Map, from, aim, 1f);
+            for (float t = 0f; t < 0.2f; t += Time.deltaTime)
+            {
+                if (caught == null || !run.IsPlaying) yield break;
+                caught.transform.position = Vector2.Lerp(start, goal, t / 0.2f);
+                yield return null;
+            }
+            if (caught != null) { caught.transform.position = goal; caught.Stun(0.3f); }
         }
 
         public const float NetRange = 5f, NetCone = 70f;

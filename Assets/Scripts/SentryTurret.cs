@@ -49,9 +49,40 @@ namespace Slopgame
         {
             if (run == null || !run.IsPlaying) return;
             if (Time.time >= expiresAt || (!ghost && (owner == null || owner.Health <= 0))) { Expire(); return; }
-            if (ghost || Time.time < nextShot) return;
+            if (ghost) return;
+            // Missile Turret: every 2 seconds it also looses a micro-missile at the nearest enemy.
+            if (owner != null && owner.Powerups.Count(PowerupType.MissileTurret) > 0 && Time.time >= nextMissile)
+            {
+                nextMissile = Time.time + MissileInterval;
+                var target = Nearest();
+                if (target != null)
+                {
+                    Vector2 origin = transform.position;
+                    Vector2 toward = ((Vector2)target.transform.position - origin).normalized;
+                    MicroMissile.Launch(owner, origin + Vector2.up * 0.2f, toward, target, damage);
+                }
+            }
+            if (Time.time < nextShot) return;
             nextShot = Time.time + Interval;
             Shoot();
+        }
+
+        public const float MissileInterval = 2f;
+        private float nextMissile;
+
+        private DungeonEnemy Nearest()
+        {
+            DungeonEnemy best = null;
+            float nearest = Range;
+            foreach (var enemy in run.Enemies)
+            {
+                if (enemy == null || enemy.Health <= 0) continue;
+                float distance = Vector2.Distance(transform.position, enemy.transform.position);
+                if (distance > nearest || !run.HasLineOfSight(transform.position, enemy.transform.position)) continue;
+                nearest = distance;
+                best = enemy;
+            }
+            return best;
         }
 
         /// <summary>Fires at the nearest living enemy in range and in sight; false when there is none.</summary>

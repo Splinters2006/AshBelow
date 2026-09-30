@@ -10,7 +10,7 @@ namespace Slopgame
         Eclipse, SoulRend, ShadowReign, KnuckleSandwich, WildLeap, PrimalRage, ArchdemonTechnique, DemonPaw, DemonCurse,
         Windfall, AllIn, Jackpot, MicroMissiles, RocketBoost, SentryTurret,
         // The talents & abilities expansion.
-        ShieldThrow, Whirlwind, WarBanner, NetShot, RicochetArrow, BearTrap, IceWall, BallLightning, LightningStorm, SmokeBomb, DeathMark, ShadowClone, HolyLance, Consecration, DivineIntervention, ThunderClap, HaymakerDash, Suplex, WingDash, SoulSiphon, NightmareSnap, CardToss, DiceBomb, Insurance
+        ShieldThrow, Whirlwind, WarBanner, NetShot, RicochetArrow, BearTrap, IceWall, BallLightning, LightningStorm, SmokeBomb, DeathMark, ShadowClone, HolyLance, Consecration, DivineIntervention, ThunderClap, HaymakerDash, Suplex, WingDash, SoulSiphon, NightmareSnap, CardToss, DiceBomb, Insurance, EmpPulse, GrappleArm, OrbitalLaser
     }
 
     public sealed class AbilityDefinition
@@ -95,6 +95,9 @@ namespace Slopgame
             new AbilityDefinition(AbilityType.CardToss, WeaponType.Coins, "Card Toss", "Throw 3 cards in a spread. Each card's suit decides its trick: hearts burn, diamonds freeze, clubs shock and spades paralyse. Ranks add damage.", "<>", 7f, new Color(0.95f, 0.95f, 0.95f)),
             new AbilityDefinition(AbilityType.DiceBomb, WeaponType.Coins, "Dice Bomb", "Toss a pair of dice at the cursor. Each explodes for your damage times the face it rolls. Ranks add damage.", ":", 10f, new Color(0.97f, 0.95f, 0.9f)),
             new AbilityDefinition(AbilityType.Insurance, WeaponType.Coins, "Insurance", "For 6 seconds, every hit costs you 5 coins instead of HP (while you can pay). Ranks lengthen the policy.", "$!", 18f, new Color(0.35f, 0.9f, 0.5f), true),
+            new AbilityDefinition(AbilityType.EmpPulse, WeaponType.Beam, "EMP Pulse", "Stun every enemy within 4 units for 1.5 seconds and destroy the enemy bolts around you. Ranks stun longer.", "((", 12f, WorldCatalog.Neon),
+            new AbilityDefinition(AbilityType.GrappleArm, WeaponType.Beam, "Grapple Arm", "Fire a hook that snags the first enemy in line and hauls it to you. Guardians are too heavy to pull. Ranks add damage.", "J", 7f, new Color(0.7f, 0.75f, 0.85f)),
+            new AbilityDefinition(AbilityType.OrbitalLaser, WeaponType.Beam, "Orbital Laser", "A laser from the sky follows your cursor for 3 seconds, burning everything it touches. Ranks lengthen it.", "|v|", 18f, CyborgAttack.Plasma, true),
             new AbilityDefinition(AbilityType.WarBanner, WeaponType.Sword, "War Banner", "Plant a banner for 6 seconds. You and allies inside deal +1 damage, and everyone inside gains a ward when it's planted. Ranks extend it.", "F", 18f, new Color(0.9f, 0.2f, 0.25f), true)
         };
 

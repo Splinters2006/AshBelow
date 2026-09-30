@@ -36,7 +36,9 @@ namespace Slopgame
         // Demoness.
         LingeringTerror, Torment, DreadAura, BloodPact, CursedPaw, InfernalTechnique,
         // Gambler.
-        Ricochet, GoldCoin, CompoundInterest, HeadsOrTails, TipJar, SnakeEyes
+        Ricochet, GoldCoin, CompoundInterest, HeadsOrTails, TipJar, SnakeEyes,
+        // Augment.
+        ThermalVent, Overheat, TargetingArray, ReactivePlating, Coolant, MissileTurret
     }
 
     public sealed class PowerupDefinition
@@ -215,6 +217,12 @@ namespace Slopgame
             new PowerupDefinition(PowerupType.HeadsOrTails, "Gambler: Heads or Tails", "Each coin hit has an even chance of dealing double or half damage", 1, WeaponType.Coins),
             new PowerupDefinition(PowerupType.TipJar, "Gambler: Tip Jar", "Every 25 gold coins you pick up heal 1 HP", 1, WeaponType.Coins),
             new PowerupDefinition(PowerupType.SnakeEyes, "Snake Eyes", "Losing All In makes you greedier: double damage for 5 seconds", 1, WeaponType.Coins, AbilityType.AllIn),
+            new PowerupDefinition(PowerupType.ThermalVent, "Augment: Thermal Vent", "Firing the plasma cannon gives +20% movement speed for 2 seconds", 1, WeaponType.Beam),
+            new PowerupDefinition(PowerupType.Overheat, "Augment: Overheat", "An enemy hit by your ray twice within 2 seconds starts burning", 1, WeaponType.Beam),
+            new PowerupDefinition(PowerupType.TargetingArray, "Augment: Targeting Array", "Your ray deals +1 to enemies more than 6 units away", 1, WeaponType.Beam),
+            new PowerupDefinition(PowerupType.ReactivePlating, "Augment: Reactive Plating", "When you're hit, a plasma burst goes off around you", 1, WeaponType.Beam),
+            new PowerupDefinition(PowerupType.Coolant, "Augment: Coolant", "Rolling vents 30% of the plasma cannon's remaining cooldown", 1, WeaponType.Beam),
+            new PowerupDefinition(PowerupType.MissileTurret, "Missile Turret", "Sentry Turret also fires a micro-missile every 2 seconds", 1, WeaponType.Beam, AbilityType.SentryTurret),
             new PowerupDefinition(PowerupType.AegisBurst, "Aegis Burst", "When Aegis ends, it blasts nearby enemies back and damages them once per hit it blocked", 1, WeaponType.Sword, AbilityType.Aegis)
         };
 

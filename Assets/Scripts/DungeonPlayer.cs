@@ -50,6 +50,8 @@ namespace Slopgame
         /// <summary>Shadow Veil: enemies cannot see this hero, so they neither chase nor turn toward them.</summary>
         public bool IsVeiled => Time.time < veiledUntil && Health > 0;
         public Vector2 AimDirection { get; private set; } = Vector2.right;
+        /// <summary>Where the cursor points in the world (Orbital Laser follows it).</summary>
+        public Vector2 CursorPoint { get; private set; }
         /// <summary>This frame's movement input (zero while standing still).</summary>
         public Vector2 MoveInput { get; private set; }
         private const float RollDuration = 0.25f;
@@ -193,6 +195,7 @@ namespace Slopgame
             if (!Run.IsPlaying || Health <= 0 || IsBusy) { MoveInput = Vector2.zero; Charge.Tick(PlayerInput.Attack, false); return; }
             Vector2 cursor = Run.View.ScreenToWorldPoint(new Vector3(PlayerInput.CursorPosition.x,
                 PlayerInput.CursorPosition.y, -Run.View.transform.position.z));
+            CursorPoint = cursor;
             Vector2 aim = cursor - (Vector2)transform.position;
             if (aim.sqrMagnitude > 0.001f) AimDirection = aim.normalized;
             FaceAim();
@@ -245,6 +248,8 @@ namespace Slopgame
             if (!Run.IsPlaying || IsRolling || IsBusy || DodgeCooldownRemaining > 0f || direction.sqrMagnitude < 0.001f) return false;
             rollDirection = direction.normalized;
             rollUntil = Time.time + RollDuration;
+            // Coolant: the roll vents 30% of the plasma cannon's remaining cooldown.
+            if (Powerups.Count(PowerupType.Coolant) > 0 && Weapon is CyborgAttack cannon) cannon.ReduceHeavyCooldown(cannon.HeavyCooldownRemaining * 0.3f);
             // Footwork: the Brawler stays untouchable a beat after the roll.
             if (Powerups.Count(PowerupType.Footwork) > 0) Protect(RollDuration + FootworkGrace);
             // Rolling smothers the flames.

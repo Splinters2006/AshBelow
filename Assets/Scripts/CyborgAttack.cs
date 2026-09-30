@@ -72,6 +72,9 @@ namespace Slopgame
             return true;
         }
 
+        private void Start() { if (Player != null) Player.Struck += OnStruck; }
+        private void OnDestroy() { if (chargeGlow != null) Destroy(chargeGlow.gameObject); if (Player != null) Player.Struck -= OnStruck; }
+
         /// <summary>Where shots leave the arm cannon.</summary>
         private Vector2 Muzzle(Vector2 aim) => (Vector2)transform.position + aim * 0.45f + Vector2.down * 0.05f;
 
@@ -113,6 +116,8 @@ namespace Slopgame
             if (aim.sqrMagnitude < 0.001f) aim = Vector2.right;
             aim.Normalize();
             PlasmaOrb.Fire(Player, Muzzle(aim), aim, CannonDamage(charge), BlastRadius(charge), charge);
+            // Thermal Vent: the cannon's heat pushes him along.
+            if (Player.Powerups.Count(PowerupType.ThermalVent) > 0) Player.Buffs.Vent(ThermalVentTime);
             cannonReadyAt = Time.time + CannonCooldownTime;
             readyAt = Mathf.Max(readyAt, Time.time + 0.25f);
             // The recoil shoves him back a step.
@@ -127,7 +132,6 @@ namespace Slopgame
             chargeGlow = null;
         }
 
-        private void OnDestroy() { if (chargeGlow != null) Destroy(chargeGlow.gameObject); }
 
         public void Hide()
         {
@@ -156,12 +160,21 @@ namespace Slopgame
             Vector2 end = RayEnd(run, origin, direction, range);
             float length = Vector2.Distance(origin, end);
             int hits = 0;
+            bool targeting = shooter.Powerups.Count(PowerupType.TargetingArray) > 0, overheat = shooter.Powerups.Count(PowerupType.Overheat) > 0;
             foreach (var enemy in run.Enemies.ToArray())
             {
                 if (enemy == null || enemy.Health <= 0) continue;
                 if (!BrawlerAttack.InRectangle((Vector2)enemy.transform.position - origin, direction, length, width * 0.5f, enemy.HitRadius)) continue;
                 if (!enemy.IsInvulnerable) hits++;
-                CombatDamage.Apply(shooter, enemy, damage, DamageElement.Physical, origin, knockback);
+                // Targeting Array: +1 at long range. Overheat: a second ray within 2 seconds sets the target burning.
+                int dealt = damage + (targeting && Vector2.Distance(origin, enemy.transform.position) > TargetingRange ? 1 : 0);
+                CombatDamage.Apply(shooter, enemy, dealt, DamageElement.Physical, origin, knockback);
+                if (overheat && enemy != null && enemy.Health > 0)
+                {
+                    if (lastRayHit.TryGetValue(enemy, out float last) && Time.time - last <= OverheatWindow)
+                        enemy.Burn(CombatDamage.BurnTicks, CombatDamage.BurnTickDamage(dealt));
+                    lastRayHit[enemy] = Time.time;
+                }
                 HeroVfx.Sparks(run.ProjectileRoot, enemy.transform.position, Core, 6, 4f, 0.22f, direction, 70f);
             }
             CyborgVfx.Ray(run.ProjectileRoot, origin, end, Plasma, width);
@@ -183,6 +196,22 @@ namespace Slopgame
         }
 
         // ---------------------------------------------------------------- boss artifacts
+
+        public const float TargetingRange = 6f, OverheatWindow = 2f, ThermalVentTime = 2f, PlatingRadius = 2f;
+        private static readonly System.Collections.Generic.Dictionary<DungeonEnemy, float> lastRayHit = new System.Collections.Generic.Dictionary<DungeonEnemy, float>();
+
+        /// <summary>Reactive Plating: a hit sets off a plasma burst around him.</summary>
+        private void OnStruck(bool warded)
+        {
+            if (Player.Powerups.Count(PowerupType.ReactivePlating) == 0 || !Player.Run.IsPlaying) return;
+            var run = Player.Run;
+            Vector2 at = transform.position;
+            HeroVfx.Pulse(run.ProjectileRoot, at, PlatingRadius, Plasma, 0.3f);
+            CoopFx.Pulse(run, at, PlatingRadius, Plasma, 0.3f);
+            foreach (var enemy in run.Enemies.ToArray())
+                if (enemy != null && enemy.Health > 0 && Vector2.Distance(at, enemy.transform.position) <= PlatingRadius + enemy.HitRadius)
+                    CombatDamage.Apply(Player, enemy, Player.Damage, DamageElement.Physical, at, 1.5f);
+        }
 
         public const float MissileRange = 9f, BoostDistance = 4.5f, BoostHitRadius = 0.9f, BoostBlastRadius = 1.4f;
         public const float TurretRange = 4f, TurretDuration = 6f;
