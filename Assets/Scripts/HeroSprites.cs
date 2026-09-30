@@ -103,12 +103,49 @@ namespace Slopgame
         {
             if (!Grids.TryGetValue(weapon, out var rows)) return null;
             if (cache.TryGetValue(weapon, out var sprite) && sprite != null) return sprite;
-            sprite = Build(weapon + (accent ? " hero details" : " hero body"), rows, accent);
+            sprite = Build(weapon + (accent ? " hero details" : " hero body"), rows, accent, (x, c) => true, Vector2.one * 0.5f);
             cache[weapon] = sprite;
             return sprite;
         }
 
-        private static Sprite Build(string name, string[] rows, bool accent)
+        // The Demoness's wing pixels, and the pixel on each side of her back where a wing joins it (the flap's pivot).
+        private const string WingPixels = "XxZYyw";
+        private const float WingShoulderX = 9f, WingShoulderY = 8f;
+        private static Sprite winglessAccent;
+        private static readonly Sprite[] wings = new Sprite[2];
+
+        /// <summary>True for heroes whose wings can beat on their own (the Demoness).</summary>
+        public static bool HasWings(WeaponType weapon) => weapon == WeaponType.Tail;
+
+        /// <summary>The Demoness's detail layer with her wings left out, worn while the separate wing layers beat.</summary>
+        public static Sprite WinglessAccent => winglessAccent != null ? winglessAccent
+            : winglessAccent = Build("Tail hero details (wingless)", Grids[WeaponType.Tail], true, (x, c) => WingPixels.IndexOf(c) < 0, Vector2.one * 0.5f);
+
+        /// <summary>
+        /// One of the Demoness's wings (side -1 left, +1 right) exactly as drawn on her sprite, pivoted at the shoulder
+        /// so it can be rotated to beat. Place it at <see cref="WingShoulder"/> on an unflipped hero.
+        /// </summary>
+        public static Sprite Wing(int side)
+        {
+            int index = side < 0 ? 0 : 1;
+            if (wings[index] != null) return wings[index];
+            var rows = Grids[WeaponType.Tail];
+            float half = rows[0].Length * 0.5f, shoulderX = side < 0 ? WingShoulderX : rows[0].Length - WingShoulderX;
+            return wings[index] = Build(side < 0 ? "Demoness left wing" : "Demoness right wing", rows, true,
+                (x, c) => WingPixels.IndexOf(c) >= 0 && (side < 0 ? x < half : x >= half),
+                new Vector2(shoulderX / rows[0].Length, WingShoulderY / rows.Length));
+        }
+
+        /// <summary>Where a wing's shoulder sits relative to the centre of the unflipped hero sprite, in sprite units.</summary>
+        public static Vector2 WingShoulder(int side)
+        {
+            var rows = Grids[WeaponType.Tail];
+            float unit = WorldSize / rows.Length;
+            return new Vector2(side * (rows[0].Length * 0.5f - WingShoulderX), WingShoulderY - rows.Length * 0.5f) * unit;
+        }
+
+        /// <param name="include">Which accent pixels (by column and grid letter) to keep.</param>
+        private static Sprite Build(string name, string[] rows, bool accent, System.Func<int, char, bool> include, Vector2 pivot)
         {
             int width = rows[0].Length, height = rows.Length;
             var texture = new Texture2D(width, height, TextureFormat.RGBA32, false)
@@ -120,13 +157,13 @@ namespace Slopgame
                     char c = x < rows[y].Length ? rows[y][x] : '.';
                     Color? body = BodyColor(c);
                     pixels[(height - y - 1) * width + x] = accent
-                        ? (body.HasValue ? Color.clear : AccentColor(c))
+                        ? (body.HasValue || !include(x, c) ? Color.clear : AccentColor(c))
                         : body ?? Color.clear;
                 }
             texture.SetPixels(pixels);
             texture.Apply(false, true);
             // Scaled by height, so a wider grid (the Demoness's wings) spreads sideways instead of shrinking the hero.
-            return Sprite.Create(texture, new Rect(0, 0, width, height), Vector2.one * 0.5f, height / WorldSize);
+            return Sprite.Create(texture, new Rect(0, 0, width, height), pivot, height / WorldSize);
         }
 
         private static Color? BodyColor(char c)
