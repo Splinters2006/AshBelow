@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace Slopgame
 {
-    public enum BossKind { AshWarden, Duelist, Archdemon, GridOverseer, SiegeEngine, SingularityCore, HexMatriarch, BrimstoneHound, InfernalJudge }
+    public enum BossKind { AshWarden, Duelist, Archdemon, GridOverseer, SiegeEngine, SingularityCore, HexMatriarch, BrimstoneHound, InfernalJudge, Spellblade, RimeArchmage, GrandMagister }
 
     /// <summary>
     /// The arena guardian's shared state (health, title, invulnerability, co-op state). Its fighting style lives in
@@ -40,7 +40,8 @@ namespace Slopgame
 
         /// <summary>
         /// Each world's three guardians in order from its <see cref="WorldDefinition.FirstGuardian"/>: the ash guardians on
-        /// floors 5/10/15 (and in worlds without their own), the Arcology's machines on 20/25/30, the Infernal Court's on 35/40/45.
+        /// floors 5/10/15 (and in worlds without their own), the Arcology's machines on 20/25/30, the Infernal Court's on 35/40/45
+        /// and the Arcane Spire's mages on 50/55/60.
         /// </summary>
         public static BossKind KindForFloor(int floor) => (BossKind)(Mathf.Max(0, floor / 5 - 1) % 3 + (int)WorldCatalog.ForFloor(floor).FirstGuardian);
 
@@ -50,6 +51,9 @@ namespace Slopgame
             BossKind.HexMatriarch => HexMatriarchBoss.FixedTitle,
             BossKind.BrimstoneHound => BrimstoneHoundBoss.FixedTitle,
             BossKind.InfernalJudge => InfernalJudgeBoss.FixedTitle,
+            BossKind.Spellblade => SpellbladeBoss.FixedTitle,
+            BossKind.RimeArchmage => RimeArchmageBoss.FixedTitle,
+            BossKind.GrandMagister => GrandMagisterBoss.FixedTitle,
             BossKind.GridOverseer => GridOverseerBoss.FixedTitle,
             BossKind.SiegeEngine => SiegeEngineBoss.FixedTitle,
             BossKind.SingularityCore => SingularityCoreBoss.FixedTitle,
@@ -68,6 +72,9 @@ namespace Slopgame
             Behaviour = Kind == BossKind.HexMatriarch ? gameObject.AddComponent<HexMatriarchBoss>()
                 : Kind == BossKind.BrimstoneHound ? (BossBehaviour)gameObject.AddComponent<BrimstoneHoundBoss>()
                 : Kind == BossKind.InfernalJudge ? gameObject.AddComponent<InfernalJudgeBoss>()
+                : Kind == BossKind.Spellblade ? gameObject.AddComponent<SpellbladeBoss>()
+                : Kind == BossKind.RimeArchmage ? (BossBehaviour)gameObject.AddComponent<RimeArchmageBoss>()
+                : Kind == BossKind.GrandMagister ? gameObject.AddComponent<GrandMagisterBoss>()
                 : Kind == BossKind.GridOverseer ? gameObject.AddComponent<GridOverseerBoss>()
                 : Kind == BossKind.SiegeEngine ? (BossBehaviour)gameObject.AddComponent<SiegeEngineBoss>()
                 : Kind == BossKind.SingularityCore ? gameObject.AddComponent<SingularityCoreBoss>()

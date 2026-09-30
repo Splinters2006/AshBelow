@@ -98,7 +98,9 @@ namespace Slopgame
             var hero = world.Hero.HasValue ? HeroFor(run, world.Hero.Value) : null;
             int first = WorldCatalog.FirstFloor(world.Index);
             string owner = hero != null ? $"{hero.DisplayName}'s world" : "The starting world";
-            string status = world.IsPlaceholder ? "Placeholder: the Ash Below's enemies and guardians for now" : "Three guardians await";
+            string status = !world.IsPlaceholder ? "Three guardians await"
+                : world.FirstGuardian != BossKind.AshWarden ? "Three guardians of its own; the Ash Below's enemies for now"
+                : "Placeholder: the Ash Below's enemies and guardians for now";
             string layout = world.IsWaveWorld ? $"{WorldCatalog.FloorsPerWorld} levels of enemy waves, a guardian every 5" : $"floors {first}-{first + WorldCatalog.FloorsPerWorld - 1}";
             DungeonUi.Label(new Rect(frame.x + 24f, frame.y + 16f, frame.width - 48f, 30f), world.Name, 24, world.Accent);
             DungeonUi.Label(new Rect(frame.x + 24f, frame.y + 48f, frame.width - 48f, 22f), $"{owner}  /  {layout}  /  {status}", 14, DungeonUi.Muted);

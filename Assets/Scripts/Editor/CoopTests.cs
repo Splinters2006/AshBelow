@@ -108,7 +108,9 @@ namespace Slopgame.Editor
             Require(DungeonBoss.KindForFloor(5) == BossKind.AshWarden && DungeonBoss.KindForFloor(10) == BossKind.Duelist
                 && DungeonBoss.KindForFloor(15) == BossKind.Archdemon && DungeonBoss.KindForFloor(20) == BossKind.GridOverseer
                 && DungeonBoss.KindForFloor(35) == BossKind.HexMatriarch && DungeonBoss.KindForFloor(40) == BossKind.BrimstoneHound
-                && DungeonBoss.KindForFloor(45) == BossKind.InfernalJudge && DungeonBoss.KindForFloor(50) == BossKind.AshWarden, "Boss rotation is wrong.");
+                && DungeonBoss.KindForFloor(45) == BossKind.InfernalJudge && DungeonBoss.KindForFloor(50) == BossKind.Spellblade
+                && DungeonBoss.KindForFloor(55) == BossKind.RimeArchmage && DungeonBoss.KindForFloor(60) == BossKind.GrandMagister
+                && DungeonBoss.KindForFloor(65) == BossKind.AshWarden, "Boss rotation is wrong.");
             // Floors past the last world stay in it, and no world begins after the last one.
             int lastFloor = WorldCatalog.All.Length * WorldCatalog.FloorsPerWorld;
             Require(!WorldCatalog.ForFloor(1).HighTech && !WorldCatalog.ForFloor(15).HighTech && WorldCatalog.ForFloor(16).HighTech
