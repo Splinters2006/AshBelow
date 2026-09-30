@@ -5,7 +5,7 @@ using UnityEngine;
 namespace Slopgame
 {
     /// <summary>How a world carves its floors; each world in <see cref="WorldCatalog"/> picks one.</summary>
-    public enum MapLayout { Dungeon, CityBlocks, Caverns, Chambers, Alleys, Cathedral, Clearings, Halls }
+    public enum MapLayout { Dungeon, CityBlocks, Caverns, Chambers, Alleys, Clearings }
 
     public sealed class DungeonMap
     {
@@ -56,9 +56,7 @@ namespace Slopgame
                 case MapLayout.Caverns: GenerateCaverns(random); break;
                 case MapLayout.Chambers: GenerateChambers(random); break;
                 case MapLayout.Alleys: GenerateAlleys(random); break;
-                case MapLayout.Cathedral: GenerateCathedral(random); break;
                 case MapLayout.Clearings: GenerateClearings(random); break;
-                case MapLayout.Halls: GenerateHalls(random); break;
                 default: GenerateDungeon(random); break;
             }
             Finish();
@@ -181,38 +179,6 @@ namespace Slopgame
             }
         }
 
-        /// <summary>The Sunken Cathedral: a pillared nave with mirrored side chapels and an apse at its far end.</summary>
-        private void GenerateCathedral(System.Random random)
-        {
-            int mid = Height / 2, left = 4, right = Width - 10;
-            FillRect(new RectInt(left, mid - 3, right - left, 7));
-            for (int x = left + 3; x < right - 1; x += 4)
-            {
-                floor[x, mid - 2] = false;
-                floor[x, mid + 2] = false;
-            }
-            var apse = new Vector2Int(Width - 8, mid);
-            FillCircle(apse, 4.4f);
-            Centers.Add(new Vector2Int(left + 1, mid));
-            int chapels = random.Next(2, 4);
-            float spacing = (right - left - 8f) / chapels;
-            for (int i = 0; i < chapels; i++)
-            {
-                int x = left + 6 + Mathf.RoundToInt(spacing * i + (float)random.NextDouble() * (spacing - 7f));
-                int w = random.Next(6, 9), h = random.Next(5, 8);
-                foreach (int side in new[] { 1, -1 })
-                {
-                    int y = side > 0 ? mid + 6 : mid - 6 - h;
-                    FillRect(new RectInt(x, y, w, h));
-                    // A two-wide doorway from the nave into the chapel.
-                    int door = x + w / 2;
-                    for (int d = mid; d != (side > 0 ? y : y + h - 1); d += side) { floor[door, d] = true; floor[door + 1, d] = true; }
-                    Centers.Add(new Vector2Int(x + w / 2, y + h / 2));
-                }
-            }
-            Centers.Add(apse);
-        }
-
         /// <summary>The Savage Wilds: ragged clearings joined by wide game trails, with trees growing in the open.</summary>
         private void GenerateClearings(System.Random random)
         {
@@ -235,44 +201,6 @@ namespace Slopgame
                 if (floor[x, y] && !Centers.Exists(c => Mathf.Abs(c.x - x) <= 2 && Mathf.Abs(c.y - y) <= 2)
                     && floor[x - 1, y] && floor[x + 1, y] && floor[x, y - 1] && floor[x, y + 1]) floor[x, y] = false;
             }
-        }
-
-        /// <summary>The Gilded Casino: grand gaming halls in a grid, joined by wide doorways and filled with card tables.</summary>
-        private void GenerateHalls(System.Random random)
-        {
-            const int columns = 3, rows = 2;
-            int cellW = (Width - 4) / columns, cellH = (Height - 4) / rows;
-            var halls = new RectInt[columns, rows];
-            for (int cx = 0; cx < columns; cx++)
-                for (int cy = 0; cy < rows; cy++)
-                {
-                    int w = random.Next(cellW - 7, cellW - 3), h = random.Next(cellH - 7, cellH - 3);
-                    var hall = new RectInt(2 + cx * cellW + random.Next(1, cellW - w), 2 + cy * cellH + random.Next(1, cellH - h), w, h);
-                    halls[cx, cy] = hall;
-                    FillRect(hall);
-                }
-            // Snake through the halls so the start and the stairs sit at opposite corners.
-            for (int cx = 0; cx < columns; cx++)
-                for (int k = 0; k < rows; k++)
-                {
-                    int cy = cx % 2 == 0 ? k : rows - 1 - k;
-                    var hall = halls[cx, cy];
-                    Centers.Add(new Vector2Int((int)hall.center.x, (int)hall.center.y));
-                }
-            for (int i = 1; i < Centers.Count; i++) Line(Centers[i - 1], Centers[i], 1);
-            for (int cx = 0; cx < columns; cx++)
-                for (int cy = 0; cy < rows; cy++)
-                {
-                    var hall = halls[cx, cy];
-                    // Rows of two-wide card tables with aisles between them.
-                    for (int x = hall.xMin + 2; x + 1 < hall.xMax - 2; x += 4)
-                        for (int y = hall.yMin + 2; y < hall.yMax - 2; y += 3)
-                        {
-                            if (random.Next(3) == 0 || Centers.Exists(c => Mathf.Abs(c.x - x) <= 3 && Mathf.Abs(c.y - y) <= 2)) continue;
-                            floor[x, y] = false;
-                            floor[x + 1, y] = false;
-                        }
-                }
         }
 
         private static readonly Vector2Int[] Steps = { Vector2Int.up, Vector2Int.down, Vector2Int.left, Vector2Int.right };

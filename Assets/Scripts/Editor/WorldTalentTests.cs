@@ -228,7 +228,7 @@ namespace Slopgame.Editor
             Require(run.Floor == 16, "Travelled between worlds without clearing one");
         }
 
-        /// <summary>The travel map's data: one world per hero but the Knight and Archer, the Augment's second, all on the map.</summary>
+        /// <summary>The travel map's data: at most one world per hero (never the starting heroes), the Augment's second, all on the map.</summary>
         private static void TestWorldCatalog()
         {
             var worlds = WorldCatalog.All;
