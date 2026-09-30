@@ -101,6 +101,53 @@ namespace Slopgame
             _ => Color.clear
         });
 
+        private static Sprite urnSprite, crateSprite, heartSprite;
+
+        /// <summary>A clay urn with a dark mouth and a pale band. Tint it with the world's colours.</summary>
+        public static Sprite UrnSprite => urnSprite != null ? urnSprite : urnSprite = PaletteSprite("Urn", new[]
+        {
+            "...OOOO...", "..OKKKKO..", "...OMMO...", "..OMLMMO..", ".OMLMMMDO.", ".OBBBBBBO.",
+            ".OMLMMMDO.", ".OMMMMMDO.", "..OMMMDO..", "...ODDO...", "....OO...."
+        }, key => key switch
+        {
+            'O' => new Color(0.2f, 0.15f, 0.13f),
+            'K' => new Color(0.08f, 0.06f, 0.06f),
+            'M' => new Color(0.72f, 0.72f, 0.72f),
+            'L' => new Color(0.95f, 0.95f, 0.95f),
+            'D' => new Color(0.48f, 0.48f, 0.48f),
+            'B' => new Color(1f, 0.9f, 0.7f),
+            _ => Color.clear
+        });
+
+        /// <summary>A banded supply crate with a status light. Tint it with the world's colours.</summary>
+        public static Sprite CrateSprite => crateSprite != null ? crateSprite : crateSprite = PaletteSprite("Crate", new[]
+        {
+            "OOOOOOOOOO", "OLLLLLLLDO", "OLBBBBBBDO", "OLMMMMMMDO", "OLMMGGMMDO",
+            "OLMMGGMMDO", "OLMMMMMMDO", "OLBBBBBBDO", "ODDDDDDDDO", "OOOOOOOOOO"
+        }, key => key switch
+        {
+            'O' => new Color(0.12f, 0.12f, 0.16f),
+            'L' => new Color(0.95f, 0.95f, 0.95f),
+            'M' => new Color(0.7f, 0.7f, 0.7f),
+            'D' => new Color(0.45f, 0.45f, 0.45f),
+            'B' => new Color(0.3f, 0.3f, 0.34f),
+            'G' => Color.white,
+            _ => Color.clear
+        });
+
+        /// <summary>A small red heart with a white shine. Draw it untinted.</summary>
+        public static Sprite HeartSprite => heartSprite != null ? heartSprite : heartSprite = PaletteSprite("Heart", new[]
+        {
+            ".OO...OO.", "OWRO.ORRO", "ORRRORRRO", "ORRRRRRDO", ".ORRRRDO.", "..ORRDO..", "...ODO...", "....O...."
+        }, key => key switch
+        {
+            'O' => new Color(0.35f, 0.04f, 0.08f),
+            'R' => new Color(0.95f, 0.2f, 0.28f),
+            'D' => new Color(0.65f, 0.08f, 0.15f),
+            'W' => Color.white,
+            _ => Color.clear
+        });
+
         /// <summary>A pixel sprite one world unit wide, drawn from rows of palette keys.</summary>
         public static Sprite PaletteSprite(string name, string[] rows, System.Func<char, Color> palette)
         {

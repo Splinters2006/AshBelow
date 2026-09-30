@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Reflection;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -73,6 +74,7 @@ namespace Slopgame.Editor
                 if (stage == 1)
                 {
                     TestAsh(run);
+                    TestBreakables(run);
                     TestUniversalEffects(run);
                     DebugMode.Set(true);
                     while (run.Floor < 15) run.DebugSkipRoom();
@@ -82,7 +84,7 @@ namespace Slopgame.Editor
                     return;
                 }
                 TestNeon(run);
-                Finish(!failed, "26 talent caps/class gates; crit, burn, freeze, shock, ward effects; world-cleared screen; both world spawns; spread fire, freeze/pause, charge/recovery/walls");
+                Finish(!failed, "26 talent caps/class gates; crit, burn, freeze, shock, ward effects; world-cleared screen; both world spawns; breakables; spread fire, freeze/pause, charge/recovery/walls");
             }
             catch (Exception error) { Debug.LogException(error); Finish(false, error.Message); }
         }
@@ -112,6 +114,23 @@ namespace Slopgame.Editor
                 if (weapon == WeaponType.Staff) Near(powers.ElementalEffectChance, 0.3f, "Stormcraft missing");
                 UnityEngine.Object.Destroy(obj);
             }
+        }
+
+        private static void TestBreakables(DungeonRun run)
+        {
+            Require(Breakable.Active.Count > 0, "No breakables on a combat floor");
+            Vector2 hero = run.Map.Centers[0];
+            run.Player.transform.position = hero;
+            int crystals = run.ProjectileRoot.GetComponentsInChildren<Crystal>().Length;
+            var loaded = Breakable.Create(run, run.ProjectileRoot, hero + Vector2.right, run.World, 2, true);
+            var behind = Breakable.Create(run, run.ProjectileRoot, hero + Vector2.left * 1.5f, run.World, 0, false);
+            Breakable.SmashInArc(run.Player, Vector2.right, Breakable.SwingReach);
+            Require(!Breakable.Active.Contains(loaded), "Swing did not smash the urn in front");
+            Require(Breakable.Active.Contains(behind), "Swing smashed an urn behind the hero");
+            Require(run.ProjectileRoot.GetComponentsInChildren<Crystal>().Length == crystals + 1, "Urn dropped no crystals");
+            Require(run.ProjectileRoot.GetComponentsInChildren<HealthPickup>().Length > 0, "Urn dropped no heart");
+            Require(Breakable.SmashAt(run, behind.transform.position, 0.1f) && !Breakable.Active.Contains(behind), "Touch did not smash the urn");
+            Require(WorldCatalog.All[0].Layout == MapLayout.Dungeon && WorldCatalog.All[1].Layout != MapLayout.Dungeon, "World layouts wrong");
         }
 
         private static void TestAsh(DungeonRun run)

@@ -227,7 +227,7 @@ namespace Slopgame
             InShop = !InShop && IsShopNext(Floor);
             if (!InShop) Floor++;
             floorRewardGranted = false;
-            Map = InShop ? DungeonMap.Shop() : new DungeonMap(Seed + Floor * 7919, IsBossFloor);
+            Map = InShop ? DungeonMap.Shop() : new DungeonMap(Seed + Floor * 7919, IsBossFloor, World.Layout);
             level = new GameObject(InShop ? "Crystal shop" : "Floor " + Floor).transform;
             level.SetParent(transform);
             view.backgroundColor = World.Background;
@@ -292,6 +292,8 @@ namespace Slopgame
                     Enemies.Add(enemy);
                 }
             }
+            // Urns and crates to smash for crystals (and the odd heart).
+            if (!IsBossFloor && !InShop) Breakable.Scatter(this, level, Map, World, Vector2Int.RoundToInt(exit), Seed + Floor * 4409);
             lastHeroCells.Clear();
             ChoosingUpgrade = false;
             IsPlaying = true;
