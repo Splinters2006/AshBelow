@@ -63,12 +63,12 @@ namespace Slopgame
                 "A..DLWWWWWFFRRRr", "AA.DLWWWWWMDRRRr", ".AADWWMWWWMD.rr.", "..DDDDgGgDDD....",
                 "...DMWWDWWMD....", "....DSSDSsD.....", "....DkkDkkD.....", "...DDDD.DDDD....",
             } },
-            { WeaponType.Tail, new[] // Demoness: a pale girl with curled black ram horns, long dark violet hair, glowing eyes and a spade-tipped tail
+            { WeaponType.Tail, new[] // Demoness: a pale girl with curled black ram horns, long dark violet hair, glowing eyes, a spade-tipped tail and bat wings
             {
-                "................", "..NNNn....nNNN..", ".NnnNNDDDDNNnnN.", "Nn.DVUUUVVVVD.nN",
-                "NnNVUVVVVVVVVNnN", ".NNVVVVVCCVVVNN.", "..DVVVCCCCCCVD..", "..DVVCCEvCCEvD..",
-                "..DVVCCCCCCCcD..", ".DVVVcCCCPCcD...", "TDVVVVDcCCcD....", "TTDVVDLWWWWWD...",
-                ".TNDVDLWFFWMCD..", "..NDDWWWMWWMcD..", "..NDWWWWWWWWWD..", "...NDDCcDDCcD...",
+                "........................", "......NNNn....nNNN......", ".N...NnnNNDDDDNNnnN...N.", "NVN.Nn.DVUUUVVVVD.nN.NVN",
+                "NVVNNnNVUVVVVVVVVNnNNVVN", "NVUVNNNVVVVVCCVVVNNNVUVN", "NVUUVNDVVVCCCCCCVDNVUUVN", "NUVUUNDVVCCEvCCEvDNUUVUN",
+                "NVNUVNDVVCCCCCCCcDNVUNVN", "N.NVUDVVVcCCCPCcD.NUVN.N", "...NTDVVVVDcCCcD..NVN...", "....TTDVVDLWWWWWD.NN....",
+                ".....TNDVDLWFFWMCD......", "......NDDWWWMWWMcD......", "......NDWWWWWWWWWD......", ".......NDDCcDDCcD.......",
             } },
             { WeaponType.Coins, new[] // Gambler: a travelling merchant in a wide-brimmed hat, gold-toothed grin, fat coin purse and a flipped coin
             {
@@ -124,7 +124,8 @@ namespace Slopgame
                 }
             texture.SetPixels(pixels);
             texture.Apply(false, true);
-            return Sprite.Create(texture, new Rect(0, 0, width, height), Vector2.one * 0.5f, width / WorldSize);
+            // Scaled by height, so a wider grid (the Demoness's wings) spreads sideways instead of shrinking the hero.
+            return Sprite.Create(texture, new Rect(0, 0, width, height), Vector2.one * 0.5f, height / WorldSize);
         }
 
         private static Color? BodyColor(char c)
