@@ -16,18 +16,22 @@ namespace Slopgame
         private SpriteRenderer pawRenderer, armRenderer;
         private static readonly Color Hellfire = new Color(1f, 0.16f, 0.08f);
 
-        // Pixel art for the pet's paw, drawn as left halves and mirrored. N outline, R blood-red fur, r dark fur,
-        // L fur highlight, e/E smouldering embers, C claw, G glowing claw edge.
-        private const float PixelsPerUnit = 24f;
+        // Pixel art for the pet's paw, drawn as left halves and mirrored: a furry wrist, a great palm pad, four toes with
+        // their own pads and long hooked claws. N outline, R blood-red fur, r dark fur, L fur highlight, e/E smouldering
+        // embers, P pad, p pad sheen, C claw, G glowing claw edge.
+        private const float PixelsPerUnit = 32f;
         private static readonly string[] PawHalf =
         {
-            "...NrRRRRRRR", "..NrRRLRRRRR", ".NrRRRRReRRR", "NrRRLRRRReRR", "NrRRRRRRRReR", "NrRRRRLRRRRR",
-            "NrRLRRRRRRRR", "NrRRRRNrRRRN", "NrRLRNrRLRRN", "NrRRRNrRRRRN", "NrRRrNrRRRrN", "NrrrrNNrrrrN",
-            ".NCGN..NCGN.", ".NCCGN.NCCGN", "..NCGN.NCCG.", "..NCCG..NCG.", "...NCG..NCG.", "...NCCG.NCG.",
-            "....NCG..G..", ".....NG.....", "......G.....",
+            "......NrRRRRRRRR", ".....NrRRLRRRRRR", "....NrRRRRRRRRRR", "..N.NrRLRRRRRReR",
+            "..NNrRRRRRLRRRRR", ".NrRRRLRRRRRRRRR", ".NrRRRRRRRRNNNNN", "NrRRLRRRRRNPPPPP",
+            "NrRRRRRRRNPppPPP", "NrRLRRRRRNPpPPPP", "NrRRRRRRRNPPPPPP", "NrRRReRRRRNPPPPP",
+            "NrRRRRRRRRRNNNNN", ".NrRRRRNNNrRRRRR", ".NrRLRNN.NrRLRRN", "NrRRRRN.NrRRRRRN",
+            "NrRRRRN.NrRRRRRN", ".NPpPN..NPPpPPN.", ".NPPPN..NPPPPPN.", "..NNN....NNNNN..",
+            ".NCGN....NCCGN..", ".NCCG....NCCGN..", ".NCCG....NNCCG..", "..NCG.....NCG...",
+            "..NG......NG....", "..G.......G.....",
         };
         // One tile of the forearm, repeated up to the portal; bristling tufts stick out of its edges.
-        private static readonly string[] ArmHalf = { "....NrRRRLRR", "...NrRRRRRRR", "..NrrRRLRRRR", "....NrReRRRR" };
+        private static readonly string[] ArmHalf = { "....NrRRRLRRRRRR", "...NrRRRRRRRRRRR", "..NNrRRLRRRRReRR", "....NrRRRRRRLRRR" };
         private static Sprite pawSprite, armSprite;
         private static Sprite PawSprite => pawSprite != null ? pawSprite : pawSprite = Mirrored("Demon paw", PawHalf, new Vector2(0.5f, 0f));
         private static Sprite ArmSprite => armSprite != null ? armSprite : armSprite = Mirrored("Demon forearm", ArmHalf, new Vector2(0.5f, 0f));
@@ -187,6 +191,8 @@ namespace Slopgame
                 case 'E': return new Color(1f, 0.72f, 0.2f);
                 case 'C': return new Color(0.2f, 0.05f, 0.07f);
                 case 'G': return Hellfire;
+                case 'P': return new Color(0.22f, 0.03f, 0.07f);
+                case 'p': return new Color(0.45f, 0.1f, 0.16f);
                 default: return Color.clear;
             }
         }

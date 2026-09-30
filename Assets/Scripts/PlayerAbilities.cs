@@ -241,6 +241,9 @@ namespace Slopgame
                 case AbilityType.ArchdemonTechnique:
                 case AbilityType.DemonPaw:
                 case AbilityType.DemonCurse:
+                case AbilityType.WingDash:
+                case AbilityType.SoulSiphon:
+                case AbilityType.NightmareSnap:
                     var demoness = Player.GetComponent<DemonessAttack>();
                     if (demoness == null || !demoness.CastArtifact(definition.Type, aim, rank, cursorDistance)) return false;
                     break;
@@ -375,7 +378,7 @@ namespace Slopgame
         /// <summary>Dashes and blinks travel the way the hero is moving (see <see cref="DungeonPlayer.MobilityAim"/>).</summary>
         public static bool IsMovementAbility(AbilityType type)
             => type == AbilityType.ShieldRush || type == AbilityType.Windstep || type == AbilityType.Blink || type == AbilityType.RocketBoost
-                || type == AbilityType.HaymakerDash;
+                || type == AbilityType.HaymakerDash || type == AbilityType.WingDash;
 
         private void ForAllies(SupportKind kind, int amount, float duration)
         {

@@ -444,6 +444,7 @@ namespace Slopgame
             if (type == PowerupType.Damage) BaseDamage++;
             if (type == PowerupType.Vitality) { rawMaxHealth += 2; if (Health > 0) Health = MaxHealth; }
             if (type == PowerupType.GlassCannon) Health = Mathf.Min(Health, MaxHealth);
+            if (type == PowerupType.BloodPact) { rawMaxHealth = Mathf.Max(1, rawMaxHealth - 1); Health = Mathf.Min(Health, MaxHealth); }
             if (type == PowerupType.Movement) Speed += 0.7f;
             return true;
         }

@@ -358,7 +358,8 @@ namespace Slopgame
             {
                 if (message.Kind == CoopDamageKind.Hit) enemy.Hit(message.Amount, message.Source, message.Knockback);
                 else if (message.Kind == CoopDamageKind.Burn) enemy.Burn(message.Ticks, message.Amount, message.Color);
-                else if (message.Kind == CoopDamageKind.Paralyze) enemy.Paralyze(message.Duration);
+                else if (message.Kind == CoopDamageKind.Paralyze) enemy.Paralyze(message.Duration, message.Ticks > 0);
+                else if (message.Kind == CoopDamageKind.ClearParalysis) enemy.ConsumeParalysis();
                 else if (message.Kind == CoopDamageKind.Curse) enemy.Curse(message.Duration);
                 else if (message.Kind == CoopDamageKind.Freeze) enemy.Freeze(message.Duration);
                 else if (message.Kind == CoopDamageKind.Fear) enemy.Fear(message.Source, message.Duration);

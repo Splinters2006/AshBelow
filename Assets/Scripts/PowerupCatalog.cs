@@ -32,7 +32,9 @@ namespace Slopgame
         // Paladin.
         Zeal, HolyGround, Retribution, Shepherd, BlessedJudgment, HealingSanctuary,
         // Brawler.
-        ComboCounter, Footwork, Brawl, Knockout, MeteorLeap, SandwichSpecial
+        ComboCounter, Footwork, Brawl, Knockout, MeteorLeap, SandwichSpecial,
+        // Demoness.
+        LingeringTerror, Torment, DreadAura, BloodPact, CursedPaw, InfernalTechnique
     }
 
     public sealed class PowerupDefinition
@@ -199,6 +201,12 @@ namespace Slopgame
             new PowerupDefinition(PowerupType.Knockout, "Brawler: Knockout", "The last punch of a charged barrage stuns for 1 second", 1, WeaponType.Fists),
             new PowerupDefinition(PowerupType.MeteorLeap, "Meteor Leap", "Wild Leap's slam sets enemies burning", 1, WeaponType.Fists, AbilityType.WildLeap),
             new PowerupDefinition(PowerupType.SandwichSpecial, "Sandwich Special", "Knuckle Sandwich sends a shockwave rolling forward past its box", 1, WeaponType.Fists, AbilityType.KnuckleSandwich),
+            new PowerupDefinition(PowerupType.LingeringTerror, "Demoness: Lingering Terror", "When your paralysis wears off, the enemy stays 40% slower for 2 seconds", 1, WeaponType.Tail),
+            new PowerupDefinition(PowerupType.Torment, "Demoness: Torment", "Each vital stab on the same enemy deals +1 more than the last", 1, WeaponType.Tail),
+            new PowerupDefinition(PowerupType.DreadAura, "Demoness: Dread Aura", "Enemies within 3 units act and attack 25% slower", 1, WeaponType.Tail),
+            new PowerupDefinition(PowerupType.BloodPact, "Demoness: Blood Pact", "-1 max HP, but vital stabs paralyse 0.5 seconds longer", 1, WeaponType.Tail),
+            new PowerupDefinition(PowerupType.CursedPaw, "Cursed Paw", "HEEEELP's slam leaves a Demon Curse where it lands", 1, WeaponType.Tail, AbilityType.DemonPaw),
+            new PowerupDefinition(PowerupType.InfernalTechnique, "Infernal Technique", "During Archdemon's Technique, tail whips set enemies burning", 1, WeaponType.Tail, AbilityType.ArchdemonTechnique),
             new PowerupDefinition(PowerupType.AegisBurst, "Aegis Burst", "When Aegis ends, it blasts nearby enemies back and damages them once per hit it blocked", 1, WeaponType.Sword, AbilityType.Aegis)
         };
 

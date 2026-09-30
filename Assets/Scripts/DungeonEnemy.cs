@@ -101,7 +101,7 @@ namespace Slopgame
         /// <summary>After a paralysis wears off, a guardian shrugs off new ones for this long.</summary>
         public const float BossParalysisImmunity = 3f;
         public float ActionSpeedMultiplier => IsHeld ? 0f
-            : (IsChilled ? 0.5f : 1f) * (HolyBubble.SlowsAt(transform.position) ? HolyBubble.SanctuarySlow : 1f);
+            : (IsChilled ? 0.5f : 1f) * (HolyBubble.SlowsAt(transform.position) ? HolyBubble.SanctuarySlow : 1f) * (Time.time < terrorUntil ? TerrorSlow : 1f);
         public float MoveMultiplier => ActionSpeedMultiplier;
         // Attack timers follow local action time; status durations and damage-over-time use world time.
         public float ActionTime { get; private set; }
@@ -152,7 +152,8 @@ namespace Slopgame
         {
             if (!Run.IsPlaying || Health <= 0) return;
             if (Run.IsGuest) { GuestUpdate(); return; }
-            ActionTime += Time.deltaTime * ActionSpeedMultiplier;
+            ActionTime += Time.deltaTime * ActionSpeedMultiplier * DreadFactor();
+            if (terrorPending && !IsParalyzed) { terrorPending = false; terrorUntil = Time.time + TerrorTime; }
             UpdateCurseIndicator();
             if (burnTicks > 0 && Time.time >= nextBurn)
             {
@@ -394,10 +395,12 @@ namespace Slopgame
         /// Holds the enemy in place. Guardians are held half as long and then resist for a few seconds.
         /// False when nothing took hold (an untouchable or resisting guardian); a co-op guest assumes it lands.
         /// </summary>
-        public bool Paralyze(float duration)
+        public bool Paralyze(float duration, bool lingering = false)
         {
             if (IsInvulnerable || duration <= 0f || Health <= 0) return false;
-            if (Run.IsGuest) { Run.Coop.ReportDamage(this, CoopDamageKind.Paralyze, 0, transform.position, 0, duration); return true; }
+            if (Run.IsGuest) { Run.Coop.ReportDamage(this, CoopDamageKind.Paralyze, 0, transform.position, lingering ? 1 : 0, duration); return true; }
+            // Lingering Terror: once this paralysis wears off, the enemy stays slowed for a while.
+            if (lingering) terrorPending = true;
             if (Boss != null)
             {
                 // Covers the paralysis itself too, so repeated stabs cannot chain-lock a guardian.
@@ -436,6 +439,27 @@ namespace Slopgame
             Vector2 away = (Vector2)transform.position - from;
             if (away.sqrMagnitude > 0.0001f) Facing.Face(away.normalized);
             return Paralyze(duration);
+        }
+
+        public const float TerrorSlow = 0.6f, TerrorTime = 2f, DreadRadius = 3f, DreadSlow = 0.75f;
+        private bool terrorPending;
+        private float terrorUntil;
+
+        /// <summary>Nightmare Snap: ends the paralysis now and says how long it still had to run.</summary>
+        public float ConsumeParalysis()
+        {
+            float remaining = Mathf.Max(0f, paralyzedUntil - Time.time);
+            if (Run.IsGuest) { Run.Coop.ReportDamage(this, CoopDamageKind.ClearParalysis, 0, transform.position, 0, 0f); return remaining; }
+            paralyzedUntil = Mathf.Min(paralyzedUntil, Time.time);
+            return remaining;
+        }
+
+        /// <summary>Dread Aura: enemies near a Demoness who has it act (and so attack) 25% slower.</summary>
+        private float DreadFactor()
+        {
+            var hero = Run.Player;
+            return hero != null && hero.Health > 0 && hero.Powerups.Count(PowerupType.DreadAura) > 0
+                && Vector2.Distance(transform.position, hero.transform.position) <= DreadRadius ? DreadSlow : 1f;
         }
 
         /// <summary>Breaks the enemy out of its ice at once (Shatter).</summary>
