@@ -19,6 +19,12 @@ namespace Slopgame
             /// <summary>The same record per hero class, keyed by weapon; class mechanics unlock from these.</summary>
             public List<RankEntry> classGuardians;
             public List<RankEntry> upgrades;
+            /// <summary>Worlds cleared at least once, by index; each unlocks two Ash shop items.</summary>
+            public List<int> clearedWorlds;
+            /// <summary>Smuggler's Stash: crystals carried over to the next descent.</summary>
+            public int stashedCrystals;
+            /// <summary>Switched-off toggles, such as the Infernal Pact.</summary>
+            public List<string> flags;
         }
         private SaveData data = Fresh();
         private bool dirty, recoveredBackup;
@@ -36,7 +42,8 @@ namespace Slopgame
             Load();
         }
 
-        private static SaveData Fresh() => new SaveData { version = 1, ash = 0, classGuardians = new List<RankEntry>(), upgrades = new List<RankEntry>() };
+        private static SaveData Fresh() => new SaveData { version = 1, ash = 0, classGuardians = new List<RankEntry>(), upgrades = new List<RankEntry>(),
+            clearedWorlds = new List<int>(), flags = new List<string>() };
         private static string ClassKey(WeaponType weapon) => weapon.ToString().ToLowerInvariant();
 
         /// <summary>The most guardians beaten in a single descent as this class.</summary>
@@ -61,8 +68,11 @@ namespace Slopgame
             foreach (var entry in loaded.upgrades)
                 if (entry == null || string.IsNullOrEmpty(entry.id) || entry.rank < 0 || !ids.Add(entry.id))
                     throw new InvalidDataException("Invalid upgrade data.");
-            // Saves from before per-class records simply start them at zero.
+            // Saves from before per-class records, world clears and toggles simply start them empty.
             if (loaded.classGuardians == null) loaded.classGuardians = new List<RankEntry>();
+            if (loaded.clearedWorlds == null) loaded.clearedWorlds = new List<int>();
+            if (loaded.flags == null) loaded.flags = new List<string>();
+            if (loaded.stashedCrystals < 0) loaded.stashedCrystals = 0;
             ids.Clear();
             foreach (var entry in loaded.classGuardians)
                 if (entry == null || string.IsNullOrEmpty(entry.id) || entry.rank < 0 || !ids.Add(entry.id))
@@ -133,9 +143,61 @@ namespace Slopgame
             Changed?.Invoke();
         }
 
-        /// <summary>Class upgrades gated behind guardians (the class mechanics) need that class to have beaten them.</summary>
+        /// <summary>
+        /// Class upgrades gated behind guardians (the class mechanics) need that class to have beaten them; world rewards need
+        /// their world cleared once.
+        /// </summary>
         public bool IsAvailable(PermanentUpgradeDefinition upgrade) => upgrade != null
-            && (upgrade.ClassWeapon.HasValue ? GuardiansDefeatedAs(upgrade.ClassWeapon.Value) : data.guardians) >= upgrade.RequiredGuardians;
+            && (upgrade.ClassWeapon.HasValue ? GuardiansDefeatedAs(upgrade.ClassWeapon.Value) : data.guardians) >= upgrade.RequiredGuardians
+            && (upgrade.RequiredWorld < 0 || HasClearedWorld(upgrade.RequiredWorld));
+
+        public bool HasClearedWorld(int index) => data.clearedWorlds.Contains(index);
+
+        /// <summary>A world was cleared (its third guardian beaten): its two Ash shop rewards unlock.</summary>
+        public void RecordWorldCleared(int index)
+        {
+            if (IsReadOnly || HasClearedWorld(index)) return;
+            data.clearedWorlds.Add(index);
+            dirty = true;
+            Save();
+            Changed?.Invoke();
+        }
+
+        public const int StashCap = 100;
+        public int StashedCrystals => data.stashedCrystals;
+
+        /// <summary>Smuggler's Stash: puts crystals aside for the next descent (never more than the cap).</summary>
+        public void Stash(int crystals)
+        {
+            if (IsReadOnly) return;
+            data.stashedCrystals = Mathf.Clamp(crystals, 0, StashCap);
+            dirty = true;
+            Save();
+        }
+
+        /// <summary>Takes the stashed crystals out for a new descent.</summary>
+        public int TakeStash()
+        {
+            int crystals = data.stashedCrystals;
+            if (crystals <= 0 || IsReadOnly) return 0;
+            data.stashedCrystals = 0;
+            dirty = true;
+            Save();
+            return crystals;
+        }
+
+        /// <summary>True when a toggle has been switched off in the Ash shop.</summary>
+        public bool IsSwitchedOff(string id) => data.flags.Contains(id);
+
+        public void Switch(string id, bool on)
+        {
+            if (IsReadOnly || IsSwitchedOff(id) == !on) return;
+            if (on) data.flags.Remove(id);
+            else data.flags.Add(id);
+            dirty = true;
+            Save();
+            Changed?.Invoke();
+        }
 
         public bool TryPurchase(string id)
         {

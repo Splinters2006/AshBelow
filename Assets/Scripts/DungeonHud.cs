@@ -430,6 +430,8 @@ namespace Slopgame
                 if (DungeonUi.Button("upgrade" + i, new Rect(rect.x + 24, rect.yMax - 60, 268, 40), "Choose talent", DungeonUi.Teal))
                 { Run.ChooseUpgrade(i); return; }
             }
+            if (Run.CanRerollTalents && DungeonUi.Button("rerollTalents", new Rect(520, 650, 240, 36), "Reroll  /  Scholar's Reroll", AbilityCatalog.Gold))
+                Run.RerollTalents();
         }
 
         private void DrawArtifacts()

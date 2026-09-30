@@ -29,7 +29,7 @@ You can rebind every action under **Controls** in the main menu. Each action get
 ## How a run works
 
 - **Clear the floor.** Defeat every enemy, then find the gold stairs and press **F** to descend.
-- **Pick a boon.** Between floors you choose one of three upgrades for this run. Each choice also restores 2 HP. Some boons belong to your class, and some only show up after you unlock the ability they improve. Open **Talents** in the HUD to see your build.
+- **Pick a boon.** Between floors you choose one of three upgrades for this run. Each choice also restores 2 HP. Some boons belong to your class, and some only show up after you unlock the ability they improve. Hybrid talents change how one of your abilities behaves and only show up once you've learned that ability. Open **Build** in the HUD to see your talents.
 - **Gather crystals.** Every enemy you defeat drops purple crystals (armoured brutes drop 3, guardians 15). Walk near them to pick them up. They last the whole run.
 - **Visit the crystal shop.** Before every guardian you reach a lantern-lit shop. The merchant glows when you can talk to him. Press **F** at his counter to spend crystals. Each shop stocks a random five wares:
   - **One healing ware:** a Healing Draught (+2 HP) or a Grand Elixir (full HP).
@@ -48,7 +48,7 @@ You can rebind every action under **Controls** in the main menu. Each action get
   - **Gorgoth, the Brimstone Hound** (floor 40): lane charges that leave burning pawprints, a sweeping fan of molten breath, and eruptions of shockwaves and falling brimstone.
   - **Vassago, the Infernal Judge** (floor 45): a grid of hellfire chains (find the open square), a double spiral of hex bolts, and a gavel that slams wherever you stand.
   The Arcology guardians vent between attacks, giving you time to punish them. The Infernal Court's guardians tire the same way, summon imps, hellhounds and cultists every few attacks (their minions dissolve when they fall), and their brimstone and hex bolts set you alight: you keep burning until the flames gutter out or you dodge-roll to put them out.
-- **Claim an artifact.** A beaten guardian drops an artifact that unlocks an active ability for your class. Put it on **Q** or **E**. You can hold two at a time, and later artifacts can upgrade one (up to rank 3) or replace it. You can also leave an artifact for 40 crystals.
+- **Claim an artifact.** A beaten guardian drops an artifact that offers three abilities from your hero's pool (four with Sanctified Relics). Pick one to learn, or raise one you already know (up to rank 3). The abilities page then lists every ability you've learned this run so you can choose which sit on **Q** and **E**; it's also the **Abilities** tab of the **Build** panel, so you can swap any time (cooldowns stay with each ability). You can also leave an artifact for 40 crystals.
 - **Death ends the run.** Boons and abilities reset, but your **Ash** and Ash shop upgrades are kept.
 
 Enemies get tougher every floor. The **minimap** in the top-right corner fills in as you explore.
@@ -64,16 +64,20 @@ Enemies get tougher every floor. The **minimap** in the top-right corner fills i
 
 | Hero | Left click / right click | Artifact abilities |
 | --- | --- | --- |
-| **Knight** | Charged sweeping slash / shield that parries and reflects bolts | Shield Rush, Earthshatter, Aegis |
-| **Archer** | Charged arrow / triple shot | Arrow Volley, Piercing Shot, Windstep |
-| **Wizard** | Charged fireball / chain lightning | Inferno Orb, Frost Nova, Arcane Blink |
-| **Assassin** | Charged dagger stab / Shadowstep blink that backstabs everything it passes | Fan of Knives, Venom Vial, Shadow Veil |
-| **Paladin** | Quick sword swipe (hold to bless nearby allies with bonus damage) / Holy Sword strikes | Healing Light, Judgment, Sanctuary |
-| **Brawler** | Fast jab (charge for a punch barrage) / Empower | Knuckle Sandwich, Wild Leap, Primal Rage |
-| **Demoness** | Tail stab (charge to strike the vitals and paralyse) / tail sweep that hits paralysed foes twice as hard | Archdemon's Technique, HEEEELP, Demon Curse |
-| **Gambler** | Throw a coin / a volley of one coin per coin you carry across a 90° cone | Windfall, All In, Jackpot |
-| **Augment** | Plasma ray that pierces every enemy in a line (charge it for a longer, wider, stronger ray) / hold to charge the arm cannon, release to fire a plasma orb that bursts in flame | Micro-Missiles, Rocket Boost, Sentry Turret |
+| **Knight** | Charged sweeping slash / shield that parries and reflects bolts | Shield Rush, Earthshatter, Aegis, Shield Throw, Whirlwind, War Banner* |
+| **Archer** | Charged arrow / triple shot | Arrow Volley, Piercing Shot, Windstep, Net Shot, Ricochet Arrow, Bear Trap* |
+| **Wizard** | Charged fireball / chain lightning | Inferno Orb, Frost Nova, Arcane Blink, Ice Wall, Ball Lightning, Lightning Storm* |
+| **Assassin** | Charged dagger stab / Shadowstep blink that backstabs everything it passes | Fan of Knives, Venom Vial, Shadow Veil, Smoke Bomb, Death Mark*, Shadow Clone* |
+| **Paladin** | Quick sword swipe (hold to bless nearby allies with bonus damage) / Holy Sword strikes | Healing Light, Judgment, Sanctuary, Holy Lance, Consecration, Divine Intervention* |
+| **Brawler** | Fast jab (charge for a punch barrage) / Empower | Knuckle Sandwich, Wild Leap, Primal Rage, Thunder Clap, Haymaker Dash, Suplex* |
+| **Demoness** | Tail stab (charge to strike the vitals and paralyse) / tail sweep that hits paralysed foes twice as hard | Archdemon's Technique, HEEEELP, Demon Curse, Wing Dash, Soul Siphon, Nightmare Snap* |
+| **Gambler** | Throw a coin / a volley of one coin per coin you carry across a 90° cone | Windfall, All In, Jackpot, Card Toss, Dice Bomb, Insurance* |
+| **Augment** | Plasma ray that pierces every enemy in a line (charge it for a longer, wider, stronger ray) / hold to charge the arm cannon, release to fire a plasma orb that bursts in flame | Micro-Missiles, Rocket Boost, Sentry Turret, EMP Pulse, Grapple Arm, Orbital Laser* |
 | **Admin** | Shadow rifts / Nightfall, which executes every nearby enemy | Eclipse, Soul Rend, Shadow Reign |
+
+\* Bought in the Ash shop before guardians can offer it.
+
+Enemies can now be **immobilized**: paralysed, frozen, stunned (Holy Lance, Thunder Clap, EMP Pulse) or rooted (Net Shot, Bear Trap; rooted enemies can still attack). Talents that care about immobilized enemies count all four.
 
 **Admin** is deliberately overpowered, for when you just want to wreck things.
 
@@ -113,7 +117,18 @@ Once you have beaten the third guardian (floor 15) in a single descent, the Ash 
 
 ## Ash and the Ash shop
 
-You earn **Ash** from every kill (1 Ash), every cleared floor (10 Ash) and every guardian (50 Ash). Spend it in the **Ash shop** on the main menu on permanent upgrades such as health, damage, speed, attack speed and dodge. There are also class-specific upgrades for every hero. New purchases apply from your next run.
+You earn **Ash** from every kill (1 Ash), every cleared floor (10 Ash) and every guardian (50 Ash). Spend it in the **Ash shop** on the main menu on permanent upgrades such as health, damage, speed, attack speed and dodge. There are also class-specific upgrades for every hero, and some of each hero's abilities are unlocked here. New purchases apply from your next run.
+
+Clearing a world for the first time (with any hero) adds two rewards to the shop:
+
+| World | Rewards |
+| --- | --- |
+| The Ash Below | **Ember Heart:** start every descent with a random talent |
+| The Neon Arcology | **Backup Drive:** once per descent a killing blow leaves you at 1 HP. **Targeting Chip:** +3% crit and effect chance per rank |
+| The Infernal Court | **Infernal Pact:** +10% damage and -10% max HP per rank (up to 90%), with an on/off switch. **Soul Tithe:** guardians drop a heart that heals 2 HP |
+| The Arcane Spire | **Scholar's Reroll:** reroll the floor talent pick once per world. **Sanctified Relics:** guardians offer 4 abilities |
+| The Shadow Market | **Black Market Pass:** crystal shops stock an extra relic. **Smuggler's Stash:** keep 25% of unspent crystals (up to 100) for the next descent |
+| The Savage Wilds | **Wild Growth:** +1 max HP for each world cleared in a descent. **Apex Predator:** +10% damage to guardians and brutes per rank |
 
 ## Co-op (up to 4 players)
 

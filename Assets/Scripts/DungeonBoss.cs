@@ -126,6 +126,9 @@ namespace Slopgame
                 }
             Behaviour.OnDefeated();
             Enemy.Run.DropArtifact(Behaviour.GroundPosition);
+            // Soul Tithe: every guardian gives up a heart worth 2 HP.
+            if (Enemy.Run.Progress.Rank(PermanentUpgradeCatalog.SoulTitheId) > 0)
+                HealthPickup.Drop(Enemy.Run, Behaviour.GroundPosition + Vector2.down * 1.2f, 2);
         }
     }
 }

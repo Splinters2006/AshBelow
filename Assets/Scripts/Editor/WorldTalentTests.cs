@@ -78,6 +78,7 @@ namespace Slopgame.Editor
                     TestHazards(run);
                     TestBestiary(run);
                     TestUniversalEffects(run);
+                    TestExpansion(run);
                     DebugMode.Set(true);
                     while (run.Floor < 15) run.DebugSkipRoom();
                     DebugMode.Set(false);
@@ -93,6 +94,24 @@ namespace Slopgame.Editor
 
         private static void TestCatalog()
         {
+            // The talents & abilities expansion: every ability is in the catalog, shop-locked ones are sold in the Ash shop,
+            // and every hybrid needs an ability of its own hero.
+            foreach (AbilityType type in Enum.GetValues(typeof(AbilityType)))
+            {
+                if (type == AbilityType.None) continue;
+                var ability = AbilityCatalog.Get(type);
+                Require(ability != null, "Ability missing from the catalog: " + type);
+                if (ability.ShopUnlock) Require(PermanentUpgradeCatalog.Get(ability.UnlockId)?.ClassWeapon == ability.ClassWeapon, "Shop ability not sold: " + type);
+            }
+            foreach (var talent in PowerupCatalog.All)
+                if (talent.RequiredAbility != AbilityType.None)
+                    Require(talent.ClassWeapon == AbilityCatalog.Get(talent.RequiredAbility).ClassWeapon, "Hybrid for another hero's ability: " + talent.Name);
+            foreach (var world in WorldCatalog.All)
+            {
+                int rewards = 0;
+                foreach (var item in PermanentUpgradeCatalog.All) if (item.RequiredWorld == world.Index) rewards++;
+                Require(rewards >= 1, "World without Ash shop rewards: " + world.Name);
+            }
             Require(PowerupCatalog.All.Count == Enum.GetValues(typeof(PowerupType)).Length, "Catalog/enum size mismatch");
             for (int i = 0; i < PowerupCatalog.All.Count; i++) Require((int)PowerupCatalog.All[i].Type == i, "Catalog IDs shifted");
             Require((int)PowerupType.DarkHorizon - (int)PowerupType.ExtendedBattery == 26, "Expected 26 new talents");
@@ -104,7 +123,8 @@ namespace Slopgame.Editor
                 foreach (var talent in PowerupCatalog.All)
                 {
                     if (talent.Type <= PowerupType.ExtendedBattery) continue;
-                    bool eligible = !talent.ClassWeapon.HasValue || talent.ClassWeapon == weapon;
+                    // Hybrids also need their ability learned, which a bare talent sheet never has.
+                    bool eligible = (!talent.ClassWeapon.HasValue || talent.ClassWeapon == weapon) && talent.RequiredAbility == AbilityType.None;
                     Require(powers.CanTake(talent.Type) == eligible, "Class gate: " + talent.Name);
                     if (!eligible) { Require(!powers.Add(talent.Type), "Wrong class acquired talent"); continue; }
                     for (int rank = 0; rank < talent.MaxStacks; rank++) Require(powers.Add(talent.Type), "Missing rank: " + talent.Name);
@@ -273,6 +293,39 @@ namespace Slopgame.Editor
             var bolts = run.ProjectileRoot.GetComponentsInChildren<EnemyProjectile>();
             Require(bolts.Length == before + 3 && !shooter.IsCharging, "Fanatic did not fire exactly three bolts");
             Near(Vector2.Angle(bolts[before].Direction, bolts[before + 2].Direction), 36f, "Fan spread wrong");
+        }
+
+        /// <summary>The talents & abilities expansion's core rules.</summary>
+        private static void TestExpansion(DungeonRun run)
+        {
+            var player = run.Player;
+            var enemy = run.Enemies.Find(e => e.Boss == null && e.Health > 0);
+            Require(enemy != null, "No enemy for the expansion checks");
+            enemy.Health = 1000;
+            // Stun and root both count as immobilized; only the stun holds the enemy.
+            Require(enemy.Stun(1f) && enemy.IsStunned && enemy.IsHeld && enemy.IsImmobilized, "Stun did not hold the enemy");
+            Require(enemy.Root(1f) && enemy.IsRooted, "Root did not take");
+            // Executioner: +50% below a quarter of peak health.
+            Require(CombatDamage.ScaleForTarget(player, enemy, 10) == 10, "Executioner fired without the talent");
+            player.Powerups.Add(PowerupType.Executioner);
+            enemy.Hit(800, enemy.transform.position, 0f);
+            Require(CombatDamage.ScaleForTarget(player, enemy, 10) == 15, "Executioner did not add 50% to a wounded enemy");
+            // Glass Cannon halves max HP, and halves later gains too.
+            int before = player.MaxHealth;
+            Require(player.GrantPowerup(PowerupType.GlassCannon) && player.MaxHealth == Mathf.CeilToInt(before * 0.5f), "Glass Cannon did not halve max HP");
+            int halved = player.MaxHealth;
+            player.RaiseMaxHealth(2);
+            Require(player.MaxHealth == Mathf.CeilToInt((before + 2) * 0.5f) && player.MaxHealth <= halved + 1, "Glass Cannon did not halve a later max HP gain");
+            // Guardian ability picks: learning fills an empty key, and binding to the other key swaps them.
+            var abilities = player.Abilities;
+            var pool = AbilityCatalog.PoolFor(player.ClassWeapon, null);
+            Require(pool.Count >= 5 && !pool.Exists(a => a.ShopUnlock), "Wrong guardian pool before any Ash shop unlocks");
+            Require(abilities.Learn(pool[0].Type) && abilities.Learn(pool[1].Type), "Could not learn abilities");
+            Require(abilities.Equipped(0) == pool[0].Type && abilities.Equipped(1) == pool[1].Type, "Learned abilities did not fill empty keys");
+            Require(abilities.Learn(pool[2].Type) && !abilities.IsEquipped(pool[2].Type) && abilities.IsLearned(pool[2].Type), "Third ability should wait on the abilities page");
+            Require(abilities.Equip(pool[2].Type, 0) && abilities.Equipped(0) == pool[2].Type, "Could not bind a learned ability");
+            Require(abilities.Equip(pool[1].Type, 0) && abilities.Equipped(0) == pool[1].Type && abilities.Equipped(1) == pool[2].Type, "Binding to the other key did not swap");
+            Require(abilities.Learn(pool[1].Type) && abilities.Rank(pool[1].Type) == 2, "Picking a known ability did not rank it up");
         }
 
         private static void TestUniversalEffects(DungeonRun run)

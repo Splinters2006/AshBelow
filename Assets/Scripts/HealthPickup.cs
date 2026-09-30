@@ -13,17 +13,19 @@ namespace Slopgame
         private const float HopTime = 0.35f, HopHeight = 0.5f, Size = 0.4f;
         private static readonly Color HeartColor = new Color(1f, 0.3f, 0.38f);
         private DungeonRun run;
+        private int heal = HealAmount;
         private Vector2 rest, hopFrom;
         private float phase, age;
         private Transform shadow;
 
-        public static HealthPickup Drop(DungeonRun run, Vector2 position)
+        public static HealthPickup Drop(DungeonRun run, Vector2 position, int heal = HealAmount)
         {
             if (run == null || run.ProjectileRoot == null) return null;
             var sprite = DungeonVisuals.Create("Heart", run.ProjectileRoot, position, Vector2.one * Size, Color.white, 5);
             sprite.sprite = DungeonVisuals.HeartSprite;
             var heart = sprite.gameObject.AddComponent<HealthPickup>();
             heart.run = run;
+            heart.heal = heal;
             heart.hopFrom = position;
             Vector2 landing = position + Random.insideUnitCircle.normalized * Random.Range(0.2f, 0.4f);
             heart.rest = run.Map != null && (!run.Map.CanStand(landing, 0.1f) || run.Map.IsLava(landing)) ? position : landing;
@@ -52,7 +54,7 @@ namespace Slopgame
             if (wounded && distance <= MagnetRadius) rest = Vector2.MoveTowards(rest, hero, (6f - distance * 2f) * Time.deltaTime);
             Place(rest, 0.12f + 0.07f * Mathf.Sin(Time.time * 3f + phase));
             if (!wounded || Vector2.Distance(rest, hero) > PickupRadius) return;
-            player.Heal(HealAmount);
+            player.Heal(heal);
             player.CurePoison();
             HeroVfx.Motes(run.ProjectileRoot, hero, 0.7f, HeartColor, 10, 0.8f);
             HeroVfx.Pulse(run.ProjectileRoot, rest, 0.5f, new Color(1f, 0.4f, 0.45f, 0.7f), 0.2f);

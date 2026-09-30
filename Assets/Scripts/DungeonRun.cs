@@ -138,6 +138,7 @@ namespace Slopgame
         public void ShowMainMenu(bool disconnected)
         {
             if (Coop != null && Coop.Session.State != NetState.Offline && !disconnected) Coop.Session.Leave();
+            if (!IsInMainMenu) StashCrystals();
             ClearRun();
             menu.ResetPage(disconnected);
         }
@@ -199,7 +200,40 @@ namespace Slopgame
                 SelectedCharacter.Color, 4).gameObject.AddComponent<DungeonPlayer>();
             Player.Run = this;
             Player.Initialize(SelectedCharacter);
+            crystalsStashed = false;
+            // Smuggler's Stash: last descent's crystals come along.
+            Player.Crystals.Add(Progress.TakeStash());
+            // Ember Heart: the descent begins with one random talent.
+            if (Progress.Rank(PermanentUpgradeCatalog.EmberHeartId) > 0)
+            {
+                var pool = new List<PowerupDefinition>();
+                foreach (var powerup in PowerupCatalog.All) if (Player.Powerups.CanTake(powerup.Type)) pool.Add(powerup);
+                if (pool.Count > 0) Player.GrantPowerup(pool[UnityEngine.Random.Range(0, pool.Count)].Type);
+            }
             NextFloor();
+        }
+
+        private bool crystalsStashed, rerolledThisWorld;
+
+        /// <summary>Smuggler's Stash: when a descent ends, a quarter of the unspent crystals (up to 100) is put aside.</summary>
+        private void StashCrystals()
+        {
+            if (crystalsStashed || Player == null || Progress.Rank(PermanentUpgradeCatalog.SmugglersStashId) == 0) return;
+            crystalsStashed = true;
+            Progress.Stash(Player.Crystals.Crystals / 4);
+        }
+
+        /// <summary>Scholar's Reroll: whether the floor's talent pick can still be rerolled in this world.</summary>
+        public bool CanRerollTalents => ChoosingUpgrade && !rerolledThisWorld && Progress.Rank(PermanentUpgradeCatalog.ScholarsRerollId) > 0
+            && !(IsNetworked && Coop.WaitingForTeam);
+
+        /// <summary>Scholar's Reroll: draws a fresh three (once per world).</summary>
+        public bool RerollTalents()
+        {
+            if (!CanRerollTalents) return false;
+            rerolledThisWorld = true;
+            RollUpgradeChoices(Seed + Floor * 3571 + 9973);
+            return true;
         }
 
         /// <summary>Co-op: the host decided everyone descends now.</summary>
@@ -253,8 +287,9 @@ namespace Slopgame
             arrivingByTravel = false;
             if (!InShop && (WorldCatalog.EntersWorld(Floor) || travelled))
             {
-                // Cheat Death refreshes in every new world.
+                // Cheat Death and Scholar's Reroll refresh in every new world.
                 Player.Powerups.CheatDeathSpent = false;
+                rerolledThisWorld = false;
                 ScreenFx.Flash(FlameMesh.Alpha(World.Accent, 0.6f), 1.2f);
                 WorldBannerUntil = Time.time + 4f;
                 HeroVfx.Pulse(level, Player.transform.position, 3f, World.Accent, 0.9f);
@@ -424,6 +459,7 @@ namespace Slopgame
         public static int EnemyHealthForFloor(int floor) => 2 + Mathf.Max(0, floor - 3);
         public void EndRun()
         {
+            StashCrystals();
             IsPlaying = false;
             ChoosingUpgrade = false;
             ChoosingArtifact = false;
@@ -588,11 +624,21 @@ namespace Slopgame
             // The third guardian's stairs end the world: a cleared screen offers the next world or the menu.
             if (IsBossFloor && WorldCatalog.CompletesWorld(Floor)) { ShowWorldComplete(); return; }
             if (IsBossFloor || InShop) { NextFloor(); return; }
+            RollUpgradeChoices(Seed + Floor * 3571);
+            IsPlaying = false;
+            Player.Weapon?.Hide();
+            ChoosingUpgrade = true;
+            if (!IsNetworked) Time.timeScale = 0f;
+        }
+
+        /// <summary>Draws the floor's three talents: one for the class when there is one, the rest from everything takeable.</summary>
+        private void RollUpgradeChoices(int seed)
+        {
             var pool = new List<PowerupDefinition>();
             foreach (var powerup in PowerupCatalog.All)
                 if (Player.Powerups.CanTake(powerup.Type)) pool.Add(powerup);
             upgradeChoices.Clear();
-            var random = new System.Random(Seed + Floor * 3571);
+            var random = new System.Random(seed);
             var talents = pool.FindAll(powerup => powerup.ClassWeapon.HasValue);
             if (talents.Count > 0)
             {
@@ -606,10 +652,6 @@ namespace Slopgame
                 upgradeChoices.Add(pool[index]);
                 pool.RemoveAt(index);
             }
-            IsPlaying = false;
-            Player.Weapon?.Hide();
-            ChoosingUpgrade = true;
-            if (!IsNetworked) Time.timeScale = 0f;
         }
 
         /// <summary>
@@ -622,6 +664,9 @@ namespace Slopgame
             IsPlaying = false;
             ChoosingUpgrade = false;
             WorldComplete = true;
+            // The world's two Ash shop rewards unlock, and Wild Growth toughens the hero for every world cleared.
+            Progress.RecordWorldCleared(World.Index);
+            if (Progress.Rank(PermanentUpgradeCatalog.WildGrowthId) > 0) Player.RaiseMaxHealth(1);
             Player.Weapon?.Hide();
             Player.Charge.Cancel();
             if (!IsNetworked) Time.timeScale = 0f;
