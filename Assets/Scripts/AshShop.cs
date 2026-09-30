@@ -6,6 +6,8 @@ namespace Slopgame
     {
         private static string LockedText(PermanentUpgradeDefinition item)
         {
+            if (item.RequiredWorld >= 0 && item.RequiredWorld < WorldCatalog.All.Length)
+                return $"Clear {WorldCatalog.All[item.RequiredWorld].Name} or any later world to unlock";
             string hero = item.ClassWeapon.HasValue ? Tabs[System.Array.IndexOf(Weapons, item.ClassWeapon)] : null;
             string guardian = item.RequiredGuardians == 3 ? "the third guardian" : $"{item.RequiredGuardians} guardians in one descent";
             return hero != null ? $"Defeat {guardian} as the {hero} to unlock" : $"Defeat {guardian} to unlock";
@@ -46,6 +48,13 @@ namespace Slopgame
                     DungeonUi.Label(new Rect(884, y + 20, 196, 60), LockedText(item), 14,
                         DungeonUi.Muted, TextAnchor.MiddleCenter);
                     continue;
+                }
+                // The Infernal Pact can be switched off and on again once owned.
+                if (item.Id == PermanentUpgradeCatalog.InfernalPactId && rank > 0)
+                {
+                    bool on = !progress.IsSwitchedOff(item.Id);
+                    if (DungeonUi.Button("toggle_" + item.Id, new Rect(710, y + 50, 160, 34), on ? "Pact: ON" : "Pact: OFF", on ? new Color(1f, 0.4f, 0.3f) : DungeonUi.Muted))
+                        progress.Switch(item.Id, !on);
                 }
                 if (DungeonUi.Button("buy_" + item.Id, new Rect(884, y + 20, 196, 60), maxed ? (item.MaxRank == 1 ? "Owned" : "Maxed") : $"Buy  /  {cost} Ash", AbilityCatalog.Gold,
                     !maxed && !progress.IsReadOnly && progress.Ash >= cost))

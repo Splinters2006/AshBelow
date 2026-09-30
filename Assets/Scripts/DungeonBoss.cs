@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace Slopgame
 {
-    public enum BossKind { AshWarden, Duelist, Archdemon, GridOverseer, SiegeEngine, SingularityCore }
+    public enum BossKind { AshWarden, Duelist, Archdemon, GridOverseer, SiegeEngine, SingularityCore, HexMatriarch, BrimstoneHound, InfernalJudge }
 
     /// <summary>
     /// The arena guardian's shared state (health, title, invulnerability, co-op state). Its fighting style lives in
@@ -30,7 +30,7 @@ namespace Slopgame
         private float nextDeflect;
 
         /// <summary>Guardians have this many times their style's base health, so a fight lasts through several attack cycles.</summary>
-        public const float HealthMultiplier = 3f;
+        public const float HealthMultiplier = 6f;
 
         /// <summary>
         /// A guardian's health for a party: every hero adds a full guardian's worth (normal enemies only add half),
@@ -39,9 +39,10 @@ namespace Slopgame
         public static int ScaledHealth(int baseHealth, int partySize) => Mathf.CeilToInt(baseHealth * HealthMultiplier * Mathf.Max(1, partySize));
 
         /// <summary>
-        /// The ash guardians occupy floors 5/10/15; the Arcology has its own guardians on 20/25/30.
+        /// Each world's three guardians in order from its <see cref="WorldDefinition.FirstGuardian"/>: the ash guardians on
+        /// floors 5/10/15 (and in worlds without their own), the Arcology's machines on 20/25/30, the Infernal Court's on 35/40/45.
         /// </summary>
-        public static BossKind KindForFloor(int floor) => (BossKind)(Mathf.Max(0, floor / 5 - 1) % 3 + (WorldCatalog.ForFloor(floor).HighTech ? 3 : 0));
+        public static BossKind KindForFloor(int floor) => (BossKind)(Mathf.Max(0, floor / 5 - 1) % 3 + (int)WorldCatalog.ForFloor(floor).FirstGuardian);
 
         public void Initialize(DungeonRun run)
         {
@@ -50,7 +51,10 @@ namespace Slopgame
             Enemy.Boss = this;
             body = GetComponent<SpriteRenderer>();
             Kind = KindForFloor(run.Floor);
-            Behaviour = Kind == BossKind.GridOverseer ? gameObject.AddComponent<GridOverseerBoss>()
+            Behaviour = Kind == BossKind.HexMatriarch ? gameObject.AddComponent<HexMatriarchBoss>()
+                : Kind == BossKind.BrimstoneHound ? (BossBehaviour)gameObject.AddComponent<BrimstoneHoundBoss>()
+                : Kind == BossKind.InfernalJudge ? gameObject.AddComponent<InfernalJudgeBoss>()
+                : Kind == BossKind.GridOverseer ? gameObject.AddComponent<GridOverseerBoss>()
                 : Kind == BossKind.SiegeEngine ? (BossBehaviour)gameObject.AddComponent<SiegeEngineBoss>()
                 : Kind == BossKind.SingularityCore ? gameObject.AddComponent<SingularityCoreBoss>()
                 : Kind == BossKind.Duelist ? gameObject.AddComponent<DuelistBoss>()
@@ -113,8 +117,18 @@ namespace Slopgame
                 zone.gameObject.SetActive(false);
                 Destroy(zone.gameObject);
             }
+            // The guardian's summoned court dissolves with it (every machine does this itself).
+            foreach (var minion in Enemy.Run.Enemies.ToArray())
+                if (minion != null && minion.IsMinion && minion.Health > 0)
+                {
+                    HeroVfx.Pulse(Enemy.Run.ProjectileRoot, minion.transform.position, 0.8f, new Color(0.9f, 0.4f, 1f), 0.4f);
+                    minion.Die(false);
+                }
             Behaviour.OnDefeated();
             Enemy.Run.DropArtifact(Behaviour.GroundPosition);
+            // Soul Tithe: every guardian gives up a heart worth 2 HP.
+            if (Enemy.Run.Progress.Rank(PermanentUpgradeCatalog.SoulTitheId) > 0)
+                HealthPickup.Drop(Enemy.Run, Behaviour.GroundPosition + Vector2.down * 1.2f, 2);
         }
     }
 }

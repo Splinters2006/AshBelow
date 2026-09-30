@@ -17,6 +17,7 @@ namespace Slopgame.Editor
         private static float waitUntil;
         private static bool failed, sawDash;
         private static int neonIndex, attackMask;
+        private static bool sawMinion;
         private static bool sawNeonHazard, sawNeonBolt;
         private static int healthBefore;
         private static HellfireZone inferno;
@@ -61,7 +62,7 @@ namespace Slopgame.Editor
 
         private static void Check()
         {
-            if (EditorApplication.timeSinceStartup - started > 120) { Finish(false, "Timed out at stage " + stage); return; }
+            if (EditorApplication.timeSinceStartup - started > 300) { Finish(false, "Timed out at stage " + stage); return; }
             if (!EditorApplication.isPlaying) return;
             var run = UnityEngine.Object.FindAnyObjectByType<DungeonRun>();
             if (run == null || run.Characters == null || run.Characters.Count == 0) return;
@@ -137,8 +138,11 @@ namespace Slopgame.Editor
                         break;
                     case 6:
                         SkipTo(run, 20 + neonIndex * 5);
-                        Require(run.Boss.Behaviour is NeonBossBehaviour, "Arcology reused an ash guardian.");
-                        Require((int)run.Boss.Kind == 3 + neonIndex, "Wrong Arcology guardian.");
+                        // Three Arcology machines, then the Infernal Court's three guardians.
+                        Require(neonIndex < 3 ? run.Boss.Behaviour is NeonBossBehaviour : run.Boss.Behaviour is InfernalBossBehaviour,
+                            "World reused an ash guardian at floor " + run.Floor);
+                        Require((int)run.Boss.Kind == 3 + neonIndex, "Wrong guardian at floor " + run.Floor);
+                        sawMinion = false;
                         run.Boss.Enemy.Health = run.Boss.MaxHealth / 2;
                         attackMask = 0; sawNeonHazard = false; sawNeonBolt = false;
                         stage = 7;
@@ -148,22 +152,24 @@ namespace Slopgame.Editor
                         if (state >= 1 && state <= 3) attackMask |= 1 << (state - 1);
                         sawNeonHazard |= run.ProjectileRoot.GetComponentsInChildren<HellfireZone>().Length > 0;
                         sawNeonBolt |= run.ProjectileRoot.GetComponentsInChildren<EnemyProjectile>().Length > 0;
-                        if (attackMask != 7 || state != 4) return;
+                        sawMinion |= run.Enemies.Exists(enemy => enemy.IsMinion);
+                        if (attackMask != 7 || state != 4 || (neonIndex >= 3 && !sawMinion)) return;
                         Require(sawNeonHazard, "Arcology guardian created no hazards.");
                         if (neonIndex == 2) Require(sawNeonBolt, "Core did not fire its spiral/satellite bolts.");
                         var behaviour = run.Boss.Behaviour;
-                        for (byte value = 0; value <= 4; value++)
+                        if (neonIndex >= 3) Require(sawNeonBolt, "Infernal guardian fired no hex bolts.");
+                        for (byte value = 0; value <= (neonIndex >= 3 ? 5 : 4); value++)
                         {
-                            behaviour.ApplyNetState(value >= 1 && value <= 3, value);
+                            behaviour.ApplyNetState((value >= 1 && value <= 3) || value == 5, value);
                             Require(behaviour.NetState == value && !string.IsNullOrEmpty(behaviour.Tell), "Arcology snapshot state failed.");
                             behaviour.VisualTick();
                         }
                         run.Boss.Enemy.Hit(100000);
-                        Require(run.Artifact != null && run.Enemies.Count == 0, "Arcology guardian dropped no artifact.");
+                        Require(run.Artifact != null && run.Enemies.Count == 0, "Guardian dropped no artifact or its minions outlived it.");
                         Require(run.ProjectileRoot.GetComponentsInChildren<HellfireZone>().Length == 0, "Arcology hazards outlived their boss.");
                         Require(run.ProjectileRoot.GetComponentsInChildren<EnemyProjectile>().Length == 0, "Arcology bolts outlived their boss.");
-                        if (++neonIndex < 3) { stage = 6; break; }
-                        Finish(!failed, "All six guardians, nine Arcology attack patterns, hazards/projectiles, replicated states, artifact drops and cleanup; ash roster regressions");
+                        if (++neonIndex < 6) { stage = 6; break; }
+                        Finish(!failed, "All nine guardians, nine Arcology and nine Infernal attack patterns, summoned minions, hazards/projectiles, replicated states, artifact drops and cleanup; ash roster regressions");
                         break;
                 }
             }

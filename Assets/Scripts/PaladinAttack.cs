@@ -24,13 +24,19 @@ namespace Slopgame
         private SwordAttack swipe;
         private PaladinRelics relics;
         private float readyAt, swordReadyAt;
+        public const int RetributionBonus = 3;
+        /// <summary>The left-click swing's hit area, which the cone flashed on each swing shows exactly.</summary>
+        public const float SwingReach = 1.9f, SwingCone = 80f, RetributionReach = 2.3f, RetributionCone = 140f;
+        private bool retributionReady;
 
         public void Initialize(DungeonPlayer player, SwordAttack sword)
         {
             Player = player;
             swipe = sword;
             swipe.ShowChargePreview = false;
+            swipe.HitsWholeBody = true;
             relics = GetComponent<PaladinRelics>();
+            Player.Struck += warded => { if (Player.Powerups.Count(PowerupType.Retribution) > 0) retributionReady = true; };
             // Teammates see the same ring through RemoteHero.
             BlessingChargeRing.Attach(transform, () => Player.Run.IsPlaying && Player.Health > 0 && Player.Charge.IsCharging
                 && !Player.IsRolling && !IsHeavyAttacking, () => Player.Charge.Amount);
@@ -40,16 +46,26 @@ namespace Slopgame
         {
             if (!CanAttack || aim.sqrMagnitude < 0.001f) return false;
             if (charge < 1f)
-                return swipe.TrySwipe(aim, Mathf.Max(1, Player.BaseDamage / 2) + Player.Blessing.BonusDamage, 1.6f, SwordAttack.ConeAngle);
+            {
+                // Retribution: the swipe after the Paladin is struck smites a wide golden arc.
+                if (retributionReady)
+                {
+                    retributionReady = false;
+                    return swipe.TrySwipe(aim, Mathf.Max(1, Player.BaseDamage / 2) + Player.Blessing.BonusDamage + RetributionBonus, RetributionReach, RetributionCone);
+                }
+                return swipe.TrySwipe(aim, Mathf.Max(1, Player.BaseDamage / 2) + Player.Blessing.BonusDamage, SwingReach, SwingCone);
+            }
+            // Zeal: ten stacks double the blessing.
+            int blessing = Player.Powerups.ConsumeZeal() ? BlessingDamage * 2 : BlessingDamage;
             foreach (var ally in FindObjectsByType<DungeonPlayer>())
             {
                 if (ally.Run != Player.Run || ally.Health <= 0
                     || Vector2.Distance(transform.position, ally.transform.position) > BlessingRadius) continue;
-                ally.Blessing.Apply(BlessingDamage, BlessingDuration + Player.Permanent.BlessingDuration + Player.Powerups.Count(PowerupType.PatientFaith), Player);
+                ally.Blessing.Apply(blessing, BlessingDuration + Player.Permanent.BlessingDuration + Player.Powerups.Count(PowerupType.PatientFaith), Player);
                 CombatVfx.Ring(Player.Run.ProjectileRoot, ally.transform.position, 0.6f, AbilityCatalog.Gold);
                 HeroVfx.Motes(Player.Run.ProjectileRoot, ally.transform.position, 0.6f, AbilityCatalog.Gold, 14, 1f);
             }
-            Player.Run.Coop?.SupportAllies(transform.position, BlessingRadius, SupportKind.Bless, BlessingDamage,
+            Player.Run.Coop?.SupportAllies(transform.position, BlessingRadius, SupportKind.Bless, blessing,
                 BlessingDuration + Player.Permanent.BlessingDuration + Player.Powerups.Count(PowerupType.PatientFaith));
             CombatVfx.Ring(Player.Run.ProjectileRoot, transform.position, BlessingRadius, AbilityCatalog.Gold, 0.6f);
             HeroVfx.Pulse(Player.Run.ProjectileRoot, transform.position, BlessingRadius, AbilityCatalog.Gold, 0.55f);
@@ -99,7 +115,8 @@ namespace Slopgame
             if (target == null || target.Health <= 0
                 || Vector2.Distance(sword.Target, target.transform.position) > HolySwordReach + target.HitRadius) yield break;
             CombatDamage.Apply(Player, target, damage, DamageElement.Physical, sword.Target + Vector2.up, 0.2f);
-            if (target.Health > 0) target.Chill(0.8f);
+            if (target != null && target.Health > 0) target.Chill(0.8f);
+            if (Player.Powerups.Count(PowerupType.HolyGround) > 0) HallowedGround.Leave(run, sword.Target);
         }
         public void Hide() { swipe.Hide(); }
     }

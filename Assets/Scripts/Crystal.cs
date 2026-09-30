@@ -37,7 +37,7 @@ namespace Slopgame
             crystal.Value = value;
             crystal.hopFrom = position;
             Vector2 landing = position + Random.insideUnitCircle.normalized * Random.Range(0.25f, 0.5f);
-            crystal.rest = run.Map != null && !run.Map.CanStand(landing, 0.1f) ? position : landing;
+            crystal.rest = run.Map != null && (!run.Map.CanStand(landing, 0.1f) || run.Map.IsLava(landing)) ? position : landing;
             crystal.phase = Random.value * Mathf.PI * 2f;
             var shadow = DungeonVisuals.Create("Crystal shadow", run.ProjectileRoot, crystal.rest, new Vector2(0.3f, 0.18f), Color.white, 4);
             shadow.sprite = DungeonVisuals.CoinShadow;

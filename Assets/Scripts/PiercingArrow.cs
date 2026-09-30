@@ -10,7 +10,7 @@ namespace Slopgame
     /// </summary>
     public sealed class PiercingArrow : MonoBehaviour
     {
-        public const float Range = 18f, Speed = 28f, BoomSpacing = 1.8f;
+        public const float Range = 18f, Speed = 35f, BoomSpacing = 1.8f;
         public static readonly Color Core = new Color(1f, 0.97f, 0.8f);
         private DungeonRun run;
         private DungeonPlayer shooter;
@@ -102,6 +102,10 @@ namespace Slopgame
                     HeroVfx.Sparks(run.ProjectileRoot, next, Core, 12, 5.5f, 0.3f, direction, 80f, 1.3f);
                     CombatVfx.Ring(run.ProjectileRoot, next, 0.5f, color, 0.25f);
                     if (!ghost) CombatDamage.Apply(shooter, enemy, damage, DamageElement.Physical, next - direction, 1.6f, infusion);
+                    // Splitting Shot: past the first enemy, two more arrows peel off to the sides.
+                    if (!ghost && hits.Count == 1 && shooter.Powerups.Count(PowerupType.SplittingShot) > 0)
+                        for (int side = -1; side <= 1; side += 2)
+                            PlayerProjectile.Spawn(run, next, Quaternion.Euler(0, 0, side * 18f) * direction, Mathf.Max(1, damage / 2), 8f);
                 }
             }
             remaining -= distance;

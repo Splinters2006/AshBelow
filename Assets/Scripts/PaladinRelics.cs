@@ -34,6 +34,13 @@ namespace Slopgame
                 CombatDamage.Apply(Player, enemy, damage, DamageElement.Physical, center);
                 if (enemy.Health > 0 && slow > 0f) enemy.Chill(slow);
             }
+            // Blessed Judgment: the light also blesses every hero near the mark.
+            if (Player.Powerups.Count(PowerupType.BlessedJudgment) == 0) yield break;
+            float duration = PaladinAttack.BlessingDuration + Player.Permanent.BlessingDuration + Player.Powerups.Count(PowerupType.PatientFaith);
+            foreach (var ally in FindObjectsByType<DungeonPlayer>())
+                if (ally.Run == run && ally.Health > 0 && Vector2.Distance(center, ally.transform.position) <= JudgmentRadius)
+                    ally.Blessing.Apply(PaladinAttack.BlessingDamage, duration, Player);
+            run.Coop?.SupportAllies(center, JudgmentRadius, SupportKind.Bless, PaladinAttack.BlessingDamage, duration);
         }
 
         /// <summary>
@@ -55,6 +62,12 @@ namespace Slopgame
             if (!IsSanctuaryActive) return;
             HolyBubble.EndFollowing(transform);
             CoopFx.SanctuaryEnd(Player.Run);
+            // Healing Sanctuary: dropping the bubble heals everyone who was inside.
+            if (Player.Powerups.Count(PowerupType.HealingSanctuary) == 0) return;
+            float radius = SanctuaryRadius + Player.Powerups.Count(PowerupType.SanctuarySize) * 0.5f;
+            Player.Heal(1);
+            Player.Run.Coop?.SupportAllies(transform.position, radius, SupportKind.Heal, 1, 0f);
+            HeroVfx.Motes(Player.Run.ProjectileRoot, transform.position, radius * 0.8f, AbilityCatalog.Gold, 18, 1f);
         }
     }
 }

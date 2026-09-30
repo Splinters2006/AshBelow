@@ -4,7 +4,7 @@ using UnityEngine;
 namespace Slopgame
 {
     /// <summary>
-    /// 16x16 pixel-art sprites for the regular heroes (every class except Admin, which keeps its own sprite).
+    /// 16-pixel-tall chibi pixel-art sprites for the regular heroes (every class except Admin, which keeps its own sprite).
     /// Each hero has two layers built from one grid: a body layer drawn in greys so the SpriteRenderer's colour
     /// tints it with the class colour (keeping the dodge/hit flashes), and an accent layer with fixed colours for
     /// skin, steel, gold, wood, fur, gloves and horns. Sprites face right; flip them to face left.
@@ -16,73 +16,76 @@ namespace Slopgame
         // S skin, s skin shade, E eyes, H hair, I glow, F white cloth, f bowstring,
         // A floppy-ear / tail fur, R boxing glove, r glove shade, P pink tongue.
         // N demon horn / tail black, n horn sheen, V dark violet hair, U hair highlight, v glowing violet eyes,
-        // T glowing tail tip, C pale skin, c pale skin shade.
+        // T glowing tail tip, C pale skin, c pale skin shade. Wings: X leather, x crease, Z bone, Y outline, y claw,
+        // w glowing violet edge.
+        // i blue iris / visor glint, l green iris, h brown hair highlight, a blond hair, e blond hair shade, o auburn hair,
+        // p blush, m mouth, t fur highlight.
         // The Gambler reuses G / g for his gold tooth, coins and purse.
         // J glowing plasma, j deep plasma, O gunmetal (the Augment's implant eye, power core and arm cannon).
         private static readonly Dictionary<WeaponType, string[]> Grids = new Dictionary<WeaponType, string[]>
         {
-            { WeaponType.Sword, new[] // Knight
+            { WeaponType.Sword, new[] // Knight: a plumed great helm with eyes glinting through the visor, a gold-bossed shield and a raised sword
             {
-                "......LW........", ".....LWWM.......", "....DDQKDD......", "...DQKKKKkD.....",
-                "...DKKKKKKkD..Q.", "...DEEEEEEkD.QK.", "...DKKKKKKkDQKD.", "..DDDkkkkkDDKD..",
-                ".DQKDLWWWMDgD...", "DLWWDWWMWWDGsD..", "DWMWDWMMMMDsD...", "DWWMDDgGgDD.....",
-                ".DMDDkWWMkD.....", "..D.DkkDkkD.....", "....DKkDKkD.....", "...DDDD.DDDD....",
+                "..........DLD.......", ".........DLWD.......", ".....DDDDLWMDDD.....", "....DQQKKDDDKkkD....",
+                "...DQKKKKKKKKKkkD...", "...DQKKKKKKKKKKkD..D", "...DKDDDDDDDDDDkD.DQ", "...DKDiIDDDDiIDkDDQD",
+                "...DKKkKKkKKkKkkDQKD", "....DkKKKKKKKKkDDQKD", ".DDDDDDkkkkkkDDDgGgD", "DLWWDLWWWWWWWMDDSbD.",
+                "DWGWDWWMgGgWWMDWsD..", "DWWMDDDDgGgDDDD.D...", ".DMD.DkKKDDKKkD.....", "..D..DDDD.DDDDD.....",
             } },
-            { WeaponType.Bow, new[] // Archer
+            { WeaponType.Bow, new[] // Archer: a leaf-green hood over auburn hair, green eyes, a quiver on the back and a tall strung longbow
             {
-                ".............bB.", ".....DDDD....fB.", "....DLWWMD...f.B", "...DLWWWWMD..f.B",
-                "...DWHHHHMD..f.B", "...DHSSESsD..f.B", "....DSSSsD...f.B", "..FDDLWWMDD..f.B",
-                "..FDLWWWMMWDSsfB", ".bBDWWgGgMDD.f.B", ".bBDWWWWWMD..f.B", ".bBDDBBGBBD..f.B",
-                "..bDMWWWMMD..fB.", "....DMWDMMD..bB.", "....DBBDBbD.....", "...DDDD.DDDD....",
+                "..................B.", "......DDDDDD.....Bb.", ".....DLLWWWMD...fDB.", "....DLWWWWWWMD..f.Bb",
+                "...DLWWWWWWWWMD.f.Bb", "...DWWoooooooWMDf..B", "...DWoohSSooohWDf..B", "..DWWoSSSSSSSoWDf..B",
+                "..DWoSSElSSElSsDf..B", "..DMoSSSSSSSSpsDf..B", "..DMDoSSSmSSsoD.f.Bb", ".BbDDDsSSSSsDDDDf.Bb",
+                ".bBDLWWGgGWWMDSsfBb.", ".bBDWWWWBWWMMD..fD..", "..DDMWWDDWWMDD......", "...DDbbD.DbbDD......",
             } },
-            { WeaponType.Staff, new[] // Wizard
+            { WeaponType.Staff, new[] // Wizard: a broad pointed hat with a gold star, green eyes over a long white beard, and a staff topped with a glowing crystal
             {
-                ".......D........", "......DWD.......", ".....DLWMD......", "....DLWGWMD..I..",
-                "...DLWWWWWMD.III", ".DDLWWWWWWMMDDI.", "DLWWWWWWWWWWMMDB", "..DHSSSSSSHD..B.",
-                "..DHSESSESHD..B.", "..DHHSSSSHHD..B.", ".DLWHHHHHHWMDSB.", ".DLWWHHHHWWMDsB.",
-                ".DLWWMWGWMWMD.B.", ".DWWMWWGWWMMD.B.", ".DWMWWWGWWWMD.B.", "..DDDDDDDDDD..b.",
+                "........D...........", ".......DLD..........", "......DLWMD.........", "......DLWMD.....I...",
+                ".....DLWWWMD...IiI..", ".....DLWGWMMD..DID..", "....DLWWWWWWMD..B...", "DDDDDLWWWWWWMMDDDDB.",
+                ".DLWWWWWWWWWWWMMMDB.", "..DDDHHHHHHHHDDDDB..", "...DHSSElSSElSHD.B..", "...DHSSSSSSSSSHDSs..",
+                "..DLFFFSSmSSFFFDsB..", "..DLWFFFFFFFFFWMDB..", "..DLWWWfFFFfWWMMDB..", "...DDDDDDDDDDDDD.b..",
             } },
-            { WeaponType.Daggers, new[] // Assassin
+            { WeaponType.Daggers, new[] // Assassin: a deep hood over violet hair, a shadowed face with glowing violet eyes, a gold-buckled sash and a dagger in each hand
             {
-                ".......D........", "......DLD.......", ".....DLWWD......", "....DLWWWMD.....",
-                "...DLWDDDMMD....", "...DWDIDIDMD....", ".Q.DWMDDDMMD..Q.", ".Q..DWWWWMD...Q.",
-                ".K.DLWMMMWMD..K.", ".gDDWWWMWWMDDDg.", ".sDLWWWMWWMMDDs.", "..DDDDgGgDDDD...",
-                "....DMWWWMD.....", "....DMWDWMD.....", "....DkkDkkD.....", "...DDDD.DDDD....",
+                "........DDDD........", "......DDLWWMDD......", ".....DLWWWWWWMD.....", "....DLWWWWWWWWMD....",
+                "....DLWDDDDDDWMD....", "...DLWDVUUVVVDWMD...", "...DWDVSSSSSSVDWD...", "...DWDSSEvSEvSDWD.Q.",
+                ".Q.DWDSSSSSSSsDWDQ..", "..QDWDDMMMMMMDDWDK..", "..KDLWMMWWWMMWWDgD..", "...gDLWWMWWMWWMDs...",
+                "...sDDDDgGgDDDDD....", "....DMWWWDWWWMD.....", "....DkkkDDkkkkD.....", "...DDDDD..DDDDD.....",
             } },
-            { WeaponType.Hammer, new[] // Paladin
+            { WeaponType.Hammer, new[] // Paladin: a gold-crested helm over blond hair, blue eyes, a white tabard with a gold sun and a steel warhammer
             {
-                ".......GG.......", "......DGgD......", ".....DQKGKD.....", "...DDQKKGKKDD...",
-                "...DQKKKKKKkD...", "...DKEEKKEEkD.Q.", "...DKKKKKKKkDQK.", "..DGDkkkkkkDQKD.",
-                ".DGGDLWFFWMDKD..", "DLFWDWFFFFMDgD..", "DFFFDWWFFWMGsD..", "DLFWDDgGGgDsD...",
-                ".DMDDLWWWMMD....", "..D.DWWDWMMD....", "....DKkDKkD.....", "...DDDD.DDDDD...",
+                "........GGG.........", ".......DGYGD...DDDDD", "......DQKGKkD..DQGkD", ".....DQKKGKKkD.DKGkD",
+                "....DQKKKGKKKkDDKGkD", "....DKaaaaaaaakDDDDD", "....DaSSSSSSSSaD.B..", "....DSSEiSSEiSsD.B..",
+                "....DSSSSSSSSpsD.B..", "....DaSSSmmSSsaD.B..", "...DGDaSSSSSSaDGDB..", "..DGGDDFWWWWFDDGgBs.",
+                "..DLWFDFWGGWFMDGDs..", "..DFGFDWWgGWWMDD....", "...DFDDLWWWWWMD.....", "....DDDKKDDKKDD.....",
             } },
-            { WeaponType.Fists, new[] // Brawler: a puppygirl pit-fighter with floppy ears, a wagging tail, collar and big gloves
+            { WeaponType.Fists, new[] // Brawler: a puppygirl pit-fighter with auburn hair, floppy ears, green eyes and a pink tongue, a collar, a wagging tail and big gloves
             {
-                "................", "....DDDDDDD.....", "..DDHHHHHHHDD...", ".DAAHHHHHHHHAD..",
-                ".DAAHSSESSESAD..", ".DAAHSSSSPSRRr..", ".DAADsSSSSDRRr..", "..DAADrrGrD.....",
-                "A..DLWWWWWFFRRRr", "AA.DLWWWWWMDRRRr", ".AADWWMWWWMD.rr.", "..DDDDgGgDDD....",
-                "...DMWWDWWMD....", "....DSSDSsD.....", "....DkkDkkD.....", "...DDDD.DDDD....",
+                "....................", ".....DDDDDDDDD......", "...DDoohhooooDD.....", "..DAoohoooooooAD....",
+                ".DAAoooooooooooAD...", ".DAtoSSSSSSSSSoAD...", ".DAtSSSElSSElSSAD...", ".DAAoSSSSSSSSpsAD...",
+                ".DAAoSSSSPSSSsoAD...", "..DDDDSSSSSSsDDDD...", "A...DDrrGrrDD.DRRr..", "AA.DLWWWWWFFDDRRRRr.",
+                ".AADWWWWWWMMDRRRRRr.", "...DDDgGgDDD.DrrrD..", "....DSSDSsD.........", "...DDkkDkkDD........",
             } },
-            { WeaponType.Tail, new[] // Demoness: a pale girl with curled black ram horns, long dark violet hair, glowing eyes and a spade-tipped tail
+            { WeaponType.Tail, new[] // Demoness: a pale girl with curled black ram horns, long dark violet hair, glowing eyes, a spade-tipped tail and bat wings drawn like Wing Dash's (clawed wrist, finger bones, scalloped violet-lit edge)
             {
-                "................", "..NNNn....nNNN..", ".NnnNNDDDDNNnnN.", "Nn.DVUUUVVVVD.nN",
-                "NnNVUVVVVVVVVNnN", ".NNVVVVVCCVVVNN.", "..DVVVCCCCCCVD..", "..DVVCCEvCCEvD..",
-                "..DVVCCCCCCCcD..", ".DVVVcCCCPCcD...", "TDVVVVDcCCcD....", "TTDVVDLWWWWWD...",
-                ".TNDVDLWFFWMCD..", "..NDDWWWMWWMcD..", "..NDWWWWWWWWWD..", "...NDDCcDDCcD...",
+                ".y..........................y.", ".yY......NNNn....nNNN......Yy.", ".YZY....NnnNNDDDDNNnnN....YZY.", ".YZZYY.Nn.DVUUUVVVVD.nN.YYZZY.",
+                "YZxXZZYNnNVUVVVVVVVVNnNYZZXxZY", "YwxXXZZYNNVVVVVCCVVVNNYZZXXxwY", "YXxZXxZZYDVVVCCCCCCVDYZZxXZxXY", "ZwwxXXxxZDVVCCEvCCEvDZxxXXxwwZ",
+                "YYwxXXXxxDVVCCCCCCCcDxxXXXxwYY", ".YwwZwwwDVVVcCCCPCcDxxwwwZwwY.", ".YwYwwYTDVVVVDcCCcD.wwwYwwYwY.", ".YwYYwYTTDVVDLWWWWWDwYYYwYYwY.",
+                "..Y.YZY.TNDVDLWFFWMCD..YZY.Y..", ".....Y...NDDWWWMWWMcD...Y.....", ".........NDWWWWWWWWWD.........", "..........NDDCcDDCcD..........",
             } },
-            { WeaponType.Coins, new[] // Gambler: a travelling merchant in a wide-brimmed hat, gold-toothed grin, fat coin purse and a flipped coin
+            { WeaponType.Coins, new[] // Gambler: a travelling merchant in a wide-brimmed banded hat, a gold-toothed grin, a fat coin purse and a flipped coin
             {
-                "................", ".....DDDDDD.....", "....DMWWWWMD....", "....DWbbbbWD....",
-                "..DDDDDDDDDDDD..", "....DHSSSSHD....", "....DSESSESD....", "....DSSSGSsD....",
-                "...DDsSSSSsDD...", "..DLWWFFFFWMD...", ".DLWWWFGFWWMD.G.", ".DWWWWFFFWMMDGgG",
-                ".DSDDbBBBbDSD.G.", "..DgGGgDMWMD....", "....DbbDbbD.....", "...DDDD.DDDD....",
+                "....................", "......DDDDDDDD......", ".....DLWWWWWWMD.....", ".....DLWWWWWWMD.....",
+                ".....DbbbbGbbbD.....", "..DDDDDDDDDDDDDDD...", "...DDLWWWWWWWMDD....", "....DHSSSSSSSSHD....",
+                "....DSSElSSElSsD....", "....DSSSSSSSSSsD....", "....DsSSmGmmSssD..G.", "...DDDsSSSSSssDD.GgG",
+                "..DLWWFFFFFFWWMD.G..", ".DLWWWFFGFFWWMMDSs..", ".DSDbBGBbBbBWMDDD...", "...DkkDDDDkkDD......",
             } },
-            { WeaponType.Beam, new[] // Augment: a pale soldier with brown hair, a steel skull plate with a glowing implant eye, plated armour, a plasma core and an arm cannon
+            { WeaponType.Beam, new[] // Augment: a soldier with brown hair and a steel skull plate with a glowing implant eye, plated armour, a plasma core and an arm cannon
             {
-                "...Q............", "...kDDDDDDD.....", "...DKHHHHHHD....", "..DQKKHHHHHHD...",
-                "..DKKKSSSSSSD...", "..DKJjSSSESSD...", "..DkKKSSSSSsD...", "...DkKkSSssD....",
-                "....DDOkDDD.....", "..DLWWWWWWMDkKKQ", ".DLWWjJjWWMkKKKJ", ".DWWWWWWWMMkOOkj",
-                ".DMDDOOOODDD....", "...DMWWDWWMD....", "...DKkD.DKkD....", "..DDDD..DDDD....",
+                "....................", "....Q...............", "....kDDDDDDDD.......", "...DKHHhHHHHHD......",
+                "..DQKKHhHHHHHHD.....", "..DKKKHHHHHHHHHD....", "..DKKHSSSSSSSSHD....", "..DKJjSSSElSSSsD....",
+                "..DkKKSSSSSSSSsD....", "..DkKKSSSmSSSssD....", "...DDkKsSSSSssD.....", "...DDLWDOkDWMDDkKKQD",
+                "..DLWWWjJjWWMkKKKKJj", ".DLWWWWWjWWWMkOOkkDD", ".DMDDOOOOOODDD......", "...DMWDDDWWMD.......",
             } },
         };
         // Drawn about 1.45 units tall before the hero's 0.65 scale, matching the old hero footprint.
@@ -102,12 +105,49 @@ namespace Slopgame
         {
             if (!Grids.TryGetValue(weapon, out var rows)) return null;
             if (cache.TryGetValue(weapon, out var sprite) && sprite != null) return sprite;
-            sprite = Build(weapon + (accent ? " hero details" : " hero body"), rows, accent);
+            sprite = Build(weapon + (accent ? " hero details" : " hero body"), rows, accent, (x, c) => true, Vector2.one * 0.5f);
             cache[weapon] = sprite;
             return sprite;
         }
 
-        private static Sprite Build(string name, string[] rows, bool accent)
+        // The Demoness's wing pixels, and the pixel on each side of her back where a wing joins it (the flap's pivot).
+        private const string WingPixels = "XxZYyw";
+        private const float WingShoulderX = 9f, WingShoulderY = 8f;
+        private static Sprite winglessAccent;
+        private static readonly Sprite[] wings = new Sprite[2];
+
+        /// <summary>True for heroes whose wings can beat on their own (the Demoness).</summary>
+        public static bool HasWings(WeaponType weapon) => weapon == WeaponType.Tail;
+
+        /// <summary>The Demoness's detail layer with her wings left out, worn while the separate wing layers beat.</summary>
+        public static Sprite WinglessAccent => winglessAccent != null ? winglessAccent
+            : winglessAccent = Build("Tail hero details (wingless)", Grids[WeaponType.Tail], true, (x, c) => WingPixels.IndexOf(c) < 0, Vector2.one * 0.5f);
+
+        /// <summary>
+        /// One of the Demoness's wings (side -1 left, +1 right) exactly as drawn on her sprite, pivoted at the shoulder
+        /// so it can be rotated to beat. Place it at <see cref="WingShoulder"/> on an unflipped hero.
+        /// </summary>
+        public static Sprite Wing(int side)
+        {
+            int index = side < 0 ? 0 : 1;
+            if (wings[index] != null) return wings[index];
+            var rows = Grids[WeaponType.Tail];
+            float half = rows[0].Length * 0.5f, shoulderX = side < 0 ? WingShoulderX : rows[0].Length - WingShoulderX;
+            return wings[index] = Build(side < 0 ? "Demoness left wing" : "Demoness right wing", rows, true,
+                (x, c) => WingPixels.IndexOf(c) >= 0 && (side < 0 ? x < half : x >= half),
+                new Vector2(shoulderX / rows[0].Length, WingShoulderY / rows.Length));
+        }
+
+        /// <summary>Where a wing's shoulder sits relative to the centre of the unflipped hero sprite, in sprite units.</summary>
+        public static Vector2 WingShoulder(int side)
+        {
+            var rows = Grids[WeaponType.Tail];
+            float unit = WorldSize / rows.Length;
+            return new Vector2(side * (rows[0].Length * 0.5f - WingShoulderX), WingShoulderY - rows.Length * 0.5f) * unit;
+        }
+
+        /// <param name="include">Which accent pixels (by column and grid letter) to keep.</param>
+        private static Sprite Build(string name, string[] rows, bool accent, System.Func<int, char, bool> include, Vector2 pivot)
         {
             int width = rows[0].Length, height = rows.Length;
             var texture = new Texture2D(width, height, TextureFormat.RGBA32, false)
@@ -119,12 +159,13 @@ namespace Slopgame
                     char c = x < rows[y].Length ? rows[y][x] : '.';
                     Color? body = BodyColor(c);
                     pixels[(height - y - 1) * width + x] = accent
-                        ? (body.HasValue ? Color.clear : AccentColor(c))
+                        ? (body.HasValue || !include(x, c) ? Color.clear : AccentColor(c))
                         : body ?? Color.clear;
                 }
             texture.SetPixels(pixels);
             texture.Apply(false, true);
-            return Sprite.Create(texture, new Rect(0, 0, width, height), Vector2.one * 0.5f, width / WorldSize);
+            // Scaled by height, so a wider grid (the Demoness's wings) spreads sideways instead of shrinking the hero.
+            return Sprite.Create(texture, new Rect(0, 0, width, height), pivot, height / WorldSize);
         }
 
         private static Color? BodyColor(char c)
@@ -172,6 +213,23 @@ namespace Slopgame
                 case 'J': return new Color(0.45f, 1f, 0.8f);
                 case 'j': return new Color(0.12f, 0.55f, 0.45f);
                 case 'O': return new Color(0.24f, 0.27f, 0.33f);
+                case 'i': return new Color(0.3f, 0.6f, 1f);
+                case 'l': return new Color(0.3f, 0.75f, 0.4f);
+                case 'h': return new Color(0.58f, 0.4f, 0.24f);
+                case 'a': return new Color(0.98f, 0.84f, 0.46f);
+                case 'e': return new Color(0.76f, 0.55f, 0.24f);
+                case 'o': return new Color(0.62f, 0.26f, 0.16f);
+                case 'p': return new Color(1f, 0.62f, 0.62f);
+                case 'm': return new Color(0.55f, 0.16f, 0.2f);
+                case 't': return new Color(0.76f, 0.54f, 0.34f);
+                // The Demoness's bat wings: dark oxblood leather with lighter creases, veins and near-black bone.
+                case 'X': return new Color(0.13f, 0.05f, 0.07f);
+                case 'x': return new Color(0.23f, 0.1f, 0.11f);
+                case 'Z': return new Color(0.07f, 0.025f, 0.04f);
+                case 'Y': return new Color(0.04f, 0.02f, 0.03f);
+                case 'y': return new Color(0.6f, 0.54f, 0.48f);
+                // The glowing violet trailing edge along the wings' scallops, as in Wing Dash.
+                case 'w': return new Color(0.66f, 0.3f, 1f);
                 default: return Color.clear;
             }
         }

@@ -2,7 +2,11 @@ using UnityEngine;
 
 namespace Slopgame
 {
-    public enum DamageElement { Physical, Fire, Lightning, Ice }
+    /// <summary>
+    /// What a hit is made of. Fire, lightning and ice can set off their element; holy (the Paladin's light) and demonic
+    /// (the Demoness's powers) are their own kinds of damage that neither crit nor set off an effect.
+    /// </summary>
+    public enum DamageElement { Physical, Fire, Lightning, Ice, Holy, Demonic }
 
     public static class CombatDamage
     {
@@ -21,8 +25,10 @@ namespace Slopgame
             Vector2 source = (Vector2)enemy.transform.position - enemy.Facing.Direction;
             HitVfx(player, enemy.transform.position, source, new Color(0.8f, 0.5f, 1f), true);
             RearHitMarker.Show(player.Run, enemy);
-            enemy.Hit(ShadowstepDamageForRoll(player, Random.value), source);
+            int damage = AssassinBonus(player, enemy, ShadowstepDamageForRoll(player, Random.value));
+            enemy.Hit(damage, source);
             player.Mechanic?.OnBackstab();
+            OnBackstab(player, enemy, damage);
             CreditBlessing(player);
         }
 
@@ -38,7 +44,47 @@ namespace Slopgame
         }
 
         public static Color ElementColor(DamageElement element) => element == DamageElement.Fire ? new Color(1f, 0.55f, 0.15f)
-            : element == DamageElement.Ice ? AbilityCatalog.Ice : element == DamageElement.Lightning ? ShockColor : new Color(1f, 0.95f, 0.8f);
+            : element == DamageElement.Ice ? AbilityCatalog.Ice : element == DamageElement.Lightning ? ShockColor
+            : element == DamageElement.Holy ? AbilityCatalog.Gold : element == DamageElement.Demonic ? DemonessAttack.Violet : new Color(1f, 0.95f, 0.8f);
+
+        /// <summary>Fire, lightning and ice: the elements with a status effect.</summary>
+        public static bool HasEffect(DamageElement element) => element == DamageElement.Fire || element == DamageElement.Lightning || element == DamageElement.Ice;
+
+        public const float SittingDuckMultiplier = 1.3f;
+
+        /// <summary>Damage bonuses that depend on the target: Executioner, Sitting Duck and the Ash shop's Apex Predator.</summary>
+        public static int ScaleForTarget(DungeonPlayer player, DungeonEnemy enemy, int damage)
+        {
+            if (player == null) return damage;
+            float multiplier = 1f;
+            if (player.Powerups.Count(PowerupType.Executioner) > 0 && enemy.HealthFraction < 0.25f) multiplier *= 1.5f;
+            if (player.Powerups.Count(PowerupType.SittingDuck) > 0 && enemy.IsImmobilized) multiplier *= SittingDuckMultiplier;
+            if (enemy.Boss != null || enemy.IsTank) multiplier *= 1f + player.Permanent.GuardianDamage;
+            return multiplier == 1f ? damage : Mathf.Max(1, Mathf.RoundToInt(damage * multiplier));
+        }
+
+        public const float OverkillBaseRadius = 1f, OverkillRadiusPerDamage = 0.25f, OverkillMaxRadius = 3.5f;
+
+        /// <summary>Overkill: what a killing blow had left over hits the nearest enemy, reaching farther the bigger the overkill.</summary>
+        private static void Overkill(DungeonPlayer player, DungeonEnemy dead, int excess)
+        {
+            if (player == null || excess <= 0 || player.Powerups.Count(PowerupType.Overkill) == 0) return;
+            Vector2 from = dead.transform.position;
+            float radius = Mathf.Min(OverkillMaxRadius, OverkillBaseRadius + excess * OverkillRadiusPerDamage);
+            DungeonEnemy nearest = null;
+            float best = float.MaxValue;
+            foreach (var enemy in player.Run.Enemies)
+            {
+                if (enemy == null || enemy == dead || enemy.Health <= 0) continue;
+                float distance = Vector2.Distance(from, enemy.transform.position) - enemy.HitRadius;
+                if (distance <= radius && distance < best) { best = distance; nearest = enemy; }
+            }
+            if (nearest == null) return;
+            var color = new Color(1f, 0.4f, 0.3f);
+            CombatVfx.Bolt(player.Run.ProjectileRoot, from, nearest.transform.position, color);
+            CoopFx.Bolt(player.Run, from, nearest.transform.position, color);
+            nearest.Hit(excess, from, 0.5f);
+        }
 
         /// <param name="knockback">Scales how far the hit shoves the enemy (1 = normal).</param>
         /// <param name="infusion">
@@ -51,31 +97,105 @@ namespace Slopgame
         {
             if (enemy == null || enemy.Health <= 0) return;
             if (enemy.IsInvulnerable) { enemy.Hit(0, source); return; }
-            bool behind = enemy.Facing.IsBehind(source);
+            damage = ScaleForTarget(player, enemy, damage);
+            int healthBefore = enemy.Health;
+            // Opening Strike: the first hit on an unhurt enemy always crits (or, if elemental, sets off its element).
+            bool opening = player != null && player.Powerups.Count(PowerupType.OpeningStrike) > 0 && enemy.IsUnhurt;
+            // Smoke Bomb: hits on enemies inside the Assassin's smoke always count as backstabs.
+            bool behind = enemy.Facing.IsBehind(source) || (player != null && player.ClassWeapon == WeaponType.Daggers && SmokeCloud.Covers(enemy.transform.position));
             if (behind) RearHitMarker.Show(player != null ? player.Run : null, enemy);
             if (element == DamageElement.Physical)
             {
                 if (player.ClassWeapon == WeaponType.Daggers && behind)
                     damage = damage * 2 + player.Powerups.Count(PowerupType.Backstab);
-                int rolled = player.Powerups.RollDamage(damage);
+                damage = AssassinBonus(player, enemy, damage) + BrawlBonus(player);
+                int rolled = opening ? player.Powerups.CriticalDamage(damage) : player.Powerups.RollDamage(damage);
                 bool critical = rolled > damage;
+                if (critical) player.Powerups.OnCritical(player);
                 HitVfx(player, enemy.transform.position, source, infusion != DamageElement.Physical ? ElementColor(infusion) : new Color(1f, 0.95f, 0.8f), critical);
                 enemy.Hit(rolled, source, knockback);
-                if (player.ClassWeapon == WeaponType.Daggers && behind) player.Mechanic?.OnBackstab();
+                if (player.ClassWeapon == WeaponType.Daggers && behind)
+                {
+                    if (!ShadowClone.IsStriking) player.Mechanic?.OnBackstab();
+                    OnBackstab(player, enemy, rolled);
+                }
                 CreditBlessing(player);
                 if (critical && infusion != DamageElement.Physical) ApplyEffect(player, enemy, infusion, rolled);
+                if (enemy.Health <= 0) Overkill(player, enemy, rolled - healthBefore);
                 return;
             }
-            // Elemental attacks roll for a status effect instead of critical damage.
+            // Pyromancer: burning enemies take +1 from lightning.
+            if (element == DamageElement.Lightning && enemy.IsBurning && player.Powerups.Count(PowerupType.Pyromancer) > 0) damage++;
+            bool wasBurning = enemy.IsBurning, wasFrozen = enemy.IsFrozen;
             HitVfx(player, enemy.transform.position, source, ElementColor(element), false);
             enemy.Hit(damage, source, knockback);
             CreditBlessing(player);
-            if (guaranteedEffect || Random.value < player.Powerups.ElementalEffectChance) ApplyEffect(player, enemy, element, damage);
+            if (enemy.Health <= 0) Overkill(player, enemy, damage - healthBefore);
+            if (player.Powerups.Count(PowerupType.ElementalClash) > 0 && HasEffect(element))
+            {
+                if (wasBurning && element != DamageElement.Fire) Clash(player, enemy, DamageElement.Fire, damage);
+                else if (wasFrozen && element != DamageElement.Ice) Clash(player, enemy, DamageElement.Ice, damage);
+            }
+            // Holy and demonic damage have no status effect; the rest roll for one instead of critical damage.
+            if (!HasEffect(element)) return;
+            // Elemental Kills' charge is spent on the next elemental hit, even one that would have set off anyway.
+            bool primed = player.Powerups.ConsumeElementalPrime();
+            if (guaranteedEffect || primed || opening || Random.value < player.Powerups.ElementalEffectChance) ApplyEffect(player, enemy, element, damage);
         }
 
-        /// <summary>Hits dealt while blessed charge the Paladin who gave the blessing.</summary>
+        /// <summary>The Assassin's bonuses to her own physical hits: Ambush (spent) and Poisoner.</summary>
+        private static int AssassinBonus(DungeonPlayer player, DungeonEnemy enemy, int damage)
+        {
+            if (player == null || player.ClassWeapon != WeaponType.Daggers) return damage;
+            if (player.Powerups.AmbushReady) { player.Powerups.AmbushReady = false; damage *= 2; }
+            if (player.Powerups.Count(PowerupType.Poisoner) > 0 && enemy.HasDamageOverTime) damage++;
+            return damage;
+        }
+
+        public const float BrawlRadius = 2f;
+
+        /// <summary>Brawl: +1 for every enemy crowding the Brawler (a guardian counts as 3).</summary>
+        private static int BrawlBonus(DungeonPlayer player)
+        {
+            if (player == null || player.ClassWeapon != WeaponType.Fists || player.Powerups.Count(PowerupType.Brawl) == 0) return 0;
+            int bonus = 0;
+            Vector2 at = player.transform.position;
+            foreach (var enemy in player.Run.Enemies)
+                if (enemy != null && enemy.Health > 0 && Vector2.Distance(at, enemy.transform.position) <= BrawlRadius + enemy.HitRadius)
+                    bonus += enemy.Boss != null ? 3 : 1;
+            return bonus;
+        }
+
+        /// <summary>A backstab landed: Bleed opens a wound and Shadow Clone sends a clone to stab again.</summary>
+        private static void OnBackstab(DungeonPlayer player, DungeonEnemy enemy, int damage)
+        {
+            if (enemy == null || enemy.Health <= 0) return;
+            if (player.Powerups.Count(PowerupType.Bleed) > 0) enemy.Bleed(3, Mathf.Max(1, damage / 3));
+            ShadowClone.OnBackstab(player, enemy, Mathf.Max(1, damage / 2));
+        }
+
+        public const float ClashRadius = 2f;
+
+        /// <summary>Elemental Clash: a second element on a burning or frozen enemy spreads the first to everything within 2 units.</summary>
+        private static void Clash(DungeonPlayer player, DungeonEnemy origin, DamageElement first, int hit)
+        {
+            var run = player.Run;
+            Vector2 center = origin.transform.position;
+            var color = ElementColor(first);
+            HeroVfx.Pulse(run.ProjectileRoot, center, ClashRadius, color, 0.3f);
+            CoopFx.Pulse(run, center, ClashRadius, color, 0.3f);
+            foreach (var enemy in run.Enemies.ToArray())
+            {
+                if (enemy == null || enemy == origin || enemy.Health <= 0 || Vector2.Distance(center, enemy.transform.position) > ClashRadius + enemy.HitRadius) continue;
+                if (first == DamageElement.Fire) enemy.Burn(BurnTicks + player.Powerups.Count(PowerupType.SlowBurn), BurnTickDamage(hit));
+                else enemy.Freeze(FreezeDuration + player.Powerups.Count(PowerupType.Permafrost) * 0.3f);
+            }
+        }
+
+        /// <summary>Hits dealt while blessed charge the Paladin who gave the blessing; the Paladin's own hits build Zeal.</summary>
         private static void CreditBlessing(DungeonPlayer player)
         {
+            if (player != null && player.ClassWeapon == WeaponType.Hammer) player.Powerups.AddZeal();
             if (player != null && player.Blessing != null && player.Blessing.BonusDamage > 0) player.Blessing.Credit(player);
         }
 
@@ -96,7 +216,7 @@ namespace Slopgame
         /// </summary>
         public static void ApplyEffect(DungeonPlayer player, DungeonEnemy enemy, DamageElement element, int hit)
         {
-            if (enemy == null || element == DamageElement.Physical) return;
+            if (enemy == null || !HasEffect(element)) return;
             player.Mechanic?.OnElementalEffect();
             // Kindling: freezes and shocks set the target alight as well.
             bool kindle = element != DamageElement.Fire && player.Powerups.Count(PowerupType.Kindling) > 0;

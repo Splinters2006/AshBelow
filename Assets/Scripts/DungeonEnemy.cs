@@ -16,6 +16,8 @@ namespace Slopgame
         private EnemyVariant variant;
         public DungeonBoss Boss { get; set; }
         public bool IsTank { get; set; }
+        /// <summary>Summoned by a guardian mid-fight; dissolves when its guardian falls.</summary>
+        public bool IsMinion { get; set; }
         public float HitRadius => Boss != null ? Boss.HitRadius : IsTank ? 0.5f : 0.38f;
         /// <summary>True while a boss is out of reach (such as the Archdemon in flight); blows glance off.</summary>
         public bool IsInvulnerable => Boss != null && Boss.IsInvulnerable;
@@ -31,16 +33,84 @@ namespace Slopgame
         /// <summary>Frozen solid by ice: like paralysis, a frozen enemy cannot move, turn or attack.</summary>
         public bool IsFrozen => Time.time < frozenUntil;
         /// <summary>True while paralysis or ice holds the enemy completely still.</summary>
-        public bool IsHeld => IsParalyzed || IsFrozen;
+        public bool IsHeld => IsParalyzed || IsFrozen || IsStunned;
+        /// <summary>Stunned (Holy Lance, Thunder Clap, EMP Pulse...): held like paralysis, but not the Demoness's paralysis.</summary>
+        public bool IsStunned => Time.time < stunnedUntil;
+        /// <summary>Rooted (Net Shot, Bear Trap): cannot move, but still turns, shoots and swings.</summary>
+        public bool IsRooted => Time.time < rootedUntil;
+        /// <summary>Held or rooted: what talents mean by an immobilized enemy (paralysed, frozen, stunned or rooted).</summary>
+        public bool IsImmobilized => IsHeld || IsRooted;
+        public bool IsBleeding => bleedTicks > 0 || netBleeding;
+        public bool IsPoisoned => poisonTicks > 0 || netPoisoned;
+        /// <summary>Suffering any damage over time: burning, bleeding or poisoned.</summary>
+        public bool HasDamageOverTime => IsBurning || IsBleeding || IsPoisoned;
+        /// <summary>The most health this enemy has had: its starting health, since enemies never heal.</summary>
+        public int PeakHealth => Mathf.Max(peakHealth, Health);
+        public float HealthFraction => PeakHealth > 0 ? Health / (float)PeakHealth : 1f;
+        /// <summary>Not yet hurt (Opening Strike).</summary>
+        public bool IsUnhurt => Health >= PeakHealth;
+        public static readonly Color StunnedTint = new Color(1f, 0.95f, 0.55f), RootedTint = new Color(0.7f, 0.6f, 0.4f);
+        public static readonly Color BleedColor = new Color(0.85f, 0.08f, 0.12f), PoisonColor = new Color(0.45f, 0.95f, 0.3f);
+        private float stunnedUntil, stunImmuneUntil, rootedUntil, nextBleed, nextPoison;
+        private int bleedTicks, bleedDamage, poisonTicks, poisonDamage, peakHealth;
+        private bool netBleeding, netPoisoned;
+        /// <summary>
+        /// Death Mark: every hit taken is remembered. If the enemy dies while marked, all of it bursts out onto every
+        /// enemy around it; if it survives, it takes it all again when the mark comes due.
+        /// </summary>
+        public bool IsDeathMarked => deathMarkDue > 0f;
+        public const float DeathMarkTime = 6f, DeathMarkBurstRadius = 2.5f;
+        private float deathMarkDue;
+        private int deathMarkStored;
+
+        public void DeathMark(float delay)
+        {
+            if (IsInvulnerable || delay <= 0f) return;
+            if (Run.IsGuest) { Run.Coop.ReportDamage(this, CoopDamageKind.DeathMark, 0, transform.position, 0, delay); return; }
+            deathMarkDue = Time.time + delay;
+            deathMarkStored = 0;
+        }
+
+        /// <summary>Host: when the mark comes due, every hit it remembered lands again at once.</summary>
+        private void SettleDeathMark()
+        {
+            if (deathMarkDue <= 0f || Time.time < deathMarkDue) return;
+            deathMarkDue = 0f;
+            int owed = deathMarkStored;
+            deathMarkStored = 0;
+            if (owed <= 0) return;
+            HeroVfx.Pulse(Run.ProjectileRoot, transform.position, 1.1f, new Color(0.85f, 0.2f, 0.3f), 0.35f);
+            HeroVfx.Sparks(Run.ProjectileRoot, transform.position, new Color(0.85f, 0.2f, 0.3f), 16, 5f, 0.35f);
+            Hit(owed, transform.position, 0f);
+        }
+
+        /// <summary>Hunter's Mark: takes +1 damage from every hit.</summary>
+        public bool IsMarked => Time.time < markedUntil;
+        private float markedUntil;
+
+        public void Mark(float duration)
+        {
+            if (IsInvulnerable || duration <= 0f) return;
+            if (Run.IsGuest) { Run.Coop.ReportDamage(this, CoopDamageKind.Mark, 0, transform.position, 0, duration); }
+            if (!IsMarked && Run.ProjectileRoot != null) CombatVfx.Ring(Run.ProjectileRoot, transform.position, 0.6f, new Color(1f, 0.3f, 0.3f), 0.4f);
+            markedUntil = Mathf.Max(markedUntil, Time.time + duration);
+        }
         /// <summary>Paralysed enemies cannot move, turn or attack (the Demoness's vital stabs and curses).</summary>
         public bool IsParalyzed => Time.time < paralyzedUntil;
         /// <summary>Cursed enemies take <see cref="CurseDamageMultiplier"/> times the damage from every hit.</summary>
         public bool IsCursed => Time.time < cursedUntil;
         public const float CurseDamageMultiplier = 1.5f;
         /// <summary>After a paralysis wears off, a guardian shrugs off new ones for this long.</summary>
-        public const float BossParalysisImmunity = 3f;
+        public const float BossParalysisImmunity = 5f;
+        /// <summary>Guardians shake off crowd control: holds and chills last this fraction as long on them.</summary>
+        public const float BossCrowdControlDuration = 0.35f;
+        /// <summary>Guardians feel only this fraction of any slow's strength.</summary>
+        public const float BossSlowResistance = 0.5f;
         public float ActionSpeedMultiplier => IsHeld ? 0f
-            : (IsChilled ? 0.5f : 1f) * (HolyBubble.SlowsAt(transform.position) ? HolyBubble.SanctuarySlow : 1f);
+            : Slowed((IsChilled ? 0.5f : 1f) * (HolyBubble.SlowsAt(transform.position) ? HolyBubble.SanctuarySlow : 1f) * (Time.time < terrorUntil ? TerrorSlow : 1f));
+
+        /// <summary>A speed factor after the guardian's resistance: a 50% slow only slows a guardian by 25%.</summary>
+        private float Slowed(float factor) => Boss != null ? 1f - (1f - factor) * BossSlowResistance : factor;
         public float MoveMultiplier => ActionSpeedMultiplier;
         // Attack timers follow local action time; status durations and damage-over-time use world time.
         public float ActionTime { get; private set; }
@@ -91,7 +161,8 @@ namespace Slopgame
         {
             if (!Run.IsPlaying || Health <= 0) return;
             if (Run.IsGuest) { GuestUpdate(); return; }
-            ActionTime += Time.deltaTime * ActionSpeedMultiplier;
+            ActionTime += Time.deltaTime * ActionSpeedMultiplier * DreadFactor();
+            if (terrorPending && !IsParalyzed) { terrorPending = false; terrorUntil = Time.time + TerrorTime; }
             UpdateCurseIndicator();
             if (burnTicks > 0 && Time.time >= nextBurn)
             {
@@ -100,6 +171,24 @@ namespace Slopgame
                 Hit(burnDamage);
                 if (Health <= 0) return;
                 CombatVfx.Ring(Run.ProjectileRoot, transform.position, 0.4f, burnColor, 0.2f);
+            }
+            SettleDeathMark();
+            if (Health <= 0) return;
+            if (bleedTicks > 0 && Time.time >= nextBleed)
+            {
+                bleedTicks--;
+                nextBleed = Time.time + 1f;
+                HeroVfx.Sparks(Run.ProjectileRoot, transform.position, BleedColor, 5, 2f, 0.3f, Vector2.down, 90f, 0.8f);
+                Hit(bleedDamage, transform.position, 0f);
+                if (Health <= 0) return;
+            }
+            if (poisonTicks > 0 && Time.time >= nextPoison)
+            {
+                poisonTicks--;
+                nextPoison = Time.time + 1f;
+                HeroVfx.Sparks(Run.ProjectileRoot, transform.position, PoisonColor, 4, 1.4f, 0.4f, Vector2.up, 60f, 0.8f);
+                Hit(poisonDamage, transform.position, 0f);
+                if (Health <= 0) return;
             }
             if (burnIndicator != null)
             {
@@ -119,6 +208,13 @@ namespace Slopgame
             }
             float distance = Vector2.Distance(position, target);
             bool visible = Run.HasLineOfSight(position, target);
+            if (IsRooted)
+            {
+                if (!IsRanged || !shooter.IsCharging) Facing.TurnToward(target - position, Time.deltaTime * ActionSpeedMultiplier);
+                UpdateColor();
+                if (!IsRanged) TryContactHit(HitRadius + 0.27f);
+                return;
+            }
             if (Variant != null && Variant.Move(this, target, visible))
             {
                 UpdateColor();
@@ -129,7 +225,8 @@ namespace Slopgame
             {
                 if (!IsRanged || !shooter.IsCharging) Facing.TurnToward(target - position, Time.deltaTime * ActionSpeedMultiplier);
                 Vector2 direction = tactics.Direction(target, visible, IsRanged && shooter.IsCharging);
-                transform.position = Run.Map.Move(position, direction * Speed * MoveMultiplier * Time.deltaTime, MoveRadius);
+                Vector2 step = Run.Map.Move(position, direction * Speed * MoveMultiplier * Time.deltaTime, MoveRadius);
+                if (!IceWall.BlocksEnemy(this, position, step)) transform.position = step;
             }
             UpdateColor();
             if (!IsRanged) TryContactHit(HitRadius + 0.27f);
@@ -137,8 +234,10 @@ namespace Slopgame
 
         private void UpdateColor()
         {
-            body.color = IsFlashing || netFlashing || (IsRanged && shooter.IsCharging && !IsHeld) ? Color.white
+            body.color = IsFlashing || netFlashing || (((IsRanged && shooter.IsCharging) || (Variant != null && Variant.IsWindingUp)) && !IsHeld) ? Color.white
                 : IsParalyzed ? DemonessAttack.ParalyzedTint(Time.time)
+                : IsStunned ? Color.Lerp(StunnedTint, Color.white, 0.5f + 0.5f * Mathf.Sin(Time.time * 14f))
+                : IsRooted ? RootedTint
                 : IsFrozen ? FrozenTint
                 : IsChilled ? AbilityCatalog.Ice : Variant != null ? Variant.Tint
                 : IsTank ? Run.World.BruteTint : IsRanged ? Run.World.CasterTint : Run.World.BasicTint;
@@ -192,8 +291,13 @@ namespace Slopgame
             paralyzedUntil = (snapshot.MoreFlags & EnemySnapshot.Paralyzed) != 0 ? Time.time + 0.25f : Mathf.Min(paralyzedUntil, Time.time);
             cursedUntil = (snapshot.MoreFlags & EnemySnapshot.Cursed) != 0 ? Time.time + 0.25f : Mathf.Min(cursedUntil, Time.time);
             frozenUntil = (snapshot.MoreFlags & EnemySnapshot.Frozen) != 0 ? Time.time + 0.25f : Mathf.Min(frozenUntil, Time.time);
+            stunnedUntil = (snapshot.MoreFlags & EnemySnapshot.Stunned) != 0 ? Time.time + 0.25f : Mathf.Min(stunnedUntil, Time.time);
+            rootedUntil = (snapshot.MoreFlags & EnemySnapshot.Rooted) != 0 ? Time.time + 0.25f : Mathf.Min(rootedUntil, Time.time);
+            netBleeding = (snapshot.MoreFlags & EnemySnapshot.Bleeding) != 0;
+            netPoisoned = (snapshot.MoreFlags & EnemySnapshot.Poisoned) != 0;
             bool charging = (snapshot.Flags & EnemySnapshot.Charging) != 0;
             if (shooter != null) shooter.SetCharging(charging);
+            if (Variant != null) Variant.SetNetWindup(charging && (shooter == null || !shooter.IsCharging));
             if (Boss != null) Boss.ApplySnapshot(charging, (byte)(snapshot.Flags >> EnemySnapshot.BossStateShift));
         }
 
@@ -215,6 +319,8 @@ namespace Slopgame
         {
             if (Health <= 0) return;
             if (IsInvulnerable) { Boss.Deflect(source); return; }
+            peakHealth = Mathf.Max(peakHealth, Health);
+            if (IsMarked && damage > 0 && !Run.IsGuest) damage++;
             if (DebugMode.Enabled) damage = Mathf.Max(damage, Health);
             LastHitRegion = Facing.RegionFrom(source);
             HitReceived?.Invoke(LastHitRegion);
@@ -229,6 +335,7 @@ namespace Slopgame
                 return;
             }
             Health -= CursedDamage(damage);
+            if (deathMarkDue > 0f) deathMarkStored += CursedDamage(damage);
             hitUntil = Time.time + 0.15f;
             if (Health <= 0)
             {
@@ -254,10 +361,24 @@ namespace Slopgame
             hiddenRenderers.Clear();
         }
 
+        /// <summary>Host: a marked enemy fell, and every hit it took while marked bursts out onto the enemies around it.</summary>
+        private void DeathMarkBurst()
+        {
+            int owed = deathMarkStored;
+            deathMarkDue = 0f;
+            deathMarkStored = 0;
+            if (owed <= 0) return;
+            Vector2 at = transform.position;
+            foreach (var enemy in Run.Enemies.ToArray())
+                if (enemy != null && enemy != this && enemy.Health > 0 && Vector2.Distance(at, enemy.transform.position) <= DeathMarkBurstRadius + enemy.HitRadius)
+                    enemy.Hit(owed, at, 1.5f);
+        }
+
         /// <summary>Removes the enemy with its death effects and rewards; kill talents apply only to the killer.</summary>
         public void Die(bool localKill)
         {
             Health = Mathf.Min(Health, 0);
+            if (!Run.IsGuest && deathMarkDue > 0f) DeathMarkBurst();
             Run.EnemyDefeated(this);
             if (localKill && Run.Player.Health > 0) Run.Player.Powerups.OnKill(Run.Player, this);
             Boss?.Defeated();
@@ -277,6 +398,8 @@ namespace Slopgame
                     Boss != null ? 6f : 4.2f, Boss != null ? 0.6f : 0.4f);
                 HeroVfx.Pulse(Run.ProjectileRoot, transform.position, Boss != null ? 2.4f : 0.8f, AbilityCatalog.Gold, Boss != null ? 0.6f : 0.3f);
             }
+            if (Run.ProjectileRoot != null)
+                DeathAnimation.Play(transform, Run.ProjectileRoot, Boss != null ? DeathAnimation.BossDuration : DeathAnimation.EnemyDuration);
             gameObject.SetActive(false);
             Destroy(gameObject);
         }
@@ -285,7 +408,7 @@ namespace Slopgame
         {
             if (IsInvulnerable) return;
             if (Run.IsGuest) { Run.Coop.ReportDamage(this, CoopDamageKind.Chill, 0, transform.position, 0, duration); return; }
-            chilledUntil = Mathf.Max(chilledUntil, Time.time + duration * (Boss != null ? 0.5f : 1f));
+            chilledUntil = Mathf.Max(chilledUntil, Time.time + duration * (Boss != null ? BossCrowdControlDuration : 1f));
         }
 
         /// <summary>Damage after the curse, rounded half up so even a 1-damage hit is worth more on a cursed enemy.</summary>
@@ -294,38 +417,46 @@ namespace Slopgame
         public static readonly Color FrozenTint = new Color(0.72f, 0.93f, 1f);
 
         /// <summary>
-        /// Holds the enemy in place. Guardians are held half as long and then resist for a few seconds.
+        /// Holds the enemy in place. Guardians are held for a fraction of the time and then resist for a few seconds.
         /// False when nothing took hold (an untouchable or resisting guardian); a co-op guest assumes it lands.
         /// </summary>
-        public bool Paralyze(float duration)
+        public bool Paralyze(float duration, bool lingering = false)
         {
             if (IsInvulnerable || duration <= 0f || Health <= 0) return false;
-            if (Run.IsGuest) { Run.Coop.ReportDamage(this, CoopDamageKind.Paralyze, 0, transform.position, 0, duration); return true; }
+            bool fresh = !IsImmobilized;
+            duration = HoldTime(duration);
+            if (Run.IsGuest) { Run.Coop.ReportDamage(this, CoopDamageKind.Paralyze, 0, transform.position, lingering ? 1 : 0, duration); Held(fresh, duration); return true; }
+            // Lingering Terror: once this paralysis wears off, the enemy stays slowed for a while.
+            if (lingering) terrorPending = true;
             if (Boss != null)
             {
                 // Covers the paralysis itself too, so repeated stabs cannot chain-lock a guardian.
                 if (Time.time < paralysisImmuneUntil) return false;
-                duration *= 0.5f;
+                duration *= BossCrowdControlDuration;
             }
             paralyzedUntil = Mathf.Max(paralyzedUntil, Time.time + duration);
             if (Boss != null) paralysisImmuneUntil = paralyzedUntil + BossParalysisImmunity;
+            Held(fresh, duration);
             return true;
         }
 
-        /// <summary>Ice freezes the enemy solid. Like paralysis, guardians thaw twice as fast and then resist for a while.</summary>
+        /// <summary>Ice freezes the enemy solid. Like paralysis, guardians thaw far faster and then resist for a while.</summary>
         public void Freeze(float duration)
         {
             if (IsInvulnerable || duration <= 0f || Health <= 0) return;
-            if (Run.IsGuest) { Run.Coop.ReportDamage(this, CoopDamageKind.Freeze, 0, transform.position, 0, duration); return; }
+            bool fresh = !IsImmobilized;
+            duration = HoldTime(duration);
+            if (Run.IsGuest) { Run.Coop.ReportDamage(this, CoopDamageKind.Freeze, 0, transform.position, 0, duration); Held(fresh, duration); return; }
             if (Boss != null)
             {
                 if (Time.time < freezeImmuneUntil) return;
-                duration *= 0.5f;
+                duration *= BossCrowdControlDuration;
             }
             frozenUntil = Mathf.Max(frozenUntil, Time.time + duration);
             if (Boss != null) freezeImmuneUntil = frozenUntil + BossParalysisImmunity;
             if (Run.ProjectileRoot != null)
                 HeroVfx.Sparks(Run.ProjectileRoot, transform.position, Color.Lerp(AbilityCatalog.Ice, Color.white, 0.5f), 8, 2.6f, 0.3f);
+            Held(fresh, duration);
         }
 
         /// <summary>
@@ -335,10 +466,104 @@ namespace Slopgame
         public bool Fear(Vector2 from, float duration)
         {
             if (IsInvulnerable || duration <= 0f || Health <= 0) return false;
-            if (Run.IsGuest) { Run.Coop.ReportDamage(this, CoopDamageKind.Fear, 0, from, 0, duration); return true; }
+            if (Run.IsGuest)
+            {
+                bool fresh = !IsImmobilized;
+                duration = HoldTime(duration);
+                Run.Coop.ReportDamage(this, CoopDamageKind.Fear, 0, from, 0, duration);
+                Held(fresh, duration);
+                return true;
+            }
             Vector2 away = (Vector2)transform.position - from;
             if (away.sqrMagnitude > 0.0001f) Facing.Face(away.normalized);
             return Paralyze(duration);
+        }
+
+        public const float TerrorSlow = 0.6f, TerrorTime = 2f, DreadRadius = 3f, DreadSlow = 0.75f;
+        private bool terrorPending;
+        private float terrorUntil;
+
+        /// <summary>Nightmare Snap: ends the paralysis now and says how long it still had to run.</summary>
+        public float ConsumeParalysis()
+        {
+            float remaining = Mathf.Max(0f, paralyzedUntil - Time.time);
+            if (Run.IsGuest) { Run.Coop.ReportDamage(this, CoopDamageKind.ClearParalysis, 0, transform.position, 0, 0f); return remaining; }
+            paralyzedUntil = Mathf.Min(paralyzedUntil, Time.time);
+            return remaining;
+        }
+
+        /// <summary>Dread Aura: enemies near a Demoness who has it act (and so attack) 25% slower.</summary>
+        private float DreadFactor()
+        {
+            var hero = Run.Player;
+            return hero != null && hero.Health > 0 && hero.Powerups.Count(PowerupType.DreadAura) > 0
+                && Vector2.Distance(transform.position, hero.transform.position) <= DreadRadius ? Slowed(DreadSlow) : 1f;
+        }
+
+        /// <summary>Whether the local hero inflicted this status, rather than the host applying a co-op guest's report.</summary>
+        private bool FromLocalHero => Run.Player != null && Run.Player.Health > 0 && (Run.Coop == null || Run.Coop.IsLocalAttacker);
+
+        /// <summary>Iron Grip lengthens holds the local hero inflicts; a guest's reports arrive already lengthened.</summary>
+        private float HoldTime(float duration) => FromLocalHero ? duration * Run.Player.Powerups.HoldDurationMultiplier : duration;
+
+        /// <summary>A hold took: if it caught the enemy moving freely, the local hero's hold talents go off.</summary>
+        private void Held(bool fresh, float duration)
+        {
+            if (fresh && Health > 0 && FromLocalHero) Run.Player.Powerups.OnImmobilized(Run.Player, this, duration);
+        }
+
+        /// <summary>Breaks the enemy out of its ice at once (Shatter).</summary>
+        public void Thaw() { if (!Run.IsGuest) frozenUntil = Mathf.Min(frozenUntil, Time.time); }
+
+        /// <summary>Stuns the enemy: held like paralysis. Guardians shake stuns off far faster and then resist for a while.</summary>
+        public bool Stun(float duration)
+        {
+            if (IsInvulnerable || duration <= 0f || Health <= 0) return false;
+            bool fresh = !IsImmobilized;
+            duration = HoldTime(duration);
+            if (Run.IsGuest) { Run.Coop.ReportDamage(this, CoopDamageKind.Stun, 0, transform.position, 0, duration); Held(fresh, duration); return true; }
+            if (Boss != null)
+            {
+                if (Time.time < stunImmuneUntil) return false;
+                duration *= BossCrowdControlDuration;
+            }
+            stunnedUntil = Mathf.Max(stunnedUntil, Time.time + duration);
+            if (Boss != null) stunImmuneUntil = stunnedUntil + BossParalysisImmunity;
+            if (Run.ProjectileRoot != null) HeroVfx.Sparks(Run.ProjectileRoot, (Vector2)transform.position + Vector2.up * 0.5f, StunnedTint, 6, 1.6f, 0.4f);
+            Held(fresh, duration);
+            return true;
+        }
+
+        /// <summary>Roots the enemy in place: it can still turn and attack. Guardians are too massive to root.</summary>
+        public bool Root(float duration)
+        {
+            if (IsInvulnerable || duration <= 0f || Health <= 0 || Boss != null) return false;
+            bool fresh = !IsImmobilized;
+            duration = HoldTime(duration);
+            if (Run.IsGuest) { Run.Coop.ReportDamage(this, CoopDamageKind.Root, 0, transform.position, 0, duration); Held(fresh, duration); return true; }
+            rootedUntil = Mathf.Max(rootedUntil, Time.time + duration);
+            Held(fresh, duration);
+            return true;
+        }
+
+        /// <summary>Bleeding: <paramref name="damage"/> a second for <paramref name="ticks"/> seconds; a fresh wound tops up rather than stacks.</summary>
+        public void Bleed(int ticks, int damage)
+        {
+            if (IsInvulnerable || ticks <= 0) return;
+            if (Run.IsGuest) { Run.Coop.ReportDamage(this, CoopDamageKind.Bleed, damage, transform.position, ticks, 0f); return; }
+            if (bleedTicks == 0) nextBleed = Time.time + 1f;
+            bleedDamage = Mathf.Max(bleedTicks > 0 ? bleedDamage : 0, damage);
+            bleedTicks = Mathf.Max(bleedTicks, ticks);
+        }
+
+        /// <summary>Poisoned: <paramref name="damage"/> a second for <paramref name="ticks"/> seconds; a fresh dose tops up rather than stacks.</summary>
+        public void Poison(int ticks, int damage)
+        {
+            if (IsInvulnerable || ticks <= 0) return;
+            if (Run.IsGuest) { Run.Coop.ReportDamage(this, CoopDamageKind.Poison, damage, transform.position, ticks, 0f); return; }
+            if (poisonTicks == 0) nextPoison = Time.time + 1f;
+            poisonDamage = Mathf.Max(poisonTicks > 0 ? poisonDamage : 0, damage);
+            poisonTicks = Mathf.Max(poisonTicks, ticks);
         }
 
         public void Curse(float duration)

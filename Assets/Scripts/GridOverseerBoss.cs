@@ -7,7 +7,9 @@ namespace Slopgame
     {
         public override string Title => "GRID OVERSEER";
         protected override Color Accent => WorldCatalog.Neon;
-        protected override Sprite Chassis => NeonBossSprites.Overseer;
+        protected override Sprite Chassis => GuardianSprites.Overseer;
+        protected override Sprite Details => GuardianSprites.OverseerDetails;
+        protected override Color BodyTint => new Color(0.5f, 0.55f, 0.66f);
         protected override HazardStyle Hazards => HazardStyle.Circuit;
         protected override string[] AttackTells => tells;
         private static readonly string[] tells = { "SCAN GRID - STEP BETWEEN THE LANES", "TRACE LOCK - LEAVE YOUR MARK", "FIREWALL - FOLLOW THE OPENING" };

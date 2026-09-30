@@ -11,8 +11,8 @@ namespace Slopgame
         public float DrawMultiplier { get; } = 1f;
         public int ReflectionDamage { get; }
         public int LightningDamage { get; }
-        public float EffectChance { get; }
-        public float PhysicalCritChance { get; }
+        public float EffectChance { get; private set; }
+        public float PhysicalCritChance { get; private set; }
         public float BlessingDuration { get; }
         public int BarragePunches { get; }
         public int ParalyzedDamage { get; }
@@ -24,6 +24,14 @@ namespace Slopgame
         public float CannonCooldownMultiplier { get; } = 1f;
         /// <summary>The class mechanic on R, bought in the Ash shop.</summary>
         public bool MechanicUnlocked { get; }
+        /// <summary>Scales all damage (the Ash shop's Infernal Pact).</summary>
+        public float DamageMultiplier { get; } = 1f;
+        /// <summary>Scales maximum HP (the Ash shop's Infernal Pact).</summary>
+        public float MaxHealthMultiplier { get; } = 1f;
+        /// <summary>The Ash shop's Backup Drive: once per descent, a killing blow leaves the hero at 1 HP.</summary>
+        public bool BackupDrive { get; }
+        /// <summary>The Ash shop's Apex Predator: extra damage share against guardians and armoured brutes.</summary>
+        public float GuardianDamage { get; }
 
         public PermanentBonuses(PermanentProgress progress, WeaponType weapon)
         {
@@ -34,6 +42,17 @@ namespace Slopgame
             Speed = progress.Rank("speed") * 0.2f;
             AttackSpeed = progress.Rank("attack") * 0.05f;
             DodgeMultiplier = 1f - progress.Rank("dodge") * 0.03f;
+            BackupDrive = progress.Rank(PermanentUpgradeCatalog.BackupDriveId) > 0;
+            GuardianDamage = progress.Rank(PermanentUpgradeCatalog.ApexPredatorId) * 0.1f;
+            float chip = progress.Rank(PermanentUpgradeCatalog.TargetingChipId) * 0.03f;
+            PhysicalCritChance += chip;
+            EffectChance += chip;
+            if (!progress.IsSwitchedOff(PermanentUpgradeCatalog.InfernalPactId))
+            {
+                int pact = progress.Rank(PermanentUpgradeCatalog.InfernalPactId);
+                DamageMultiplier = 1f + pact * 0.1f;
+                MaxHealthMultiplier = 1f - pact * 0.1f;
+            }
             switch (weapon)
             {
                 case WeaponType.Sword:
@@ -44,10 +63,10 @@ namespace Slopgame
                     DrawMultiplier = 1f - progress.Rank("archer_draw") * 0.05f; break;
                 case WeaponType.Staff:
                     LightningDamage = progress.Rank("wizard_lightning");
-                    EffectChance = progress.Rank("wizard_effect") * 0.03f; break;
+                    EffectChance += progress.Rank("wizard_effect") * 0.03f; break;
                 case WeaponType.Daggers:
                     Speed += progress.Rank("assassin_speed") * 0.15f;
-                    PhysicalCritChance = progress.Rank("assassin_crit") * 0.03f; break;
+                    PhysicalCritChance += progress.Rank("assassin_crit") * 0.03f; break;
                 case WeaponType.Hammer:
                     Health += progress.Rank("paladin_health");
                     BlessingDuration = progress.Rank("paladin_blessing"); break;

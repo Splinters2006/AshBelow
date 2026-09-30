@@ -120,7 +120,11 @@ namespace Slopgame
                 var enemy = run.Enemies[j];
                 if (enemy == null || alreadyHit.Contains(enemy) || Vector2.Distance(point, enemy.transform.position) > enemy.HitRadius) continue;
                 alreadyHit.Add(enemy);
-                if (!ghost) CombatDamage.Apply(run.Player, enemy, damage, DamageElement.Physical, point - heading);
+                if (!ghost)
+                {
+                    CombatDamage.Apply(run.Player, enemy, damage, DamageElement.Physical, point - heading);
+                    if (enemy != null && enemy.Health > 0 && run.Player.Powerups.Count(PowerupType.VenomKnives) > 0) enemy.Poison(3, Mathf.Max(1, damage / 2));
+                }
             }
         }
 

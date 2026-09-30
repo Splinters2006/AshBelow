@@ -13,11 +13,13 @@ namespace Slopgame
         public WeaponType? ClassWeapon { get; }
         /// <summary>How many guardians must have fallen in one descent (as this class, for a class upgrade) before this can be bought.</summary>
         public int RequiredGuardians { get; }
+        /// <summary>The world that must be cleared once (by any hero) before this is sold; -1 for none.</summary>
+        public int RequiredWorld { get; }
         public PermanentUpgradeDefinition(string id, string name, string description, int maxRank, int cost, int step, WeaponType? weapon = null,
-            int requiredGuardians = 0)
+            int requiredGuardians = 0, int requiredWorld = -1)
         {
             Id = id; Name = name; Description = description; MaxRank = maxRank; BaseCost = cost; CostStep = step; ClassWeapon = weapon;
-            RequiredGuardians = requiredGuardians;
+            RequiredGuardians = requiredGuardians; RequiredWorld = requiredWorld;
         }
         public int Cost(int currentRank) => BaseCost + CostStep * currentRank;
     }
@@ -31,6 +33,18 @@ namespace Slopgame
             new PermanentUpgradeDefinition("speed", "Trailblazer", "+0.2 movement speed for every hero per rank", 5, 25, 25),
             new PermanentUpgradeDefinition("attack", "Combat Training", "+5% attack and charge speed for every hero per rank", 5, 40, 30),
             new PermanentUpgradeDefinition("dodge", "Lightfoot", "3% shorter dodge cooldown for every hero per rank", 5, 35, 25),
+            // Rewards for clearing each world for the first time, with any hero.
+            WorldReward(EmberHeartId, "Ember Heart", "Start every descent with one random talent already taken", 1, 300, 0, 0),
+            WorldReward(BackupDriveId, "Backup Drive", "Once per descent, a hit that would kill you leaves you at 1 HP instead", 1, 800, 0, 1),
+            WorldReward(TargetingChipId, "Targeting Chip", "+3% crit and elemental effect chance for every hero per rank", 3, 250, 0, 1),
+            WorldReward(InfernalPactId, "Infernal Pact", "+10% damage and -10% maximum HP per rank (up to 90%). Switch it off any time", 9, 400, 50, 2),
+            WorldReward(SoulTitheId, "Soul Tithe", "Guardians drop a heart that heals 2 HP", 1, 350, 0, 2),
+            WorldReward(ScholarsRerollId, "Scholar's Reroll", "Reroll the floor talent pick once per world", 1, 450, 0, 3),
+            WorldReward(DungeonRun.SanctifiedRelicsId, "Sanctified Relics", "Guardians offer 4 abilities to pick from instead of 3", 1, 700, 0, 3),
+            WorldReward(BlackMarketPassId, "Black Market Pass", "Crystal shops stock one extra relic", 1, 500, 0, 4),
+            WorldReward(SmugglersStashId, "Smuggler's Stash", "Keep 25% of your unspent crystals (up to 100) for the next descent", 1, 600, 0, 4),
+            WorldReward(WildGrowthId, "Wild Growth", "+1 maximum HP for each world you clear within a descent", 1, 600, 0, 5),
+            WorldReward(ApexPredatorId, "Apex Predator", "+10% damage against guardians and armoured brutes per rank", 3, 450, 150, 5),
             new PermanentUpgradeDefinition("knight_reflect", "Polished Steel", "+1 reflected bolt damage per rank", 3, 45, 35, WeaponType.Sword),
             new PermanentUpgradeDefinition("knight_health", "Iron Constitution", "+1 Knight maximum HP per rank", 3, 35, 25, WeaponType.Sword),
             new PermanentUpgradeDefinition("archer_draw", "Trained Draw", "5% shorter bow charge time per rank", 3, 45, 35, WeaponType.Bow),
@@ -49,6 +63,16 @@ namespace Slopgame
             new PermanentUpgradeDefinition("gambler_luck", "Lady Luck", "+4% odds on All In per rank", 3, 50, 40, WeaponType.Coins),
             new PermanentUpgradeDefinition("augment_capacitor", "Capacitor Bank", "10% shorter plasma cannon cooldown per rank", 3, 45, 35, WeaponType.Beam),
             new PermanentUpgradeDefinition("augment_health", "Titanium Frame", "+1 Augment maximum HP per rank", 3, 35, 25, WeaponType.Beam),
+            AbilityUnlock(AbilityType.WarBanner, 150),
+            AbilityUnlock(AbilityType.BearTrap, 150),
+            AbilityUnlock(AbilityType.LightningStorm, 180),
+            AbilityUnlock(AbilityType.DeathMark, 160),
+            AbilityUnlock(AbilityType.ShadowClone, 200),
+            AbilityUnlock(AbilityType.DivineIntervention, 200),
+            AbilityUnlock(AbilityType.Suplex, 160),
+            AbilityUnlock(AbilityType.NightmareSnap, 180),
+            AbilityUnlock(AbilityType.Insurance, 160),
+            AbilityUnlock(AbilityType.OrbitalLaser, 200),
             Mechanic(WeaponType.Sword, "Shield Taunt", "R: turn red with rage for 2.25s. You can walk; you block bolts from every side (+1 ward each) and draw the enemies' attention"),
             Mechanic(WeaponType.Bow, "Elemental Quiver", "R: cycle fire, freeze and shock arrows. Critical hits set off the arrow's element"),
             Mechanic(WeaponType.Staff, "Wild Storm", "R: after 10 elemental effects, summon a storm that hurls fire, lightning and ice, every strike sure to burn, shock or freeze"),
@@ -60,9 +84,27 @@ namespace Slopgame
             Mechanic(WeaponType.Beam, "Overclock", "R: after your plasma ray strikes 25 enemies, overclock for 8s: fully charged rays at double speed and a vented, faster cannon")
         };
 
+        public const string EmberHeartId = "ember_heart", BackupDriveId = "backup_drive", TargetingChipId = "targeting_chip",
+            InfernalPactId = "infernal_pact", SoulTitheId = "soul_tithe", ScholarsRerollId = "scholars_reroll",
+            BlackMarketPassId = "black_market_pass", SmugglersStashId = "smugglers_stash", WildGrowthId = "wild_growth", ApexPredatorId = "apex_predator";
+
+        private static PermanentUpgradeDefinition WorldReward(string id, string name, string description, int maxRank, int cost, int step, int world)
+            => new PermanentUpgradeDefinition(id, name, description, maxRank, cost, step, null, 0, world);
+
         /// <summary>The Ash shop's hefty class mechanic (R), sold only once that class has felled the third guardian.</summary>
         public const int MechanicCost = 600, MechanicGuardians = 3;
         public static string MechanicId(WeaponType weapon) => "mechanic_" + weapon.ToString().ToLowerInvariant();
+
+        /// <summary>
+        /// An ability guardians only offer once it is bought here (see <see cref="AbilityDefinition.ShopUnlock"/>).
+        /// Once bought, it can turn up in every later descent.
+        /// </summary>
+        private static PermanentUpgradeDefinition AbilityUnlock(AbilityType type, int cost)
+        {
+            var ability = AbilityCatalog.Get(type);
+            return new PermanentUpgradeDefinition(ability.UnlockId, "Ability: " + ability.Name, ability.Description + " Guardians can offer it once bought.",
+                1, cost, 0, ability.ClassWeapon);
+        }
 
         private static PermanentUpgradeDefinition Mechanic(WeaponType weapon, string name, string description)
             => new PermanentUpgradeDefinition(MechanicId(weapon), name, description, 1, MechanicCost, 0, weapon, MechanicGuardians);

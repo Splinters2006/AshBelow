@@ -106,7 +106,9 @@ namespace Slopgame.Editor
                 && hazardBack.Spec.Direction == Vector2.up && Mathf.Approximately(hazardBack.Spec.Radius, 2.8f) && Mathf.Approximately(hazardBack.Spec.Width, 0.9f)
                 && Mathf.Approximately(hazardBack.Spec.Telegraph, 2.4f) && Mathf.Approximately(hazardBack.Spec.Duration, 6.5f), "Hellfire hazard did not round-trip.");
             Require(DungeonBoss.KindForFloor(5) == BossKind.AshWarden && DungeonBoss.KindForFloor(10) == BossKind.Duelist
-                && DungeonBoss.KindForFloor(15) == BossKind.Archdemon && DungeonBoss.KindForFloor(20) == BossKind.GridOverseer, "Boss rotation is wrong.");
+                && DungeonBoss.KindForFloor(15) == BossKind.Archdemon && DungeonBoss.KindForFloor(20) == BossKind.GridOverseer
+                && DungeonBoss.KindForFloor(35) == BossKind.HexMatriarch && DungeonBoss.KindForFloor(40) == BossKind.BrimstoneHound
+                && DungeonBoss.KindForFloor(45) == BossKind.InfernalJudge && DungeonBoss.KindForFloor(50) == BossKind.AshWarden, "Boss rotation is wrong.");
             // Floors past the last world stay in it, and no world begins after the last one.
             int lastFloor = WorldCatalog.All.Length * WorldCatalog.FloorsPerWorld;
             Require(!WorldCatalog.ForFloor(1).HighTech && !WorldCatalog.ForFloor(15).HighTech && WorldCatalog.ForFloor(16).HighTech
@@ -150,8 +152,8 @@ namespace Slopgame.Editor
             Require(DungeonRun.ScaleHealth(3, 2) == 5, "Scaled health rounds up.");
             Require(DungeonRun.ScaleHealth(27, 4) == 68, "Four heroes: 2.5x health.");
             Require(DungeonRun.ScaleHealth(5, 0) == 5, "A missing party size counts as solo.");
-            Require(DungeonBoss.ScaledHealth(10, 1) == 30 && DungeonBoss.ScaledHealth(10, 0) == 30, "Solo guardians: 3x base health.");
-            Require(DungeonBoss.ScaledHealth(10, 2) == 60 && DungeonBoss.ScaledHealth(10, 4) == 120, "Every hero adds a full guardian's health.");
+            Require(DungeonBoss.ScaledHealth(10, 1) == 60 && DungeonBoss.ScaledHealth(10, 0) == 60, "Solo guardians: 6x base health.");
+            Require(DungeonBoss.ScaledHealth(10, 2) == 120 && DungeonBoss.ScaledHealth(10, 4) == 240, "Every hero adds a full guardian's health.");
         }
 
         private static void TestDeterminism()

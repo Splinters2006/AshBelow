@@ -10,6 +10,13 @@ namespace Slopgame
         public float SpreadDegrees { get; set; } = 18f;
         public float Windup { get; set; } = 0.45f;
         public float Recovery { get; set; } = 0.9f;
+        /// <summary>The bolt kind; null uses the world's own bolts.</summary>
+        public BoltKind? Kind { get; set; }
+        public float BoltSpeed { get; set; } = EnemyProjectile.DefaultSpeed;
+        /// <summary>Extra volleys fired <see cref="VolleyGap"/> apart, each fanned half a spread step aside.</summary>
+        public int ExtraVolleys { get; set; }
+        public float VolleyGap { get; set; } = 0.25f;
+        private int volley;
         private DungeonEnemy enemy;
         private float readyAt, fireAt;
         private Vector2 lockedDirection;
@@ -32,11 +39,14 @@ namespace Slopgame
             if (IsCharging)
             {
                 if (enemy.ActionTime < fireAt) return;
+                float stagger = volley % 2 == 1 ? SpreadDegrees * 0.5f : 0f;
                 for (int i = 0; i < ProjectileCount; i++)
                 {
-                    Vector2 direction = Quaternion.Euler(0, 0, (i - (ProjectileCount - 1) * 0.5f) * SpreadDegrees) * lockedDirection;
-                    EnemyProjectile.Spawn(enemy.Run, transform.parent, transform.position, direction, true, EnemyProjectile.DefaultSpeed, enemy.Run.World.Bolts);
+                    Vector2 direction = Quaternion.Euler(0, 0, (i - (ProjectileCount - 1) * 0.5f) * SpreadDegrees + stagger) * lockedDirection;
+                    EnemyProjectile.Spawn(enemy.Run, transform.parent, transform.position, direction, true, BoltSpeed, Kind ?? enemy.Run.World.Bolts);
                 }
+                if (volley++ < ExtraVolleys) { fireAt = enemy.ActionTime + VolleyGap; return; }
+                volley = 0;
                 IsCharging = false;
                 readyAt = enemy.ActionTime + Recovery;
             }

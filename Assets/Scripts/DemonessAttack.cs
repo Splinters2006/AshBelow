@@ -8,12 +8,12 @@ namespace Slopgame
     /// and paralyses it. RMB sweeps the tail through a half circle, hitting paralysed enemies twice as hard. Her boss
     /// artifacts (Archdemon's Technique, HEEEELP and Demon Curse) are cast from here.
     /// </summary>
-    public sealed class DemonessAttack : MonoBehaviour, IPlayerWeapon
+    public sealed partial class DemonessAttack : MonoBehaviour, IPlayerWeapon
     {
         public const float ChargeDuration = 1.1f;
         public const float StabReach = 1.9f, VitalReach = 2.4f, StabHalfWidth = 0.3f;
         public const float VitalParalysis = 1.5f;
-        public const float SweepRadius = 2f, SweepCone = 180f, SweepCooldown = 5f;
+        public const float SweepRadius = 2.8f, SweepCone = 180f, SweepCooldown = 5f;
         public const int SweepDamage = 2, SweepParalyzedMultiplier = 2;
         /// <summary>Archdemon's Technique: a fully charged tail whip strikes a small cone.</summary>
         public const float WhipRadius = 2.8f, WhipCone = 70f;
@@ -28,8 +28,11 @@ namespace Slopgame
         public float HeavyCooldownRemaining => DebugMode.Cooldown(Mathf.Max(0f, sweepReadyAt - Time.time));
         public void ReduceHeavyCooldown(float seconds) => sweepReadyAt = Cooldowns.Shorten(sweepReadyAt, seconds);
         public bool CanAttack => Player.Run.IsPlaying && !Player.IsRolling && !Player.IsBusy && Time.time >= readyAt;
+        /// <summary>Nerve Strike and Blood Pact: extra seconds on every paralysis she inflicts.</summary>
+        public float ParalysisBonus => Player.Powerups.Count(PowerupType.NerveStrike) * 0.25f
+            + (Player.Powerups.Count(PowerupType.BloodPact) > 0 ? 0.5f : 0f);
         /// <summary>How long a vital stab (or Archdemon's tail whip) holds its victims.</summary>
-        public float ParalysisDuration => VitalParalysis + Player.Powerups.Count(PowerupType.NerveStrike) * 0.25f;
+        public float ParalysisDuration => VitalParalysis + ParalysisBonus;
         /// <summary>Pressure Points: extra damage on every hit against an already paralysed enemy.</summary>
         public int ParalyzedBonusDamage => Player.Permanent.ParalyzedDamage + Player.Powerups.Count(PowerupType.CruelTouch);
         public float SweepReach => SweepRadius + Player.Powerups.Count(PowerupType.LongTail) * 0.3f;
@@ -64,7 +67,7 @@ namespace Slopgame
                 return true;
             }
             // Under Archdemon's Technique every click strikes as if fully charged.
-            if (ascended || charge >= 1f) Stab(aim, VitalReach, Player.Charge.Damage(1f), ParalysisDuration);
+            if (ascended || charge >= 1f) Stab(aim, VitalReach, Player.Charge.Damage(1f), VitalParalysis);
             else Stab(aim, Mathf.Lerp(StabReach, VitalReach, charge), Player.Charge.Damage(charge), 0f);
             readyAt = Time.time + 0.35f * Interval;
             return true;
@@ -93,8 +96,8 @@ namespace Slopgame
             CoopFx.TailStab(Player.Run, origin, aim, length, color);
             if (victim == null) return;
             Vector2 hitPoint = victim.transform.position;
-            CombatDamage.Apply(Player, victim, WithPressurePoints(victim, damage), DamageElement.Physical, origin, vital ? 0.2f : 0.5f);
-            if (!vital) return;
+            CombatDamage.Apply(Player, victim, WithPressurePoints(victim, damage) + (vital ? TormentBonus(victim) : 0), DamageElement.Physical, origin, vital ? 0.2f : 0.5f);
+            if (!vital || victim == null) return;
             ParalyzeCounted(victim, paralysis);
             var root = Player.Run.ProjectileRoot;
             HeroVfx.Sparks(root, hitPoint, Pale, 10, 4f, 0.3f, aim, 80f, 0.9f);
@@ -118,7 +121,10 @@ namespace Slopgame
             {
                 if (!InCone(enemy, origin, aim, WhipRadius, WhipCone)) continue;
                 CombatDamage.Apply(Player, enemy, WithPressurePoints(enemy, damage), DamageElement.Physical, origin, 1.2f);
-                ParalyzeCounted(enemy, ParalysisDuration);
+                ParalyzeCounted(enemy, VitalParalysis);
+                // Infernal Technique: the whips set enemies burning.
+                if (enemy != null && enemy.Health > 0 && Player.Powerups.Count(PowerupType.InfernalTechnique) > 0)
+                    enemy.Burn(CombatDamage.BurnTicks, CombatDamage.BurnTickDamage(damage));
                 HeroVfx.Sparks(root, enemy.transform.position, Pale, 8, 4.5f, 0.3f, aim, 100f);
             }
         }
@@ -151,12 +157,12 @@ namespace Slopgame
         }
 
         /// <summary>
-        /// Paralyses the enemy; every paralysis that takes hold charges Demonic Power, and so does a paralysing hit that
-        /// killed its target outright.
+        /// Paralyses the enemy for <paramref name="duration"/> plus her paralysis bonus; every paralysis that takes hold
+        /// charges Demonic Power, and so does a paralysing hit that killed its target outright.
         /// </summary>
         private void ParalyzeCounted(DungeonEnemy enemy, float duration)
         {
-            if (enemy.Health <= 0 || enemy.Paralyze(duration)) Player.Mechanic?.OnParalyzed();
+            if (enemy.Health <= 0 || enemy.Paralyze(duration + ParalysisBonus, Player.Powerups.Count(PowerupType.LingeringTerror) > 0)) Player.Mechanic?.OnParalyzed();
         }
 
         private int WithPressurePoints(DungeonEnemy enemy, int damage) => enemy.IsParalyzed ? damage + ParalyzedBonusDamage : damage;
@@ -187,6 +193,9 @@ namespace Slopgame
                 case AbilityType.DemonCurse:
                     StartCoroutine(CurseMark(CursePoint(Player.Run.Map, transform.position, aim, cursorDistance), rank));
                     return true;
+                case AbilityType.WingDash: StartCoroutine(WingDash(aim, WingDashDistance + (rank - 1) * 0.5f)); return true;
+                case AbilityType.SoulSiphon: StartCoroutine(SoulSiphon(SiphonTime + (rank - 1) * 1f)); return true;
+                case AbilityType.NightmareSnap: return NightmareSnap(rank);
                 default: return false;
             }
         }
@@ -270,6 +279,8 @@ namespace Slopgame
                 CombatDamage.Apply(Player, enemy, WithPressurePoints(enemy, damage), DamageElement.Physical, center + Vector2.up, 1.5f);
                 ParalyzeCounted(enemy, PawStun);
             }
+            // Cursed Paw: where the paw lands, a Demon Curse is branded.
+            if (Player.Powerups.Count(PowerupType.CursedPaw) > 0) StartCoroutine(CurseMark(center, 1));
         }
 
         public float CurseAreaRadius(int rank) => CurseRadius + (rank - 1) * 0.25f;

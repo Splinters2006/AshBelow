@@ -24,7 +24,9 @@ namespace Slopgame.Editor
         private static bool IsDelayed(AbilityType type) => type == AbilityType.ShieldRush || type == AbilityType.Earthshatter
             || type == AbilityType.Judgment || type == AbilityType.KnuckleSandwich || type == AbilityType.FrostNova
             || type == AbilityType.VenomVial || type == AbilityType.DemonPaw || type == AbilityType.DemonCurse
-            || type == AbilityType.MicroMissiles;
+            || type == AbilityType.MicroMissiles || type == AbilityType.NetShot || type == AbilityType.RicochetArrow
+            || type == AbilityType.GrappleArm || type == AbilityType.ThunderClap || type == AbilityType.HaymakerDash || type == AbilityType.Suplex
+            || type == AbilityType.CardToss || type == AbilityType.DiceBomb || type == AbilityType.HolyLance;
 
         private static void VerifyDelayed(DungeonRun run, AbilityDefinition ability)
         {
@@ -125,7 +127,7 @@ namespace Slopgame.Editor
                     Require(run.Map.CanStand(new Vector2(15, 9)) && !run.Map.CanStand(new Vector2(12, 9)), "Arena bounds are wrong.");
                     run.Player.Protect(30f);
                     run.Boss.Enemy.Chill(20f);
-                    waitUntil = Time.time + 3.05f;
+                    waitUntil = Time.time + 2.2f;
                     stage = 2;
                     return;
                 }
@@ -136,8 +138,8 @@ namespace Slopgame.Editor
                     {
                         Require(run.ProjectileRoot.GetComponentsInChildren<EnemyProjectile>().Length == 0,
                             "Chilled boss attacked at normal speed.");
-                        Require(Mathf.Abs(run.Boss.Enemy.ActionTime - 1.525f) < 0.15f,
-                            "Chill did not halve the boss action clock.");
+                        Require(Mathf.Abs(run.Boss.Enemy.ActionTime - 1.65f) < 0.15f,
+                            "Chill did not slow the boss action clock by a quarter.");
                         checkedChilledBoss = true;
                         waitUntil = Time.time + 3f;
                         return;
@@ -857,6 +859,17 @@ namespace Slopgame.Editor
                     player.Buffs.Clear(); break;
                 case AbilityType.DemonPaw:
                     Require(target.Health == 100 && run.ProjectileRoot.GetComponentInChildren<DemonPawVfx>() != null, "HEEEELP slammed without a portal windup."); break;
+                case AbilityType.NetShot:
+                    Require(target.Health == 100 && run.ProjectileRoot.GetComponentInChildren<ThrownNet>() != null, "Net Shot struck instantly instead of throwing a net."); break;
+                case AbilityType.RicochetArrow:
+                case AbilityType.GrappleArm:
+                case AbilityType.ThunderClap:
+                case AbilityType.HaymakerDash:
+                case AbilityType.Suplex:
+                case AbilityType.CardToss:
+                case AbilityType.DiceBomb:
+                case AbilityType.HolyLance:
+                    Require(target.Health == 100, ability.Name + " struck instantly instead of travelling."); break;
                 case AbilityType.MicroMissiles:
                     Require(target.Health == 100 && run.ProjectileRoot.GetComponentsInChildren<MicroMissile>().Length >= CyborgAttack.BaseMissiles,
                         "Micro-Missiles struck instantly instead of flying."); break;

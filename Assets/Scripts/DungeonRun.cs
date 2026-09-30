@@ -139,6 +139,7 @@ namespace Slopgame
         public void ShowMainMenu(bool disconnected)
         {
             if (Coop != null && Coop.Session.State != NetState.Offline && !disconnected) Coop.Session.Leave();
+            if (!IsInMainMenu) StashCrystals();
             ClearRun();
             menu.ResetPage(disconnected);
         }
@@ -202,7 +203,40 @@ namespace Slopgame
                 SelectedCharacter.Color, 4).gameObject.AddComponent<DungeonPlayer>();
             Player.Run = this;
             Player.Initialize(SelectedCharacter);
+            crystalsStashed = false;
+            // Smuggler's Stash: last descent's crystals come along.
+            Player.Crystals.Add(Progress.TakeStash());
+            // Ember Heart: the descent begins with one random talent.
+            if (Progress.Rank(PermanentUpgradeCatalog.EmberHeartId) > 0)
+            {
+                var pool = new List<PowerupDefinition>();
+                foreach (var powerup in PowerupCatalog.All) if (Player.Powerups.CanTake(powerup.Type)) pool.Add(powerup);
+                if (pool.Count > 0) Player.GrantPowerup(pool[UnityEngine.Random.Range(0, pool.Count)].Type);
+            }
             NextFloor();
+        }
+
+        private bool crystalsStashed, rerolledThisWorld;
+
+        /// <summary>Smuggler's Stash: when a descent ends, a quarter of the unspent crystals (up to 100) is put aside.</summary>
+        private void StashCrystals()
+        {
+            if (crystalsStashed || Player == null || Progress.Rank(PermanentUpgradeCatalog.SmugglersStashId) == 0) return;
+            crystalsStashed = true;
+            Progress.Stash(Player.Crystals.Crystals / 4);
+        }
+
+        /// <summary>Scholar's Reroll: whether the floor's talent pick can still be rerolled in this world.</summary>
+        public bool CanRerollTalents => ChoosingUpgrade && !rerolledThisWorld && Progress.Rank(PermanentUpgradeCatalog.ScholarsRerollId) > 0
+            && !(IsNetworked && Coop.WaitingForTeam);
+
+        /// <summary>Scholar's Reroll: draws a fresh three (once per world).</summary>
+        public bool RerollTalents()
+        {
+            if (!CanRerollTalents) return false;
+            rerolledThisWorld = true;
+            RollUpgradeChoices(Seed + Floor * 3571 + 9973);
+            return true;
         }
 
         /// <summary>Co-op: the host decided everyone descends now.</summary>
@@ -233,7 +267,7 @@ namespace Slopgame
             if (!InShop) Floor++;
             floorRewardGranted = false;
             // Wave worlds fight every wave in the open arena the guardians use.
-            Map = InShop ? DungeonMap.Shop() : new DungeonMap(Seed + Floor * 7919, IsBossFloor || IsWaveFloor);
+            Map = InShop ? DungeonMap.Shop() : new DungeonMap(Seed + Floor * 7919, IsBossFloor || IsWaveFloor, World.Layout, World.HasLava && !IsBossFloor);
             waveClearedAt = -1f;
             waveReserves.Clear();
             WavesThisLevel = 0;
@@ -242,6 +276,7 @@ namespace Slopgame
             level.SetParent(transform);
             view.backgroundColor = World.Background;
             DungeonVisuals.DrawMap(Map, level, World, InShop);
+            if (Map.HasLava) LavaField.Create(this, level, Map);
             Player.Crystals.BeginFloor(Floor, InShop);
             Player.transform.position = (Vector2)Map.Centers[0];
             exit = Map.Centers[Map.Centers.Count - 1];
@@ -262,6 +297,9 @@ namespace Slopgame
             arrivingByTravel = false;
             if (!InShop && (WorldCatalog.EntersWorld(Floor) || travelled))
             {
+                // Cheat Death and Scholar's Reroll refresh in every new world.
+                Player.Powerups.CheatDeathSpent = false;
+                rerolledThisWorld = false;
                 ScreenFx.Flash(FlameMesh.Alpha(World.Accent, 0.6f), 1.2f);
                 WorldBannerUntil = Time.time + 4f;
                 HeroVfx.Pulse(level, Player.transform.position, 3f, World.Accent, 0.9f);
@@ -281,6 +319,10 @@ namespace Slopgame
                     SpawnEnemy((Vector2)Map.Centers[room] + new Vector2(i % 2, i / 2), i == 1, i == 0 && room % 2 == 0, room == 1 && i == 2,
                         variants, EnemyHealthScaled(EnemyHealthForFloor(Floor)));
             }
+            // Urns and crates to smash for crystals (and the odd heart).
+            if (!IsBossFloor && !InShop) Breakable.Scatter(this, level, Map, World, Vector2Int.RoundToInt(exit), Seed + Floor * 4409);
+            // The world's environmental traps: fire vents, plasma lasers, frost runes, ...
+            if (!IsBossFloor && !InShop) EnvironmentHazard.Plant(this, level, Map, World, Floor, exit, Seed + Floor * 2203);
             lastHeroCells.Clear();
             ChoosingUpgrade = false;
             IsPlaying = true;
@@ -320,7 +362,7 @@ namespace Slopgame
                 double roll = variants.NextDouble();
                 bool specialist = Floor >= 3 && (guaranteeSpecialist || roll >= HuskChance + SkitterChance && roll < HuskChance + SkitterChance + SpecialistChance);
                 EnemyVariant variant = specialist
-                    ? (World.HighTech ? (EnemyVariant)enemy.gameObject.AddComponent<NeonLancer>() : enemy.gameObject.AddComponent<EmberFanatic>())
+                    ? WorldBestiary.AddSpecialist(enemy.gameObject, World, guaranteeSpecialist, variants)
                     : Floor >= 3 && roll < HuskChance ? enemy.gameObject.AddComponent<CinderHusk>()
                     : Floor >= 2 && roll < HuskChance + SkitterChance ? enemy.gameObject.AddComponent<AshSkitter>() : null;
                 variant?.Configure(enemy);
@@ -482,6 +524,49 @@ namespace Slopgame
                 foreach (var coin in level.GetComponentsInChildren<GoldCoin>()) coin.CollectNow();
         }
 
+        /// <summary>Minion kinds a guardian can summon: the world's basic enemy, caster or brute, or its specialist number n as <see cref="MinionSpecialist"/> + n.</summary>
+        public const byte MinionBasic = 0, MinionCaster = 1, MinionBrute = 2, MinionSpecialist = 10;
+
+        /// <summary>
+        /// Host (or offline): a guardian summons a minion. In co-op the host numbers it and announces it, so every
+        /// machine spawns the same enemy and it syncs like any other.
+        /// </summary>
+        public DungeonEnemy SpawnMinion(Vector2 position, byte kind)
+        {
+            var enemy = CreateMinion(position, kind);
+            if (IsNetworked) Coop.RegisterMinion(enemy, kind);
+            return enemy;
+        }
+
+        /// <summary>Builds a summoned minion on this machine (also called by co-op guests when the host announces one).</summary>
+        public DungeonEnemy CreateMinion(Vector2 position, byte kind)
+        {
+            var enemy = DungeonVisuals.Create(World.BasicName, level, position, Vector2.one * 0.6f, World.BasicTint, 3).gameObject.AddComponent<DungeonEnemy>();
+            enemy.Run = this;
+            enemy.IsMinion = true;
+            enemy.Health = EnemyHealthScaled(EnemyHealthForFloor(Floor));
+            enemy.Speed = Mathf.Min(4.3f, 2.25f + Floor * 0.15f);
+            if (kind == MinionCaster) enemy.gameObject.AddComponent<EnemyShooter>();
+            else if (kind == MinionBrute)
+            {
+                enemy.IsTank = true;
+                enemy.name = World.BruteName;
+                enemy.Health *= 3;
+                enemy.Speed *= 0.6f;
+                enemy.transform.localScale = Vector2.one * 0.9f;
+            }
+            else if (kind >= MinionSpecialist)
+            {
+                var roster = WorldBestiary.Roster(World.Index);
+                var variant = (EnemyVariant)enemy.gameObject.AddComponent(roster[(kind - MinionSpecialist) % roster.Length]);
+                variant.Configure(enemy);
+            }
+            Enemies.Add(enemy);
+            HeroVfx.Pulse(level, position, 1f, World.Accent, 0.4f);
+            HeroVfx.Sparks(level, position, World.Accent, 12, 4f, 0.4f, Vector2.up, 120f);
+            return enemy;
+        }
+
         /// <summary>True when the floor after <paramref name="floor"/> is a boss floor, so the crystal shop comes first.</summary>
         public static bool IsShopNext(int floor) => floor > 0 && (floor + 1) % 5 == 0;
         /// <summary>Variant chances for eligible basic enemies; the first combat room also guarantees a specialist from floor 3.</summary>
@@ -559,6 +644,7 @@ namespace Slopgame
         public static int EnemyHealthForFloor(int floor) => 2 + Mathf.Max(0, floor - 3);
         public void EndRun()
         {
+            StashCrystals();
             IsPlaying = false;
             ChoosingUpgrade = false;
             ChoosingArtifact = false;
@@ -623,13 +709,55 @@ namespace Slopgame
         {
             if (Artifact == null) Artifact = ArtifactPickup.Spawn(level, position);
         }
+        /// <summary>The abilities a guardian's artifact offers: 3 from the hero's pool, or 4 with the Ash shop's Sanctified Relics.</summary>
+        public IReadOnlyList<AbilityDefinition> AbilityOffers => abilityOffers;
+        private readonly List<AbilityDefinition> abilityOffers = new List<AbilityDefinition>();
+        /// <summary>True once the guardian's ability is picked, while the hero arranges which learned abilities sit on Q and E.</summary>
+        public bool ArrangingAbilities { get; private set; }
+        public const string SanctifiedRelicsId = "sanctified_relics";
+        public int AbilityOfferCount => Progress != null && Progress.Rank(SanctifiedRelicsId) > 0 ? 4 : 3;
+
         public void BeginArtifactChoice()
         {
             if (!IsPlaying || Artifact == null || Enemies.Count != 0) return;
             IsPlaying = false;
             ChoosingArtifact = true;
+            ArrangingAbilities = false;
+            RollAbilityOffers();
             Player.Weapon?.Hide();
             if (!IsNetworked) Time.timeScale = 0f;
+        }
+
+        /// <summary>Picks the offers from the hero's pool (Ash shop abilities once bought), skipping any already at maximum rank.</summary>
+        private void RollAbilityOffers()
+        {
+            abilityOffers.Clear();
+            var pool = AbilityCatalog.PoolFor(Player.ClassWeapon, Progress);
+            pool.RemoveAll(ability => Player.Abilities.Rank(ability.Type) >= PlayerAbilities.MaxRank);
+            for (int i = 0; i < AbilityOfferCount && pool.Count > 0; i++)
+            {
+                int pick = UnityEngine.Random.Range(0, pool.Count);
+                abilityOffers.Add(pool[pick]);
+                pool.RemoveAt(pick);
+            }
+        }
+
+        /// <summary>Takes one of the guardian's offers: learned at rank 1, or ranked up. The abilities page follows.</summary>
+        public bool PickAbility(AbilityType type)
+        {
+            if (!ChoosingArtifact || ArrangingAbilities || (IsNetworked && Coop.WaitingForTeam)
+                || !abilityOffers.Exists(offer => offer.Type == type) || !Player.Abilities.Learn(type)) return false;
+            Player.Heal(2);
+            ArrangingAbilities = true;
+            return true;
+        }
+
+        /// <summary>Closes the abilities page after a pick and resumes the descent.</summary>
+        public void FinishAbilityLoadout()
+        {
+            if (!ArrangingAbilities) return;
+            ArrangingAbilities = false;
+            FinishArtifactChoice();
         }
         public bool ChooseArtifact(AbilityType type, int slot)
         {
@@ -644,7 +772,7 @@ namespace Slopgame
         /// <summary>Leaves the guardian's artifact behind for a pile of crystals instead of an ability.</summary>
         public bool LeaveArtifact()
         {
-            if (!ChoosingArtifact || (IsNetworked && Coop.WaitingForTeam)) return false;
+            if (!ChoosingArtifact || ArrangingAbilities || (IsNetworked && Coop.WaitingForTeam)) return false;
             Player.Crystals.Add(LeftArtifactCrystals);
             if (ProjectileRoot != null)
                 HeroVfx.Motes(ProjectileRoot, Player.transform.position, 0.9f, CrystalPouch.CrystalColor, 20, 1.1f);
@@ -671,6 +799,7 @@ namespace Slopgame
             if (Artifact != null) Destroy(Artifact.gameObject);
             Artifact = null;
             ChoosingArtifact = false;
+            ArrangingAbilities = false;
             IsPlaying = true;
             Time.timeScale = 1f;
         }
@@ -680,11 +809,21 @@ namespace Slopgame
             // The third guardian's stairs end the world: a cleared screen offers the next world or the menu.
             if (IsBossFloor && WorldCatalog.CompletesWorld(Floor)) { ShowWorldComplete(); return; }
             if (IsBossFloor || InShop) { NextFloor(); return; }
+            RollUpgradeChoices(Seed + Floor * 3571);
+            IsPlaying = false;
+            Player.Weapon?.Hide();
+            ChoosingUpgrade = true;
+            if (!IsNetworked) Time.timeScale = 0f;
+        }
+
+        /// <summary>Draws the floor's three talents: one for the class when there is one, the rest from everything takeable.</summary>
+        private void RollUpgradeChoices(int seed)
+        {
             var pool = new List<PowerupDefinition>();
             foreach (var powerup in PowerupCatalog.All)
                 if (Player.Powerups.CanTake(powerup.Type)) pool.Add(powerup);
             upgradeChoices.Clear();
-            var random = new System.Random(Seed + Floor * 3571);
+            var random = new System.Random(seed);
             var talents = pool.FindAll(powerup => powerup.ClassWeapon.HasValue);
             if (talents.Count > 0)
             {
@@ -698,10 +837,6 @@ namespace Slopgame
                 upgradeChoices.Add(pool[index]);
                 pool.RemoveAt(index);
             }
-            IsPlaying = false;
-            Player.Weapon?.Hide();
-            ChoosingUpgrade = true;
-            if (!IsNetworked) Time.timeScale = 0f;
         }
 
         /// <summary>
@@ -714,6 +849,9 @@ namespace Slopgame
             IsPlaying = false;
             ChoosingUpgrade = false;
             WorldComplete = true;
+            // The world's two Ash shop rewards unlock, and Wild Growth toughens the hero for every world cleared.
+            Progress.RecordWorldCleared(World.Index);
+            if (Progress.Rank(PermanentUpgradeCatalog.WildGrowthId) > 0) Player.RaiseMaxHealth(1);
             Player.Weapon?.Hide();
             Player.Charge.Cancel();
             if (!IsNetworked) Time.timeScale = 0f;

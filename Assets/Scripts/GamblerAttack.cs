@@ -42,6 +42,20 @@ namespace Slopgame
 
         /// <summary>The purse holds at most this many; Double or Nothing and Windfall cannot push past it (or overflow).</summary>
         public const int MaxCoins = 999999;
+        public const int GoldCoinEvery = 10, GoldCoinCap = 50;
+        public const float InterestInterval = 30f;
+        private int coinsThrown;
+        private float nextInterest;
+
+        // Compound Interest: the purse grows by a tenth every half minute of play.
+        private void Update()
+        {
+            if (player == null || !player.Run.IsPlaying || player.Powerups.Count(PowerupType.CompoundInterest) == 0) { nextInterest = Time.time + InterestInterval; return; }
+            if (Time.time < nextInterest) return;
+            nextInterest = Time.time + InterestInterval;
+            AddCoins(Mathf.Max(1, Coins / 10));
+            HeroVfx.Sparks(player.Run.ProjectileRoot, transform.position, Gold, 10, 3f, 0.3f, Vector2.up, 120f);
+        }
         public void AddCoins(int amount) { if (amount > 0) coins = (int)System.Math.Min(MaxCoins, (long)Coins + amount); }
 
         /// <summary>Spends coins if he has enough. The purse tops an emptied pocket back up to <see cref="MinCoins"/>.</summary>
@@ -60,7 +74,14 @@ namespace Slopgame
         public bool TryAttack(Vector2 aim, float charge = 0f)
         {
             if (!CanAttack || aim.sqrMagnitude < 0.001f) return false;
-            PlayerProjectile.Spawn(Player.Run, transform.position, aim.normalized, Player.Charge.Damage(charge), ThrowRange, ProjectileStyle.Coin);
+            int damage = Player.Charge.Damage(charge);
+            // Gold Coin: every 10th coin is worth its damage times the coins in the purse.
+            if (Player.Powerups.Count(PowerupType.GoldCoin) > 0 && ++coinsThrown % GoldCoinEvery == 0)
+            {
+                damage *= Mathf.Clamp(Coins, 1, GoldCoinCap);
+                HeroVfx.Sparks(Player.Run.ProjectileRoot, transform.position, Gold, 16, 4f, 0.35f, aim, 60f, 1.3f);
+            }
+            PlayerProjectile.Spawn(Player.Run, transform.position, aim.normalized, damage, ThrowRange, ProjectileStyle.Coin);
             readyAt = Time.time + 0.4f * Player.Powerups.AttackIntervalMultiplier;
             return true;
         }
@@ -117,11 +138,14 @@ namespace Slopgame
         public bool AllIn(int rank, float roll)
         {
             bool won = DoubleOrNothing(roll, AllInOdds(rank));
+            // Snake Eyes: a lost bet makes him greedy for more.
+            if (!won && Player.Powerups.Count(PowerupType.SnakeEyes) > 0) Player.Buffs.Greed(SnakeEyesTime);
             CoinFlipVfx.Play(Player.Run.ProjectileRoot, transform, won);
             CoopFx.CoinFlip(Player.Run, won);
             return won;
         }
         /// <summary>All In's base odds: ranks and Rigged Odds each add 5% (Lady Luck is added on top).</summary>
+        public const float SnakeEyesTime = 5f;
         public float AllInOdds(int rank) => 0.5f + 0.05f * (rank - 1) + 0.05f * Player.Powerups.Count(PowerupType.RiggedOdds);
 
         /// <param name="roll">0-1; below <paramref name="winChance"/> wins.</param>

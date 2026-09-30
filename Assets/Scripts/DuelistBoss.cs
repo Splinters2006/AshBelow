@@ -56,7 +56,8 @@ namespace Slopgame
         protected override void OnSetup()
         {
             Enemy.Speed = 4.5f;
-            transform.localScale = Vector2.one * 1.15f;
+            // A touch larger than the old 16-pixel sprite so the 40x40 art stays readable.
+            transform.localScale = Vector2.one * (HighTech ? 1.15f : 1.4f);
             body = GetComponent<SpriteRenderer>();
             body.sprite = DungeonVisuals.BossSprite(BossKind.Duelist);
             DungeonVisuals.DecorateDuelist(transform, HighTech);

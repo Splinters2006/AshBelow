@@ -9,7 +9,7 @@ namespace Slopgame
         private static Sprite thrownBlade;
 
         private static readonly Sprite[] enemySprites = new Sprite[3];
-        private static Sprite flameSprite, shadowHero, duelistSprite, archdemonSprite, archdemonDetails, wardenSprite, wardenDetails,
+        private static Sprite flameSprite, shadowHero, duelistSprite, archdemonSprite, wardenSprite,
             sentinelDetails, titanDetails;
         public static Sprite FlameSprite => flameSprite != null ? flameSprite : flameSprite = PixelSprite("Burn flame", new[]
         {
@@ -20,24 +20,35 @@ namespace Slopgame
         {
             int index = tank ? 2 : ranged ? 1 : 0;
             if (enemySprites[index] == null)
-                enemySprites[index] = PixelSprite(tank ? "Iron brute" : ranged ? "Ember caster" : "Ashling", tank ? new[]
+                enemySprites[index] = tank ? ShadedSprite("Iron brute", new[]
                 {
-                    "...DDDDDDDD.....", "..DWWWWWWWWD....", ".DWWDDDDDDWWD...", ".DWDWDDWDWWWD...",
-                    "DDWWDDDDDDWWDD..", "DWWWWWWWWWWWWD..", "DWWDDWWWWDDWWD..", "DDDDWWWWWWDDDD..",
-                    ".DWWWWDDWWWWD...", ".DWWWWDDWWWWD...", "..DDDDDDDDDD....", "..DWWWDDWWWD....",
-                    "..DWWWDDWWWD....", "..DDDD..DDDD....", "..DDDD..DDDD....", "................"
-                } : ranged ? new[]
+                    "....DDDDDDDD....", "...DLLWWWWWMD...", "..DLWWWWWWWWMD..", "..DWDDDDDDDDMD..",
+                    "..DWDEEDDEEDMD..", "..DWWWWWWWWWMD..", "DDDDMWKKKKWMDDDD", "DLWWDMWWWWMDLWWD",
+                    "DWWMDLWWWWWMDWMD", "DWWMDWWMMWWMDWMD", "DDDDDWWWWWWMDDDD", "DLWD.DDDDDDD.DWD",
+                    "DDDD.DWWDWWD.DDD", ".....DWMDWMD....", "....DDMMDMMDD...", "....DDDDDDDDD..."
+                }, new Color(0.2f, 0.22f, 0.28f), key => key switch
                 {
-                    ".......WW.......", "......WWWW......", ".....WWWWWW.....", "....WDDDDDDW....",
-                    "....WDDWDDWW....", "....WDDDDDDW....", "...WWWWWWWWW..W.", "...WWDDDDWWW.WWW",
-                    "..WWWWDDWWWW..W.", "..WWWWDDWWWWW.D.", ".WWWWWDDWWWWW.D.", ".WWWWWWWWWWWW.D.",
-                    "WWWWWWWWWWWWWWD.", "WWWDDWWWWDDWWWD.", "WWD..WWWW..DWWD.", "................"
-                } : new[]
+                    'E' => new Color(1f, 0.5f, 0.2f), 'K' => new Color(0.06f, 0.06f, 0.08f), _ => Color.clear
+                })
+                    : ranged ? ShadedSprite("Ember caster", new[]
                 {
-                    "..WW......WW....", "..WWW....WWW....", "...WWWWWWWW.....", "..WWWWWWWWWW....",
-                    "..WDDWDDWDDW....", "..WDDDDDDDDW....", "...WWDDDDWW.....", "....WWWWWW......",
-                    "..WWWWWWWWWW....", ".WW.WWWWWW.WW...", ".WW.WWDDWW.WW...", "....WWWWWW......",
-                    "....WW..WW......", "...WWW..WWW.....", "...DDD..DDD.....", "................"
+                    ".......DD.......", "......DLWD....F.", ".....DLWWMD..FYF", "....DLWWWWMD.FYF",
+                    "....DWKKKKWD.DFD", "...DLKEKKEKMD.B.", "...DWKKKKKKMD.B.", "...DWWKKKKWMDDB.",
+                    "..DLWWWWWWWWMWBD", "..DWWMWWWWMWMDB.", "..DWWMWFFWMWMDB.", ".DLWWMWWWWMWWMB.",
+                    ".DWWMWWWWWWMWMB.", ".DWWMWWWWWWMWMD.", ".DDMMMWWWWMMMDD.", "..DDDDDDDDDDDD.."
+                }, new Color(0.2f, 0.22f, 0.28f), key => key switch
+                {
+                    'K' => new Color(0.05f, 0.03f, 0.05f), 'E' => new Color(1f, 0.7f, 0.3f), 'F' => new Color(1f, 0.55f, 0.15f), 'Y' => new Color(1f, 0.92f, 0.55f), 'B' => new Color(0.4f, 0.26f, 0.15f), _ => Color.clear
+                })
+                    : ShadedSprite("Ashling", new[]
+                {
+                    "...DD......DD...", "...DLD....DLD...", "....DLDDDDLD....", "...DLWWWWWWMD...",
+                    "..DLWWWWWWWWMD..", "..DWEEWWWWEEMD..", "..DWWWWWWWWWMD..", "...DWKFKKFKMD...",
+                    "....DDMWWMDD....", "..DDLWWWWWWMDD..", ".DLWDLWWWWWMDMD.", ".DWD.DWWWWMD.DD.",
+                    "..D..DWMMWMD....", ".....DWDDWMD....", "....DDMD.DMDD...", "....DDDD.DDDD..."
+                }, new Color(0.2f, 0.22f, 0.28f), key => key switch
+                {
+                    'E' => new Color(1f, 0.85f, 0.4f), 'K' => new Color(0.08f, 0.03f, 0.03f), 'F' => new Color(0.97f, 0.94f, 0.86f), _ => Color.clear
                 });
             return enemySprites[index];
         }
@@ -101,6 +112,67 @@ namespace Slopgame
             _ => Color.clear
         });
 
+        private static Sprite urnSprite, crateSprite, heartSprite;
+
+        /// <summary>A clay urn with a dark mouth and a pale band. Tint it with the world's colours.</summary>
+        public static Sprite UrnSprite => urnSprite != null ? urnSprite : urnSprite = PaletteSprite("Urn", new[]
+        {
+            "...OOOO...", "..OKKKKO..", "...OMMO...", "..OMLMMO..", ".OMLMMMDO.", ".OBBBBBBO.",
+            ".OMLMMMDO.", ".OMMMMMDO.", "..OMMMDO..", "...ODDO...", "....OO...."
+        }, key => key switch
+        {
+            'O' => new Color(0.2f, 0.15f, 0.13f),
+            'K' => new Color(0.08f, 0.06f, 0.06f),
+            'M' => new Color(0.72f, 0.72f, 0.72f),
+            'L' => new Color(0.95f, 0.95f, 0.95f),
+            'D' => new Color(0.48f, 0.48f, 0.48f),
+            'B' => new Color(1f, 0.9f, 0.7f),
+            _ => Color.clear
+        });
+
+        /// <summary>A banded supply crate with a status light. Tint it with the world's colours.</summary>
+        public static Sprite CrateSprite => crateSprite != null ? crateSprite : crateSprite = PaletteSprite("Crate", new[]
+        {
+            "OOOOOOOOOO", "OLLLLLLLDO", "OLBBBBBBDO", "OLMMMMMMDO", "OLMMGGMMDO",
+            "OLMMGGMMDO", "OLMMMMMMDO", "OLBBBBBBDO", "ODDDDDDDDO", "OOOOOOOOOO"
+        }, key => key switch
+        {
+            'O' => new Color(0.12f, 0.12f, 0.16f),
+            'L' => new Color(0.95f, 0.95f, 0.95f),
+            'M' => new Color(0.7f, 0.7f, 0.7f),
+            'D' => new Color(0.45f, 0.45f, 0.45f),
+            'B' => new Color(0.3f, 0.3f, 0.34f),
+            'G' => Color.white,
+            _ => Color.clear
+        });
+
+        /// <summary>A small red heart with a white shine. Draw it untinted.</summary>
+        public static Sprite HeartSprite => heartSprite != null ? heartSprite : heartSprite = PaletteSprite("Heart", new[]
+        {
+            ".OO...OO.", "OWRO.ORRO", "ORRRORRRO", "ORRRRRRDO", ".ORRRRDO.", "..ORRDO..", "...ODO...", "....O...."
+        }, key => key switch
+        {
+            'O' => new Color(0.35f, 0.04f, 0.08f),
+            'R' => new Color(0.95f, 0.2f, 0.28f),
+            'D' => new Color(0.65f, 0.08f, 0.15f),
+            'W' => Color.white,
+            _ => Color.clear
+        });
+
+        /// <summary>
+        /// A tintable creature sprite one world unit wide: L highlight, W base and M shade are greys the renderer's colour
+        /// tints, D is its outline, and every other key takes its fixed colour from <paramref name="details"/>.
+        /// </summary>
+        public static Sprite ShadedSprite(string name, string[] rows, Color outline, System.Func<char, Color> details) =>
+            PaletteSprite(name, rows, key => key switch
+            {
+                'L' => Color.white,
+                'W' => new Color(0.86f, 0.86f, 0.88f),
+                'M' => new Color(0.6f, 0.6f, 0.66f),
+                'D' => outline,
+                _ => details(key)
+            });
+
         /// <summary>A pixel sprite one world unit wide, drawn from rows of palette keys.</summary>
         public static Sprite PaletteSprite(string name, string[] rows, System.Func<char, Color> palette)
         {
@@ -156,6 +228,26 @@ namespace Slopgame
             return renderer;
         }
 
+        private static Sprite hexBolt, arcaneBolt, venomBolt;
+
+        /// <summary>The newer worlds' bolts: an Infernal hex, an Arcane Spire orb and a Savage Wilds venom glob.</summary>
+        public static SpriteRenderer CreateThemedBolt(Transform parent, Vector2 position, BoltKind kind)
+        {
+            Sprite sprite;
+            if (kind == BoltKind.Hex)
+                sprite = hexBolt != null ? hexBolt : hexBolt = BoltSprite("Hex bolt sprite", new Color(0.55f, 0.1f, 0.8f), new Color(0.6f, 0.15f, 0.85f),
+                    new Color(0.75f, 0.25f, 1f), new Color(1f, 0.35f, 0.5f), new Color(0.95f, 0.7f, 1f), new Color(1f, 0.95f, 1f));
+            else if (kind == BoltKind.Arcane)
+                sprite = arcaneBolt != null ? arcaneBolt : arcaneBolt = BoltSprite("Arcane bolt sprite", new Color(0.25f, 0.35f, 1f), new Color(0.35f, 0.45f, 1f),
+                    new Color(0.5f, 0.65f, 1f), new Color(0.75f, 0.55f, 1f), new Color(0.8f, 0.9f, 1f), Color.white);
+            else
+                sprite = venomBolt != null ? venomBolt : venomBolt = BoltSprite("Venom bolt sprite", new Color(0.2f, 0.55f, 0.1f), new Color(0.3f, 0.65f, 0.15f),
+                    new Color(0.45f, 0.85f, 0.2f), new Color(0.75f, 0.9f, 0.2f), new Color(0.8f, 1f, 0.55f), new Color(0.95f, 1f, 0.85f));
+            var renderer = Create(kind + " bolt", parent, position, Vector2.one, Color.white, 6);
+            renderer.sprite = sprite;
+            return renderer;
+        }
+
         /// <summary>A glowing bolt, hottest (or brightest) at the head, colours listed from the outer glow inward.</summary>
         private static Sprite BoltSprite(string name, Color glow, Color outerTail, Color body, Color innerTail, Color rim, Color core)
         {
@@ -187,6 +279,61 @@ namespace Slopgame
             texture.SetPixels(pixels);
             texture.Apply(false, true);
             return Sprite.Create(texture, new Rect(0, 0, width, height), new Vector2(23f / width, 0.5f), 40f);
+        }
+
+        private static Sprite glowSprite;
+
+        /// <summary>A soft round falloff for light pools and halos, drawn tinted and translucent. One world unit across.</summary>
+        public static Sprite GlowSprite
+        {
+            get
+            {
+                if (glowSprite != null) return glowSprite;
+                const int size = 32;
+                var texture = new Texture2D(size, size, TextureFormat.RGBA32, false) { name = "Soft glow", filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp };
+                var pixels = new Color[size * size];
+                for (int y = 0; y < size; y++)
+                    for (int x = 0; x < size; x++)
+                    {
+                        float distance = Vector2.Distance(new Vector2(x + 0.5f, y + 0.5f), Vector2.one * size / 2f) / (size / 2f);
+                        float falloff = Mathf.Clamp01(1f - distance);
+                        pixels[y * size + x] = new Color(1f, 1f, 1f, falloff * falloff);
+                    }
+                texture.SetPixels(pixels);
+                texture.Apply(false, true);
+                return glowSprite = Sprite.Create(texture, new Rect(0, 0, size, size), Vector2.one * 0.5f, size);
+            }
+        }
+
+        private static Sprite arrowSprite;
+
+        /// <summary>
+        /// An arrow pointing right: a steel broadhead, a pale wooden shaft and split fletching. Light enough to take a
+        /// tint (the Archer's element) without losing its shape. One world unit long before scaling.
+        /// </summary>
+        public static Sprite ArrowSprite => arrowSprite != null ? arrowSprite : arrowSprite = PaletteSprite("Arrow", new[]
+        {
+            "FF............H...",
+            ".FF..........HHH..",
+            "NFFSSSSSSSSSSHHWHH",
+            ".FF..........HHH..",
+            "FF............H...",
+        }, key => key switch
+        {
+            'F' => new Color(1f, 1f, 1f),
+            'N' => new Color(0.7f, 0.6f, 0.5f),
+            'S' => new Color(0.85f, 0.72f, 0.55f),
+            'H' => new Color(0.8f, 0.84f, 0.9f),
+            'W' => Color.white,
+            _ => Color.clear
+        });
+
+        /// <summary>An arrow renderer <paramref name="length"/> long, pointing along its local +x.</summary>
+        public static SpriteRenderer CreateArrow(string name, Transform parent, Vector2 position, float length, Color tint, int order)
+        {
+            var renderer = Create(name, parent, position, Vector2.one * length, tint, order);
+            renderer.sprite = ArrowSprite;
+            return renderer;
         }
 
         /// <summary>A thrown steel blade: the point sits at the collision position, the hilt trails behind.</summary>
@@ -317,6 +464,13 @@ namespace Slopgame
         /// <param name="highTech">The Neon Arcology's Chrome Duelist: magenta energy blades and a neon sash.</param>
         public static void DecorateDuelist(Transform boss, bool highTech = false)
         {
+            // The Ash Below's duelist wears the 40x40 art; the Chrome Duelist keeps its sprite with drawn-on details.
+            if (!highTech)
+            {
+                boss.GetComponent<SpriteRenderer>().sprite = GuardianSprites.Duelist;
+                BossArt.AddDetails(boss, "Duelist details", GuardianSprites.DuelistDetails);
+                return;
+            }
             var blade = highTech ? WorldCatalog.NeonPink : new Color(0.45f, 0.95f, 1f);
             Detail(boss, "Left eye", new Vector2(-0.094f, 0.28f), new Vector2(0.09f, 0.05f), blade, 7);
             Detail(boss, "Right eye", new Vector2(0.094f, 0.28f), new Vector2(0.09f, 0.05f), blade, 7);
@@ -343,10 +497,6 @@ namespace Slopgame
             "......DMWWMD....", ".......DWWMD....", "......DhHHhD....", ".....DhhhhhD....",
         };
 
-        /// <summary>The archdemon's fixed-colour layer: horns, burning eyes, fanged maw and the magma in his chest.</summary>
-        public static Sprite ArchdemonDetails => archdemonDetails != null ? archdemonDetails
-            : archdemonDetails = MirroredSprite("Hellfire archdemon details", ArchdemonGrid, true, ArchdemonDetailColor);
-
         // Left half of the 32x32 Rime Warden, a hooded, crowned caster cradling a frost crystal. Body layer (tinted): L highlight,
         // W base, M shade, D outline. Detail layer (fixed): G gold, g dark gold, E eyes, K hood void, O crystal, Y crystal core.
         private static readonly string[] WardenGrid =
@@ -360,10 +510,6 @@ namespace Slopgame
             "DMD...DWWMWWWWDD", ".D....DWWMWWWWWG", "......DWWMWWWWWG", ".....DLWWMWWWWWG",
             ".....DWWMWWWMWWG", "....DLWMWWWMWWWG", "....DWMWWWMWWWMG", "....DDDDDDDDDDDD",
         };
-
-        /// <summary>The Rime Warden's fixed-colour layer: crown, gold mask, frost-lit eyes and the crystal in its hands.</summary>
-        public static Sprite WardenDetails => wardenDetails != null ? wardenDetails
-            : wardenDetails = MirroredSprite("Rime warden details", WardenGrid, true, WardenDetailColor);
 
         /// <summary>The Cryo Sentinel's layer: the Warden's shape with a chrome crest, a cyan visor and a pink cryo core.</summary>
         public static Sprite SentinelDetails => sentinelDetails != null ? sentinelDetails
@@ -451,23 +597,18 @@ namespace Slopgame
             }
         }
 
+        /// <summary>The archdemon's body and detail layers (the 40x40 art; its high-tech Titan keeps the older sprite).</summary>
         public static void DecorateArchdemon(Transform boss, bool highTech = false)
         {
-            var body = boss.GetComponent<SpriteRenderer>();
-            var details = new GameObject("Archdemon details").AddComponent<SpriteRenderer>();
-            details.transform.SetParent(boss, false);
-            details.sprite = highTech ? TitanDetails : ArchdemonDetails;
-            details.sortingOrder = body.sortingOrder + 1;
+            boss.GetComponent<SpriteRenderer>().sprite = highTech ? BossSprite(BossKind.Archdemon) : GuardianSprites.Archdemon;
+            BossArt.AddDetails(boss, "Archdemon details", highTech ? TitanDetails : GuardianSprites.ArchdemonDetails);
         }
 
+        /// <summary>The Rime Warden's body and detail layers (the 40x40 art; its high-tech Cryo Sentinel keeps the older sprite).</summary>
         public static void DecorateWarden(Transform boss, bool highTech = false)
         {
-            var body = boss.GetComponent<SpriteRenderer>();
-            body.sprite = BossSprite(BossKind.AshWarden);
-            var details = new GameObject("Warden details").AddComponent<SpriteRenderer>();
-            details.transform.SetParent(boss, false);
-            details.sprite = highTech ? SentinelDetails : WardenDetails;
-            details.sortingOrder = body.sortingOrder + 1;
+            boss.GetComponent<SpriteRenderer>().sprite = highTech ? BossSprite(BossKind.AshWarden) : GuardianSprites.Warden;
+            BossArt.AddDetails(boss, "Warden details", highTech ? SentinelDetails : GuardianSprites.WardenDetails);
         }
 
         public static void DecorateArena(Transform root, WorldDefinition world)

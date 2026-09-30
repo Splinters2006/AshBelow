@@ -51,13 +51,13 @@ namespace Slopgame
             new Offer(Ware.WardingSigil, Category.Relic, "Warding Sigil", "Block one extra hit on every floor", 55, AbilityCatalog.Ice, PowerupType.Armor),
             new Offer(Ware.VampireFang, Category.Relic, "Vampire Fang", "Heal 1 HP every few kills (Soul Harvest)", 50, HealColor, PowerupType.LifeSteal),
             new Offer(Ware.PhoenixFeather, Category.Relic, "Phoenix Feather", "10% shorter dodge cooldown", 35, new Color(1f, 0.45f, 0.25f), PowerupType.DodgeRecovery),
-            new Offer(Ware.NerveNeedle, Category.Relic, "Nerve Needle", "Killing a paralysed or frozen enemy resets your class skill", 45, DemonessAttack.Violet, PowerupType.NerveSnap),
+            new Offer(Ware.NerveNeedle, Category.Relic, "Nerve Needle", "Killing an immobilized enemy resets your class skill", 45, DemonessAttack.Violet, PowerupType.NerveSnap),
             new Offer(Ware.PyreUrn, Category.Relic, "Pyre Urn", "Burning enemies explode when they die", 50, new Color(1f, 0.5f, 0.15f), PowerupType.PyreBurst),
             new Offer(Ware.KindlingFlint, Category.Relic, "Kindling Flint", "Elemental effects also set enemies burning", 45, new Color(1f, 0.62f, 0.3f), PowerupType.Kindling),
             new Offer(Ware.ReapersSigil, Category.Relic, "Reaper's Sigil", "5 kills within 1 second reset your class skill", 40, new Color(0.9f, 0.3f, 0.35f), PowerupType.Massacre),
             new Offer(Ware.RunnersBand, Category.Relic, "Runner's Band", "2 kills within 1 second reset your dodge", 40, DungeonUi.Teal, PowerupType.Momentum),
             new Offer(Ware.BloodChalice, Category.Relic, "Blood Chalice", "Every kill takes 0.5s off all your cooldowns", 60, HealColor, PowerupType.Bloodrush),
-            new Offer(Ware.StillwaterCharm, Category.Relic, "Stillwater Charm", "Paralysed or frozen kills take 0.5s off all cooldowns", 45, AbilityCatalog.Ice, PowerupType.StillHunter),
+            new Offer(Ware.StillwaterCharm, Category.Relic, "Stillwater Charm", "Immobilized kills take 0.5s off all cooldowns", 45, AbilityCatalog.Ice, PowerupType.StillHunter),
             new Offer(Ware.DowsingRod, Category.Relic, "Dowsing Rod", "50% chance per rank for kills to drop extra crystals", 35, CrystalPouch.CrystalColor, PowerupType.Prospector),
             new Offer(Ware.SilverTongue, Category.Relic, "Silver Tongue", "Shop prices 25% lower per rank", 35, AbilityCatalog.Gold, PowerupType.Haggler),
             new Offer(Ware.MerchantsToken, Category.Relic, "Merchant's Token", "One free reroll of every shop's wares", 25, new Color(0.85f, 0.7f, 1f), PowerupType.MerchantsFavor),
@@ -124,7 +124,9 @@ namespace Slopgame
         {
             var random = new System.Random(seed);
             stock.Clear();
-            foreach (var (category, count) in new[] { (Category.Healing, HealingStock), (Category.Arena, ArenaStock), (Category.Relic, RelicStock) })
+            // Black Market Pass adds a relic, drawn last so the rest of the stock matches the party's.
+            int relics = RelicStock + (run != null && run.Progress != null && run.Progress.Rank(PermanentUpgradeCatalog.BlackMarketPassId) > 0 ? 1 : 0);
+            foreach (var (category, count) in new[] { (Category.Healing, HealingStock), (Category.Arena, ArenaStock), (Category.Relic, relics) })
             {
                 var choices = new List<Offer>(System.Array.FindAll(Offers, offer => offer.Category == category));
                 for (int i = 0; i < count && choices.Count > 0; i++)
@@ -237,7 +239,7 @@ namespace Slopgame
 
         // ---------------------------------------------------------------- the room
 
-        private static Sprite glowSprite, merchantSprite, merchantOutlineSprite, bottleSprite;
+        private static Sprite merchantSprite, merchantOutlineSprite, bottleSprite;
         private static readonly Color MerchantGlow = new Color(0.85f, 0.7f, 1f);
 
         /// <summary>Builds the shop's furnishings inside <paramref name="level"/>; the map and stairs are drawn by the run.</summary>
@@ -416,27 +418,7 @@ namespace Slopgame
             sparklePoints.Add(position);
         }
 
-        /// <summary>A soft round falloff for light pools, drawn tinted and translucent.</summary>
-        private static Sprite GlowSprite
-        {
-            get
-            {
-                if (glowSprite != null) return glowSprite;
-                const int size = 32;
-                var texture = new Texture2D(size, size, TextureFormat.RGBA32, false) { name = "Shop glow", filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp };
-                var pixels = new Color[size * size];
-                for (int y = 0; y < size; y++)
-                    for (int x = 0; x < size; x++)
-                    {
-                        float distance = Vector2.Distance(new Vector2(x + 0.5f, y + 0.5f), Vector2.one * size / 2f) / (size / 2f);
-                        float falloff = Mathf.Clamp01(1f - distance);
-                        pixels[y * size + x] = new Color(1f, 1f, 1f, falloff * falloff);
-                    }
-                texture.SetPixels(pixels);
-                texture.Apply(false, true);
-                return glowSprite = Sprite.Create(texture, new Rect(0, 0, size, size), Vector2.one * 0.5f, size);
-            }
-        }
+        private static Sprite GlowSprite => DungeonVisuals.GlowSprite;
 
         /// <summary>A round-bellied bottle with a cork; tinted by its contents.</summary>
         private static Sprite BottleSprite => bottleSprite != null ? bottleSprite : bottleSprite = DungeonVisuals.PaletteSprite("Shop bottle", new[]

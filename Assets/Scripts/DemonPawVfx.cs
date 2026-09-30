@@ -4,7 +4,9 @@ namespace Slopgame
 {
     /// <summary>
     /// HEEEELP: a portal rips open in the air above the target while a violet warning circle fills on the ground,
-    /// red eyes glare out of it, then the Demoness's giant pet shoves a pixel-art, red-furred, clawed paw through and slams it down. Purely visual; she applies the damage.
+    /// red eyes glare out of it, then the Demoness's giant pet shoves its pixel-art paw through and slams it down: a
+    /// red-furred mitt with four fanned toes, a big trefoil palm pad and bean-shaped toe pads, each toe tipped with a
+    /// hooked claw glowing with hellfire. Purely visual; she applies the damage.
     /// </summary>
     public sealed class DemonPawVfx : MonoBehaviour
     {
@@ -16,20 +18,13 @@ namespace Slopgame
         private SpriteRenderer pawRenderer, armRenderer;
         private static readonly Color Hellfire = new Color(1f, 0.16f, 0.08f);
 
-        // Pixel art for the pet's paw, drawn as left halves and mirrored. N outline, R blood-red fur, r dark fur,
-        // L fur highlight, e/E smouldering embers, C claw, G glowing claw edge.
-        private const float PixelsPerUnit = 24f;
-        private static readonly string[] PawHalf =
-        {
-            "...NrRRRRRRR", "..NrRRLRRRRR", ".NrRRRRReRRR", "NrRRLRRRReRR", "NrRRRRRRRReR", "NrRRRRLRRRRR",
-            "NrRLRRRRRRRR", "NrRRRRNrRRRN", "NrRLRNrRLRRN", "NrRRRNrRRRRN", "NrRRrNrRRRrN", "NrrrrNNrrrrN",
-            ".NCGN..NCGN.", ".NCCGN.NCCGN", "..NCGN.NCCG.", "..NCCG..NCG.", "...NCG..NCG.", "...NCCG.NCG.",
-            "....NCG..G..", ".....NG.....", "......G.....",
-        };
+        // The pet's paw is pixel art drawn from shapes (see BuildPaw); PixelsPerUnit matches the forearm tile.
+        private const float PixelsPerUnit = 32f;
+        private const int PawWidth = 40, PawHeight = 50;
         // One tile of the forearm, repeated up to the portal; bristling tufts stick out of its edges.
-        private static readonly string[] ArmHalf = { "....NrRRRLRR", "...NrRRRRRRR", "..NrrRRLRRRR", "....NrReRRRR" };
+        private static readonly string[] ArmHalf = { "....NrRRRLRRRRRR", "...NrRRRRRRRRRRR", "..NNrRRLRRRRReRR", "....NrRRRRRRLRRR" };
         private static Sprite pawSprite, armSprite;
-        private static Sprite PawSprite => pawSprite != null ? pawSprite : pawSprite = Mirrored("Demon paw", PawHalf, new Vector2(0.5f, 0f));
+        private static Sprite PawSprite => pawSprite != null ? pawSprite : pawSprite = FromGrid("Demon paw", BuildPaw(), new Vector2(0.5f, 0f));
         private static Sprite ArmSprite => armSprite != null ? armSprite : armSprite = Mirrored("Demon forearm", ArmHalf, new Vector2(0.5f, 0f));
 
         public static DemonPawVfx Play(Transform root, Vector2 center, float radius, float windup)
@@ -109,7 +104,7 @@ namespace Slopgame
             bool visible = alpha > 0f;
             pawRenderer.enabled = armRenderer.enabled = visible;
             if (!visible) return;
-            float scale = size * 2.3f;
+            float scale = size * 2f;
             var tint = new Color(1f, 1f, 1f, alpha);
             Vector2 tips = at + Vector2.down * size * 0.35f;
             pawRenderer.transform.localPosition = tips;
@@ -160,6 +155,119 @@ namespace Slopgame
             }
         }
 
+        /// <summary>
+        /// Draws the paw into a grid of palette keys (row 0 at the top): a furry wrist widening into a rounded palm,
+        /// four toes fanned along its lower edge, a trefoil palm pad and a bean-shaped pad on each toe, and a hooked
+        /// claw curling out of each toe, glowing toward its tip. Everything gets a dark outline, the toes are creased
+        /// apart, and the fur is shaded dark at its edges with a highlight up and to the left.
+        /// </summary>
+        private static char[,] BuildPaw()
+        {
+            var grid = new char[PawWidth, PawHeight];
+            var owner = new int[PawWidth, PawHeight];
+            Vector2[] toes = { new Vector2(6.5f, 30.5f), new Vector2(14.5f, 35.5f), new Vector2(25.5f, 35.5f), new Vector2(33.5f, 30.5f) };
+            bool Ellipse(Vector2 p, Vector2 c, float rx, float ry) => Mathf.Pow((p.x - c.x) / rx, 2f) + Mathf.Pow((p.y - c.y) / ry, 2f) <= 1f;
+            for (int y = 0; y < PawHeight; y++)
+                for (int x = 0; x < PawWidth; x++)
+                {
+                    var p = new Vector2(x + 0.5f, y + 0.5f);
+                    // Wrist, with a ragged fur edge.
+                    float wristHalf = 11f + (y % 3 == 0 ? 1f : 0f);
+                    bool palm = (y < 14 && Mathf.Abs(p.x - 20f) <= wristHalf) || Ellipse(p, new Vector2(20f, 19f), 15.5f, 10.5f);
+                    owner[x, y] = -1;
+                    if (palm) { grid[x, y] = 'R'; owner[x, y] = 0; continue; }
+                    for (int i = 0; i < toes.Length; i++)
+                        if (Ellipse(p, toes[i], 5.2f, 6f)) { grid[x, y] = 'R'; owner[x, y] = i + 1; break; }
+                }
+            // Claws: a tapering hook from under each toe, curling outward, glowing toward the tip.
+            for (int i = 0; i < toes.Length; i++)
+            {
+                float outward = Mathf.Sign(toes[i].x - 20f) * (i == 0 || i == 3 ? 1f : 0.4f);
+                Vector2 a = toes[i] + new Vector2(0f, 4.5f), b = a + new Vector2(outward * 1.5f, 4.5f), c = a + new Vector2(outward * 3.5f, 9.5f);
+                for (float t = 0f; t <= 1f; t += 0.02f)
+                {
+                    Vector2 point = Vector2.Lerp(Vector2.Lerp(a, b, t), Vector2.Lerp(b, c, t), t);
+                    float half = Mathf.Lerp(1.4f, 0.35f, t);
+                    for (int y = Mathf.FloorToInt(point.y - half); y <= Mathf.CeilToInt(point.y + half); y++)
+                        for (int x = Mathf.FloorToInt(point.x - half); x <= Mathf.CeilToInt(point.x + half); x++)
+                        {
+                            if (x < 0 || y < 0 || x >= PawWidth || y >= PawHeight || owner[x, y] >= 0) continue;
+                            if (Vector2.Distance(new Vector2(x + 0.5f, y + 0.5f), point) > half + 0.25f) continue;
+                            if (grid[x, y] != 'G') grid[x, y] = t > 0.55f ? 'G' : 'C';
+                        }
+                }
+            }
+            // Fur shading and creases, worked out on a copy so each pixel sees the original shape.
+            var shaded = (char[,])grid.Clone();
+            for (int y = 0; y < PawHeight; y++)
+                for (int x = 0; x < PawWidth; x++)
+                {
+                    if (owner[x, y] < 0) continue;
+                    bool edge = false, crease = false;
+                    for (int dy = -1; dy <= 1; dy++)
+                        for (int dx = -1; dx <= 1; dx++)
+                        {
+                            int nx = x + dx, ny = y + dy;
+                            // Above the top row the forearm carries on, so that is not an edge.
+                            if (ny < 0) continue;
+                            if (nx < 0 || nx >= PawWidth || ny >= PawHeight || owner[nx, ny] < 0) { edge = true; continue; }
+                            if (owner[nx, ny] != owner[x, y] && (dx == 0 || dy == 0)) crease = true;
+                        }
+                    if (crease && owner[x, y] > 0) shaded[x, y] = 'N';
+                    else if (edge) shaded[x, y] = 'r';
+                    else if (Ellipse(new Vector2(x + 0.5f, y + 0.5f), new Vector2(13.5f, 12f), 5.5f, 3.5f) && (x + 2 * y) % 4 == 0) shaded[x, y] = 'L';
+                }
+            // Pads: a trefoil on the palm, a bean on each toe, each with a sheen.
+            for (int y = 0; y < PawHeight; y++)
+                for (int x = 0; x < PawWidth; x++)
+                {
+                    var p = new Vector2(x + 0.5f, y + 0.5f);
+                    bool palmPad = Ellipse(p, new Vector2(20f, 20.5f), 5.5f, 3.6f) || Ellipse(p, new Vector2(15.5f, 23.5f), 2.8f, 2.6f)
+                        || Ellipse(p, new Vector2(20f, 25f), 2.8f, 2.4f) || Ellipse(p, new Vector2(24.5f, 23.5f), 2.8f, 2.6f);
+                    bool toePad = false;
+                    foreach (var toe in toes) toePad |= Ellipse(p, toe + new Vector2(0f, 0.5f), 2.6f, 3.2f);
+                    if (!palmPad && !toePad) continue;
+                    bool sheen = Ellipse(p, new Vector2(18f, 19.3f), 1.8f, 1f);
+                    foreach (var toe in toes) sheen |= Ellipse(p, toe + new Vector2(-0.8f, -1f), 0.9f, 0.9f);
+                    shaded[x, y] = sheen ? 'p' : 'P';
+                }
+            // A few smouldering embers in the fur.
+            foreach (var ember in new[] { new Vector2Int(10, 8), new Vector2Int(29, 11), new Vector2Int(33, 20), new Vector2Int(6, 19) })
+                if (owner[ember.x, ember.y] >= 0 && shaded[ember.x, ember.y] == 'R') shaded[ember.x, ember.y] = 'e';
+            // Outline everything.
+            var outlined = (char[,])shaded.Clone();
+            for (int y = 0; y < PawHeight; y++)
+                for (int x = 0; x < PawWidth; x++)
+                {
+                    if (shaded[x, y] != '\0') continue;
+                    for (int dy = -1; dy <= 1 && outlined[x, y] == '\0'; dy++)
+                        for (int dx = -1; dx <= 1; dx++)
+                        {
+                            int nx = x + dx, ny = y + dy;
+                            if ((dx == 0) == (dy == 0) || nx < 0 || ny < 0 || nx >= PawWidth || ny >= PawHeight || shaded[nx, ny] == '\0') continue;
+                            // The top row stays open where the forearm joins on.
+                            if (y == 0) continue;
+                            outlined[x, y] = 'N';
+                            break;
+                        }
+                }
+            return outlined;
+        }
+
+        private static Sprite FromGrid(string name, char[,] grid, Vector2 pivot)
+        {
+            int width = grid.GetLength(0), height = grid.GetLength(1);
+            var texture = new Texture2D(width, height, TextureFormat.RGBA32, false)
+            { name = name, filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Clamp };
+            var pixels = new Color[width * height];
+            for (int y = 0; y < height; y++)
+                for (int x = 0; x < width; x++)
+                    pixels[(height - y - 1) * width + x] = PixelColor(grid[x, y]);
+            texture.SetPixels(pixels);
+            texture.Apply(false, true);
+            return Sprite.Create(texture, new Rect(0, 0, width, height), pivot, PixelsPerUnit, 0, SpriteMeshType.FullRect);
+        }
+
         private static Sprite Mirrored(string name, string[] halfRows, Vector2 pivot)
         {
             int half = halfRows[0].Length, width = half * 2, height = halfRows.Length;
@@ -187,6 +295,8 @@ namespace Slopgame
                 case 'E': return new Color(1f, 0.72f, 0.2f);
                 case 'C': return new Color(0.2f, 0.05f, 0.07f);
                 case 'G': return Hellfire;
+                case 'P': return new Color(0.22f, 0.03f, 0.07f);
+                case 'p': return new Color(0.45f, 0.1f, 0.16f);
                 default: return Color.clear;
             }
         }

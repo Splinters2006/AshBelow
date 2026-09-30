@@ -16,23 +16,63 @@ namespace Slopgame
         public const float EarthshatterRadius = 3.25f;
         public const float VeilDuration = 3f, VeilProtection = 1.5f;
         private readonly AbilityType[] equipped = new AbilityType[SlotCount];
-        private readonly float[] readyAt = new float[SlotCount];
+        // Cooldowns belong to the ability, not the key, so swapping Q and E never refreshes one.
+        private readonly Dictionary<AbilityType, float> readyAt = new Dictionary<AbilityType, float>();
         private readonly Dictionary<AbilityType, int> ranks = new Dictionary<AbilityType, int>();
         private float castReadyAt;
         public AbilityType Equipped(int slot) => slot >= 0 && slot < SlotCount ? equipped[slot] : AbilityType.None;
         public int Rank(AbilityType type) => ranks.TryGetValue(type, out int value) ? value : 0;
         public bool IsEquipped(AbilityType type) => type != AbilityType.None && (equipped[0] == type || equipped[1] == type);
+        /// <summary>Learned this run (whether or not it sits on Q or E); hybrid talents need their ability learned.</summary>
+        public bool IsLearned(AbilityType type) => type != AbilityType.None && Rank(type) > 0;
+        /// <summary>Every ability learned this run, in catalog order (the abilities page).</summary>
+        public IEnumerable<AbilityDefinition> Learned
+        {
+            get { foreach (var ability in AbilityCatalog.All) if (IsLearned(ability.Type)) yield return ability; }
+        }
         /// <summary>Kill talents: takes time off every relic ability's cooldown.</summary>
         public void ReduceCooldowns(float seconds)
         {
-            for (int slot = 0; slot < SlotCount; slot++) readyAt[slot] = Cooldowns.Shorten(readyAt[slot], seconds);
+            foreach (var type in new List<AbilityType>(readyAt.Keys)) readyAt[type] = Cooldowns.Shorten(readyAt[type], seconds);
         }
 
         // Capped at the ability's own cooldown, so a delayed start (Primal Rage, Archdemon's Technique) reads as a paused timer.
-        public float CooldownRemaining(int slot) => DebugMode.Cooldown(Mathf.Min(Mathf.Max(0f, readyAt[slot] - Time.time),
-            AbilityCatalog.Get(equipped[slot])?.Cooldown ?? float.MaxValue));
+        public float CooldownRemaining(int slot) => CooldownRemaining(Equipped(slot));
+        public float CooldownRemaining(AbilityType type) => type == AbilityType.None ? 0f
+            : DebugMode.Cooldown(Mathf.Min(Mathf.Max(0f, (readyAt.TryGetValue(type, out float ready) ? ready : 0f) - Time.time),
+                AbilityCatalog.Get(type)?.Cooldown ?? float.MaxValue));
         public int EmptySlot => equipped[0] == AbilityType.None ? 0 : equipped[1] == AbilityType.None ? 1 : -1;
 
+        /// <summary>
+        /// A guardian's ability pick: learns the ability at rank 1 (putting it on an empty key if there is one), or raises
+        /// the rank of one already learned.
+        /// </summary>
+        public bool Learn(AbilityType type)
+        {
+            var definition = AbilityCatalog.Get(type);
+            if (definition == null || definition.ClassWeapon != Player.ClassWeapon) return false;
+            if (IsLearned(type))
+            {
+                if (Rank(type) >= MaxRank) return false;
+                ranks[type] = Rank(type) + 1;
+                return true;
+            }
+            ranks[type] = 1;
+            if (EmptySlot >= 0) equipped[EmptySlot] = type;
+            return true;
+        }
+
+        /// <summary>Puts a learned ability on Q or E; if it already sits on the other key, the two swap.</summary>
+        public bool Equip(AbilityType type, int slot)
+        {
+            if (!IsLearned(type) || slot < 0 || slot >= SlotCount) return false;
+            int other = 1 - slot;
+            if (equipped[other] == type) equipped[other] = equipped[slot];
+            equipped[slot] = type;
+            return true;
+        }
+
+        /// <summary>Learns (or ranks up) an ability and puts it on <paramref name="slot"/>; an equipped ability just ranks up.</summary>
         public bool Claim(AbilityType type, int slot)
         {
             var definition = AbilityCatalog.Get(type);
@@ -43,8 +83,8 @@ namespace Slopgame
                 ranks[type] = Rank(type) + 1;
                 return true;
             }
-            equipped[slot] = type;
             if (Rank(type) == 0) ranks[type] = 1;
+            equipped[slot] = type;
             return true;
         }
 
@@ -54,6 +94,14 @@ namespace Slopgame
         /// </summary>
         public bool TryUse(int slot, Vector2 aim)
         {
+            // Storm-Charged Orb: Inferno Orb charges while its key is held and flies on release.
+            if (slot >= 0 && slot < SlotCount && equipped[slot] == AbilityType.Fireball && Player.Powerups.Count(PowerupType.StormChargedOrb) > 0
+                && orbChargeSlot < 0 && orbCharge < 0f && Player.Run.IsPlaying && CooldownRemaining(slot) <= 0f)
+            {
+                orbChargeSlot = slot;
+                orbChargeStarted = Time.time;
+                return true;
+            }
             // Recasting an active Sanctuary drops it; its cooldown keeps running from the original cast.
             if (slot >= 0 && slot < SlotCount && equipped[slot] == AbilityType.Sanctuary && Player.Run.IsPlaying)
             {
@@ -64,7 +112,7 @@ namespace Slopgame
                 || Time.time < castReadyAt || CooldownRemaining(slot) > 0f || aim.sqrMagnitude < 0.001f) return false;
             var definition = AbilityCatalog.Get(equipped[slot]);
             if (definition == null) return false;
-            if (IsMovementAbility(definition.Type)) aim = Player.MobilityAim(aim);
+            // Every ability, dashes and blinks included, is aimed at the cursor.
             float cursorDistance = aim.magnitude;
             aim.Normalize();
             // Checked before anything is spent: Arcane Blink needs somewhere to land.
@@ -87,6 +135,58 @@ namespace Slopgame
                         knight.Earthshatter(EarthshatterRadius + powers.Count(PowerupType.ShatterRadius) * 0.5f, damage, definition.Color, 2f);
                     else knight.Aegis(2f + (rank - 1) * 0.3f + powers.Count(PowerupType.AegisDuration) * 0.4f);
                     break;
+                case AbilityType.ShieldThrow:
+                    if (!ThrownShield.Throw(Player, aim, Player.Damage * 2 + rank)) return false;
+                    break;
+                case AbilityType.Whirlwind:
+                    Whirlwind.Spin(Player, Whirlwind.Duration + (rank - 1) * 0.4f, Player.Damage + rank - 1); break;
+                case AbilityType.WarBanner:
+                    WarBanner.Plant(Player, WarBanner.Duration + (rank - 1) * 1.5f); break;
+                case AbilityType.IceWall:
+                    IceWall.Raise(Player, aim, IceWall.Duration + (rank - 1) * 0.75f, IceWall.BaseHealth + (rank - 1)); break;
+                case AbilityType.BallLightning:
+                    BallLightning.Launch(Player, aim, BallLightning.Duration + (rank - 1) * 0.5f, Player.Damage + rank - 1); break;
+                case AbilityType.LightningStorm:
+                    LightningStorm.Call(Player, LightningStorm.Duration + (rank - 1) * 0.75f, Player.Damage * 2 + rank - 1); break;
+                case AbilityType.SmokeBomb:
+                    SmokeCloud.Drop(Player, SmokeCloud.Duration + (rank - 1) * 0.75f); break;
+                case AbilityType.DeathMark:
+                    var marked = NearestEnemy((Vector2)transform.position + aim * Mathf.Min(cursorDistance, 8f), 3f);
+                    if (marked == null) return false;
+                    marked.DeathMark(DungeonEnemy.DeathMarkTime);
+                    if (!marked.IsInvulnerable)
+                    {
+                        DeathMarkVfx.Play(Player.Run.ProjectileRoot, marked, DungeonEnemy.DeathMarkTime);
+                        CoopFx.DeathMark(Player.Run, marked.transform.position, DungeonEnemy.DeathMarkTime);
+                    }
+                    break;
+                case AbilityType.ShadowClone:
+                    ShadowClone.Activate(Player, ShadowClone.Duration + (rank - 1) * 1.5f); break;
+                case AbilityType.HolyLance:
+                    HolyLance(aim, Player.Damage * 2 + rank - 1); break;
+                case AbilityType.Consecration:
+                    Consecration.Sanctify(Player, Consecration.Duration + (rank - 1) * 1f, Mathf.Max(1, Player.Damage / 2) + rank - 1); break;
+                case AbilityType.DivineIntervention:
+                    Intervene((Vector2)transform.position + aim * Mathf.Min(cursorDistance, 8f)); break;
+                case AbilityType.CardToss:
+                    ThrownCard.Toss(Player, aim, 3, Player.Damage + rank); break;
+                case AbilityType.DiceBomb:
+                    DiceBomb.Toss(Player, FindGroundLanding(Player.Run.Map, transform.position, aim, Mathf.Min(DiceBomb.Range, cursorDistance)), Player.Damage + rank - 1); break;
+                case AbilityType.Insurance:
+                    Player.Insure(DungeonPlayer.InsuranceTime + (rank - 1) * 1.5f); break;
+                case AbilityType.EmpPulse:
+                    EmpPulse(EmpRadius, EmpStun + (rank - 1) * 0.3f); break;
+                case AbilityType.GrappleArm:
+                    Grapple(aim, Player.Damage + rank); break;
+                case AbilityType.OrbitalLaser:
+                    OrbitalLaser.Call(Player, (Vector2)transform.position + aim * Mathf.Min(cursorDistance, 6f), OrbitalLaser.Duration + (rank - 1) * 0.75f, Player.Damage + rank - 1); break;
+                case AbilityType.NetShot:
+                    NetShot(aim, 2f + (rank - 1) * 0.5f, Player.Damage + rank - 1); break;
+                case AbilityType.RicochetArrow:
+                    RicochetArrow.Fire(Player, aim, Player.Damage * 2 + rank - 1, Player.Damage); break;
+                case AbilityType.BearTrap:
+                    BearTrap.Set(Player, FindGroundLanding(Player.Run.Map, transform.position, aim, Mathf.Min(BearTrap.Range, cursorDistance)),
+                        Player.Damage * 3 + rank - 1, 2f + (rank - 1) * 0.5f); break;
                 case AbilityType.Volley:
                     ArrowRain.Cast(Player, FindGroundLanding(Player.Run.Map, transform.position, aim, Mathf.Min(ArrowRain.Range, cursorDistance)),
                         ArrowRain.BaseArrows + powers.Count(PowerupType.VolleyCount) * ArrowRain.ArrowsPerRank, Player.Damage + rank - 1); break;
@@ -96,13 +196,21 @@ namespace Slopgame
                     Dash(aim, Mathf.Min(3.5f + powers.Count(PowerupType.WindstepDistance) * 0.5f, cursorDistance), 0, true);
                     Fan(aim, 3, BowAttack.SpreadAngle, Player.Damage + rank - 1, BowAttack.HeavyRange); break;
                 case AbilityType.Fireball:
-                    SpellProjectile.Spawn(Player, aim, damage, DamageElement.Fire, definition.Color, 7f,
-                        1.7f + powers.Count(PowerupType.FireballRadius) * 0.4f, guaranteedEffect: true); break;
+                    var orb = SpellProjectile.Spawn(Player, aim, damage, DamageElement.Fire, definition.Color, 7f,
+                        1.7f + powers.Count(PowerupType.FireballRadius) * 0.4f, guaranteedEffect: true);
+                    // Storm-Charged Orb: held to full charge, the blast shocks everything it burns.
+                    if (orbCharge >= 1f) { orb.StormCharged = true; HeroVfx.Pulse(Player.Run.ProjectileRoot, transform.position, 1f, CombatDamage.ShockColor, 0.3f); }
+                    break;
                 case AbilityType.FrostNova:
                     StartCoroutine(ExpandingNova(transform.position, FrostNovaRadius, FrostNovaExpandTime, damage, definition.Color,
                         FrostNovaFreeze + powers.Count(PowerupType.FrostDuration) * 0.5f + (rank - 1) * 0.25f)); break;
                 case AbilityType.Blink:
-                    Blink(blinkLanding, definition.Color); break;
+                    Vector2 blinkFrom = transform.position;
+                    Blink(blinkLanding, definition.Color);
+                    // Frostblink: a Frost Nova bursts where the Wizard vanished.
+                    if (powers.Count(PowerupType.Frostblink) > 0)
+                        StartCoroutine(ExpandingNova(blinkFrom, FrostNovaRadius, FrostNovaExpandTime, Player.Damage * 2, AbilityCatalog.Ice, FrostNovaFreeze));
+                    break;
                 case AbilityType.FanOfKnives:
                     int knives = 12 + powers.Count(PowerupType.KnifeCount) * 2;
                     for (int i = 0; i < knives; i++)
@@ -119,7 +227,7 @@ namespace Slopgame
                     ShadowstepVfx.Puff(Player.Run.ProjectileRoot, transform.position);
                     CoopFx.Shadowstep(Player.Run, transform.position, transform.position); break;
                 case AbilityType.HealingLight:
-                    ForAllies(SupportKind.Heal, 2 + rank - 1 + powers.Count(PowerupType.HealingPower), 0f); break;
+                    HealAllies(2 + rank - 1 + powers.Count(PowerupType.HealingPower)); break;
                 case AbilityType.Judgment:
                 case AbilityType.Sanctuary:
                     var paladin = Player.GetComponent<PaladinRelics>();
@@ -139,12 +247,18 @@ namespace Slopgame
                 case AbilityType.KnuckleSandwich:
                 case AbilityType.WildLeap:
                 case AbilityType.PrimalRage:
+                case AbilityType.ThunderClap:
+                case AbilityType.HaymakerDash:
+                case AbilityType.Suplex:
                     var brawler = Player.GetComponent<BrawlerAttack>();
                     if (brawler == null || !brawler.CastArtifact(definition.Type, aim, rank)) return false;
                     break;
                 case AbilityType.ArchdemonTechnique:
                 case AbilityType.DemonPaw:
                 case AbilityType.DemonCurse:
+                case AbilityType.WingDash:
+                case AbilityType.SoulSiphon:
+                case AbilityType.NightmareSnap:
                     var demoness = Player.GetComponent<DemonessAttack>();
                     if (demoness == null || !demoness.CastArtifact(definition.Type, aim, rank, cursorDistance)) return false;
                     break;
@@ -169,28 +283,113 @@ namespace Slopgame
                 HeroVfx.Sparks(Player.Run.ProjectileRoot, transform.position, definition.Color, 10, 3.5f, 0.35f);
             }
             // Primal Rage's and Archdemon's Technique's cooldowns only start once their effects have ended.
-            readyAt[slot] = Time.time + definition.Cooldown * Player.Powerups.RelicCooldownMultiplier
+            readyAt[definition.Type] = Time.time + definition.Cooldown * Player.Powerups.RelicCooldownMultiplier
                 + (definition.Type == AbilityType.PrimalRage ? Player.Buffs.RageCycleRemaining
                     : definition.Type == AbilityType.ArchdemonTechnique ? Player.Buffs.AscendRemaining : 0f);
             castReadyAt = Time.time + 0.2f;
+            Player.Powerups.OnAbilityUsed();
             return true;
         }
 
-        /// <summary>Dashes and blinks travel the way the hero is moving (see <see cref="DungeonPlayer.MobilityAim"/>).</summary>
-        public static bool IsMovementAbility(AbilityType type)
-            => type == AbilityType.ShieldRush || type == AbilityType.Windstep || type == AbilityType.Blink || type == AbilityType.RocketBoost;
-
-        private void ForAllies(SupportKind kind, int amount, float duration)
+        /// <summary>The living enemy nearest <paramref name="point"/> within <paramref name="radius"/>.</summary>
+        public DungeonEnemy NearestEnemy(Vector2 point, float radius)
         {
+            DungeonEnemy best = null;
+            float bestDistance = radius;
+            foreach (var enemy in Player.Run.Enemies)
+            {
+                if (enemy == null || enemy.Health <= 0) continue;
+                float distance = Vector2.Distance(point, enemy.transform.position);
+                if (distance <= bestDistance) { best = enemy; bestDistance = distance; }
+            }
+            return best;
+        }
+
+        public const float InterventionTime = 5f;
+
+        /// <summary>Holy Lance: a lance of light flies along a wide line, piercing with holy damage; the first enemy it meets is stunned.</summary>
+        private void HolyLance(Vector2 aim, int damage) => ThrownLance.Throw(Player, aim, damage);
+
+        /// <summary>Divine Intervention: the ally nearest the cursor (the Paladin, if none is closer) is watched over for a few seconds.</summary>
+        private void Intervene(Vector2 cursor)
+        {
+            var run = Player.Run;
+            Vector2 target = transform.position;
+            RemoteHero chosen = null;
+            if (run.IsNetworked)
+                foreach (var hero in run.Coop.RemoteHeroes)
+                    if (hero != null && hero.IsAlive && Vector2.Distance(cursor, hero.transform.position) < Vector2.Distance(cursor, target))
+                    { chosen = hero; target = hero.transform.position; }
+            if (chosen == null) Player.Intercede(InterventionTime);
+            else run.Coop.SupportAllies(target, 0.6f, SupportKind.Intervention, 0, InterventionTime);
+            // Guardian angels circle whoever is watched over, on every machine.
+            GuardianAngelsVfx.Play(run.ProjectileRoot, chosen != null ? chosen.transform : transform, InterventionTime);
+            CoopFx.Intervention(run, target, InterventionTime);
+        }
+
+        public const float EmpRadius = 4f, EmpStun = 1.5f, GrappleRange = 7f;
+
+        /// <summary>EMP Pulse: stuns every enemy nearby and fries the enemy bolts around the Augment.</summary>
+        private void EmpPulse(float radius, float stun)
+        {
+            var run = Player.Run;
+            Vector2 at = transform.position;
+            HeroVfx.Pulse(run.ProjectileRoot, at, radius, WorldCatalog.Neon, 0.4f);
+            CombatVfx.Ring(run.ProjectileRoot, at, radius, WorldCatalog.Neon, 0.4f);
+            CoopFx.Pulse(run, at, radius, WorldCatalog.Neon, 0.4f);
+            ScreenFx.Flash(FlameMesh.Alpha(WorldCatalog.Neon, 0.15f), 0.2f);
+            foreach (var enemy in run.Enemies.ToArray())
+                if (enemy != null && enemy.Health > 0 && Vector2.Distance(at, enemy.transform.position) <= radius + enemy.HitRadius) enemy.Stun(stun);
+            foreach (var bolt in run.ProjectileRoot.GetComponentsInChildren<EnemyProjectile>())
+            {
+                if (bolt.IsSpent || bolt.IsReflected || Vector2.Distance(at, bolt.transform.position) > radius) continue;
+                HeroVfx.Sparks(run.ProjectileRoot, bolt.transform.position, WorldCatalog.Neon, 4, 2f, 0.2f);
+                if (run.IsNetworked) run.Coop.ReportBolt(bolt, CoopBoltEventKind.Consumed);
+                bolt.Consume();
+            }
+        }
+
+        /// <summary>Grapple Arm: the hook flies out on its chain, snags the first enemy it touches and hauls it in (guardians only take the hit).</summary>
+        private void Grapple(Vector2 aim, int damage) => GrappleHook.Fire(Player, aim, GrappleRange, damage);
+
+        public const float NetRange = 5f;
+
+        /// <summary>Net Shot: a weighted net flies out and drops on the first enemy it reaches, rooting everything under it.</summary>
+        private void NetShot(Vector2 aim, float hold, int damage) => ThrownNet.Fire(Player, aim, NetRange, hold, damage);
+
+        public const float OrbChargeTime = 1f;
+        private int orbChargeSlot = -1;
+        private float orbChargeStarted, orbCharge = -1f;
+        /// <summary>How full Storm-Charged Orb's charge is (0-1), or -1 when not charging.</summary>
+        public float OrbCharge => orbChargeSlot >= 0 ? Mathf.Clamp01((Time.time - orbChargeStarted) / OrbChargeTime) : -1f;
+
+        private void Update()
+        {
+            if (orbChargeSlot < 0) return;
+            if (!Player.Run.IsPlaying || Player.Health <= 0 || equipped[orbChargeSlot] != AbilityType.Fireball) { orbChargeSlot = -1; return; }
+            if (OrbCharge >= 1f && Time.frameCount % 6 == 0)
+                HeroVfx.Sparks(Player.Run.ProjectileRoot, transform.position, CombatDamage.ShockColor, 2, 2f, 0.2f);
+            if (KeyBindings.IsHeld(orbChargeSlot == 0 ? GameAction.AbilityQ : GameAction.AbilityE)) return;
+            // Released: the orb flies with whatever charge it built.
+            int slot = orbChargeSlot;
+            orbCharge = OrbCharge;
+            orbChargeSlot = -1;
+            try { TryUse(slot, Player.AimDirection * 6f); }
+            finally { orbCharge = -1f; }
+        }
+
+        /// <summary>Healing Light: heals every hero within 4 units in a soft green light, kept distinct from the Paladin's gold.</summary>
+        private void HealAllies(int amount)
+        {
+            const float Reach = 4f;
+            var run = Player.Run;
             foreach (var ally in FindObjectsByType<DungeonPlayer>())
-                if (ally.Run == Player.Run && ally.Health > 0 && Vector2.Distance(transform.position, ally.transform.position) <= 4f)
-                {
-                    ally.ApplySupport(kind, amount, duration);
-                    HeroVfx.Motes(Player.Run.ProjectileRoot, ally.transform.position, 0.7f, AbilityCatalog.Gold, 14, 1f);
-                }
-            Player.Run.Coop?.SupportAllies(transform.position, 4f, kind, amount, duration);
-            CombatVfx.Ring(Player.Run.ProjectileRoot, transform.position, 4f, AbilityCatalog.Gold);
-            CoopFx.Ring(Player.Run, transform.position, 4f, AbilityCatalog.Gold);
+                if (ally.Run == run && ally.Health > 0 && Vector2.Distance(transform.position, ally.transform.position) <= Reach)
+                    ally.ApplySupport(SupportKind.Heal, amount, 0f);
+            run.Coop?.SupportAllies(transform.position, Reach, SupportKind.Heal, amount, 0f);
+            HealVfx.PlayAround(run, transform.position, Reach);
+            CombatVfx.Ring(run.ProjectileRoot, transform.position, Reach, FlameMesh.Alpha(HealVfx.Mint, 0.7f), 0.5f);
+            CoopFx.Heal(run, transform.position, Reach);
         }
 
         private void Fan(Vector2 aim, int count, float spacing, int damage, float range = PlayerProjectile.MaxRange)
@@ -254,6 +453,7 @@ namespace Slopgame
                 if (enemy.Health <= 0 || (position - closest).sqrMagnitude > radius * radius) continue;
                 HeroVfx.Slash(Player.Run.ProjectileRoot, position - travel.normalized * 0.4f, travel, 0.7f, 70f, color, 0.18f);
                 CombatDamage.ApplyShadowstep(Player, enemy);
+                if (enemy.Health <= 0 && Player.Powerups.Count(PowerupType.Vanish) > 0) Player.Veil(1f);
             }
             return true;
         }

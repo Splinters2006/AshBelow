@@ -8,6 +8,10 @@ namespace Slopgame
         private DungeonPlayer player;
         private DungeonRun run;
         private bool ghost, guaranteedEffect;
+        /// <summary>A fully charged fireball (Shatter).</summary>
+        public bool FullyCharged { get; set; }
+        /// <summary>Storm-Charged Orb: the blast also shocks everything it hits.</summary>
+        public bool StormCharged { get; set; }
         private Vector2 direction;
         private int damage, pierces;
         private float remaining, radius, pulsePhase, baseScale = 1f;
@@ -96,15 +100,26 @@ namespace Slopgame
             for (int i = 0; i < steps; i++)
             {
                 Vector2 next = (Vector2)transform.position + direction * (distance / steps);
-                if (!run.Map.CanStand(next, 0.1f) || HolyBubble.Blocks(transform.position, next)) { Explode(); return; }
+                if (!run.Map.CanStand(next, 0.1f) || HolyBubble.Blocks(transform.position, next) || IceWall.StopsShot(transform.position, next, !ghost)) { Explode(); return; }
                 transform.position = next;
+                if (!ghost) Breakable.SmashAt(run, next, 0.1f);
                 for (int j = run.Enemies.Count - 1; j >= 0; j--)
                 {
                     var enemy = run.Enemies[j];
                     if (hits.Contains(enemy) || Vector2.Distance(next, enemy.transform.position) > enemy.HitRadius) continue;
                     if (radius > 0f) { Explode(); return; }
                     hits.Add(enemy);
-                    if (!ghost) CombatDamage.Apply(player, enemy, damage, element, next - direction, guaranteedEffect: guaranteedEffect);
+                    if (!ghost)
+                    {
+                        // Shatter: a fully charged fireball breaks a frozen enemy's ice for double damage.
+                        bool shatter = FullyCharged && enemy.IsFrozen && player.Powerups.Count(PowerupType.Shatter) > 0;
+                        if (shatter)
+                        {
+                            enemy.Thaw();
+                            HeroVfx.Sparks(run.ProjectileRoot, next, AbilityCatalog.Ice, 16, 5f, 0.4f, null, 360f, 1.3f);
+                        }
+                        CombatDamage.Apply(player, enemy, shatter ? damage * 2 : damage, element, next - direction, guaranteedEffect: guaranteedEffect);
+                    }
                     if (pierces-- <= 0) { Finish(); return; }
                 }
             }
@@ -121,6 +136,10 @@ namespace Slopgame
                 if (!ghost)
                 {
                     player.Abilities.AreaAttack(transform.position, radius, damage, element, color, guaranteedEffect: guaranteedEffect);
+                    if (StormCharged)
+                        foreach (var enemy in run.Enemies.ToArray())
+                            if (enemy != null && enemy.Health > 0 && Vector2.Distance(transform.position, enemy.transform.position) <= radius + enemy.HitRadius)
+                                CombatDamage.ApplyEffect(player, enemy, DamageElement.Lightning, damage);
                     ScreenFx.Shake(0.28f, 0.28f);
                     ScreenFx.Flash(new Color(1f, 0.55f, 0.2f, 0.12f), 0.12f);
                 }

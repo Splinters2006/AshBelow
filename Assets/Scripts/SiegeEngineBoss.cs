@@ -7,7 +7,9 @@ namespace Slopgame
     {
         public override string Title => "BASTION, THE SIEGE ENGINE";
         protected override Color Accent => new Color(1f, 0.65f, 0.15f);
-        protected override Sprite Chassis => NeonBossSprites.Bastion;
+        protected override Sprite Chassis => GuardianSprites.Bastion;
+        protected override Sprite Details => GuardianSprites.BastionDetails;
+        protected override Color BodyTint => new Color(0.55f, 0.52f, 0.5f);
         protected override HazardStyle Hazards => HazardStyle.Artillery;
         protected override float Scale => 2.2f;
         protected override string[] AttackTells => tells;

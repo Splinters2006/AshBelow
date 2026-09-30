@@ -16,6 +16,13 @@ namespace Slopgame
         public override float Readiness => 1f;
         public override string Status => ElementName(Element);
 
+        /// <summary>The element loaded in <paramref name="player"/>'s quiver, or physical for anyone who isn't an Archer.</summary>
+        public static DamageElement InfusionOf(DungeonPlayer player) => player != null && player.Mechanic is ElementalQuiver quiver ? quiver.Element : DamageElement.Physical;
+
+        /// <summary>What an Archer's shot looks like with <paramref name="infusion"/> loaded: its element's colour, or <paramref name="plain"/>.</summary>
+        public static Color ShotColor(DamageElement infusion, Color plain)
+            => infusion != DamageElement.Physical ? Color.Lerp(CombatDamage.ElementColor(infusion), Color.white, 0.25f) : plain;
+
         public static string ElementName(DamageElement element) => element == DamageElement.Fire ? "FIRE"
             : element == DamageElement.Ice ? "FREEZE" : element == DamageElement.Lightning ? "SHOCK" : "PLAIN";
 

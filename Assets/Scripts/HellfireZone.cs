@@ -27,7 +27,13 @@ namespace Slopgame
         Plasma,
         Circuit,
         Artillery,
-        Void
+        Void,
+        /// <summary>The Savage Wilds' toxic spores: green, flame-like fumes.</summary>
+        Venom,
+        /// <summary>The Ash Below's spike traps: holes rattle in a steel plate, then spikes stab up.</summary>
+        Spikes,
+        /// <summary>The Infernal Court guardians' hellfire, which also sets the hero alight (a lingering burn a roll puts out).</summary>
+        Brimstone
     }
 
     /// <summary>Everything needed to rebuild a hazard on another machine.</summary>
@@ -64,6 +70,10 @@ namespace Slopgame
             new Color(0.45f, 0.95f, 1f), new Color(0.2f, 0.45f, 0.62f), new Color(0.08f, 0.15f, 0.22f));
         private static readonly Palette PlasmaPalette = new Palette(new Color(1f, 0.95f, 1f), new Color(1f, 0.6f, 0.95f),
             new Color(1f, 0.25f, 0.8f), new Color(0.5f, 0.1f, 0.6f), new Color(0.15f, 0.03f, 0.22f));
+        private static readonly Palette SpikePalette = new Palette(Color.white, new Color(0.85f, 0.88f, 0.92f),
+            new Color(0.6f, 0.63f, 0.68f), new Color(0.3f, 0.32f, 0.36f), new Color(0.1f, 0.1f, 0.12f));
+        private static readonly Palette VenomPalette = new Palette(new Color(0.95f, 1f, 0.85f), new Color(0.75f, 1f, 0.35f),
+            new Color(0.4f, 0.85f, 0.2f), new Color(0.18f, 0.45f, 0.1f), new Color(0.06f, 0.15f, 0.04f));
 
         private DungeonRun run;
         private HazardSpec spec;
@@ -73,7 +83,16 @@ namespace Slopgame
         private bool erupted;
         private Vector2 meteorFrom;
 
+        /// <summary>
+        /// Damage the zone deals to enemies caught in it; 0 (every boss hazard) leaves them alone. Environmental traps set
+        /// it so heroes can lure enemies into them. Strikes hit each enemy once, burning ground once a second.
+        /// </summary>
+        public int EnemyDamage { get; set; }
+        private readonly System.Collections.Generic.Dictionary<DungeonEnemy, float> enemyHitAt = new System.Collections.Generic.Dictionary<DungeonEnemy, float>();
+
         public bool IsBurning => age >= spec.Telegraph && age < spec.Telegraph + spec.Duration;
+        /// <summary>Lingering burns a brimstone strike leaves on the hero.</summary>
+        public const int BrimstoneTicks = 2;
         /// <summary>The Cataclysm sea of fire and meteor craters are burning ground; beams and rings are strikes.</summary>
         private bool IsGround => spec.Shape == HazardShape.Inferno || spec.Shape == HazardShape.Pool;
         private float ActiveTime => age - spec.Telegraph;
@@ -88,7 +107,7 @@ namespace Slopgame
             spec.Direction = spec.Direction.sqrMagnitude > 0.0001f ? spec.Direction.normalized : Vector2.right;
             zone.spec = spec;
             zone.colors = spec.Style == HazardStyle.Frost ? FrostPalette : spec.Style == HazardStyle.Steel ? SteelPalette
-                : spec.Style == HazardStyle.Plasma ? PlasmaPalette : HellfirePalette;
+                : spec.Style == HazardStyle.Plasma ? PlasmaPalette : spec.Style == HazardStyle.Venom ? VenomPalette : spec.Style == HazardStyle.Spikes ? SpikePalette : HellfirePalette;
             if (spec.Style == HazardStyle.Circuit || spec.Style == HazardStyle.Artillery || spec.Style == HazardStyle.Void)
             {
                 Color tint = spec.Style == HazardStyle.Circuit ? WorldCatalog.Neon
@@ -134,10 +153,53 @@ namespace Slopgame
                 // Burning ground ticks once a second; pillars and fire walls strike like any other blow.
                 if (IsGround) hero.Burn();
                 else hero.Hit();
+                if (spec.Style == HazardStyle.Venom && hero.Health > 0 && hero.Health != before) hero.Poison();
+                if (spec.Style == HazardStyle.Brimstone && hero.Health > 0 && hero.Health != before) hero.Ignite(BrimstoneTicks);
                 if (hero.Health != before || hero.IsInvulnerable)
                     HeroVfx.Sparks(run.ProjectileRoot, hero.transform.position, colors.Main, 12, 4f, 0.4f, Vector2.up, 120f);
             }
+            // Enemies are the host's to damage; a guest's copy only judges its own hero.
+            if (IsBurning && EnemyDamage > 0 && !run.IsGuest) HurtEnemies();
             Draw();
+        }
+
+        private void HurtEnemies()
+        {
+            foreach (var enemy in run.Enemies.ToArray())
+            {
+                if (enemy == null || enemy.Health <= 0 || !Contains(enemy.transform.position)) continue;
+                if (enemyHitAt.TryGetValue(enemy, out float last) && (!IsGround || Time.time < last + 1f)) continue;
+                enemyHitAt[enemy] = Time.time;
+                HeroVfx.Sparks(run.ProjectileRoot, enemy.transform.position, colors.Main, 8, 3.5f, 0.35f, Vector2.up, 120f);
+                enemy.Hit(EnemyDamage, spec.Center, IsGround ? 0f : 0.6f);
+            }
+        }
+
+        /// <summary>A steel plate full of holes; they rattle through the warning, then a bed of spikes stabs up and sinks back.</summary>
+        private void DrawSpikes(bool warning, float warn, float fade)
+        {
+            float r = spec.Radius;
+            flames.Disc(spec.Center, r, FlameMesh.Alpha(colors.Deep, 0.35f * fade), FlameMesh.Alpha(colors.Dark, 0.25f * fade));
+            flames.Ring(spec.Center, r, 0.06f, FlameMesh.Alpha(colors.Main, (warning ? 0.35f + 0.5f * warn : 0.8f) * fade));
+            float rise = warning ? 0f : Mathf.Clamp01(ActiveTime / 0.07f);
+            float rattle = warning && warn > 0.55f ? Mathf.Sin(Time.time * 60f) * 0.03f : 0f;
+            const float Spacing = 0.36f;
+            for (float x = -r; x <= r; x += Spacing)
+                for (float y = -r; y <= r; y += Spacing)
+                {
+                    Vector2 spot = spec.Center + new Vector2(x + ((int)Mathf.Round(y / Spacing) % 2 == 0 ? 0f : Spacing * 0.5f), y);
+                    if (Vector2.Distance(spot, spec.Center) > r - 0.12f) continue;
+                    flames.Disc(spot, 0.07f, FlameMesh.Alpha(colors.Dark, 0.9f * fade), FlameMesh.Alpha(colors.Dark, 0.6f * fade), 8);
+                    if (warning)
+                    {
+                        // Tips glint in the holes just before they strike.
+                        if (warn > 0.55f) flames.Diamond(spot + new Vector2(rattle, 0f), 0.05f, FlameMesh.Alpha(colors.Bright, (warn - 0.55f) * 2f));
+                        continue;
+                    }
+                    float height = 0.42f * rise;
+                    flames.Triangle(spot + new Vector2(-0.08f, 0f), spot + new Vector2(0.08f, 0f), spot + Vector2.up * height,
+                        FlameMesh.Alpha(colors.Deep, fade), FlameMesh.Alpha(colors.Main, fade), FlameMesh.Alpha(colors.Core, fade));
+                }
         }
 
         private void Erupt()
@@ -365,6 +427,7 @@ namespace Slopgame
 
         private void DrawPool(bool warning, float warn, float fade)
         {
+            if (spec.Style == HazardStyle.Spikes) { DrawSpikes(warning, warn, fade); return; }
             float r = spec.Radius, time = Time.time;
             if (warning)
             {
@@ -373,9 +436,9 @@ namespace Slopgame
                 flames.Ring(spec.Center, r, 0.08f, FlameMesh.Alpha(colors.Main, 0.6f + 0.4f * pulse));
                 flames.Bar(spec.Center - Vector2.right * r * 0.6f, Vector2.right, r * 1.2f, 0.06f, FlameMesh.Alpha(colors.Bright, 0.7f), FlameMesh.Alpha(colors.Bright, 0.7f));
                 flames.Bar(spec.Center - Vector2.up * r * 0.6f, Vector2.up, r * 1.2f, 0.06f, FlameMesh.Alpha(colors.Bright, 0.7f), FlameMesh.Alpha(colors.Bright, 0.7f));
-                // The meteor (or hailstone) itself plunges in over the last moments of the warning.
+                // The meteor (or hailstone) itself plunges in over the last moments of the warning; venom just wells up.
                 float fall = Mathf.InverseLerp(Mathf.Max(0f, spec.Telegraph - 0.45f), spec.Telegraph, age);
-                if (fall > 0f)
+                if (fall > 0f && spec.Style != HazardStyle.Venom)
                 {
                     Vector2 head = Vector2.Lerp(meteorFrom, spec.Center, fall * fall);
                     Vector2 back = (meteorFrom - spec.Center).normalized;

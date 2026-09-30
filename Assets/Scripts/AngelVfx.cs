@@ -27,6 +27,10 @@ namespace Slopgame
         private static Sprite bodySprite, wingSprite;
         private static Sprite BodySprite => bodySprite != null ? bodySprite : bodySprite = Build("Angel", BodyHalf, true, new Vector2(0.5f, 0f));
         private static Sprite WingSprite => wingSprite != null ? wingSprite : wingSprite = Build("Angel wing", Wing, false, new Vector2(1f, 1f));
+        /// <summary>The angel's body and left wing art (16 px per unit; the wing hangs from its top-right corner), shared with Divine Intervention's guardians.</summary>
+        public static Sprite Body => BodySprite;
+        public static Sprite LeftWing => WingSprite;
+        public const float ArtPixelsPerUnit = PixelsPerUnit;
 
         private FlameMesh mesh;
         private SpriteRenderer body, leftWing, rightWing;

@@ -7,6 +7,8 @@ namespace Slopgame
     {
         public DungeonPlayer Player { get; set; }
         private float readyAt, lightningReadyAt;
+        public const int ArcaneEchoEvery = 5;
+        private int fireballs;
         public bool IsHeavyAttacking => false;
         public bool CanAttack => Player.Run.IsPlaying && !Player.IsRolling && Time.time >= readyAt;
         public float HeavyCooldownRemaining => DebugMode.Cooldown(Mathf.Max(0f, lightningReadyAt - Time.time));
@@ -17,7 +19,11 @@ namespace Slopgame
         public bool TryAttack(Vector2 aim, float charge = 0f)
         {
             if (!CanAttack || aim.sqrMagnitude < 0.001f) return false;
-            SpellProjectile.Spawn(Player, aim, Player.Charge.Damage(charge), DamageElement.Fire, Color.white);
+            int damage = Player.Charge.Damage(charge);
+            SpellProjectile.Spawn(Player, aim, damage, DamageElement.Fire, Color.white).FullyCharged = charge >= 1f;
+            // Arcane Echo: every 5th fireball has a twin a few degrees off.
+            if (Player.Powerups.Count(PowerupType.ArcaneEcho) > 0 && ++fireballs % ArcaneEchoEvery == 0)
+                SpellProjectile.Spawn(Player, Quaternion.Euler(0, 0, 7f) * aim, damage, DamageElement.Fire, Color.white).FullyCharged = charge >= 1f;
             readyAt = Time.time + 0.45f * Player.Powerups.AttackIntervalMultiplier;
             return true;
         }

@@ -11,6 +11,7 @@ namespace Slopgame
     public sealed class FloorMinimap : MonoBehaviour
     {
         public const float SightRadius = 8f, SpotRadius = 11f, ScanInterval = 0.12f;
+        private static readonly Color Lava = new Color(0.9f, 0.35f, 0.08f, 0.95f);
         private static readonly Color Unknown = Color.clear, Floor = new Color(0.2f, 0.27f, 0.32f, 0.95f), Wall = new Color(0.45f, 0.56f, 0.62f, 0.95f);
         public DungeonRun Run { get; set; }
         private readonly bool[,] explored = new bool[DungeonMap.Width, DungeonMap.Height];
@@ -122,7 +123,7 @@ namespace Slopgame
             dirty = false;
             for (int x = 0; x < DungeonMap.Width; x++)
                 for (int y = 0; y < DungeonMap.Height; y++)
-                    pixels[y * DungeonMap.Width + x] = explored[x, y] ? Floor : BordersExplored(x, y) ? Wall : Unknown;
+                    pixels[y * DungeonMap.Width + x] = explored[x, y] ? (map.IsLava(x, y) ? Lava : Floor) : BordersExplored(x, y) ? Wall : Unknown;
             texture.SetPixels(pixels);
             texture.Apply(false);
         }

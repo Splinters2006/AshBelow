@@ -24,7 +24,10 @@ namespace Slopgame
         public bool TryAttack(Vector2 aim, float charge = 0f)
         {
             if (!CanFire(aim)) return false;
-            Fire(aim.normalized, Player.Charge.Damage(charge), ArrowRange(charge));
+            // Quick Nock: every 5th arrow flies fully charged.
+            if (Player.Powerups.Count(PowerupType.QuickNock) > 0 && ++arrowsLoosed % QuickNockEvery == 0) charge = 1f;
+            var arrow = Fire(aim.normalized, Player.Charge.Damage(charge), ArrowRange(charge));
+            arrow.FullyCharged = charge >= 1f;
             readyAt = Time.time + 0.35f * Player.Powerups.AttackIntervalMultiplier;
             return true;
         }
@@ -40,10 +43,11 @@ namespace Slopgame
             return true;
         }
 
-        private void Fire(Vector2 direction, int damage, float range = PlayerProjectile.MaxRange)
-        {
-            PlayerProjectile.Spawn(Player.Run, transform.position, direction, damage, range);
-        }
+        public const int QuickNockEvery = 5;
+        private int arrowsLoosed;
+
+        private PlayerProjectile Fire(Vector2 direction, int damage, float range = PlayerProjectile.MaxRange)
+            => PlayerProjectile.Spawn(Player.Run, transform.position, direction, damage, range);
 
         public void Hide() { Player.Charge.Cancel(); }
     }

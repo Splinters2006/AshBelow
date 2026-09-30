@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace Slopgame
 {
-    /// <summary>Effects for the Augment: the straight plasma ray, thruster flames and the sentry turret's body.</summary>
+    /// <summary>Effects for the Augment: the straight plasma ray and the sentry turret's body.</summary>
     public static class CyborgVfx
     {
         /// <summary>A straight ray of light: a soft glow under a white-hot core, fading out quickly, with a flash at each end.</summary>
@@ -22,17 +22,6 @@ namespace Slopgame
             core.transform.localPosition = Vector2.zero;
             ray.gameObject.AddComponent<FadingSprite>().Duration = 0.12f + width * 0.4f;
             HeroVfx.Sparks(parent, to, Color.Lerp(color, Color.white, 0.5f), 4, 3f, 0.2f, -offset, 120f, 0.8f);
-        }
-
-        /// <summary>Rocket Boost: a streak of thruster fire along the dash and flames at take-off and touchdown.</summary>
-        public static void Thrusters(Transform parent, Vector2 from, Vector2 to)
-        {
-            if (parent == null) return;
-            var flame = CyborgAttack.MissileColor;
-            CombatVfx.GlowBolt(parent, from, to, flame);
-            Vector2 travel = to - from;
-            HeroVfx.Sparks(parent, from, flame, 14, 4.5f, 0.35f, travel.sqrMagnitude > 0.0001f ? -travel : Vector2.down, 90f, 1.2f);
-            HeroVfx.Sparks(parent, to, Color.Lerp(flame, Color.white, 0.4f), 16, 5f, 0.35f, null, 360f, 1.1f);
         }
 
         /// <summary>The sentry turret: tripod, housing, a barrel that turns to aim, and a glowing plasma eye.</summary>

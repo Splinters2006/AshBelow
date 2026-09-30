@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Slopgame
@@ -7,7 +8,9 @@ namespace Slopgame
         None, ShieldRush, Earthshatter, Aegis, Volley, PiercingShot, Windstep,
         Fireball, FrostNova, Blink, FanOfKnives, VenomVial, ShadowVeil, HealingLight, Judgment, Sanctuary,
         Eclipse, SoulRend, ShadowReign, KnuckleSandwich, WildLeap, PrimalRage, ArchdemonTechnique, DemonPaw, DemonCurse,
-        Windfall, AllIn, Jackpot, MicroMissiles, RocketBoost, SentryTurret
+        Windfall, AllIn, Jackpot, MicroMissiles, RocketBoost, SentryTurret,
+        // The talents & abilities expansion.
+        ShieldThrow, Whirlwind, WarBanner, NetShot, RicochetArrow, BearTrap, IceWall, BallLightning, LightningStorm, SmokeBomb, DeathMark, ShadowClone, HolyLance, Consecration, DivineIntervention, ThunderClap, HaymakerDash, Suplex, WingDash, SoulSiphon, NightmareSnap, CardToss, DiceBomb, Insurance, EmpPulse, GrappleArm, OrbitalLaser
     }
 
     public sealed class AbilityDefinition
@@ -19,10 +22,15 @@ namespace Slopgame
         public string Glyph { get; }
         public float Cooldown { get; }
         public Color Color { get; }
-        public AbilityDefinition(AbilityType type, WeaponType weapon, string name, string description, string glyph, float cooldown, Color color)
+        /// <summary>True when the ability must be bought in the Ash shop before guardians can offer it.</summary>
+        public bool ShopUnlock { get; }
+        /// <summary>The Ash shop upgrade that unlocks a <see cref="ShopUnlock"/> ability.</summary>
+        public string UnlockId => "ability_" + Type.ToString().ToLowerInvariant();
+        public AbilityDefinition(AbilityType type, WeaponType weapon, string name, string description, string glyph, float cooldown, Color color,
+            bool shopUnlock = false)
         {
             Type = type; ClassWeapon = weapon; Name = name; Description = description;
-            Glyph = glyph; Cooldown = cooldown; Color = color;
+            Glyph = glyph; Cooldown = cooldown; Color = color; ShopUnlock = shopUnlock;
         }
     }
 
@@ -46,7 +54,7 @@ namespace Slopgame
             new AbilityDefinition(AbilityType.FanOfKnives, WeaponType.Daggers, "Fan of Knives", "Throw a ring of piercing knives that fly back to you after 1 second, wherever you are, cutting through everything in their path. Each can critically strike.", "X", 8f, Violet),
             new AbilityDefinition(AbilityType.VenomVial, WeaponType.Daggers, "Venom Vial", "Throw a vial at the cursor (up to 5 units, stopped by walls). It shatters into a toxic pool that poisons enemies standing in it.", "+", 9f, Green),
             new AbilityDefinition(AbilityType.ShadowVeil, WeaponType.Daggers, "Shadow Veil", "Vanish into shadow: enemies lose track of you and stop turning toward you. Briefly invulnerable as you fade.", "~", 12f, Violet),
-            new AbilityDefinition(AbilityType.HealingLight, WeaponType.Hammer, "Healing Light", "Restore 2 HP to yourself and nearby allies.", "+", 30f, Gold),
+            new AbilityDefinition(AbilityType.HealingLight, WeaponType.Hammer, "Healing Light", "Restore 2 HP to yourself and nearby allies.", "+", 30f, HealVfx.Mint),
             new AbilityDefinition(AbilityType.Judgment, WeaponType.Hammer, "Judgment", "Call down a column of holy light at the cursor. After a short windup it smites and slows enemies around the mark.", "!", 10f, Gold),
             new AbilityDefinition(AbilityType.Sanctuary, WeaponType.Hammer, "Sanctuary", "Surround yourself with a bubble of holy light that moves with you, destroys every projectile inside it, shoves enemies out and slows any that return. Recast to drop it. You cannot attack while it holds.", "O", 16f, Ice),
             new AbilityDefinition(AbilityType.Eclipse, WeaponType.Shadow, "Eclipse", "A vast black sun executes every visible enemy within 11 units, including guardians. Ranks widen its reach.", "O", 6f, Violet),
@@ -55,7 +63,7 @@ namespace Slopgame
             new AbilityDefinition(AbilityType.KnuckleSandwich, WeaponType.Fists, "Knuckle Sandwich", "Wind up and throw a HEAVY punch that smashes everything in a big rectangle ahead. Ranks increase its size and damage.", "[]", 7f, BrawlerAttack.Glove),
             new AbilityDefinition(AbilityType.WildLeap, WeaponType.Fists, "Wild Leap", "Pounce onto an enemy, even over walls, and slam down for massive damage. The farther you leap, the wider the slam. Invulnerable while airborne.", "^", 16f, Gold),
             new AbilityDefinition(AbilityType.PrimalRage, WeaponType.Fists, "Primal Rage", "10 seconds of huge damage, charge, movement and dodge buffs, then 5 seconds tired. Cooldown starts once rested.", "!!", 25f, new Color(1f, 0.25f, 0.2f)),
-            new AbilityDefinition(AbilityType.ArchdemonTechnique, WeaponType.Tail, "Archdemon's Technique", "Channel your father, the Demon Lord, for 8 seconds: every click is a fully charged vital stab, and charging winds up a devastating paralysing tail whip. Cooldown starts once it ends.", "W", 16f, HeroBuffs.AscendColor),
+            new AbilityDefinition(AbilityType.ArchdemonTechnique, WeaponType.Tail, "Archdemon's Technique", "Channel your father, the Demon Lord, for 8 seconds: every click is a fully charged vital stab, and charging winds up a devastating paralysing tail whip 50% faster. Cooldown starts once it ends.", "W", 16f, HeroBuffs.AscendColor),
             new AbilityDefinition(AbilityType.DemonPaw, WeaponType.Tail, "HEEEELP", "Open a portal over a nearby enemy, even beyond walls: your giant demonic pet slams a huge clawed paw down on it, stunning everything underneath.", "!", 12f, DemonessAttack.Violet),
             new AbilityDefinition(AbilityType.DemonCurse, WeaponType.Tail, "Demon Curse", "Brand a pentagram at the cursor, even past walls: enemies on it are paralysed for 3 seconds and take 50% more damage for 6.", "*", 14f, DemonessAttack.Pale),
             new AbilityDefinition(AbilityType.Windfall, WeaponType.Coins, "Windfall", "Your purse coughs up 5 coins at once. Ranks add one more coin.", "$", 12f, GamblerAttack.Gold),
@@ -63,8 +71,44 @@ namespace Slopgame
             new AbilityDefinition(AbilityType.Jackpot, WeaponType.Coins, "Jackpot", "Feed every coin you carry into the machine and always win a random speed buff, damage buff or heal that grows with every coin spent. Ranks lengthen the buffs.", "777", 18f, new Color(1f, 0.4f, 0.55f)),
             new AbilityDefinition(AbilityType.MicroMissiles, WeaponType.Beam, "Micro-Missiles", "Your shoulder pod fires a fan of 6 homing missiles that seek out the nearest enemies and burst on impact. Ranks add a missile and damage.", "^^", 9f, CyborgAttack.MissileColor),
             new AbilityDefinition(AbilityType.RocketBoost, WeaponType.Beam, "Rocket Boost", "Blast forward on your leg thrusters, ramming through every enemy in your path, and land in a burst of flame that can set them burning. Briefly invulnerable.", ">>", 8f, CyborgAttack.MissileColor),
-            new AbilityDefinition(AbilityType.SentryTurret, WeaponType.Beam, "Sentry Turret", "Deploy a turret at the cursor (up to 4 units away). For 6 seconds it fires a piercing plasma ray at the nearest enemy. Ranks add a second and damage.", "T", 16f, CyborgAttack.Plasma)
+            new AbilityDefinition(AbilityType.SentryTurret, WeaponType.Beam, "Sentry Turret", "Deploy a turret at the cursor (up to 4 units away). For 6 seconds it fires a piercing plasma ray at the nearest enemy. Ranks add a second and damage.", "T", 16f, CyborgAttack.Plasma),
+            new AbilityDefinition(AbilityType.ShieldThrow, WeaponType.Sword, "Shield Throw", "Hurl your shield: it bounces between up to 3 enemies and returns. You can't parry until it's back. Ranks add damage.", "()", 7f, Ice),
+            new AbilityDefinition(AbilityType.Whirlwind, WeaponType.Sword, "Whirlwind", "Spin with your sword for 2 seconds, hitting everything around you. You can still walk, but can't attack or parry while spinning. Ranks add damage and spin time.", "@", 10f, new Color(0.55f, 1f, 0.9f)),
+            new AbilityDefinition(AbilityType.NetShot, WeaponType.Bow, "Net Shot", "Fire a weighted net that drops on the first enemy it reaches, rooting every enemy under it for 2 seconds. Ranks hold them longer.", "#", 9f, new Color(0.8f, 0.75f, 0.55f)),
+            new AbilityDefinition(AbilityType.RicochetArrow, WeaponType.Bow, "Ricochet Arrow", "An arrow that ricochets from each enemy it hits to the nearest one it hasn't, up to 3 times, dealing more damage with each ricochet. It also glances off walls. Ranks add damage.", "/\\", 8f, new Color(1f, 0.85f, 0.45f)),
+            new AbilityDefinition(AbilityType.BearTrap, WeaponType.Bow, "Bear Trap", "Set a trap at the cursor (up to 2 at once). The first enemy to step in is held for 2 seconds and takes damage. Ranks hold longer and hurt more.", "W", 6f, new Color(0.62f, 0.62f, 0.68f), true),
+            new AbilityDefinition(AbilityType.IceWall, WeaponType.Staff, "Ice Wall", "Raise a wall of ice blocks across your aim for 7 seconds that stops enemies, heroes and bolts. Each block breaks on its own under enemy or hero blows, and its shards freeze enemies right beside it. Ranks make it last longer and tougher.", "||", 11f, new Color(0.7f, 0.92f, 1f)),
+            new AbilityDefinition(AbilityType.BallLightning, WeaponType.Staff, "Ball Lightning", "A slow orb of lightning drifts forward for 4 seconds, zapping and shocking every enemy it passes. Ranks add damage and time.", "o", 9f, CombatDamage.ShockColor),
+            new AbilityDefinition(AbilityType.LightningStorm, WeaponType.Staff, "Lightning Storm", "For 3 seconds, lightning strikes down from above onto enemies around you, shocking each one it hits. Ranks lengthen the storm.", "!", 16f, new Color(0.6f, 0.8f, 1f), true),
+            new AbilityDefinition(AbilityType.SmokeBomb, WeaponType.Daggers, "Smoke Bomb", "A smoke cloud for 4 seconds: inside it enemies lose track of you, and your hits on enemies inside always count as backstabs. Ranks make it last longer.", "~", 12f, new Color(0.62f, 0.62f, 0.7f)),
+            new AbilityDefinition(AbilityType.DeathMark, WeaponType.Daggers, "Death Mark", "Mark the enemy nearest your cursor for 6 seconds. If it dies while marked, all the damage it took during the mark bursts out onto every enemy around it; if it survives, it takes all that damage again when the mark ends.", "+", 14f, new Color(0.85f, 0.2f, 0.3f), true),
+            new AbilityDefinition(AbilityType.ShadowClone, WeaponType.Daggers, "Shadow Clone", "For 7.5 seconds, every backstab you land summons a shadow clone behind the victim that backstabs it again, sharpening your dagger another stack. Ranks lengthen it.", "&", 16f, ShadowstepVfx.Violet, true),
+            new AbilityDefinition(AbilityType.HolyLance, WeaponType.Hammer, "Holy Lance", "Hurl a lance of light that pierces a wide line with holy damage and stuns the first enemy for 1 second. Ranks add damage.", "|", 8f, Gold),
+            new AbilityDefinition(AbilityType.Consecration, WeaponType.Hammer, "Consecration", "Sanctify the ground around you for 5 seconds: enemies inside take holy damage every second, and allies inside are blessed. Ranks make it last longer.", "#", 14f, Gold),
+            new AbilityDefinition(AbilityType.DivineIntervention, WeaponType.Hammer, "Divine Intervention", "Mark the ally nearest your cursor (or yourself). If they fall in the next 5 seconds they rise at 25% HP, untouchable and +2 damage for 2 seconds.", "+", 20f, new Color(1f, 0.95f, 0.7f), true),
+            new AbilityDefinition(AbilityType.ThunderClap, WeaponType.Fists, "Thunder Clap", "Clap to send a shockwave rolling far out from you in a narrow cone, knocking back every enemy it reaches and stunning them for 0.75 seconds. Ranks add damage.", "))", 9f, new Color(0.8f, 0.9f, 1f)),
+            new AbilityDefinition(AbilityType.HaymakerDash, WeaponType.Fists, "Haymaker Dash", "Dash forward and uppercut the first enemy, launching it through the air into the enemies behind it. Ranks add damage.", ">!", 8f, BrawlerAttack.Glove),
+            new AbilityDefinition(AbilityType.Suplex, WeaponType.Fists, "Suplex", "Grab the nearest enemy and slam it down a short way toward your cursor, hurting everything where it lands. Guardians are too heavy. Ranks add damage.", "U", 10f, new Color(0.85f, 0.7f, 0.5f), true),
+            new AbilityDefinition(AbilityType.WingDash, WeaponType.Tail, "Wing Dash", "Beat your demon wings to dash, paralysing every enemy you pass through for 1 second. Ranks dash farther.", ">>", 8f, DemonessAttack.Violet),
+            new AbilityDefinition(AbilityType.SoulSiphon, WeaponType.Tail, "Soul Siphon", "For 5 seconds, drain paralysed enemies nearby: each takes demonic damage and heals you 1 HP every second. Ranks lengthen it.", "~", 14f, DemonessAttack.Violet),
+            new AbilityDefinition(AbilityType.NightmareSnap, WeaponType.Tail, "Nightmare Snap", "Snap the paralysis on every enemy nearby: each takes demonic damage that grows with how long its paralysis still had to run. Ranks add damage.", "*", 10f, DemonessAttack.Pale, true),
+            new AbilityDefinition(AbilityType.CardToss, WeaponType.Coins, "Card Toss", "Throw 3 cards in a spread. Each card's suit decides its trick: hearts burn, diamonds freeze, clubs shock and spades paralyse. Ranks add damage.", "<>", 7f, new Color(0.95f, 0.95f, 0.95f)),
+            new AbilityDefinition(AbilityType.DiceBomb, WeaponType.Coins, "Dice Bomb", "Toss a pair of dice at the cursor. Each explodes for your damage times the face it rolls. Ranks add damage.", ":", 10f, new Color(0.97f, 0.95f, 0.9f)),
+            new AbilityDefinition(AbilityType.Insurance, WeaponType.Coins, "Insurance", "For 6 seconds, every hit costs you 5 coins instead of HP (while you can pay). Ranks lengthen the policy.", "$!", 18f, new Color(0.35f, 0.9f, 0.5f), true),
+            new AbilityDefinition(AbilityType.EmpPulse, WeaponType.Beam, "EMP Pulse", "Stun every enemy within 4 units for 1.5 seconds and destroy the enemy bolts around you. Ranks stun longer.", "((", 12f, WorldCatalog.Neon),
+            new AbilityDefinition(AbilityType.GrappleArm, WeaponType.Beam, "Grapple Arm", "Fire a hook that snags the first enemy in line and hauls it to you. Guardians are too heavy to pull. Ranks add damage.", "J", 7f, new Color(0.7f, 0.75f, 0.85f)),
+            new AbilityDefinition(AbilityType.OrbitalLaser, WeaponType.Beam, "Orbital Laser", "A laser from the sky follows your cursor for 3 seconds, burning everything it touches. Ranks lengthen it.", "|v|", 18f, CyborgAttack.Plasma, true),
+            new AbilityDefinition(AbilityType.WarBanner, WeaponType.Sword, "War Banner", "Plant a banner for 6 seconds. You and allies inside its wide circle deal +1 damage, and everyone inside gains 2 wards when it's planted. Ranks extend it.", "F", 18f, new Color(0.9f, 0.2f, 0.25f), true)
         };
+
+        /// <summary>What guardians can offer this hero: their class's abilities, less any not yet bought in the Ash shop.</summary>
+        public static List<AbilityDefinition> PoolFor(WeaponType weapon, PermanentProgress progress)
+        {
+            var pool = new List<AbilityDefinition>();
+            foreach (var ability in All)
+                if (ability.ClassWeapon == weapon && (!ability.ShopUnlock || (progress != null && progress.Rank(ability.UnlockId) > 0))) pool.Add(ability);
+            return pool;
+        }
 
         public static AbilityDefinition Get(AbilityType type)
         {

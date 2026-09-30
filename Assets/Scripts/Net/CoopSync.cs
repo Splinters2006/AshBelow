@@ -47,6 +47,7 @@ namespace Slopgame
             Session.Handle(CoopMessages.Enemies, OnEnemies);
             Session.Handle(CoopMessages.Damage, OnDamage);
             Session.Handle(CoopMessages.Kill, OnKill);
+            Session.Handle(CoopMessages.Minion, OnMinion);
             Session.Handle(CoopMessages.Bolt, OnBolt);
             Session.Handle(CoopMessages.BoltEvent, OnBoltEvent);
             Session.Handle(CoopMessages.Fx, OnFx);
@@ -176,10 +177,11 @@ namespace Slopgame
                 spawned[i].NetId = (ushort)i;
                 enemies[(ushort)i] = spawned[i];
             }
+            nextEnemyId = (ushort)spawned.Count;
             WaitingForTeam = false;
             choicesDone.Clear();
             openChoice = null;
-            if (Run.Player != null && Run.Player.Health <= 0) Run.Player.Revive(true);
+            if (Run.Player != null && Run.Player.Health <= 0) Run.Player.Revive();
             if (IsHost) dead.Clear();
             foreach (var hero in remoteHeroes) hero.Teleport(Run.Player.transform.position);
         }
@@ -273,10 +275,13 @@ namespace Slopgame
                 if (enemy.IsChilled) flags |= EnemySnapshot.Chilled;
                 if (enemy.IsBurning) flags |= EnemySnapshot.Burning;
                 var shooter = enemy.GetComponent<EnemyShooter>();
-                if ((shooter != null && shooter.IsCharging) || (enemy.Boss != null && enemy.Boss.IsCharging)) flags |= EnemySnapshot.Charging;
+                if ((shooter != null && shooter.IsCharging) || (enemy.Boss != null && enemy.Boss.IsCharging)
+                    || (enemy.Variant != null && enemy.Variant.IsWindingUp)) flags |= EnemySnapshot.Charging;
                 if (enemy.Boss != null) flags |= (byte)(enemy.Boss.NetState << EnemySnapshot.BossStateShift);
                 byte more = (byte)((enemy.IsParalyzed ? EnemySnapshot.Paralyzed : 0) | (enemy.IsCursed ? EnemySnapshot.Cursed : 0)
-                    | (enemy.IsFrozen ? EnemySnapshot.Frozen : 0) | (enemy.Boss != null ? EnemySnapshot.HasMaxHealth : 0));
+                    | (enemy.IsFrozen ? EnemySnapshot.Frozen : 0) | (enemy.Boss != null ? EnemySnapshot.HasMaxHealth : 0)
+                    | (enemy.IsStunned ? EnemySnapshot.Stunned : 0) | (enemy.IsRooted ? EnemySnapshot.Rooted : 0)
+                    | (enemy.IsBleeding ? EnemySnapshot.Bleeding : 0) | (enemy.IsPoisoned ? EnemySnapshot.Poisoned : 0));
                 new EnemySnapshot { Id = enemy.NetId, Position = enemy.transform.position, Facing = enemy.Facing.Direction, Health = enemy.Health,
                     MaxHealth = enemy.Boss != null ? enemy.Boss.MaxHealth : 0, Flags = flags, MoreFlags = more }.Write(writer);
             }
@@ -294,6 +299,37 @@ namespace Slopgame
                 var snapshot = EnemySnapshot.Read(reader);
                 if (enemies.TryGetValue(snapshot.Id, out var enemy) && enemy != null) enemy.ApplySnapshot(snapshot);
             }
+        }
+
+        // ---------------------------------------------------------------- summoned minions
+
+        private ushort nextEnemyId;
+
+        /// <summary>Host only: numbers a guardian's new minion and tells the guests to spawn the same one.</summary>
+        public void RegisterMinion(DungeonEnemy enemy, byte kind)
+        {
+            if (!IsHost) return;
+            enemy.NetId = nextEnemyId++;
+            enemies[enemy.NetId] = enemy;
+            using var writer = NetSession.Writer(32);
+            writer.WriteValueSafe(Run.Floor);
+            writer.WriteValueSafe(enemy.NetId);
+            writer.WriteValueSafe(kind);
+            writer.WriteValueSafe((Vector2)enemy.transform.position);
+            Session.Send(CoopMessages.Minion, writer);
+        }
+
+        private void OnMinion(ulong sender, FastBufferReader reader)
+        {
+            if (IsHost) return;
+            reader.ReadValueSafe(out int floor);
+            reader.ReadValueSafe(out ushort id);
+            reader.ReadValueSafe(out byte kind);
+            reader.ReadValueSafe(out Vector2 position);
+            if (floor != Run.Floor || enemies.ContainsKey(id) || Run.Boss == null || Run.Boss.Enemy.Health <= 0) return;
+            var enemy = Run.CreateMinion(position, kind);
+            enemy.NetId = id;
+            enemies[id] = enemy;
         }
 
         // ---------------------------------------------------------------- enemy damage and kills
@@ -322,10 +358,17 @@ namespace Slopgame
             {
                 if (message.Kind == CoopDamageKind.Hit) enemy.Hit(message.Amount, message.Source, message.Knockback);
                 else if (message.Kind == CoopDamageKind.Burn) enemy.Burn(message.Ticks, message.Amount, message.Color);
-                else if (message.Kind == CoopDamageKind.Paralyze) enemy.Paralyze(message.Duration);
+                else if (message.Kind == CoopDamageKind.Paralyze) enemy.Paralyze(message.Duration, message.Ticks > 0);
+                else if (message.Kind == CoopDamageKind.ClearParalysis) enemy.ConsumeParalysis();
                 else if (message.Kind == CoopDamageKind.Curse) enemy.Curse(message.Duration);
                 else if (message.Kind == CoopDamageKind.Freeze) enemy.Freeze(message.Duration);
                 else if (message.Kind == CoopDamageKind.Fear) enemy.Fear(message.Source, message.Duration);
+                else if (message.Kind == CoopDamageKind.Stun) enemy.Stun(message.Duration);
+                else if (message.Kind == CoopDamageKind.Root) enemy.Root(message.Duration);
+                else if (message.Kind == CoopDamageKind.Bleed) enemy.Bleed(message.Ticks, message.Amount);
+                else if (message.Kind == CoopDamageKind.Poison) enemy.Poison(message.Ticks, message.Amount);
+                else if (message.Kind == CoopDamageKind.Mark) enemy.Mark(message.Duration);
+                else if (message.Kind == CoopDamageKind.DeathMark) enemy.DeathMark(message.Duration);
                 else enemy.Chill(message.Duration);
             }
             finally { Attacker = LocalId; }
@@ -461,7 +504,8 @@ namespace Slopgame
             foreach (var hero in remoteHeroes)
             {
                 if (!hero.IsAlive || Vector2.Distance(center, hero.transform.position) > radius) continue;
-                HeroVfx.Motes(Run.ProjectileRoot, hero.transform.position, 0.7f, AbilityCatalog.Gold, 14, 1f);
+                // Heals draw their own green light (HealVfx); everything else glitters gold.
+                if (kind != SupportKind.Heal) HeroVfx.Motes(Run.ProjectileRoot, hero.transform.position, 0.7f, AbilityCatalog.Gold, 14, 1f);
                 SendSupport(hero.Id, kind, amount, duration);
             }
         }
@@ -698,7 +742,7 @@ namespace Slopgame
         private void ReviveLocal()
         {
             if (Run.Player.Health > 0) return;
-            Run.Player.Revive(false);
+            Run.Player.Revive();
             if (Run.ProjectileRoot != null) HeroVfx.Motes(Run.ProjectileRoot, Run.Player.transform.position, 1f, AbilityCatalog.Gold, 24, 1.2f);
             if (IsHost) { dead.Remove(LocalId); return; }
             using var writer = NetSession.Writer(8);

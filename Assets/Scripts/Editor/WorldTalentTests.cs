@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Reflection;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -74,7 +75,12 @@ namespace Slopgame.Editor
                 if (stage == 1)
                 {
                     TestAsh(run);
+                    TestBreakables(run);
+                    TestHazards(run);
+                    TestBestiary(run);
                     TestUniversalEffects(run);
+                    TestHoldTalents(run);
+                    TestExpansion(run);
                     DebugMode.Set(true);
                     while (run.Floor < 15) run.DebugSkipRoom();
                     DebugMode.Set(false);
@@ -102,13 +108,31 @@ namespace Slopgame.Editor
                 // Real time: the talent pick pauses the game, which stops Time.time.
                 if (!run.ChoosingUpgrade && Time.realtimeSinceStartup < waveDeadline) return;
                 Require(run.ChoosingUpgrade && run.Floor == 16 && !run.IsPlaying, "A cleared wave did not open the talent pick by itself");
-                Finish(!failed, "26 talent caps/class gates; crit, burn, freeze, shock, ward effects; world-cleared screen; both world spawns; waves; spread fire, freeze/pause, charge/recovery/walls");
+                Finish(!failed, "26 talent caps/class gates; crit, burn, freeze, shock, ward effects; world-cleared screen; both world spawns; waves; breakables; environmental traps, lava, poison, world elements; 13 world specialists; spread fire, freeze/pause, charge/recovery/walls");
             }
             catch (Exception error) { Debug.LogException(error); Finish(false, error.Message); }
         }
 
         private static void TestCatalog()
         {
+            // The talents & abilities expansion: every ability is in the catalog, shop-locked ones are sold in the Ash shop,
+            // and every hybrid needs an ability of its own hero.
+            foreach (AbilityType type in Enum.GetValues(typeof(AbilityType)))
+            {
+                if (type == AbilityType.None) continue;
+                var ability = AbilityCatalog.Get(type);
+                Require(ability != null, "Ability missing from the catalog: " + type);
+                if (ability.ShopUnlock) Require(PermanentUpgradeCatalog.Get(ability.UnlockId)?.ClassWeapon == ability.ClassWeapon, "Shop ability not sold: " + type);
+            }
+            foreach (var talent in PowerupCatalog.All)
+                if (talent.RequiredAbility != AbilityType.None)
+                    Require(talent.ClassWeapon == AbilityCatalog.Get(talent.RequiredAbility).ClassWeapon, "Hybrid for another hero's ability: " + talent.Name);
+            foreach (var world in WorldCatalog.All)
+            {
+                int rewards = 0;
+                foreach (var item in PermanentUpgradeCatalog.All) if (item.RequiredWorld == world.Index) rewards++;
+                Require(rewards >= 1, "World without Ash shop rewards: " + world.Name);
+            }
             Require(PowerupCatalog.All.Count == Enum.GetValues(typeof(PowerupType)).Length, "Catalog/enum size mismatch");
             for (int i = 0; i < PowerupCatalog.All.Count; i++) Require((int)PowerupCatalog.All[i].Type == i, "Catalog IDs shifted");
             Require((int)PowerupType.DarkHorizon - (int)PowerupType.ExtendedBattery == 26, "Expected 26 new talents");
@@ -120,7 +144,8 @@ namespace Slopgame.Editor
                 foreach (var talent in PowerupCatalog.All)
                 {
                     if (talent.Type <= PowerupType.ExtendedBattery) continue;
-                    bool eligible = !talent.ClassWeapon.HasValue || talent.ClassWeapon == weapon;
+                    // Hybrids also need their ability learned, which a bare talent sheet never has.
+                    bool eligible = (!talent.ClassWeapon.HasValue || talent.ClassWeapon == weapon) && talent.RequiredAbility == AbilityType.None;
                     Require(powers.CanTake(talent.Type) == eligible, "Class gate: " + talent.Name);
                     if (!eligible) { Require(!powers.Add(talent.Type), "Wrong class acquired talent"); continue; }
                     for (int rank = 0; rank < talent.MaxStacks; rank++) Require(powers.Add(talent.Type), "Missing rank: " + talent.Name);
@@ -132,6 +157,129 @@ namespace Slopgame.Editor
                 if (weapon == WeaponType.Staff) Near(powers.ElementalEffectChance, 0.3f, "Stormcraft missing");
                 UnityEngine.Object.Destroy(obj);
             }
+        }
+
+        private static void TestBreakables(DungeonRun run)
+        {
+            Require(Breakable.Active.Count > 0, "No breakables on a combat floor");
+            Vector2 hero = run.Map.Centers[0];
+            run.Player.transform.position = hero;
+            int crystals = run.ProjectileRoot.GetComponentsInChildren<Crystal>().Length;
+            var loaded = Breakable.Create(run, run.ProjectileRoot, hero + Vector2.right, run.World, 2, true);
+            var behind = Breakable.Create(run, run.ProjectileRoot, hero + Vector2.left * 1.5f, run.World, 0, false);
+            Breakable.SmashInArc(run.Player, Vector2.right, Breakable.SwingReach);
+            Require(!Breakable.Active.Contains(loaded), "Swing did not smash the urn in front");
+            Require(Breakable.Active.Contains(behind), "Swing smashed an urn behind the hero");
+            Require(run.ProjectileRoot.GetComponentsInChildren<Crystal>().Length == crystals + 1, "Urn dropped no crystals");
+            Require(run.ProjectileRoot.GetComponentsInChildren<HealthPickup>().Length > 0, "Urn dropped no heart");
+            Require(Breakable.SmashAt(run, behind.transform.position, 0.1f) && !Breakable.Active.Contains(behind), "Touch did not smash the urn");
+            Require(WorldCatalog.All[0].Layout == MapLayout.Dungeon && WorldCatalog.All[1].Layout != MapLayout.Dungeon, "World layouts wrong");
+        }
+
+        private static void TestHazards(DungeonRun run)
+        {
+            foreach (var world in WorldCatalog.All)
+            {
+                Require(world.Traps.Length > 0, "World without traps: " + world.Name);
+                bool fiery = world.Index == 0 || world.Index == 2;
+                Require(fiery == (world.Bolts == BoltKind.Ember) && fiery == (world.Element == HazardStyle.Hellfire), "Fireballs outside the fire worlds: " + world.Name);
+                Require(world.HasLava == (world.Index == 2), "Lava in the wrong world: " + world.Name);
+            }
+            Require(WorldCatalog.All[5].Bolts == BoltKind.Venom, "The Wilds do not spit venom");
+            Require(Array.Exists(WorldCatalog.All[0].Traps, t => t.Style == HazardStyle.Spikes), "The Ash Below has no spike traps");
+            // Venom poisons: slowed and tinted until a heart cures it.
+            run.Player.Poison();
+            Require(run.Player.IsPoisoned, "Venom did not poison the hero");
+            run.Player.CurePoison();
+            Require(!run.Player.IsPoisoned, "Poison was not cured");
+            Require(EnvironmentHazard.CountForFloor(1) == 0 && EnvironmentHazard.CountForFloor(3) > 0, "Wrong trap counts");
+            Require(EnvironmentHazard.Active.Count > 0, "No traps on a combat floor");
+            foreach (var trap in EnvironmentHazard.Active)
+                Require(Vector2.Distance(trap.transform.position, run.Map.Centers[0]) >= EnvironmentHazard.StartClearance - 1f, "Trap at the arrival point");
+            // A vent under the hero burns them once its warning ends.
+            Vector2 hero = run.Map.Centers[0];
+            run.Player.transform.position = hero;
+            var spec = new HazardSpec { Shape = HazardShape.Pool, Style = HazardStyle.Venom, Center = hero, Radius = 1f, Telegraph = 0f, Duration = 1f };
+            var vent = EnvironmentHazard.Create(run, run.ProjectileRoot, run.World, run.World.Traps[0], spec, 4f, 0f);
+            var zone = vent.Fire();
+            Require(zone != null && zone.Contains(hero) && !zone.Contains(hero + Vector2.right * 2f), "Trap strike missed its area");
+            Require(zone.EnemyDamage == EnvironmentHazard.EnemyDamageFor(run) && zone.EnemyDamage > 0, "Trap does not hurt enemies");
+            // An enemy lured onto the vent takes the trap's damage once, not every frame.
+            var victim = run.Enemies.Find(e => e.Boss == null && e.Health > zone.EnemyDamage * 2);
+            Require(victim != null, "No enemy to lure");
+            int health = victim.Health;
+            victim.transform.position = hero;
+            Invoke(zone, "Update");
+            Invoke(zone, "Update");
+            Require(victim.Health == health - zone.EnemyDamage, "Trap damage to enemies wrong: " + (health - victim.Health));
+            UnityEngine.Object.Destroy(zone.gameObject);
+            UnityEngine.Object.Destroy(vent.gameObject);
+        }
+
+        /// <summary>Every world specialist configures, has a sprite, and its attack loop actually strikes, moves or fires.</summary>
+        private static void TestBestiary(DungeonRun run)
+        {
+            var types = new System.Collections.Generic.HashSet<Type>();
+            for (int w = 0; w < WorldCatalog.All.Length; w++)
+            {
+                Require(WorldBestiary.Roster(w).Length >= 2, "World with too few specialists: " + WorldCatalog.All[w].Name);
+                foreach (var type in WorldBestiary.Roster(w)) Require(types.Add(type), "Specialist in two worlds: " + type.Name);
+            }
+            Vector2 hero = run.Map.Centers[1];
+            run.Player.transform.position = hero;
+            foreach (var type in types)
+            {
+                bool close = type == typeof(MagmaStomper) || type == typeof(Cutthroat);
+                Vector2 start = FindSpot(run, hero, close ? 1.5f : 3.5f);
+                var enemy = DungeonVisuals.Create("Test " + type.Name, run.ProjectileRoot, start, Vector2.one * 0.6f, Color.white, 3)
+                    .gameObject.AddComponent<DungeonEnemy>();
+                enemy.Run = run;
+                enemy.Health = 10;
+                enemy.Speed = 2.5f;
+                enemy.enabled = false;
+                var variant = (EnemyVariant)enemy.gameObject.AddComponent(type);
+                variant.Configure(enemy);
+                Require(variant.Sprite != null && enemy.name == variant.DisplayName && variant.CrystalValue > 0, "Specialist setup: " + type.Name);
+                var shooter = enemy.GetComponent<EnemyShooter>();
+                if (shooter != null) { shooter.enabled = false; Require(shooter.Kind.HasValue || type == typeof(EmberFanatic), "Specialist without its own bolts: " + type.Name); }
+                int zones = run.ProjectileRoot.GetComponentsInChildren<HellfireZone>().Length;
+                bool acted = false;
+                if (type == typeof(BlinkMagus))
+                {
+                    enemy.Hit(1, hero);
+                    acted = Vector2.Distance(enemy.transform.position, start) > 1f;
+                }
+                else if (type == typeof(BloatToad))
+                {
+                    variant.OnDeath(enemy);
+                    acted = run.ProjectileRoot.GetComponentsInChildren<HellfireZone>().Length > zones;
+                }
+                else if (shooter == null || type == typeof(OrbitingEye))
+                {
+                    for (int tick = 0; tick < 60 && !acted; tick++)
+                    {
+                        SetTime(enemy, 2f + tick * 0.2f);
+                        variant.Move(enemy, hero, true);
+                        acted = run.ProjectileRoot.GetComponentsInChildren<HellfireZone>().Length > zones
+                            || Vector2.Distance(enemy.transform.position, start) > 0.3f;
+                    }
+                }
+                else acted = true;
+                Require(acted, "Specialist never attacked or moved: " + type.Name);
+                foreach (var zone in run.ProjectileRoot.GetComponentsInChildren<HellfireZone>()) UnityEngine.Object.DestroyImmediate(zone.gameObject);
+                UnityEngine.Object.DestroyImmediate(enemy.gameObject);
+            }
+        }
+
+        /// <summary>Open ground about <paramref name="distance"/> from <paramref name="from"/>, in its line of sight.</summary>
+        private static Vector2 FindSpot(DungeonRun run, Vector2 from, float distance)
+        {
+            for (int i = 0; i < 16; i++)
+            {
+                Vector2 spot = from + (Vector2)(Quaternion.Euler(0, 0, i * 22.5f) * Vector2.right) * distance;
+                if (run.Map.CanStand(spot, 0.3f) && run.HasLineOfSight(from, spot)) return spot;
+            }
+            throw new Exception("No open ground near room center");
         }
 
         private static void TestAsh(DungeonRun run)
@@ -168,6 +316,39 @@ namespace Slopgame.Editor
             Near(Vector2.Angle(bolts[before].Direction, bolts[before + 2].Direction), 36f, "Fan spread wrong");
         }
 
+        /// <summary>The talents & abilities expansion's core rules.</summary>
+        private static void TestExpansion(DungeonRun run)
+        {
+            var player = run.Player;
+            var enemy = run.Enemies.Find(e => e.Boss == null && e.Health > 0);
+            Require(enemy != null, "No enemy for the expansion checks");
+            enemy.Health = 1000;
+            // Stun and root both count as immobilized; only the stun holds the enemy.
+            Require(enemy.Stun(1f) && enemy.IsStunned && enemy.IsHeld && enemy.IsImmobilized, "Stun did not hold the enemy");
+            Require(enemy.Root(1f) && enemy.IsRooted, "Root did not take");
+            // Executioner: +50% below a quarter of peak health.
+            Require(CombatDamage.ScaleForTarget(player, enemy, 10) == 10, "Executioner fired without the talent");
+            player.Powerups.Add(PowerupType.Executioner);
+            enemy.Hit(800, enemy.transform.position, 0f);
+            Require(CombatDamage.ScaleForTarget(player, enemy, 10) == 15, "Executioner did not add 50% to a wounded enemy");
+            // Glass Cannon halves max HP, and halves later gains too.
+            int before = player.MaxHealth;
+            Require(player.GrantPowerup(PowerupType.GlassCannon) && player.MaxHealth == Mathf.CeilToInt(before * 0.5f), "Glass Cannon did not halve max HP");
+            int halved = player.MaxHealth;
+            player.RaiseMaxHealth(2);
+            Require(player.MaxHealth == Mathf.CeilToInt((before + 2) * 0.5f) && player.MaxHealth <= halved + 1, "Glass Cannon did not halve a later max HP gain");
+            // Guardian ability picks: learning fills an empty key, and binding to the other key swaps them.
+            var abilities = player.Abilities;
+            var pool = AbilityCatalog.PoolFor(player.ClassWeapon, null);
+            Require(pool.Count >= 5 && !pool.Exists(a => a.ShopUnlock), "Wrong guardian pool before any Ash shop unlocks");
+            Require(abilities.Learn(pool[0].Type) && abilities.Learn(pool[1].Type), "Could not learn abilities");
+            Require(abilities.Equipped(0) == pool[0].Type && abilities.Equipped(1) == pool[1].Type, "Learned abilities did not fill empty keys");
+            Require(abilities.Learn(pool[2].Type) && !abilities.IsEquipped(pool[2].Type) && abilities.IsLearned(pool[2].Type), "Third ability should wait on the abilities page");
+            Require(abilities.Equip(pool[2].Type, 0) && abilities.Equipped(0) == pool[2].Type, "Could not bind a learned ability");
+            Require(abilities.Equip(pool[1].Type, 0) && abilities.Equipped(0) == pool[1].Type && abilities.Equipped(1) == pool[2].Type, "Binding to the other key did not swap");
+            Require(abilities.Learn(pool[1].Type) && abilities.Rank(pool[1].Type) == 2, "Picking a known ability did not rank it up");
+        }
+
         private static void TestUniversalEffects(DungeonRun run)
         {
             var player = run.Player;
@@ -198,6 +379,38 @@ namespace Slopgame.Editor
             powers.Add(PowerupType.StaticField);
             CombatDamage.Shock(player, enemy.transform.position, enemy, 4);
             Require(target.Health == 999, "Static Field did not expand shock damage");
+        }
+
+        /// <summary>The immobilize talents; they are taken off again afterwards so later checks see a clean talent sheet.</summary>
+        private static void TestHoldTalents(DungeonRun run)
+        {
+            var player = run.Player;
+            var powers = player.Powerups;
+            var enemy = run.Enemies.Find(e => e.Boss == null && e.Health > 0);
+            var target = run.Enemies.Find(e => e != enemy && e.Boss == null && e.Health > 0);
+            Require(enemy != null && target != null, "No enemies for the hold talent checks");
+            Vector2 center = run.Map.Centers[1];
+            enemy.transform.position = center + Vector2.left;
+            target.transform.position = center + Vector2.right * 0.5f;
+            enemy.Health = target.Health = 1000;
+            foreach (var field in new[] { "frozenUntil", "stunnedUntil", "rootedUntil", "paralyzedUntil", "chilledUntil" })
+                typeof(DungeonEnemy).GetField(field, PrivateInstance).SetValue(enemy, 0f);
+            typeof(DungeonEnemy).GetField("burnTicks", PrivateInstance).SetValue(enemy, 0);
+            var added = new[] { PowerupType.IronGrip, PowerupType.SearingHold, PowerupType.StaticHold, PowerupType.NumbingHold, PowerupType.SittingDuck };
+            Require(CombatDamage.ScaleForTarget(player, enemy, 10) == 10, "Sitting Duck fired without the talent");
+            foreach (var type in added) Require(powers.Add(type), "Could not take " + type);
+            Require(CombatDamage.ScaleForTarget(player, enemy, 10) == 10, "Sitting Duck fired on a free enemy");
+            Require(enemy.Root(1f), "Root did not take");
+            Near(Field<float>(enemy, "rootedUntil") - Time.time, 1.25f, "Iron Grip did not lengthen the root");
+            Require(Field<int>(enemy, "burnTicks") > 0, "Searing Hold did not set the enemy burning");
+            Require(target.Health < 1000, "Static Hold did not shock the enemy nearby");
+            Near(Field<float>(enemy, "chilledUntil") - Time.time, 1.25f + PlayerPowerups.NumbingChill, "Numbing Hold did not outlast the hold");
+            Require(CombatDamage.ScaleForTarget(player, enemy, 10) == 13, "Sitting Duck did not add 30% on a held enemy");
+            int shocked = target.Health;
+            enemy.Stun(1f);
+            Require(target.Health == shocked, "A repeat hold on a held enemy set the hold talents off again");
+            var stacks = Field<System.Collections.Generic.Dictionary<PowerupType, int>>(powers, "stacks");
+            foreach (var type in added) stacks.Remove(type);
         }
 
         /// <summary>The first world's third guardian: its stairs open the world-cleared screen, and Next world carries on into world 2.</summary>
@@ -236,7 +449,7 @@ namespace Slopgame.Editor
             Require(run.Floor == 16, "Travelled between worlds without clearing one");
         }
 
-        /// <summary>The travel map's data: one world per hero but the Knight and Archer, the Augment's second, all on the map.</summary>
+        /// <summary>The travel map's data: at most one world per hero (never the starting heroes), the Augment's second, all on the map.</summary>
         private static void TestWorldCatalog()
         {
             var worlds = WorldCatalog.All;

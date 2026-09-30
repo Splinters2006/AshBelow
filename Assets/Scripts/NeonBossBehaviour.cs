@@ -13,6 +13,10 @@ namespace Slopgame
         private FlameMesh effect;
         protected abstract Color Accent { get; }
         protected abstract Sprite Chassis { get; }
+        /// <summary>The fixed-colour layer over the tinted chassis: lenses, neon lights, warheads and stripes.</summary>
+        protected abstract Sprite Details { get; }
+        /// <summary>The chassis's base metal; enraged it glows toward <see cref="Accent"/>, and it flashes white while venting.</summary>
+        protected abstract Color BodyTint { get; }
         protected abstract string[] AttackTells { get; }
         protected abstract float Attack(int index, Vector2 aim);
         protected virtual void AttackTick() { }
@@ -28,6 +32,7 @@ namespace Slopgame
         {
             transform.localScale = Vector3.one * Scale;
             GetComponent<SpriteRenderer>().sprite = Chassis;
+            BossArt.AddDetails(transform, Title + " details", Details);
             Enemy.Speed = 2.4f;
             until = Enemy.ActionTime + 1.1f;
             effectObject = new GameObject(Title + " circuitry");
@@ -35,7 +40,7 @@ namespace Slopgame
             effect = new FlameMesh(effectObject, 5);
         }
 
-        public override Color BodyColor() => Flashing(Accent, Color.white, state == 4);
+        public override Color BodyColor() => Flashing(IsEnraged ? Color.Lerp(BodyTint, Accent, 0.3f) : BodyTint, Color.white, state == 4);
         public override void HostTick(Vector2 toHero)
         {
             Enemy.Facing.TurnToward(toHero, Time.deltaTime * Enemy.ActionSpeedMultiplier * 3f);

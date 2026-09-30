@@ -25,7 +25,7 @@ namespace Slopgame
         public bool CanTake(PowerupType type) => Count(type) < PowerupCatalog.Get(type).MaxStacks
             && (!PowerupCatalog.Get(type).ClassWeapon.HasValue || PowerupCatalog.Get(type).ClassWeapon == ClassWeapon)
             && (PowerupCatalog.Get(type).RequiredAbility == AbilityType.None
-                || (Abilities != null && Abilities.IsEquipped(PowerupCatalog.Get(type).RequiredAbility)));
+                || (Abilities != null && Abilities.IsLearned(PowerupCatalog.Get(type).RequiredAbility)));
 
         public bool Add(PowerupType type)
         {
@@ -63,6 +63,150 @@ namespace Slopgame
             return true;
         }
 
+        // ---------------------------------------------------------------- universal expansion talents
+
+        public const float LastStandSpeed = 1.2f, CloseCallCooldown = 5f, ThornsRadius = 1f;
+        public const int RhythmBeat = 4, SpellbladeStrikes = 3, SpellbladeBonus = 2;
+        private int rhythmCount, spellbladeStrikes;
+        private bool elementalPrimed, inBasicAttack, rhythmBeat, spellbladeActive;
+        private float closeCallReadyAt;
+        public const int TipJarCoins = 25;
+        private int tipJar;
+
+        /// <summary>Tip Jar: every 25 gold coins picked up heal 1 HP.</summary>
+        public void OnCoinsPicked(DungeonPlayer player, int coins)
+        {
+            if (Count(PowerupType.TipJar) == 0) return;
+            tipJar += coins;
+            while (tipJar >= TipJarCoins) { tipJar -= TipJarCoins; player.Heal(1); HeroVfx.Motes(player.Run.ProjectileRoot, player.transform.position, 0.6f, GamblerAttack.Gold, 10, 0.8f); }
+        }
+
+        public const int ZealStacks = 10;
+        /// <summary>Zeal: stacks from the Paladin's hits; a full count doubles the next blessing.</summary>
+        public int Zeal { get; private set; }
+        public void AddZeal() { if (Count(PowerupType.Zeal) > 0 && Zeal < ZealStacks) Zeal++; }
+        public bool ConsumeZeal()
+        {
+            if (Zeal < ZealStacks) return false;
+            Zeal = 0;
+            return true;
+        }
+
+        /// <summary>Ambush: the next hit after the hero was hidden deals double damage.</summary>
+        public bool AmbushReady { get; set; }
+        private int bloodTrailCrits;
+
+        /// <summary>Blood Trail: every 10th critical hit heals 1 HP.</summary>
+        public void OnCritical(DungeonPlayer player)
+        {
+            if (Count(PowerupType.BloodTrail) == 0 || ++bloodTrailCrits < 10) return;
+            bloodTrailCrits = 0;
+            player.Heal(1);
+            HeroVfx.Motes(player.Run.ProjectileRoot, player.transform.position, 0.6f, DungeonEnemy.BleedColor, 8, 0.7f);
+        }
+
+        /// <summary>Cheat Death's once-per-world save is spent.</summary>
+        public bool CheatDeathSpent { get; set; }
+
+        /// <summary>
+        /// Damage multiplier from the hero's own state: Glass Cannon, Last Stand, Berserker and the Ash shop's Infernal Pact,
+        /// plus Rhythm's double beat while a basic attack is being thrown.
+        /// </summary>
+        public float DamageMultiplier(DungeonPlayer player)
+        {
+            float multiplier = Permanent.DamageMultiplier;
+            if (Count(PowerupType.GlassCannon) > 0) multiplier *= 1.5f;
+            if (Count(PowerupType.LastStand) > 0 && player.Health == 1) multiplier *= 2f;
+            if (Count(PowerupType.Berserker) > 0 && player.MaxHealth > 0)
+                multiplier *= 1f + (player.MaxHealth - Mathf.Max(0, player.Health)) / (float)player.MaxHealth;
+            if (inBasicAttack && rhythmBeat) multiplier *= 2f;
+            return multiplier;
+        }
+        /// <summary>Flat damage added while a basic attack is being thrown (Spellblade).</summary>
+        public int BasicAttackBonus => inBasicAttack && spellbladeActive ? SpellbladeBonus : 0;
+        /// <summary>Glass Cannon and the Ash shop's Infernal Pact scale maximum HP.</summary>
+        public float MaxHealthMultiplier => (Count(PowerupType.GlassCannon) > 0 ? 0.5f : 1f) * Permanent.MaxHealthMultiplier;
+        public float MoveMultiplier(DungeonPlayer player) => Count(PowerupType.LastStand) > 0 && player.Health == 1 ? LastStandSpeed : 1f;
+
+        /// <summary>
+        /// Wraps a basic attack or class skill (left or right click) so Rhythm and Spellblade apply to the damage it
+        /// deals as it is thrown. Returns whether the attack went off; only then does it count toward the beat.
+        /// </summary>
+        public bool BasicAttack(System.Func<bool> attack)
+        {
+            rhythmBeat = Count(PowerupType.Rhythm) > 0 && (rhythmCount + 1) % RhythmBeat == 0;
+            spellbladeActive = spellbladeStrikes > 0;
+            inBasicAttack = true;
+            bool thrown;
+            try { thrown = attack(); }
+            finally { inBasicAttack = false; }
+            if (!thrown) return false;
+            if (Count(PowerupType.Rhythm) > 0) rhythmCount++;
+            if (spellbladeActive) spellbladeStrikes--;
+            return true;
+        }
+
+        /// <summary>A Q or E ability was used: Spellblade charges the next basic attacks.</summary>
+        public void OnAbilityUsed() { if (Count(PowerupType.Spellblade) > 0) spellbladeStrikes = SpellbladeStrikes; }
+
+        /// <summary>Elemental Kills: whether this elemental hit sets off its element for free (and spends the charge).</summary>
+        public bool ConsumeElementalPrime()
+        {
+            if (!elementalPrimed) return false;
+            elementalPrimed = false;
+            return true;
+        }
+
+        /// <summary>Close Call: a roll just slipped through an enemy bolt.</summary>
+        public void OnCloseCall(DungeonPlayer player)
+        {
+            if (Count(PowerupType.CloseCall) == 0 || Time.time < closeCallReadyAt) return;
+            closeCallReadyAt = Time.time + CloseCallCooldown;
+            AddWard();
+            HeroVfx.Pulse(player.transform, player.transform.position, 0.9f, AbilityCatalog.Ice, 0.35f);
+        }
+
+        /// <summary>Thorns: when the hero is hit, everything within a unit takes their damage.</summary>
+        public void OnStruck(DungeonPlayer player)
+        {
+            if (Count(PowerupType.Thorns) == 0) return;
+            Vector2 center = player.transform.position;
+            HeroVfx.Pulse(player.Run.ProjectileRoot, center, ThornsRadius, new Color(0.6f, 0.9f, 0.4f), 0.25f);
+            foreach (var enemy in player.Run.Enemies.ToArray())
+                if (enemy != null && enemy.Health > 0 && Vector2.Distance(center, enemy.transform.position) <= ThornsRadius + enemy.HitRadius)
+                    CombatDamage.Apply(player, enemy, player.Damage, DamageElement.Physical, center, 0.8f);
+        }
+
+        public const float IronGripMultiplier = 1.25f, NumbingChill = 2f, DominoRadius = 1.5f, DominoStun = 0.75f;
+        /// <summary>Iron Grip: how much longer every paralysis, freeze, stun and root the hero inflicts lasts.</summary>
+        public float HoldDurationMultiplier => Count(PowerupType.IronGrip) > 0 ? IronGripMultiplier : 1f;
+
+        /// <summary>
+        /// The hero just immobilized an enemy that was moving freely (repeat holds on an already held enemy do not count):
+        /// Searing Hold, Static Hold and Numbing Hold set off their elements. <paramref name="duration"/> is the hold's length.
+        /// </summary>
+        public void OnImmobilized(DungeonPlayer player, DungeonEnemy enemy, float duration)
+        {
+            int hit = player.Damage;
+            if (Count(PowerupType.StaticHold) > 0) CombatDamage.ApplyEffect(player, enemy, DamageElement.Lightning, hit);
+            if (enemy.Health <= 0) return;
+            if (Count(PowerupType.SearingHold) > 0) CombatDamage.ApplyEffect(player, enemy, DamageElement.Fire, hit);
+            // The chill runs out past the hold, so the enemy crawls for a while once it breaks free.
+            if (Count(PowerupType.NumbingHold) > 0) enemy.Chill(duration + NumbingChill);
+        }
+
+        /// <summary>Domino: a held enemy's death stuns everything close around it, which may set off the hold talents again.</summary>
+        private static void Domino(DungeonPlayer player, DungeonEnemy dead)
+        {
+            var run = player.Run;
+            Vector2 center = dead.transform.position;
+            HeroVfx.Pulse(run.ProjectileRoot, center, DominoRadius, DungeonEnemy.StunnedTint, 0.3f);
+            CoopFx.Pulse(run, center, DominoRadius, DungeonEnemy.StunnedTint, 0.3f);
+            foreach (var enemy in run.Enemies.ToArray())
+                if (enemy != null && enemy != dead && enemy.Health > 0 && Vector2.Distance(center, enemy.transform.position) <= DominoRadius + enemy.HitRadius)
+                    enemy.Stun(DominoStun);
+        }
+
         public const float KillStreakWindow = 1f, KillCooldownCut = 0.5f, PyreRadius = 2f;
         public const int MassacreKills = 5, MomentumKills = 2;
         private readonly Queue<float> recentKills = new Queue<float>();
@@ -84,12 +228,15 @@ namespace Slopgame
             if (recentKills.Count == MomentumKills && Count(PowerupType.Momentum) > 0) player.ResetDodge();
             if (recentKills.Count == MassacreKills && Count(PowerupType.Massacre) > 0) player.ResetClassSkill();
 
-            bool held = enemy != null && enemy.IsHeld;
+            // Nerve Snap, Still Hunter and Domino count any immobilized enemy: paralysed, frozen, stunned or rooted.
+            bool held = enemy != null && enemy.IsImmobilized;
+            if (Count(PowerupType.ElementalKills) > 0) elementalPrimed = true;
             if (held && Count(PowerupType.NerveSnap) > 0) player.ResetClassSkill();
             float cut = (Count(PowerupType.Bloodrush) > 0 ? KillCooldownCut : 0f) + (held && Count(PowerupType.StillHunter) > 0 ? KillCooldownCut : 0f);
             if (cut > 0f) player.ReduceCooldowns(cut);
 
             if (enemy != null && enemy.IsBurning && Count(PowerupType.PyreBurst) > 0) PyreBurst(player, enemy);
+            if (held && Count(PowerupType.Domino) > 0) Domino(player, enemy);
         }
 
         /// <summary>A burning enemy bursts into flame: fire damage to everything around it, which may light them too.</summary>

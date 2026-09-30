@@ -10,20 +10,21 @@ namespace Slopgame
             Damage = "ab.damage", Kill = "ab.kill", Bolt = "ab.bolt", BoltEvent = "ab.boltevent", Fx = "ab.fx",
             Support = "ab.support", Interact = "ab.interact", Choice = "ab.choice", ChoiceDone = "ab.done",
             Advance = "ab.advance", Died = "ab.died", Revived = "ab.revived", Over = "ab.over", Hazard = "ab.hazard",
-            RestartVote = "ab.restartvote", RestartVotes = "ab.restartvotes";
+            RestartVote = "ab.restartvote", RestartVotes = "ab.restartvotes", Minion = "ab.minion";
     }
 
     public enum CoopChoice : byte { Upgrade, Artifact }
-    public enum CoopDamageKind : byte { Hit, Burn, Chill, Paralyze, Curse, Freeze, Fear }
+    public enum CoopDamageKind : byte { Hit, Burn, Chill, Paralyze, Curse, Freeze, Fear, Stun, Root, Bleed, Poison, Mark, DeathMark, ClearParalysis }
     public enum CoopBoltEventKind : byte { Reflected, Consumed }
     /// <summary>
     /// Heal, Protect and Bless help a teammate. BlessingCredit tells a Paladin how much bonus damage their blessing
     /// dealt (it charges their angels); Revive raises a fallen teammate with half health.
     /// </summary>
-    public enum SupportKind : byte { Heal, Protect, Bless, BlessingCredit, Revive }
+    public enum SupportKind : byte { Heal, Protect, Bless, BlessingCredit, Revive, Ward, Intervention }
     public enum FxKind : byte { Arrow, Spell, Slash, Bolt, GlowBolt, Ring, Pulse, Rift, Execution, Singularity, Punch, RearHit, Knife, PiercingShot, Aegis, Holy, Sanctuary,
         Windstep, Shadowstep, Stab, Quake, HolySword, Venom, HeavyPunch, Flurry, SanctuaryEnd, TailStab, TailSweep, Pentagram, DemonPaw, Coin, DemonHead, Sharpen, CoinFlip, CoinRain, Angel, Jackpot,
-        PlasmaRay, PlasmaOrb, SentryTurret, MicroMissile }
+        PlasmaRay, PlasmaOrb, SentryTurret, MicroMissile, IceWall, Wings, SoulSiphon, Ricochet, Net, ShadowClone, DeathMark, RocketBoost, OrbitalLaser, Grapple, BrawlerMove, Insurance, InsuranceClaim, Card, Dice,
+        Shield, Whirlwind, WarBanner, Consecration, Heal, Lance, Intervention, BallLightning, IceBreak, NightmareSnap, SnapTether }
 
     public struct PlayerStateMessage
     {
@@ -61,7 +62,7 @@ namespace Slopgame
         /// <summary>The top four bits carry the boss's attack state (see <see cref="DungeonBoss.NetState"/>).</summary>
         public const int BossStateShift = 4;
         /// <summary>Bits of <see cref="MoreFlags"/>.</summary>
-        public const byte Paralyzed = 1, Cursed = 2, Frozen = 4, HasMaxHealth = 8;
+        public const byte Paralyzed = 1, Cursed = 2, Frozen = 4, HasMaxHealth = 8, Stunned = 16, Rooted = 32, Bleeding = 64, Poisoned = 128;
         public ushort Id;
         public Vector2 Position, Facing;
         public int Health;
