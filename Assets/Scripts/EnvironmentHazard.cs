@@ -87,10 +87,12 @@ namespace Slopgame
                 for (int dy = -1; dy <= 1; dy++)
                     if (!map.IsFloor(cell.x + dx, cell.y + dy) || map.IsLava(cell.x + dx, cell.y + dy)) return null;
             bool rune = theme.Kind == TrapKind.Rune;
+            // Spikes stab and sink back at once; other vents burn a while.
             return new HazardSpec
             {
                 Shape = rune ? HazardShape.Ring : HazardShape.Pool, Style = theme.Style, Center = cell, Direction = Vector2.right,
-                Radius = theme.Size, Width = rune ? 0.7f : 0f, Telegraph = Telegraph, Duration = rune ? 1f : 1.3f
+                Radius = theme.Size, Width = rune ? 0.7f : 0f, Telegraph = Telegraph,
+                Duration = rune ? 1f : theme.Style == HazardStyle.Spikes ? 0.5f : 1.3f
             };
         }
 
@@ -146,6 +148,7 @@ namespace Slopgame
             HazardStyle.Frost => AbilityCatalog.Ice,
             HazardStyle.Steel => new Color(0.6f, 0.95f, 1f),
             HazardStyle.Venom => new Color(0.55f, 1f, 0.3f),
+            HazardStyle.Spikes => new Color(0.85f, 0.88f, 0.92f),
             HazardStyle.Void => new Color(0.75f, 0.35f, 1f),
             _ => FlameMesh.Orange
         };

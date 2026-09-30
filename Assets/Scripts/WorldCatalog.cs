@@ -73,6 +73,7 @@ namespace Slopgame
                 null, false, new Vector2(0.04f, 0.72f), MapLayout.Dungeon, new[]
                 {
                     new TrapTheme("Fire vent", TrapKind.Vent, HazardStyle.Hellfire, 1.1f),
+                    new TrapTheme("Spike trap", TrapKind.Vent, HazardStyle.Spikes, 0.9f),
                 }),
             // The Augment's world.
             new WorldDefinition(1, "THE NEON ARCOLOGY", true, new Color(0.015f, 0.01f, 0.05f),

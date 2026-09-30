@@ -145,6 +145,7 @@ namespace Slopgame.Editor
                 Require(world.HasLava == (world.Index == 2), "Lava in the wrong world: " + world.Name);
             }
             Require(WorldCatalog.All[5].Bolts == BoltKind.Venom, "The Wilds do not spit venom");
+            Require(Array.Exists(WorldCatalog.All[0].Traps, t => t.Style == HazardStyle.Spikes), "The Ash Below has no spike traps");
             // Venom poisons: slowed and tinted until a heart cures it.
             run.Player.Poison();
             Require(run.Player.IsPoisoned, "Venom did not poison the hero");

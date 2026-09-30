@@ -29,7 +29,9 @@ namespace Slopgame
         Artillery,
         Void,
         /// <summary>The Savage Wilds' toxic spores: green, flame-like fumes.</summary>
-        Venom
+        Venom,
+        /// <summary>The Ash Below's spike traps: holes rattle in a steel plate, then spikes stab up.</summary>
+        Spikes
     }
 
     /// <summary>Everything needed to rebuild a hazard on another machine.</summary>
@@ -66,6 +68,8 @@ namespace Slopgame
             new Color(0.45f, 0.95f, 1f), new Color(0.2f, 0.45f, 0.62f), new Color(0.08f, 0.15f, 0.22f));
         private static readonly Palette PlasmaPalette = new Palette(new Color(1f, 0.95f, 1f), new Color(1f, 0.6f, 0.95f),
             new Color(1f, 0.25f, 0.8f), new Color(0.5f, 0.1f, 0.6f), new Color(0.15f, 0.03f, 0.22f));
+        private static readonly Palette SpikePalette = new Palette(Color.white, new Color(0.85f, 0.88f, 0.92f),
+            new Color(0.6f, 0.63f, 0.68f), new Color(0.3f, 0.32f, 0.36f), new Color(0.1f, 0.1f, 0.12f));
         private static readonly Palette VenomPalette = new Palette(new Color(0.95f, 1f, 0.85f), new Color(0.75f, 1f, 0.35f),
             new Color(0.4f, 0.85f, 0.2f), new Color(0.18f, 0.45f, 0.1f), new Color(0.06f, 0.15f, 0.04f));
 
@@ -99,7 +103,7 @@ namespace Slopgame
             spec.Direction = spec.Direction.sqrMagnitude > 0.0001f ? spec.Direction.normalized : Vector2.right;
             zone.spec = spec;
             zone.colors = spec.Style == HazardStyle.Frost ? FrostPalette : spec.Style == HazardStyle.Steel ? SteelPalette
-                : spec.Style == HazardStyle.Plasma ? PlasmaPalette : spec.Style == HazardStyle.Venom ? VenomPalette : HellfirePalette;
+                : spec.Style == HazardStyle.Plasma ? PlasmaPalette : spec.Style == HazardStyle.Venom ? VenomPalette : spec.Style == HazardStyle.Spikes ? SpikePalette : HellfirePalette;
             if (spec.Style == HazardStyle.Circuit || spec.Style == HazardStyle.Artillery || spec.Style == HazardStyle.Void)
             {
                 Color tint = spec.Style == HazardStyle.Circuit ? WorldCatalog.Neon
@@ -164,6 +168,33 @@ namespace Slopgame
                 HeroVfx.Sparks(run.ProjectileRoot, enemy.transform.position, colors.Main, 8, 3.5f, 0.35f, Vector2.up, 120f);
                 enemy.Hit(EnemyDamage, spec.Center, IsGround ? 0f : 0.6f);
             }
+        }
+
+        /// <summary>A steel plate full of holes; they rattle through the warning, then a bed of spikes stabs up and sinks back.</summary>
+        private void DrawSpikes(bool warning, float warn, float fade)
+        {
+            float r = spec.Radius;
+            flames.Disc(spec.Center, r, FlameMesh.Alpha(colors.Deep, 0.35f * fade), FlameMesh.Alpha(colors.Dark, 0.25f * fade));
+            flames.Ring(spec.Center, r, 0.06f, FlameMesh.Alpha(colors.Main, (warning ? 0.35f + 0.5f * warn : 0.8f) * fade));
+            float rise = warning ? 0f : Mathf.Clamp01(ActiveTime / 0.07f);
+            float rattle = warning && warn > 0.55f ? Mathf.Sin(Time.time * 60f) * 0.03f : 0f;
+            const float Spacing = 0.36f;
+            for (float x = -r; x <= r; x += Spacing)
+                for (float y = -r; y <= r; y += Spacing)
+                {
+                    Vector2 spot = spec.Center + new Vector2(x + ((int)Mathf.Round(y / Spacing) % 2 == 0 ? 0f : Spacing * 0.5f), y);
+                    if (Vector2.Distance(spot, spec.Center) > r - 0.12f) continue;
+                    flames.Disc(spot, 0.07f, FlameMesh.Alpha(colors.Dark, 0.9f * fade), FlameMesh.Alpha(colors.Dark, 0.6f * fade), 8);
+                    if (warning)
+                    {
+                        // Tips glint in the holes just before they strike.
+                        if (warn > 0.55f) flames.Diamond(spot + new Vector2(rattle, 0f), 0.05f, FlameMesh.Alpha(colors.Bright, (warn - 0.55f) * 2f));
+                        continue;
+                    }
+                    float height = 0.42f * rise;
+                    flames.Triangle(spot + new Vector2(-0.08f, 0f), spot + new Vector2(0.08f, 0f), spot + Vector2.up * height,
+                        FlameMesh.Alpha(colors.Deep, fade), FlameMesh.Alpha(colors.Main, fade), FlameMesh.Alpha(colors.Core, fade));
+                }
         }
 
         private void Erupt()
@@ -391,6 +422,7 @@ namespace Slopgame
 
         private void DrawPool(bool warning, float warn, float fade)
         {
+            if (spec.Style == HazardStyle.Spikes) { DrawSpikes(warning, warn, fade); return; }
             float r = spec.Radius, time = Time.time;
             if (warning)
             {
