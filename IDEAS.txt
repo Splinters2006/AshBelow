@@ -1,0 +1,8 @@
+rework shhop ui to better work if a lot of options
+make wing dash paralysis last longer
+make bosses more aggressive and attack faster
+make bastion the siege engine restrice parts of the arena with earthquakes
+increase demons curse size byu 25%
+add a 25% attackspeed powerup
+tune up world 3 difficulty by a lot
+
