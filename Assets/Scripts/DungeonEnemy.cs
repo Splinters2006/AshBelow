@@ -375,6 +375,8 @@ namespace Slopgame
                     Boss != null ? 6f : 4.2f, Boss != null ? 0.6f : 0.4f);
                 HeroVfx.Pulse(Run.ProjectileRoot, transform.position, Boss != null ? 2.4f : 0.8f, AbilityCatalog.Gold, Boss != null ? 0.6f : 0.3f);
             }
+            if (Run.ProjectileRoot != null)
+                DeathAnimation.Play(transform, Run.ProjectileRoot, Boss != null ? DeathAnimation.BossDuration : DeathAnimation.EnemyDuration);
             gameObject.SetActive(false);
             Destroy(gameObject);
         }

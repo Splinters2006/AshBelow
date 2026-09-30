@@ -48,6 +48,9 @@ namespace Slopgame
         private float nextIgniteAt, nextIgniteFlame;
         public bool IsInvulnerable => Time.time < invulnerableUntil || IsRolling;
         /// <summary>Shadow Veil: enemies cannot see this hero, so they neither chase nor turn toward them.</summary>
+        /// <summary>Unscaled time the hero last fell, so the HUD can let the death animation play first.</summary>
+        public float FellAt { get; private set; } = float.NegativeInfinity;
+        public bool IsFalling => Health <= 0 && Time.unscaledTime < FellAt + DeathAnimation.HeroDuration;
         public bool IsVeiled => Time.time < veiledUntil && Health > 0;
         public Vector2 AimDirection { get; private set; } = Vector2.right;
         /// <summary>Where the cursor points in the world (Orbital Laser follows it).</summary>
@@ -400,19 +403,22 @@ namespace Slopgame
             if (!warded) hurtUntil = Time.time + HurtBlink;
             invulnerableUntil = Time.time + 1f;
             if (Health > 0) return true;
-            if (!Run.IsNetworked) { Run.EndRun(); return true; }
+            // The hero topples over; a solo death holds the game-over screen back until the fall has played.
+            FellAt = Time.unscaledTime;
+            if (Run.ProjectileRoot != null) DeathAnimation.Play(transform, Run.ProjectileRoot, DeathAnimation.HeroDuration, true);
             SetVisible(false);
+            if (!Run.IsNetworked) { Run.EndRun(); return true; }
             Run.LocalHeroDied();
             return true;
         }
 
         /// <summary>
-        /// Co-op: a fallen hero rises. At the start of the next floor they come back at full health; a teammate's
-        /// Heavenly Host raising them mid-fight brings them back with half.
+        /// Co-op: a fallen hero rises with half their health, whether at the start of the next floor or raised
+        /// mid-fight by a teammate's Heavenly Host.
         /// </summary>
-        public void Revive(bool fullHealth)
+        public void Revive()
         {
-            Health = fullHealth ? MaxHealth : Mathf.Max(1, MaxHealth / 2);
+            Health = Mathf.Max(1, MaxHealth / 2);
             invulnerableUntil = Time.time + 1.5f;
             SetVisible(true);
         }

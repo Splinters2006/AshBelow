@@ -59,7 +59,11 @@ namespace Slopgame
             ChargeAmount = state.Charge / 255f;
             bool wasAlive = IsAlive;
             Health = (flags & PlayerStateMessage.Dead) != 0 ? 0 : Mathf.Max(1, (int)state.Health);
-            if (wasAlive && !IsAlive) DiedAt = Time.time;
+            if (wasAlive && !IsAlive)
+            {
+                DiedAt = Time.time;
+                if (run != null && run.ProjectileRoot != null) DeathAnimation.Play(transform, run.ProjectileRoot, DeathAnimation.HeroDuration);
+            }
             MaxHealth = Mathf.Max(1, (int)state.MaxHealth);
             // Big jumps (a blink, a new floor) snap instead of sliding through walls.
             if (Vector2.Distance(transform.position, target) > 4f) transform.position = target;

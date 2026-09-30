@@ -18,6 +18,9 @@ namespace Slopgame
         private static readonly Rect PurseRect = new Rect(900, 262, 356, 260);
         private static readonly Rect ShopRect = new Rect(876, 84, 380, 476);
         private bool ShopOpen => Run.Shop != null && Run.Shop.IsOpen;
+        /// <summary>The run just ended with the hero's fall still playing: the game-over screen waits for it.</summary>
+        private bool DeathPending => !Run.IsPlaying && !Run.ChoosingArtifact && !Run.ChoosingUpgrade && !Run.WorldComplete
+            && Run.Player != null && Run.Player.IsFalling;
         private bool CanRestartCoop => Run.IsNetworked && Run.IsPlaying;
 
         public bool BlocksPointer(Vector2 screenPosition)
@@ -40,7 +43,7 @@ namespace Slopgame
             if (Run.Boss != null) displayedBossHealth = Mathf.Lerp(displayedBossHealth, Run.Boss.Enemy.Health / (float)Run.Boss.MaxHealth, smooth);
             else displayedBossHealth = 1f;
             if (!Run.WorldComplete) showTravelMap = false;
-            modalFade = Mathf.MoveTowards(modalFade, Run.IsPlaying ? 0f : 1f, Time.unscaledDeltaTime * 5f);
+            modalFade = Mathf.MoveTowards(modalFade, Run.IsPlaying || DeathPending ? 0f : 1f, Time.unscaledDeltaTime * 5f);
         }
 
         private void OnGUI()
@@ -61,7 +64,7 @@ namespace Slopgame
                 else if (Run.IsPlaying && mechanic is GamblerPurse purse && purse.IsOpen) DrawPurse(purse);
                 if (!ShopOpen && showTalents && Run.IsPlaying) DrawTalents();
                 else if (!ShopOpen && Run.IsPlaying && Run.Minimap != null) Run.Minimap.Draw(new Rect(1026, 84, 224, 159));
-                if (Run.IsPlaying) return;
+                if (Run.IsPlaying || DeathPending) return;
                 DungeonUi.Panel(new Rect(0, 0, 1280, 720), new Color(0.01f, 0.018f, 0.035f, 0.88f * modalFade));
                 if (Run.ChoosingArtifact) DrawArtifacts();
                 else if (Run.ChoosingUpgrade) DrawUpgrades();
@@ -409,7 +412,7 @@ namespace Slopgame
             {
                 DungeonUi.Panel(new Rect(390, 104, 500, 64), DungeonUi.PanelColor);
                 DungeonUi.Label(new Rect(400, 112, 480, 26), "YOU HAVE FALLEN", 20, new Color(1f, 0.45f, 0.45f), TextAnchor.MiddleCenter);
-                DungeonUi.Label(new Rect(400, 138, 480, 22), "Your party fights on. You rise again on the next floor.", 14, DungeonUi.Muted, TextAnchor.MiddleCenter);
+                DungeonUi.Label(new Rect(400, 138, 480, 22), "Your party fights on. You rise at half health next floor.", 14, DungeonUi.Muted, TextAnchor.MiddleCenter);
             }
         }
 
