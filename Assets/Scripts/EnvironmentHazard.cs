@@ -85,7 +85,7 @@ namespace Slopgame
         {
             for (int dx = -1; dx <= 1; dx++)
                 for (int dy = -1; dy <= 1; dy++)
-                    if (!map.IsFloor(cell.x + dx, cell.y + dy)) return null;
+                    if (!map.IsFloor(cell.x + dx, cell.y + dy) || map.IsLava(cell.x + dx, cell.y + dy)) return null;
             bool rune = theme.Kind == TrapKind.Rune;
             return new HazardSpec
             {

@@ -227,11 +227,12 @@ namespace Slopgame
             InShop = !InShop && IsShopNext(Floor);
             if (!InShop) Floor++;
             floorRewardGranted = false;
-            Map = InShop ? DungeonMap.Shop() : new DungeonMap(Seed + Floor * 7919, IsBossFloor, World.Layout);
+            Map = InShop ? DungeonMap.Shop() : new DungeonMap(Seed + Floor * 7919, IsBossFloor, World.Layout, World.HasLava && !IsBossFloor);
             level = new GameObject(InShop ? "Crystal shop" : "Floor " + Floor).transform;
             level.SetParent(transform);
             view.backgroundColor = World.Background;
             DungeonVisuals.DrawMap(Map, level, World, InShop);
+            if (Map.HasLava) LavaField.Create(this, level, Map);
             Player.Crystals.BeginFloor(Floor, InShop);
             Player.transform.position = (Vector2)Map.Centers[0];
             exit = Map.Centers[Map.Centers.Count - 1];

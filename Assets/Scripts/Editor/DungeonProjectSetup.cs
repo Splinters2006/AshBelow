@@ -668,6 +668,32 @@ namespace Slopgame.Editor
                         if (map.IsFloor(x, y) && !visited.Contains(new Vector2Int(x, y))) throw new Exception("Disconnected floor: " + layout + " " + seed);
                 if (map.CanStand(new Vector2(-1, -1))) throw new Exception("Bounds check failed");
             }
+            // Lava pools never block a room or strand solid ground.
+            int lavaFloors = 0;
+            for (int seed = 0; seed < 300; seed++)
+            {
+                var map = new DungeonMap(seed, false, MapLayout.Caverns, true);
+                if (map.HasLava) lavaFloors++;
+                var visited = new HashSet<Vector2Int> { map.Centers[0] };
+                var queue = new Queue<Vector2Int>();
+                queue.Enqueue(map.Centers[0]);
+                while (queue.Count > 0)
+                {
+                    var cell = queue.Dequeue();
+                    foreach (var direction in new[] { Vector2Int.up, Vector2Int.down, Vector2Int.left, Vector2Int.right })
+                    {
+                        var next = cell + direction;
+                        if (map.IsFloor(next.x, next.y) && !map.IsLava(next.x, next.y) && visited.Add(next)) queue.Enqueue(next);
+                    }
+                }
+                foreach (var center in map.Centers)
+                    for (int i = 0; i < 4; i++)
+                        if (map.IsLava((Vector2)center + new Vector2(i % 2, i / 2))) throw new Exception("Lava on a spawn: " + seed);
+                for (int x = 0; x < DungeonMap.Width; x++)
+                    for (int y = 0; y < DungeonMap.Height; y++)
+                        if (map.IsFloor(x, y) && !map.IsLava(x, y) && !visited.Contains(new Vector2Int(x, y))) throw new Exception("Lava cuts off ground: " + seed);
+            }
+            if (lavaFloors < 280) throw new Exception("Too few lava floors: " + lavaFloors);
         }
     }
 }

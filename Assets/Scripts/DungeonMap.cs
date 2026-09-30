@@ -12,6 +12,11 @@ namespace Slopgame
         public const int Width = 55;
         public const int Height = 39;
         private readonly bool[,] floor = new bool[Width, Height];
+        private readonly bool[,] lava = new bool[Width, Height];
+        /// <summary>True when the floor has lava pools (the Infernal Court).</summary>
+        public bool HasLava { get; private set; }
+        /// <summary>At most this share of the walkable floor turns to lava.</summary>
+        public const float MaxLavaShare = 0.15f;
         public List<Vector2Int> Centers { get; } = new List<Vector2Int>();
         /// <summary>The walkable cells of a boss floor.</summary>
         public static readonly RectInt Arena = new RectInt(14, 8, 27, 23);
@@ -39,7 +44,7 @@ namespace Slopgame
 
         private DungeonMap() { }
 
-        public DungeonMap(int seed, bool bossArena = false, MapLayout layout = MapLayout.Dungeon)
+        public DungeonMap(int seed, bool bossArena = false, MapLayout layout = MapLayout.Dungeon, bool withLava = false)
         {
             if (bossArena)
             {
@@ -60,7 +65,57 @@ namespace Slopgame
                 default: GenerateDungeon(random); break;
             }
             Finish();
+            if (withLava) PourLava(random);
         }
+
+        /// <summary>
+        /// Floods ragged lava pools across open floor, well away from every room centre. A pool is kept only if every
+        /// room and every bit of solid ground can still be reached without wading through lava.
+        /// </summary>
+        private void PourLava(System.Random random)
+        {
+            int floorCells = 0;
+            for (int x = 0; x < Width; x++)
+                for (int y = 0; y < Height; y++) if (floor[x, y]) floorCells++;
+            int lavaCells = 0, pools = random.Next(4, 7);
+            var pool = new List<Vector2Int>();
+            for (int attempt = 0; attempt < 200 && pools > 0; attempt++)
+            {
+                var origin = new Vector2Int(random.Next(2, Width - 2), random.Next(2, Height - 2));
+                if (!floor[origin.x, origin.y] || lava[origin.x, origin.y]) continue;
+                float radius = 1.2f + (float)random.NextDouble() * 1.6f;
+                pool.Clear();
+                int r = Mathf.CeilToInt(radius + 0.6f);
+                for (int x = origin.x - r; x <= origin.x + r; x++)
+                    for (int y = origin.y - r; y <= origin.y + r; y++)
+                    {
+                        if (!IsFloor(x, y) || lava[x, y]) continue;
+                        var cell = new Vector2Int(x, y);
+                        float ragged = radius + (float)random.NextDouble() * 1.2f - 0.6f;
+                        if (Vector2Int.Distance(cell, origin) > ragged || Centers.Exists(c => Vector2Int.Distance(c, cell) < 3.5f)) continue;
+                        pool.Add(cell);
+                    }
+                if (pool.Count < 3 || lavaCells + pool.Count > floorCells * MaxLavaShare) continue;
+                foreach (var cell in pool) lava[cell.x, cell.y] = true;
+                if (!SolidGroundConnected()) { foreach (var cell in pool) lava[cell.x, cell.y] = false; continue; }
+                lavaCells += pool.Count;
+                pools--;
+            }
+            HasLava = lavaCells > 0;
+        }
+
+        /// <summary>True when every non-lava floor cell is reachable from the start without crossing lava.</summary>
+        private bool SolidGroundConnected()
+        {
+            var reached = Flood(Centers[0], avoidLava: true);
+            for (int x = 0; x < Width; x++)
+                for (int y = 0; y < Height; y++)
+                    if (floor[x, y] && !lava[x, y] && !reached[x, y]) return false;
+            return true;
+        }
+
+        public bool IsLava(int x, int y) => x >= 0 && y >= 0 && x < Width && y < Height && lava[x, y];
+        public bool IsLava(Vector2 point) => IsLava(Mathf.RoundToInt(point.x), Mathf.RoundToInt(point.y));
 
         /// <summary>The Ash Below: square rooms joined by narrow corridors.</summary>
         private void GenerateDungeon(System.Random random)
@@ -302,7 +357,7 @@ namespace Slopgame
                     if (!reached[x, y]) floor[x, y] = false;
         }
 
-        private bool[,] Flood(Vector2Int start)
+        private bool[,] Flood(Vector2Int start, bool avoidLava = false)
         {
             var reached = new bool[Width, Height];
             var queue = new Queue<Vector2Int>();
@@ -314,7 +369,8 @@ namespace Slopgame
                 foreach (var step in Steps)
                 {
                     var next = cell + step;
-                    if (IsFloor(next.x, next.y) && !reached[next.x, next.y]) { reached[next.x, next.y] = true; queue.Enqueue(next); }
+                    if (IsFloor(next.x, next.y) && !reached[next.x, next.y] && !(avoidLava && lava[next.x, next.y]))
+                    { reached[next.x, next.y] = true; queue.Enqueue(next); }
                 }
             }
             return reached;

@@ -26,7 +26,7 @@ namespace Slopgame
             heart.run = run;
             heart.hopFrom = position;
             Vector2 landing = position + Random.insideUnitCircle.normalized * Random.Range(0.2f, 0.4f);
-            heart.rest = run.Map != null && !run.Map.CanStand(landing, 0.1f) ? position : landing;
+            heart.rest = run.Map != null && (!run.Map.CanStand(landing, 0.1f) || run.Map.IsLava(landing)) ? position : landing;
             heart.phase = Random.value * Mathf.PI * 2f;
             var shadow = DungeonVisuals.Create("Heart shadow", run.ProjectileRoot, heart.rest, new Vector2(0.3f, 0.18f), Color.white, 4);
             shadow.sprite = DungeonVisuals.CoinShadow;

@@ -37,15 +37,17 @@ namespace Slopgame
         public MapLayout Layout { get; }
         /// <summary>The environmental traps planted on the world's combat floors.</summary>
         public TrapTheme[] Traps { get; }
+        /// <summary>True when the world's combat floors carry lava pools that burn heroes (the Infernal Court).</summary>
+        public bool HasLava { get; }
 
         public WorldDefinition(int index, string name, bool highTech, Color background, Color floorA, Color floorB, Color wall, Color accent,
             Color arenaRune, string basicName, string casterName, string bruteName, Color basicTint, Color casterTint, Color bruteTint, BoltKind bolts,
-            WeaponType? hero = null, bool placeholder = false, Vector2 mapPosition = default, MapLayout layout = MapLayout.Dungeon, TrapTheme[] traps = null)
+            WeaponType? hero = null, bool placeholder = false, Vector2 mapPosition = default, MapLayout layout = MapLayout.Dungeon, TrapTheme[] traps = null, bool lava = false)
         {
             Index = index; Name = name; HighTech = highTech; Background = background; FloorA = floorA; FloorB = floorB; Wall = wall; Accent = accent;
             ArenaRune = arenaRune; BasicName = basicName; CasterName = casterName; BruteName = bruteName;
             BasicTint = basicTint; CasterTint = casterTint; BruteTint = bruteTint; Bolts = bolts;
-            Hero = hero; IsPlaceholder = placeholder; MapPosition = mapPosition; Layout = layout; Traps = traps ?? new TrapTheme[0];
+            Hero = hero; IsPlaceholder = placeholder; MapPosition = mapPosition; Layout = layout; Traps = traps ?? new TrapTheme[0]; HasLava = lava;
         }
     }
 
@@ -88,7 +90,7 @@ namespace Slopgame
                 {
                     new TrapTheme("Brimstone geyser", TrapKind.Vent, HazardStyle.Hellfire, 1.5f),
                     new TrapTheme("Fire jet", TrapKind.Jet, HazardStyle.Hellfire, 5f),
-                }),
+                }, lava: true),
             new WorldDefinition(3, "THE ARCANE SPIRE", false, new Color(0.03f, 0.03f, 0.08f),
                 new Color(0.1f, 0.1f, 0.2f), new Color(0.12f, 0.12f, 0.23f), new Color(0.26f, 0.26f, 0.45f),
                 new Color(0.55f, 0.6f, 1f), new Color(0.4f, 0.85f, 1f),

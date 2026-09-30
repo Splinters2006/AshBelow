@@ -32,7 +32,7 @@ namespace Slopgame
                 for (int attempt = 0; attempt < 40 && wanted > 0; attempt++)
                 {
                     var cell = center + new Vector2Int(random.Next(-5, 6), random.Next(-5, 6));
-                    if (!map.IsFloor(cell.x, cell.y) || !HugsWall(map, cell)
+                    if (!map.IsFloor(cell.x, cell.y) || map.IsLava(cell.x, cell.y) || !HugsWall(map, cell)
                         || cell.x >= center.x - 1 && cell.x <= center.x + 2 && cell.y >= center.y - 1 && cell.y <= center.y + 2
                         || Vector2Int.Distance(cell, exit) < 2f || taken.Exists(other => Vector2Int.Distance(other, cell) < 1.5f)) continue;
                     taken.Add(cell);
