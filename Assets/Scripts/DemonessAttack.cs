@@ -13,7 +13,7 @@ namespace Slopgame
         public const float ChargeDuration = 1.1f;
         public const float StabReach = 1.9f, VitalReach = 2.4f, StabHalfWidth = 0.3f;
         public const float VitalParalysis = 1.5f;
-        public const float SweepRadius = 2f, SweepCone = 180f, SweepCooldown = 5f;
+        public const float SweepRadius = 2.8f, SweepCone = 180f, SweepCooldown = 5f;
         public const int SweepDamage = 2, SweepParalyzedMultiplier = 2;
         /// <summary>Archdemon's Technique: a fully charged tail whip strikes a small cone.</summary>
         public const float WhipRadius = 2.8f, WhipCone = 70f;
