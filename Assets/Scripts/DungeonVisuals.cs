@@ -9,7 +9,7 @@ namespace Slopgame
         private static Sprite thrownBlade;
 
         private static readonly Sprite[] enemySprites = new Sprite[3];
-        private static Sprite flameSprite, shadowHero, duelistSprite, archdemonSprite, archdemonDetails, wardenSprite, wardenDetails,
+        private static Sprite flameSprite, shadowHero, duelistSprite, archdemonSprite, wardenSprite,
             sentinelDetails, titanDetails;
         public static Sprite FlameSprite => flameSprite != null ? flameSprite : flameSprite = PixelSprite("Burn flame", new[]
         {
@@ -384,6 +384,13 @@ namespace Slopgame
         /// <param name="highTech">The Neon Arcology's Chrome Duelist: magenta energy blades and a neon sash.</param>
         public static void DecorateDuelist(Transform boss, bool highTech = false)
         {
+            // The Ash Below's duelist wears the 40x40 art; the Chrome Duelist keeps its sprite with drawn-on details.
+            if (!highTech)
+            {
+                boss.GetComponent<SpriteRenderer>().sprite = GuardianSprites.Duelist;
+                BossArt.AddDetails(boss, "Duelist details", GuardianSprites.DuelistDetails);
+                return;
+            }
             var blade = highTech ? WorldCatalog.NeonPink : new Color(0.45f, 0.95f, 1f);
             Detail(boss, "Left eye", new Vector2(-0.094f, 0.28f), new Vector2(0.09f, 0.05f), blade, 7);
             Detail(boss, "Right eye", new Vector2(0.094f, 0.28f), new Vector2(0.09f, 0.05f), blade, 7);
@@ -410,10 +417,6 @@ namespace Slopgame
             "......DMWWMD....", ".......DWWMD....", "......DhHHhD....", ".....DhhhhhD....",
         };
 
-        /// <summary>The archdemon's fixed-colour layer: horns, burning eyes, fanged maw and the magma in his chest.</summary>
-        public static Sprite ArchdemonDetails => archdemonDetails != null ? archdemonDetails
-            : archdemonDetails = MirroredSprite("Hellfire archdemon details", ArchdemonGrid, true, ArchdemonDetailColor);
-
         // Left half of the 32x32 Rime Warden, a hooded, crowned caster cradling a frost crystal. Body layer (tinted): L highlight,
         // W base, M shade, D outline. Detail layer (fixed): G gold, g dark gold, E eyes, K hood void, O crystal, Y crystal core.
         private static readonly string[] WardenGrid =
@@ -427,10 +430,6 @@ namespace Slopgame
             "DMD...DWWMWWWWDD", ".D....DWWMWWWWWG", "......DWWMWWWWWG", ".....DLWWMWWWWWG",
             ".....DWWMWWWMWWG", "....DLWMWWWMWWWG", "....DWMWWWMWWWMG", "....DDDDDDDDDDDD",
         };
-
-        /// <summary>The Rime Warden's fixed-colour layer: crown, gold mask, frost-lit eyes and the crystal in its hands.</summary>
-        public static Sprite WardenDetails => wardenDetails != null ? wardenDetails
-            : wardenDetails = MirroredSprite("Rime warden details", WardenGrid, true, WardenDetailColor);
 
         /// <summary>The Cryo Sentinel's layer: the Warden's shape with a chrome crest, a cyan visor and a pink cryo core.</summary>
         public static Sprite SentinelDetails => sentinelDetails != null ? sentinelDetails
@@ -518,23 +517,18 @@ namespace Slopgame
             }
         }
 
+        /// <summary>The archdemon's body and detail layers (the 40x40 art; its high-tech Titan keeps the older sprite).</summary>
         public static void DecorateArchdemon(Transform boss, bool highTech = false)
         {
-            var body = boss.GetComponent<SpriteRenderer>();
-            var details = new GameObject("Archdemon details").AddComponent<SpriteRenderer>();
-            details.transform.SetParent(boss, false);
-            details.sprite = highTech ? TitanDetails : ArchdemonDetails;
-            details.sortingOrder = body.sortingOrder + 1;
+            boss.GetComponent<SpriteRenderer>().sprite = highTech ? BossSprite(BossKind.Archdemon) : GuardianSprites.Archdemon;
+            BossArt.AddDetails(boss, "Archdemon details", highTech ? TitanDetails : GuardianSprites.ArchdemonDetails);
         }
 
+        /// <summary>The Rime Warden's body and detail layers (the 40x40 art; its high-tech Cryo Sentinel keeps the older sprite).</summary>
         public static void DecorateWarden(Transform boss, bool highTech = false)
         {
-            var body = boss.GetComponent<SpriteRenderer>();
-            body.sprite = BossSprite(BossKind.AshWarden);
-            var details = new GameObject("Warden details").AddComponent<SpriteRenderer>();
-            details.transform.SetParent(boss, false);
-            details.sprite = highTech ? SentinelDetails : WardenDetails;
-            details.sortingOrder = body.sortingOrder + 1;
+            boss.GetComponent<SpriteRenderer>().sprite = highTech ? BossSprite(BossKind.AshWarden) : GuardianSprites.Warden;
+            BossArt.AddDetails(boss, "Warden details", highTech ? SentinelDetails : GuardianSprites.WardenDetails);
         }
 
         public static void DecorateArena(Transform root, WorldDefinition world)

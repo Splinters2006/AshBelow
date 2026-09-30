@@ -7,7 +7,9 @@ namespace Slopgame
     {
         public override string Title => "NULL, THE SINGULARITY CORE";
         protected override Color Accent => new Color(0.75f, 0.35f, 1f);
-        protected override Sprite Chassis => NeonBossSprites.Core;
+        protected override Sprite Chassis => GuardianSprites.Core;
+        protected override Sprite Details => GuardianSprites.CoreDetails;
+        protected override Color BodyTint => new Color(0.42f, 0.4f, 0.55f);
         protected override HazardStyle Hazards => HazardStyle.Void;
         protected override string[] AttackTells => tells;
         private static readonly string[] tells = { "SPIRAL STREAM - WEAVE THROUGH THE SPOKES", "SATELLITE CROSSFIRE - WATCH BOTH SIDES", "PULSE ECHO - DODGE EACH WAVE" };

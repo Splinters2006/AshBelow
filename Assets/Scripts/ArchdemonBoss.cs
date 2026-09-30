@@ -76,7 +76,6 @@ namespace Slopgame
             Enemy.Speed = 1.8f;
             transform.localScale = Vector2.one * Size;
             ground = transform.position;
-            GetComponent<SpriteRenderer>().sprite = DungeonVisuals.BossSprite(BossKind.Archdemon);
             DungeonVisuals.DecorateArchdemon(transform, HighTech);
             aura = HellfireAura.Attach(this);
             readyAt = Enemy.ActionTime + 1.5f;

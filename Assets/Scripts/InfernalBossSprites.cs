@@ -3,9 +3,9 @@ using UnityEngine;
 namespace Slopgame
 {
     /// <summary>
-    /// The Infernal Court guardians' 40x40 pixel art, drawn as left halves and mirrored. Like the Ash Below's guardians
-    /// each has two layers: a shaded body (L highlight, W base, M shade, D outline) tinted by the boss's body colour, and
-    /// a fixed-colour detail layer on top for faces, gold, gems, horns and magma.
+    /// The Infernal Court guardians' 40x40 pixel art, drawn as left halves and mirrored by <see cref="BossArt"/>: a shaded
+    /// body (L highlight, W base, M shade, D outline) tinted by the boss's body colour, and a fixed-colour detail layer on
+    /// top for faces, gold, gems, horns and magma.
     /// </summary>
     public static class InfernalBossSprites
     {
@@ -59,13 +59,13 @@ namespace Slopgame
             "......DWWWWMGWWWMWWW", ".....DLWWWMWGWWWMWWW", ".....DGGGGGGGGGGGGGG", ".....DDDDDDDDDDDDDDD"
         };
 
-        public static Sprite Matriarch => matriarch != null ? matriarch : matriarch = Build("Hex Matriarch", MatriarchGrid, false, MatriarchColor);
+        public static Sprite Matriarch => matriarch != null ? matriarch : matriarch = BossArt.Build("Hex Matriarch", MatriarchGrid, false, MatriarchColor);
         public static Sprite MatriarchDetails => matriarchDetails != null ? matriarchDetails
-            : matriarchDetails = Build("Hex Matriarch details", MatriarchGrid, true, MatriarchColor);
-        public static Sprite Hound => hound != null ? hound : hound = Build("Brimstone Hound", HoundGrid, false, HoundColor);
-        public static Sprite HoundDetails => houndDetails != null ? houndDetails : houndDetails = Build("Brimstone Hound details", HoundGrid, true, HoundColor);
-        public static Sprite Judge => judge != null ? judge : judge = Build("Infernal Judge", JudgeGrid, false, JudgeColor);
-        public static Sprite JudgeDetails => judgeDetails != null ? judgeDetails : judgeDetails = Build("Infernal Judge details", JudgeGrid, true, JudgeColor);
+            : matriarchDetails = BossArt.Build("Hex Matriarch details", MatriarchGrid, true, MatriarchColor);
+        public static Sprite Hound => hound != null ? hound : hound = BossArt.Build("Brimstone Hound", HoundGrid, false, HoundColor);
+        public static Sprite HoundDetails => houndDetails != null ? houndDetails : houndDetails = BossArt.Build("Brimstone Hound details", HoundGrid, true, HoundColor);
+        public static Sprite Judge => judge != null ? judge : judge = BossArt.Build("Infernal Judge", JudgeGrid, false, JudgeColor);
+        public static Sprite JudgeDetails => judgeDetails != null ? judgeDetails : judgeDetails = BossArt.Build("Infernal Judge details", JudgeGrid, true, JudgeColor);
 
         // G gold, g dark gold, Y gem glow, K hair, h hair sheen, S skin, s skin shade, E eyes, R lips, O hexfire.
         private static Color MatriarchColor(char c)
@@ -122,26 +122,6 @@ namespace Slopgame
                 case 'b': return new Color(0.16f, 0.04f, 0.04f);
                 default: return Color.clear;
             }
-        }
-
-        /// <summary>One unit across, like the other guardian bodies; the body layer is tinted, the detail layer is not.</summary>
-        private static Sprite Build(string name, string[] halfRows, bool details, System.Func<char, Color> detailColor)
-        {
-            int half = halfRows[0].Length, width = half * 2, height = halfRows.Length;
-            var texture = new Texture2D(width, height, TextureFormat.RGBA32, false)
-            { name = name, filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Clamp };
-            var pixels = new Color[width * height];
-            for (int y = 0; y < height; y++)
-                for (int x = 0; x < width; x++)
-                {
-                    char c = halfRows[y][x < half ? x : width - 1 - x];
-                    Color? body = c == 'L' ? new Color(1f, 1f, 1f) : c == 'W' ? new Color(0.82f, 0.82f, 0.82f)
-                        : c == 'M' ? new Color(0.55f, 0.55f, 0.55f) : c == 'D' ? new Color(0.08f, 0.08f, 0.08f) : (Color?)null;
-                    pixels[(height - y - 1) * width + x] = details ? (body.HasValue ? Color.clear : detailColor(c)) : body ?? Color.clear;
-                }
-            texture.SetPixels(pixels);
-            texture.Apply(false, true);
-            return Sprite.Create(texture, new Rect(0, 0, width, height), Vector2.one * 0.5f, width);
         }
     }
 }

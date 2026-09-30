@@ -49,10 +49,7 @@ namespace Slopgame
             transform.localScale = Vector3.one * Scale;
             var body = GetComponent<SpriteRenderer>();
             body.sprite = Body;
-            var details = new GameObject(Title + " details").AddComponent<SpriteRenderer>();
-            details.transform.SetParent(transform, false);
-            details.sprite = Details;
-            details.sortingOrder = body.sortingOrder + 1;
+            BossArt.AddDetails(transform, Title + " details", Details);
             Enemy.Speed = 2.3f;
             until = Enemy.ActionTime + 1.2f;
             auraObject = new GameObject(Title + " aura");
