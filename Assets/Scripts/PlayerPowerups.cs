@@ -70,6 +70,17 @@ namespace Slopgame
         private int rhythmCount, spellbladeStrikes;
         private bool elementalPrimed, inBasicAttack, rhythmBeat, spellbladeActive;
         private float closeCallReadyAt;
+        public const int TipJarCoins = 25;
+        private int tipJar;
+
+        /// <summary>Tip Jar: every 25 gold coins picked up heal 1 HP.</summary>
+        public void OnCoinsPicked(DungeonPlayer player, int coins)
+        {
+            if (Count(PowerupType.TipJar) == 0) return;
+            tipJar += coins;
+            while (tipJar >= TipJarCoins) { tipJar -= TipJarCoins; player.Heal(1); HeroVfx.Motes(player.Run.ProjectileRoot, player.transform.position, 0.6f, GamblerAttack.Gold, 10, 0.8f); }
+        }
+
         public const int ZealStacks = 10;
         /// <summary>Zeal: stacks from the Paladin's hits; a full count doubles the next blessing.</summary>
         public int Zeal { get; private set; }

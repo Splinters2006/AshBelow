@@ -97,8 +97,11 @@ namespace Slopgame
                 {
                     var enemy = run.Enemies[j];
                     if (Vector2.Distance(next, enemy.transform.position) > enemy.HitRadius) continue;
+                    if (enemy == lastStruck) continue;
                     if (!ghost) Strike(enemy, next);
                     if (IsCoin) CoinImpact(next);
+                    // Ricochet: the coin bounces on to one more enemy.
+                    if (IsCoin && !ghost && !bounced && run.Player.Powerups.Count(PowerupType.Ricochet) > 0 && Rebound(enemy)) return;
                     Consume();
                     return;
                 }
@@ -108,7 +111,29 @@ namespace Slopgame
             if (remainingRange <= 0) Consume();
         }
 
-        public const float SniperStep = 4f, PointBlankRange = 3f, HuntersMarkTime = 4f;
+        public const float SniperStep = 4f, PointBlankRange = 3f, HuntersMarkTime = 4f, RicochetRange = 5f;
+        private bool bounced;
+        private DungeonEnemy lastStruck;
+
+        /// <summary>Turns the coin toward the nearest other enemy in range; false when there is none.</summary>
+        private bool Rebound(DungeonEnemy from)
+        {
+            DungeonEnemy next = null;
+            float best = RicochetRange;
+            foreach (var enemy in run.Enemies)
+            {
+                if (enemy == null || enemy == from || enemy.Health <= 0) continue;
+                float distance = Vector2.Distance(transform.position, enemy.transform.position);
+                if (distance < best && run.HasLineOfSight(transform.position, enemy.transform.position)) { best = distance; next = enemy; }
+            }
+            if (next == null) return false;
+            bounced = true;
+            lastStruck = from;
+            Direction = ((Vector2)next.transform.position - (Vector2)transform.position).normalized;
+            remainingRange = RicochetRange + 0.5f;
+            transform.rotation = Quaternion.Euler(0, 0, Mathf.Atan2(Direction.y, Direction.x) * Mathf.Rad2Deg);
+            return true;
+        }
 
         /// <summary>The local hero's hit, with the Archer's arrow talents.</summary>
         private void Strike(DungeonEnemy enemy, Vector2 at)
@@ -116,6 +141,8 @@ namespace Slopgame
             var player = run.Player;
             bool arrow = !IsCoin && player.ClassWeapon == WeaponType.Bow;
             int dealt = damage + (arrow && player.Powerups.Count(PowerupType.Sniper) > 0 ? Mathf.FloorToInt(travelled / SniperStep) : 0);
+            // Heads or Tails: every coin hit is a flip for double or half.
+            if (IsCoin && player.Powerups.Count(PowerupType.HeadsOrTails) > 0) dealt = Random.value < 0.5f ? dealt * 2 : Mathf.Max(1, dealt / 2);
             bool pointBlank = arrow && FullyCharged && travelled <= PointBlankRange && player.Powerups.Count(PowerupType.PointBlank) > 0;
             CombatDamage.Apply(player, enemy, dealt, DamageElement.Physical, at - Direction, pointBlank ? 3f : 1f, infusion);
             if (enemy == null || enemy.Health <= 0) return;

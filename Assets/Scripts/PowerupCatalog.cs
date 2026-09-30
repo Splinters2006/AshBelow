@@ -34,7 +34,9 @@ namespace Slopgame
         // Brawler.
         ComboCounter, Footwork, Brawl, Knockout, MeteorLeap, SandwichSpecial,
         // Demoness.
-        LingeringTerror, Torment, DreadAura, BloodPact, CursedPaw, InfernalTechnique
+        LingeringTerror, Torment, DreadAura, BloodPact, CursedPaw, InfernalTechnique,
+        // Gambler.
+        Ricochet, GoldCoin, CompoundInterest, HeadsOrTails, TipJar, SnakeEyes
     }
 
     public sealed class PowerupDefinition
@@ -207,6 +209,12 @@ namespace Slopgame
             new PowerupDefinition(PowerupType.BloodPact, "Demoness: Blood Pact", "-1 max HP, but vital stabs paralyse 0.5 seconds longer", 1, WeaponType.Tail),
             new PowerupDefinition(PowerupType.CursedPaw, "Cursed Paw", "HEEEELP's slam leaves a Demon Curse where it lands", 1, WeaponType.Tail, AbilityType.DemonPaw),
             new PowerupDefinition(PowerupType.InfernalTechnique, "Infernal Technique", "During Archdemon's Technique, tail whips set enemies burning", 1, WeaponType.Tail, AbilityType.ArchdemonTechnique),
+            new PowerupDefinition(PowerupType.Ricochet, "Gambler: Ricochet", "Thrown coins bounce on to a second enemy", 1, WeaponType.Coins),
+            new PowerupDefinition(PowerupType.GoldCoin, "Gambler: Gold Coin", "Every 10th coin thrown deals its damage times the coins you carry (up to 50x)", 1, WeaponType.Coins),
+            new PowerupDefinition(PowerupType.CompoundInterest, "Gambler: Compound Interest", "Every 30 seconds, gain 10% of the coins you carry (at least 1)", 1, WeaponType.Coins),
+            new PowerupDefinition(PowerupType.HeadsOrTails, "Gambler: Heads or Tails", "Each coin hit has an even chance of dealing double or half damage", 1, WeaponType.Coins),
+            new PowerupDefinition(PowerupType.TipJar, "Gambler: Tip Jar", "Every 25 gold coins you pick up heal 1 HP", 1, WeaponType.Coins),
+            new PowerupDefinition(PowerupType.SnakeEyes, "Snake Eyes", "Losing All In makes you greedier: double damage for 5 seconds", 1, WeaponType.Coins, AbilityType.AllIn),
             new PowerupDefinition(PowerupType.AegisBurst, "Aegis Burst", "When Aegis ends, it blasts nearby enemies back and damages them once per hit it blocked", 1, WeaponType.Sword, AbilityType.Aegis)
         };
 

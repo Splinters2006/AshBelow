@@ -47,7 +47,11 @@ namespace Slopgame
         public float AttackIntervalMultiplier => (IsEmpowered ? 0.7f : 1f) * (IsFurious ? 0.7f : 1f);
         public float ChargeDurationMultiplier => (IsEmpowered ? 0.7f : 1f) * (IsRaging ? 0.5f : IsTired ? 1.5f : 1f) * (IsFurious ? 0.4f : 1f);
         public float AttackSizeMultiplier => (IsEmpowered ? 1.1f : 1f) * (IsFurious ? 1.5f : 1f);
-        public float DamageMultiplier => (IsRaging ? 2f : IsTired ? 0.5f : 1f) * (IsFurious ? 2f : 1f);
+        public float DamageMultiplier => (IsRaging ? 2f : IsTired ? 0.5f : 1f) * (IsFurious ? 2f : 1f) * (IsGreedy ? 2f : 1f);
+        /// <summary>Snake Eyes: a lost All In doubles the Gambler's damage for a while.</summary>
+        public bool IsGreedy => Time.time < greedUntil;
+        private float greedUntil;
+        public void Greed(float duration) => greedUntil = Mathf.Max(greedUntil, Time.time + duration);
         public float DodgeCooldownMultiplier => IsRaging ? 0.5f : IsTired ? 1.5f : 1f;
         public float DodgeCooldownReduction => IsEmpowered ? 0.5f : 0f;
         public float DodgeSpeedMultiplier => IsRaging ? 1.3f : IsTired ? 0.8f : 1f;

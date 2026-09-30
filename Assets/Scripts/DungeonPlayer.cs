@@ -329,7 +329,15 @@ namespace Slopgame
             return true;
         }
         private bool backupDriveSpent, wasVeiled;
-        private float interventionUntil;
+        private float interventionUntil, insuredUntil;
+        public const float InsuranceTime = 6f;
+        public const int InsurancePremium = 5;
+        /// <summary>Insurance: hits cost coins instead of HP for a while.</summary>
+        public void Insure(float duration)
+        {
+            insuredUntil = Mathf.Max(insuredUntil, Time.time + duration);
+            HeroVfx.Pulse(Run.ProjectileRoot, transform.position, 1.1f, new Color(0.35f, 0.9f, 0.5f), 0.4f);
+        }
 
         /// <summary>Divine Intervention: for a while, a killing blow is turned aside.</summary>
         public void Intercede(float duration) => interventionUntil = Mathf.Max(interventionUntil, Time.time + duration);
@@ -358,7 +366,10 @@ namespace Slopgame
             if (Run.IsPlaying && IsInvulnerable && Health > 0) Deflected?.Invoke();
             if (!Run.IsPlaying || IsInvulnerable || Health <= 0) return false;
             if (DebugMode.Enabled) { Health = MaxHealth; return false; }
-            bool warded = Powerups.AbsorbHit();
+            // Insurance: while the policy holds, the Gambler pays in coins instead of blood.
+            bool insured = Time.time < insuredUntil && Weapon is GamblerAttack purse && purse.Spend(InsurancePremium);
+            if (insured) HeroVfx.Sparks(Run.ProjectileRoot, transform.position, GamblerAttack.Gold, 14, 4f, 0.35f, Vector2.up, 160f);
+            bool warded = insured || Powerups.AbsorbHit();
             if (!warded)
             {
                 // Cheat Death (once per world), then the Ash shop's Backup Drive (once per descent), turn a killing blow into 1 HP.

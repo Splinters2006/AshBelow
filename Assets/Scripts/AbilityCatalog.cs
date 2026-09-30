@@ -10,7 +10,7 @@ namespace Slopgame
         Eclipse, SoulRend, ShadowReign, KnuckleSandwich, WildLeap, PrimalRage, ArchdemonTechnique, DemonPaw, DemonCurse,
         Windfall, AllIn, Jackpot, MicroMissiles, RocketBoost, SentryTurret,
         // The talents & abilities expansion.
-        ShieldThrow, Whirlwind, WarBanner, NetShot, RicochetArrow, BearTrap, IceWall, BallLightning, LightningStorm, SmokeBomb, DeathMark, ShadowClone, HolyLance, Consecration, DivineIntervention, ThunderClap, HaymakerDash, Suplex, WingDash, SoulSiphon, NightmareSnap
+        ShieldThrow, Whirlwind, WarBanner, NetShot, RicochetArrow, BearTrap, IceWall, BallLightning, LightningStorm, SmokeBomb, DeathMark, ShadowClone, HolyLance, Consecration, DivineIntervention, ThunderClap, HaymakerDash, Suplex, WingDash, SoulSiphon, NightmareSnap, CardToss, DiceBomb, Insurance
     }
 
     public sealed class AbilityDefinition
@@ -92,6 +92,9 @@ namespace Slopgame
             new AbilityDefinition(AbilityType.WingDash, WeaponType.Tail, "Wing Dash", "Beat your demon wings to dash, paralysing every enemy you pass through for 1 second. Ranks dash farther.", ">>", 8f, DemonessAttack.Violet),
             new AbilityDefinition(AbilityType.SoulSiphon, WeaponType.Tail, "Soul Siphon", "For 3 seconds, drain paralysed enemies nearby: each takes demonic damage and heals you 1 HP every second. Ranks lengthen it.", "~", 14f, DemonessAttack.Violet),
             new AbilityDefinition(AbilityType.NightmareSnap, WeaponType.Tail, "Nightmare Snap", "Snap the paralysis on every enemy nearby: each takes demonic damage that grows with how long its paralysis still had to run. Ranks add damage.", "*", 10f, DemonessAttack.Pale, true),
+            new AbilityDefinition(AbilityType.CardToss, WeaponType.Coins, "Card Toss", "Throw 3 cards in a spread. Each card's suit decides its trick: hearts burn, diamonds freeze, clubs shock and spades paralyse. Ranks add damage.", "<>", 7f, new Color(0.95f, 0.95f, 0.95f)),
+            new AbilityDefinition(AbilityType.DiceBomb, WeaponType.Coins, "Dice Bomb", "Toss a pair of dice at the cursor. Each explodes for your damage times the face it rolls. Ranks add damage.", ":", 10f, new Color(0.97f, 0.95f, 0.9f)),
+            new AbilityDefinition(AbilityType.Insurance, WeaponType.Coins, "Insurance", "For 6 seconds, every hit costs you 5 coins instead of HP (while you can pay). Ranks lengthen the policy.", "$!", 18f, new Color(0.35f, 0.9f, 0.5f), true),
             new AbilityDefinition(AbilityType.WarBanner, WeaponType.Sword, "War Banner", "Plant a banner for 6 seconds. You and allies inside deal +1 damage, and everyone inside gains a ward when it's planted. Ranks extend it.", "F", 18f, new Color(0.9f, 0.2f, 0.25f), true)
         };
 

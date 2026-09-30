@@ -165,6 +165,12 @@ namespace Slopgame
                     Consecration.Sanctify(Player, Consecration.Duration + (rank - 1) * 1f, Mathf.Max(1, Player.Damage / 2) + rank - 1); break;
                 case AbilityType.DivineIntervention:
                     Intervene((Vector2)transform.position + aim * Mathf.Min(cursorDistance, 8f)); break;
+                case AbilityType.CardToss:
+                    ThrownCard.Toss(Player, aim, 3, Player.Damage + rank); break;
+                case AbilityType.DiceBomb:
+                    DiceBomb.Toss(Player, FindGroundLanding(Player.Run.Map, transform.position, aim, Mathf.Min(DiceBomb.Range, cursorDistance)), Player.Damage + rank - 1); break;
+                case AbilityType.Insurance:
+                    Player.Insure(DungeonPlayer.InsuranceTime + (rank - 1) * 1.5f); break;
                 case AbilityType.NetShot:
                     NetShot(aim, 2f + (rank - 1) * 0.5f, Player.Damage + rank - 1); break;
                 case AbilityType.RicochetArrow:
