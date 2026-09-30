@@ -8,7 +8,9 @@ namespace Slopgame
         None, ShieldRush, Earthshatter, Aegis, Volley, PiercingShot, Windstep,
         Fireball, FrostNova, Blink, FanOfKnives, VenomVial, ShadowVeil, HealingLight, Judgment, Sanctuary,
         Eclipse, SoulRend, ShadowReign, KnuckleSandwich, WildLeap, PrimalRage, ArchdemonTechnique, DemonPaw, DemonCurse,
-        Windfall, AllIn, Jackpot, MicroMissiles, RocketBoost, SentryTurret
+        Windfall, AllIn, Jackpot, MicroMissiles, RocketBoost, SentryTurret,
+        // The talents & abilities expansion.
+        ShieldThrow, Whirlwind, WarBanner, NetShot, RicochetArrow, BearTrap
     }
 
     public sealed class AbilityDefinition
@@ -69,7 +71,13 @@ namespace Slopgame
             new AbilityDefinition(AbilityType.Jackpot, WeaponType.Coins, "Jackpot", "Feed every coin you carry into the machine and always win a random speed buff, damage buff or heal that grows with every coin spent. Ranks lengthen the buffs.", "777", 18f, new Color(1f, 0.4f, 0.55f)),
             new AbilityDefinition(AbilityType.MicroMissiles, WeaponType.Beam, "Micro-Missiles", "Your shoulder pod fires a fan of 6 homing missiles that seek out the nearest enemies and burst on impact. Ranks add a missile and damage.", "^^", 9f, CyborgAttack.MissileColor),
             new AbilityDefinition(AbilityType.RocketBoost, WeaponType.Beam, "Rocket Boost", "Blast forward on your leg thrusters, ramming through every enemy in your path, and land in a burst of flame that can set them burning. Briefly invulnerable.", ">>", 8f, CyborgAttack.MissileColor),
-            new AbilityDefinition(AbilityType.SentryTurret, WeaponType.Beam, "Sentry Turret", "Deploy a turret at the cursor (up to 4 units away). For 6 seconds it fires a piercing plasma ray at the nearest enemy. Ranks add a second and damage.", "T", 16f, CyborgAttack.Plasma)
+            new AbilityDefinition(AbilityType.SentryTurret, WeaponType.Beam, "Sentry Turret", "Deploy a turret at the cursor (up to 4 units away). For 6 seconds it fires a piercing plasma ray at the nearest enemy. Ranks add a second and damage.", "T", 16f, CyborgAttack.Plasma),
+            new AbilityDefinition(AbilityType.ShieldThrow, WeaponType.Sword, "Shield Throw", "Hurl your shield: it bounces between up to 3 enemies and returns. You can't parry until it's back. Ranks add damage.", "()", 7f, Ice),
+            new AbilityDefinition(AbilityType.Whirlwind, WeaponType.Sword, "Whirlwind", "Spin with your sword for 2 seconds, hitting everything around you. You can still walk. Ranks add damage and spin time.", "@", 10f, new Color(0.55f, 1f, 0.9f)),
+            new AbilityDefinition(AbilityType.NetShot, WeaponType.Bow, "Net Shot", "Fire a net in a cone that roots every enemy it catches for 2 seconds. Ranks hold them longer.", "#", 9f, new Color(0.8f, 0.75f, 0.55f)),
+            new AbilityDefinition(AbilityType.RicochetArrow, WeaponType.Bow, "Ricochet Arrow", "An arrow that pierces enemies and bounces off walls up to 3 times, dealing more damage with each bounce. Ranks add damage.", "/\\", 8f, new Color(1f, 0.85f, 0.45f)),
+            new AbilityDefinition(AbilityType.BearTrap, WeaponType.Bow, "Bear Trap", "Set a trap at the cursor (up to 2 at once). The first enemy to step in is held for 2 seconds and takes damage. Ranks hold longer and hurt more.", "W", 6f, new Color(0.62f, 0.62f, 0.68f), true),
+            new AbilityDefinition(AbilityType.WarBanner, WeaponType.Sword, "War Banner", "Plant a banner for 6 seconds. You and allies inside deal +1 damage, and everyone inside gains a ward when it's planted. Ranks extend it.", "F", 18f, new Color(0.9f, 0.2f, 0.25f), true)
         };
 
         /// <summary>What guardians can offer this hero: their class's abilities, less any not yet bought in the Ash shop.</summary>

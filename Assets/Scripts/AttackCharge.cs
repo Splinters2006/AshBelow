@@ -16,7 +16,8 @@ namespace Slopgame
             : Player.ClassWeapon == WeaponType.Sword ? KnightChargeDuration : 1.2f)
             * Player.Powerups.AttackIntervalMultiplier * Player.Buffs.ChargeDurationMultiplier;
         public const float KnightChargeDuration = 0.75f, WizardChargeMultiplier = 4f;
-        public float Amount => IsCharging ? Mathf.Clamp01((Time.time - startedAt) / Duration) : 0f;
+        // Retaliation: after a parry the Knight's next slash is fully charged the moment he starts it.
+        public float Amount => IsCharging ? (Player.Shield != null && Player.Shield.RetaliationReady ? 1f : Mathf.Clamp01((Time.time - startedAt) / Duration)) : 0f;
 
         public void Tick(bool held, bool allowed)
         {

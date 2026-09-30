@@ -16,7 +16,10 @@ namespace Slopgame
         public float RemainingRange => remainingRange;
         public Vector2 Direction { get; private set; }
         public bool IsSpent { get; private set; }
+        /// <summary>A fully charged arrow (Hunter's Mark, Point Blank).</summary>
+        public bool FullyCharged { get; set; }
         private bool ghost;
+        private float travelled;
 
         /// <summary>The local hero's shot. The Archer's arrows take the element loaded in her Elemental Quiver.</summary>
         public static PlayerProjectile Spawn(DungeonRun run, Vector2 position, Vector2 direction, int damage, float range = MaxRange,
@@ -94,14 +97,30 @@ namespace Slopgame
                 {
                     var enemy = run.Enemies[j];
                     if (Vector2.Distance(next, enemy.transform.position) > enemy.HitRadius) continue;
-                    if (!ghost) CombatDamage.Apply(run.Player, enemy, damage, DamageElement.Physical, next - Direction, 1f, infusion);
+                    if (!ghost) Strike(enemy, next);
                     if (IsCoin) CoinImpact(next);
                     Consume();
                     return;
                 }
             }
             remainingRange -= distance;
+            travelled += distance;
             if (remainingRange <= 0) Consume();
+        }
+
+        public const float SniperStep = 4f, PointBlankRange = 3f, HuntersMarkTime = 4f;
+
+        /// <summary>The local hero's hit, with the Archer's arrow talents.</summary>
+        private void Strike(DungeonEnemy enemy, Vector2 at)
+        {
+            var player = run.Player;
+            bool arrow = !IsCoin && player.ClassWeapon == WeaponType.Bow;
+            int dealt = damage + (arrow && player.Powerups.Count(PowerupType.Sniper) > 0 ? Mathf.FloorToInt(travelled / SniperStep) : 0);
+            bool pointBlank = arrow && FullyCharged && travelled <= PointBlankRange && player.Powerups.Count(PowerupType.PointBlank) > 0;
+            CombatDamage.Apply(player, enemy, dealt, DamageElement.Physical, at - Direction, pointBlank ? 3f : 1f, infusion);
+            if (enemy == null || enemy.Health <= 0) return;
+            if (pointBlank) enemy.Stun(0.5f);
+            if (arrow && FullyCharged && player.Powerups.Count(PowerupType.HuntersMark) > 0) enemy.Mark(HuntersMarkTime);
         }
 
         /// <summary>A coin strike rings out: a gold flash, a spray of glitter thrown onward and a white glint.</summary>

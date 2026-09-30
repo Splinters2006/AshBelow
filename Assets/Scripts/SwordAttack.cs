@@ -69,8 +69,15 @@ namespace Slopgame
         public bool TryAttack(Vector2 aim, float charge = 0f)
         {
             if (!CanAttack || aim.sqrMagnitude < 0.001f) return false;
-            return TrySwipe(aim, Player.Charge.Damage(charge), AttackReach, ChargedCone(charge));
+            bool knight = Player.ClassWeapon == WeaponType.Sword;
+            if (knight && Player.Shield != null && Player.Shield.RetaliationReady) { Player.Shield.RetaliationReady = false; charge = 1f; }
+            fullSlash = knight && charge >= 1f;
+            // Cleave: a fully charged slash reaches farther and sweeps wider.
+            bool cleave = fullSlash && Player.Powerups.Count(PowerupType.Cleave) > 0;
+            try { return TrySwipe(aim, Player.Charge.Damage(charge), AttackReach + (cleave ? 0.6f : 0f), ChargedCone(charge) + (cleave ? 30f : 0f)); }
+            finally { fullSlash = false; }
         }
+        private bool fullSlash;
 
         public bool TrySwipe(Vector2 aim, int damage, float reach, float cone)
         {
@@ -99,7 +106,12 @@ namespace Slopgame
                 var enemy = Player.Run.Enemies[i];
                 if (ContainsTarget(enemy.transform.position - transform.position, aim, reach, cone)
                     && Player.Run.HasLineOfSight(transform.position, enemy.transform.position))
-                    CombatDamage.Apply(Player, enemy, damage, DamageElement.Physical, transform.position);
+                {
+                    // Counterweight: a full slash hurls enemies back and staggers them.
+                    bool counterweight = fullSlash && Player.Powerups.Count(PowerupType.Counterweight) > 0;
+                    CombatDamage.Apply(Player, enemy, damage, DamageElement.Physical, transform.position, counterweight ? 3f : 1f);
+                    if (counterweight && enemy != null && enemy.Health > 0) enemy.Stun(0.5f);
+                }
             }
             return true;
         }

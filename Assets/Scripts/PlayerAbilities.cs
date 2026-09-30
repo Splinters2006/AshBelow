@@ -127,6 +127,20 @@ namespace Slopgame
                         knight.Earthshatter(EarthshatterRadius + powers.Count(PowerupType.ShatterRadius) * 0.5f, damage, definition.Color, 2f);
                     else knight.Aegis(2f + (rank - 1) * 0.3f + powers.Count(PowerupType.AegisDuration) * 0.4f);
                     break;
+                case AbilityType.ShieldThrow:
+                    if (!ThrownShield.Throw(Player, aim, Player.Damage * 2 + rank)) return false;
+                    break;
+                case AbilityType.Whirlwind:
+                    Whirlwind.Spin(Player, Whirlwind.Duration + (rank - 1) * 0.4f, Player.Damage + rank - 1); break;
+                case AbilityType.WarBanner:
+                    WarBanner.Plant(Player, WarBanner.Duration + (rank - 1) * 1.5f); break;
+                case AbilityType.NetShot:
+                    NetShot(aim, 2f + (rank - 1) * 0.5f, Player.Damage + rank - 1); break;
+                case AbilityType.RicochetArrow:
+                    RicochetArrow.Fire(Player, aim, Player.Damage * 2 + rank - 1, Player.Damage); break;
+                case AbilityType.BearTrap:
+                    BearTrap.Set(Player, FindGroundLanding(Player.Run.Map, transform.position, aim, Mathf.Min(BearTrap.Range, cursorDistance)),
+                        Player.Damage * 3 + rank - 1, 2f + (rank - 1) * 0.5f); break;
                 case AbilityType.Volley:
                     ArrowRain.Cast(Player, FindGroundLanding(Player.Run.Map, transform.position, aim, Mathf.Min(ArrowRain.Range, cursorDistance)),
                         ArrowRain.BaseArrows + powers.Count(PowerupType.VolleyCount) * ArrowRain.ArrowsPerRank, Player.Damage + rank - 1); break;
@@ -215,6 +229,25 @@ namespace Slopgame
             castReadyAt = Time.time + 0.2f;
             Player.Powerups.OnAbilityUsed();
             return true;
+        }
+
+        public const float NetRange = 5f, NetCone = 70f;
+
+        /// <summary>Net Shot: a weighted net fans out ahead, roots everything it catches and nicks it.</summary>
+        private void NetShot(Vector2 aim, float hold, int damage)
+        {
+            var run = Player.Run;
+            var color = new Color(0.8f, 0.75f, 0.55f);
+            HeroVfx.Slash(run.ProjectileRoot, transform.position, aim, NetRange, NetCone, color, 0.3f);
+            CoopFx.Slash(run, transform.position, aim, NetRange, NetCone, color);
+            foreach (var enemy in run.Enemies.ToArray())
+            {
+                if (enemy == null || enemy.Health <= 0 || !SwordAttack.ContainsTarget(enemy.transform.position - transform.position, aim, NetRange + enemy.HitRadius, NetCone)
+                    || !run.HasLineOfSight(transform.position, enemy.transform.position)) continue;
+                CombatDamage.Apply(Player, enemy, damage, DamageElement.Physical, transform.position, 0f);
+                if (enemy.Health > 0) enemy.Root(hold);
+                HeroVfx.Sparks(run.ProjectileRoot, enemy.transform.position, color, 6, 2f, 0.3f);
+            }
         }
 
         /// <summary>Dashes and blinks travel the way the hero is moving (see <see cref="DungeonPlayer.MobilityAim"/>).</summary>

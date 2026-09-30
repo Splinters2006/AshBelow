@@ -23,6 +23,7 @@ namespace Slopgame
         }
 
         private readonly List<Arrow> arrows = new List<Arrow>();
+        private readonly Dictionary<DungeonEnemy, int> hitsOn = new Dictionary<DungeonEnemy, int>();
         private DungeonPlayer player;
         private Vector2 center;
         private int damage;
@@ -93,7 +94,13 @@ namespace Slopgame
             HeroVfx.Sparks(run.ProjectileRoot, arrow.Landing, color, 4, 2.5f, 0.2f, Vector2.up, 120f, 0.7f);
             foreach (var enemy in run.Enemies.ToArray())
                 if (enemy != null && enemy.Health > 0 && Vector2.Distance(arrow.Landing, enemy.transform.position) <= ImpactRadius + enemy.HitRadius)
-                    CombatDamage.Apply(player, enemy, damage, DamageElement.Physical, arrow.Landing + Vector2.up * 0.3f, 0.2f, infusion);
+                {
+                    // Storm Volley: every further arrow into the same enemy hits 1 harder than the one before.
+                    int streak = hitsOn.TryGetValue(enemy, out int previous) ? previous : 0;
+                    hitsOn[enemy] = streak + 1;
+                    int bonus = player.Powerups.Count(PowerupType.StormVolley) > 0 ? streak : 0;
+                    CombatDamage.Apply(player, enemy, damage + bonus, DamageElement.Physical, arrow.Landing + Vector2.up * 0.3f, 0.2f, infusion);
+                }
         }
 
         /// <summary>The target circle on the floor, pulsing until the last arrow lands.</summary>

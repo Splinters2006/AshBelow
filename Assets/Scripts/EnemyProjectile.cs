@@ -92,6 +92,7 @@ namespace Slopgame
                 {
                     Reflect(next, -direction, false);
                     reflectedDamage = run.Player.Powerups.ReflectionDamage;
+                    shield.OnParry();
                     if (run.IsNetworked) run.Coop.ReportBolt(this, CoopBoltEventKind.Reflected);
                     return;
                 }

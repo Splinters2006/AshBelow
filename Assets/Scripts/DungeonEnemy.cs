@@ -54,6 +54,17 @@ namespace Slopgame
         private float stunnedUntil, stunImmuneUntil, rootedUntil, nextBleed, nextPoison;
         private int bleedTicks, bleedDamage, poisonTicks, poisonDamage, peakHealth;
         private bool netBleeding, netPoisoned;
+        /// <summary>Hunter's Mark: takes +1 damage from every hit.</summary>
+        public bool IsMarked => Time.time < markedUntil;
+        private float markedUntil;
+
+        public void Mark(float duration)
+        {
+            if (IsInvulnerable || duration <= 0f) return;
+            if (Run.IsGuest) { Run.Coop.ReportDamage(this, CoopDamageKind.Mark, 0, transform.position, 0, duration); }
+            if (!IsMarked && Run.ProjectileRoot != null) CombatVfx.Ring(Run.ProjectileRoot, transform.position, 0.6f, new Color(1f, 0.3f, 0.3f), 0.4f);
+            markedUntil = Mathf.Max(markedUntil, Time.time + duration);
+        }
         /// <summary>Paralysed enemies cannot move, turn or attack (the Demoness's vital stabs and curses).</summary>
         public bool IsParalyzed => Time.time < paralyzedUntil;
         /// <summary>Cursed enemies take <see cref="CurseDamageMultiplier"/> times the damage from every hit.</summary>
@@ -268,6 +279,7 @@ namespace Slopgame
             if (Health <= 0) return;
             if (IsInvulnerable) { Boss.Deflect(source); return; }
             peakHealth = Mathf.Max(peakHealth, Health);
+            if (IsMarked && damage > 0 && !Run.IsGuest) damage++;
             if (DebugMode.Enabled) damage = Mathf.Max(damage, Health);
             LastHitRegion = Facing.RegionFrom(source);
             HitReceived?.Invoke(LastHitRegion);

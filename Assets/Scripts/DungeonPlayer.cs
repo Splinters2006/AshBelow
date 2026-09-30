@@ -13,11 +13,13 @@ namespace Slopgame
         private int rawMaxHealth = 6;
         /// <summary>Fired when a hit lands on this hero (true when a ward took it); Thorns and class talents listen.</summary>
         public event System.Action<bool> Struck;
+        /// <summary>Fired when a blow glances off while the hero is invulnerable (Aegis Burst counts these).</summary>
+        public event System.Action Deflected;
         public int Health { get; private set; } = 6;
         public int BaseDamage { get; private set; } = 1;
         public int Damage => Mathf.Max(1, Mathf.RoundToInt((BaseDamage + (Blessing != null ? Blessing.BonusDamage : 0)
             + (Mechanic != null ? Mechanic.BonusDamage : 0) + (Buffs != null ? Buffs.JackpotDamage : 0) + (Crystals != null ? Crystals.BonusDamage : 0)
-            + (Powerups != null ? Powerups.BasicAttackBonus : 0))
+            + (Powerups != null ? Powerups.BasicAttackBonus : 0) + WarBanner.BonusAt(transform.position))
             * (Buffs != null ? Buffs.DamageMultiplier : 1f) * (Powerups != null ? Powerups.DamageMultiplier(this) : 1f)));
         /// <summary>The class mechanic on R, or null if this hero has not bought it.</summary>
         public ClassMechanic Mechanic { get; private set; }
@@ -332,6 +334,7 @@ namespace Slopgame
         /// <summary>Takes one hit (or spends a ward). False when nothing landed: invulnerable, dead, or debug mode.</summary>
         public bool Hit()
         {
+            if (Run.IsPlaying && IsInvulnerable && Health > 0) Deflected?.Invoke();
             if (!Run.IsPlaying || IsInvulnerable || Health <= 0) return false;
             if (DebugMode.Enabled) { Health = MaxHealth; return false; }
             bool warded = Powerups.AbsorbHit();
@@ -397,6 +400,7 @@ namespace Slopgame
         {
             if (kind == SupportKind.Heal) Heal(amount);
             else if (kind == SupportKind.Protect) Protect(duration);
+            else if (kind == SupportKind.Ward) Powerups.AddWard();
             else if (kind == SupportKind.Bless)
             {
                 if (teammate.HasValue) Blessing.ApplyFromTeammate(amount, duration, teammate.Value);

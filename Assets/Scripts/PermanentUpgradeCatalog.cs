@@ -49,6 +49,8 @@ namespace Slopgame
             new PermanentUpgradeDefinition("gambler_luck", "Lady Luck", "+4% odds on All In per rank", 3, 50, 40, WeaponType.Coins),
             new PermanentUpgradeDefinition("augment_capacitor", "Capacitor Bank", "10% shorter plasma cannon cooldown per rank", 3, 45, 35, WeaponType.Beam),
             new PermanentUpgradeDefinition("augment_health", "Titanium Frame", "+1 Augment maximum HP per rank", 3, 35, 25, WeaponType.Beam),
+            AbilityUnlock(AbilityType.WarBanner, 150),
+            AbilityUnlock(AbilityType.BearTrap, 150),
             Mechanic(WeaponType.Sword, "Shield Taunt", "R: turn red with rage for 2.25s. You can walk; you block bolts from every side (+1 ward each) and draw the enemies' attention"),
             Mechanic(WeaponType.Bow, "Elemental Quiver", "R: cycle fire, freeze and shock arrows. Critical hits set off the arrow's element"),
             Mechanic(WeaponType.Staff, "Wild Storm", "R: after 10 elemental effects, summon a storm that hurls fire, lightning and ice, every strike sure to burn, shock or freeze"),
@@ -63,6 +65,17 @@ namespace Slopgame
         /// <summary>The Ash shop's hefty class mechanic (R), sold only once that class has felled the third guardian.</summary>
         public const int MechanicCost = 600, MechanicGuardians = 3;
         public static string MechanicId(WeaponType weapon) => "mechanic_" + weapon.ToString().ToLowerInvariant();
+
+        /// <summary>
+        /// An ability guardians only offer once it is bought here (see <see cref="AbilityDefinition.ShopUnlock"/>).
+        /// Once bought, it can turn up in every later descent.
+        /// </summary>
+        private static PermanentUpgradeDefinition AbilityUnlock(AbilityType type, int cost)
+        {
+            var ability = AbilityCatalog.Get(type);
+            return new PermanentUpgradeDefinition(ability.UnlockId, "Ability: " + ability.Name, ability.Description + " Guardians can offer it once bought.",
+                1, cost, 0, ability.ClassWeapon);
+        }
 
         private static PermanentUpgradeDefinition Mechanic(WeaponType weapon, string name, string description)
             => new PermanentUpgradeDefinition(MechanicId(weapon), name, description, 1, MechanicCost, 0, weapon, MechanicGuardians);

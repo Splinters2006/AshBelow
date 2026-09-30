@@ -14,13 +14,13 @@ namespace Slopgame
     }
 
     public enum CoopChoice : byte { Upgrade, Artifact }
-    public enum CoopDamageKind : byte { Hit, Burn, Chill, Paralyze, Curse, Freeze, Fear, Stun, Root, Bleed, Poison }
+    public enum CoopDamageKind : byte { Hit, Burn, Chill, Paralyze, Curse, Freeze, Fear, Stun, Root, Bleed, Poison, Mark }
     public enum CoopBoltEventKind : byte { Reflected, Consumed }
     /// <summary>
     /// Heal, Protect and Bless help a teammate. BlessingCredit tells a Paladin how much bonus damage their blessing
     /// dealt (it charges their angels); Revive raises a fallen teammate with half health.
     /// </summary>
-    public enum SupportKind : byte { Heal, Protect, Bless, BlessingCredit, Revive }
+    public enum SupportKind : byte { Heal, Protect, Bless, BlessingCredit, Revive, Ward }
     public enum FxKind : byte { Arrow, Spell, Slash, Bolt, GlowBolt, Ring, Pulse, Rift, Execution, Singularity, Punch, RearHit, Knife, PiercingShot, Aegis, Holy, Sanctuary,
         Windstep, Shadowstep, Stab, Quake, HolySword, Venom, HeavyPunch, Flurry, SanctuaryEnd, TailStab, TailSweep, Pentagram, DemonPaw, Coin, DemonHead, Sharpen, CoinFlip, CoinRain, Angel, Jackpot,
         PlasmaRay, PlasmaOrb, SentryTurret, MicroMissile }

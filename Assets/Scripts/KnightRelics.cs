@@ -55,7 +55,11 @@ namespace Slopgame
                         || Vector2.Distance(now + aim * 0.3f, enemy.transform.position) > RushWidth + enemy.HitRadius) continue;
                     hit.Add(enemy);
                     CombatDamage.Apply(Player, enemy, damage, DamageElement.Physical, now - aim, 2.6f);
-                    if (enemy.Health > 0) enemy.Chill(1.2f);
+                    if (enemy.Health > 0)
+                    {
+                        if (Player.Powerups.Count(PowerupType.GlacialRush) > 0) enemy.Freeze(1.5f);
+                        else enemy.Chill(1.2f);
+                    }
                     ScreenFx.Shake(0.2f, 0.2f);
                     HeroVfx.Pulse(root, enemy.transform.position, 1f, AbilityCatalog.Ice, 0.25f);
                     CoopFx.Pulse(run, enemy.transform.position, 1f, AbilityCatalog.Ice, 0.25f);
@@ -111,6 +115,31 @@ namespace Slopgame
             Player.Protect(duration);
             HolyBubble.Wrap(Player.Run.ProjectileRoot, transform, duration, AbilityCatalog.Ice);
             CoopFx.Aegis(Player.Run, duration);
+            if (Player.Powerups.Count(PowerupType.AegisBurst) > 0) StartCoroutine(AegisBurst(duration));
+        }
+
+        public const float AegisBurstRadius = 2.6f;
+
+        /// <summary>Aegis Burst: counts the blows the bubble turned aside, then bursts, hitting nearby enemies once for each.</summary>
+        private IEnumerator AegisBurst(float duration)
+        {
+            int blocked = 0;
+            System.Action count = () => blocked++;
+            Player.Deflected += count;
+            yield return new WaitForSeconds(duration);
+            Player.Deflected -= count;
+            var run = Player.Run;
+            if (!run.IsPlaying || Player.Health <= 0) yield break;
+            Vector2 center = transform.position;
+            HeroVfx.Pulse(run.ProjectileRoot, center, AegisBurstRadius, AbilityCatalog.Ice, 0.4f);
+            CoopFx.Pulse(run, center, AegisBurstRadius, AbilityCatalog.Ice, 0.4f);
+            ScreenFx.Shake(0.15f, 0.2f);
+            foreach (var enemy in run.Enemies.ToArray())
+            {
+                if (enemy == null || enemy.Health <= 0 || Vector2.Distance(center, enemy.transform.position) > AegisBurstRadius + enemy.HitRadius) continue;
+                if (blocked > 0) CombatDamage.Apply(Player, enemy, Player.Damage * blocked, DamageElement.Physical, center, 3f);
+                else enemy.Hit(0, center, 3f);
+            }
         }
     }
 }

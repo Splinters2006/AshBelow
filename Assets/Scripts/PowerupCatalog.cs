@@ -20,7 +20,11 @@ namespace Slopgame
         HeatSink, WideBeam, NightCycle, DarkHorizon,
         // Universal talents from the talents & abilities expansion.
         GlassCannon, LastStand, Berserker, OpeningStrike, Executioner, Rhythm, Spellblade, Overkill, ElementalKills, Thorns,
-        CloseCall, CheatDeath
+        CloseCall, CheatDeath,
+        // Knight.
+        Retaliation, Counterweight, Cleave, Bastion, GlacialRush, AegisBurst,
+        // Archer.
+        HuntersMark, Sniper, PointBlank, QuickNock, StormVolley, SplittingShot
     }
 
     public sealed class PowerupDefinition
@@ -151,7 +155,19 @@ namespace Slopgame
             new PowerupDefinition(PowerupType.ElementalKills, "Elemental Kills", "Every kill makes your next elemental hit set off its element", 1),
             new PowerupDefinition(PowerupType.Thorns, "Thorns", "When you're hit, deal your damage to every enemy within 1 unit", 1),
             new PowerupDefinition(PowerupType.CloseCall, "Close Call", "Rolling through an enemy bolt gives +1 ward (once every 5 seconds)", 1),
-            new PowerupDefinition(PowerupType.CheatDeath, "Cheat Death", "Once per world, a hit that would kill you leaves you at 1 HP", 1)
+            new PowerupDefinition(PowerupType.CheatDeath, "Cheat Death", "Once per world, a hit that would kill you leaves you at 1 HP", 1),
+            new PowerupDefinition(PowerupType.Retaliation, "Knight: Retaliation", "After a parry, your next slash is fully charged instantly", 1, WeaponType.Sword),
+            new PowerupDefinition(PowerupType.Counterweight, "Knight: Counterweight", "Fully charged slashes knock enemies back and stagger them for 0.5 seconds", 1, WeaponType.Sword),
+            new PowerupDefinition(PowerupType.Cleave, "Knight: Cleave", "Fully charged slashes reach 0.6 farther and sweep 30 degrees wider", 1, WeaponType.Sword),
+            new PowerupDefinition(PowerupType.Bastion, "Knight: Bastion", "A parry gives +1 ward (once every 15 seconds)", 1, WeaponType.Sword),
+            new PowerupDefinition(PowerupType.GlacialRush, "Glacial Rush", "Shield Rush freezes everything it smashes through", 1, WeaponType.Sword, AbilityType.ShieldRush),
+            new PowerupDefinition(PowerupType.HuntersMark, "Archer: Hunter's Mark", "A fully charged arrow marks its target: it takes +1 damage from everything for 4 seconds", 1, WeaponType.Bow),
+            new PowerupDefinition(PowerupType.Sniper, "Archer: Sniper", "Arrows deal +1 damage for every 4 units they fly", 1, WeaponType.Bow),
+            new PowerupDefinition(PowerupType.PointBlank, "Archer: Point Blank", "Fully charged arrows fired within 3 units knock the target back and stagger it", 1, WeaponType.Bow),
+            new PowerupDefinition(PowerupType.QuickNock, "Archer: Quick Nock", "Every 5th arrow fires fully charged instantly", 1, WeaponType.Bow),
+            new PowerupDefinition(PowerupType.StormVolley, "Storm Volley", "Each Arrow Volley arrow that strikes the same enemy again deals +1 more than the last", 1, WeaponType.Bow, AbilityType.Volley),
+            new PowerupDefinition(PowerupType.SplittingShot, "Splitting Shot", "After the first enemy, Piercing Shot splits into 3 arrows", 1, WeaponType.Bow, AbilityType.PiercingShot),
+            new PowerupDefinition(PowerupType.AegisBurst, "Aegis Burst", "When Aegis ends, it blasts nearby enemies back and damages them once per hit it blocked", 1, WeaponType.Sword, AbilityType.Aegis)
         };
 
         public static PowerupDefinition Get(PowerupType type) => All[(int)type];
