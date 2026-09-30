@@ -32,7 +32,8 @@ namespace Slopgame
     /// <summary>
     /// A themed environmental trap on a combat floor. It sits dormant, then on a steady cycle fires a telegraphed
     /// <see cref="HellfireZone"/> strike. Traps are seeded from the floor, so every co-op machine plants the same ones;
-    /// like boss hazards, each machine runs its own copy and judges only its own hero. Traps only hurt heroes.
+    /// like boss hazards, each machine runs its own copy and judges only its own hero. Traps hurt enemies too (applied
+    /// by the host in co-op), so heroes can lure them in.
     /// </summary>
     public sealed class EnvironmentHazard : MonoBehaviour
     {
@@ -149,8 +150,17 @@ namespace Slopgame
             _ => FlameMesh.Orange
         };
 
-        /// <summary>Sets off the trap now: its telegraph starts, then it strikes.</summary>
-        public HellfireZone Fire() => HellfireZone.Spawn(run, spec, false);
+        /// <summary>Sets off the trap now: its telegraph starts, then it strikes heroes and enemies alike.</summary>
+        public HellfireZone Fire()
+        {
+            var zone = HellfireZone.Spawn(run, spec, false);
+            if (zone != null) zone.EnemyDamage = EnemyDamageFor(run);
+            return zone;
+        }
+
+        /// <summary>A strike takes half a basic enemy's health on this floor, so luring two strikes onto one finishes it.</summary>
+        public static int EnemyDamageFor(DungeonRun run) =>
+            Mathf.Max(1, Mathf.CeilToInt(run.EnemyHealthScaled(DungeonRun.EnemyHealthForFloor(run.Floor)) * 0.5f));
 
         private void Update()
         {

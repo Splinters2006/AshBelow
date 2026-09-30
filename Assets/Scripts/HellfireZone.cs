@@ -77,6 +77,13 @@ namespace Slopgame
         private bool erupted;
         private Vector2 meteorFrom;
 
+        /// <summary>
+        /// Damage the zone deals to enemies caught in it; 0 (every boss hazard) leaves them alone. Environmental traps set
+        /// it so heroes can lure enemies into them. Strikes hit each enemy once, burning ground once a second.
+        /// </summary>
+        public int EnemyDamage { get; set; }
+        private readonly System.Collections.Generic.Dictionary<DungeonEnemy, float> enemyHitAt = new System.Collections.Generic.Dictionary<DungeonEnemy, float>();
+
         public bool IsBurning => age >= spec.Telegraph && age < spec.Telegraph + spec.Duration;
         /// <summary>The Cataclysm sea of fire and meteor craters are burning ground; beams and rings are strikes.</summary>
         private bool IsGround => spec.Shape == HazardShape.Inferno || spec.Shape == HazardShape.Pool;
@@ -141,7 +148,21 @@ namespace Slopgame
                 if (hero.Health != before || hero.IsInvulnerable)
                     HeroVfx.Sparks(run.ProjectileRoot, hero.transform.position, colors.Main, 12, 4f, 0.4f, Vector2.up, 120f);
             }
+            // Enemies are the host's to damage; a guest's copy only judges its own hero.
+            if (IsBurning && EnemyDamage > 0 && !run.IsGuest) HurtEnemies();
             Draw();
+        }
+
+        private void HurtEnemies()
+        {
+            foreach (var enemy in run.Enemies.ToArray())
+            {
+                if (enemy == null || enemy.Health <= 0 || !Contains(enemy.transform.position)) continue;
+                if (enemyHitAt.TryGetValue(enemy, out float last) && (!IsGround || Time.time < last + 1f)) continue;
+                enemyHitAt[enemy] = Time.time;
+                HeroVfx.Sparks(run.ProjectileRoot, enemy.transform.position, colors.Main, 8, 3.5f, 0.35f, Vector2.up, 120f);
+                enemy.Hit(EnemyDamage, spec.Center, IsGround ? 0f : 0.6f);
+            }
         }
 
         private void Erupt()

@@ -148,6 +148,15 @@ namespace Slopgame.Editor
             var vent = EnvironmentHazard.Create(run, run.ProjectileRoot, run.World, run.World.Traps[0], spec, 4f, 0f);
             var zone = vent.Fire();
             Require(zone != null && zone.Contains(hero) && !zone.Contains(hero + Vector2.right * 2f), "Trap strike missed its area");
+            Require(zone.EnemyDamage == EnvironmentHazard.EnemyDamageFor(run) && zone.EnemyDamage > 0, "Trap does not hurt enemies");
+            // An enemy lured onto the vent takes the trap's damage once, not every frame.
+            var victim = run.Enemies.Find(e => e.Boss == null && e.Health > zone.EnemyDamage * 2);
+            Require(victim != null, "No enemy to lure");
+            int health = victim.Health;
+            victim.transform.position = hero;
+            Invoke(zone, "Update");
+            Invoke(zone, "Update");
+            Require(victim.Health == health - zone.EnemyDamage, "Trap damage to enemies wrong: " + (health - victim.Health));
             UnityEngine.Object.Destroy(zone.gameObject);
             UnityEngine.Object.Destroy(vent.gameObject);
         }
