@@ -99,9 +99,16 @@ namespace Slopgame
         public bool IsCursed => Time.time < cursedUntil;
         public const float CurseDamageMultiplier = 1.5f;
         /// <summary>After a paralysis wears off, a guardian shrugs off new ones for this long.</summary>
-        public const float BossParalysisImmunity = 3f;
+        public const float BossParalysisImmunity = 5f;
+        /// <summary>Guardians shake off crowd control: holds and chills last this fraction as long on them.</summary>
+        public const float BossCrowdControlDuration = 0.35f;
+        /// <summary>Guardians feel only this fraction of any slow's strength.</summary>
+        public const float BossSlowResistance = 0.5f;
         public float ActionSpeedMultiplier => IsHeld ? 0f
-            : (IsChilled ? 0.5f : 1f) * (HolyBubble.SlowsAt(transform.position) ? HolyBubble.SanctuarySlow : 1f) * (Time.time < terrorUntil ? TerrorSlow : 1f);
+            : Slowed((IsChilled ? 0.5f : 1f) * (HolyBubble.SlowsAt(transform.position) ? HolyBubble.SanctuarySlow : 1f) * (Time.time < terrorUntil ? TerrorSlow : 1f));
+
+        /// <summary>A speed factor after the guardian's resistance: a 50% slow only slows a guardian by 25%.</summary>
+        private float Slowed(float factor) => Boss != null ? 1f - (1f - factor) * BossSlowResistance : factor;
         public float MoveMultiplier => ActionSpeedMultiplier;
         // Attack timers follow local action time; status durations and damage-over-time use world time.
         public float ActionTime { get; private set; }
@@ -385,7 +392,7 @@ namespace Slopgame
         {
             if (IsInvulnerable) return;
             if (Run.IsGuest) { Run.Coop.ReportDamage(this, CoopDamageKind.Chill, 0, transform.position, 0, duration); return; }
-            chilledUntil = Mathf.Max(chilledUntil, Time.time + duration * (Boss != null ? 0.5f : 1f));
+            chilledUntil = Mathf.Max(chilledUntil, Time.time + duration * (Boss != null ? BossCrowdControlDuration : 1f));
         }
 
         /// <summary>Damage after the curse, rounded half up so even a 1-damage hit is worth more on a cursed enemy.</summary>
@@ -394,7 +401,7 @@ namespace Slopgame
         public static readonly Color FrozenTint = new Color(0.72f, 0.93f, 1f);
 
         /// <summary>
-        /// Holds the enemy in place. Guardians are held half as long and then resist for a few seconds.
+        /// Holds the enemy in place. Guardians are held for a fraction of the time and then resist for a few seconds.
         /// False when nothing took hold (an untouchable or resisting guardian); a co-op guest assumes it lands.
         /// </summary>
         public bool Paralyze(float duration, bool lingering = false)
@@ -407,14 +414,14 @@ namespace Slopgame
             {
                 // Covers the paralysis itself too, so repeated stabs cannot chain-lock a guardian.
                 if (Time.time < paralysisImmuneUntil) return false;
-                duration *= 0.5f;
+                duration *= BossCrowdControlDuration;
             }
             paralyzedUntil = Mathf.Max(paralyzedUntil, Time.time + duration);
             if (Boss != null) paralysisImmuneUntil = paralyzedUntil + BossParalysisImmunity;
             return true;
         }
 
-        /// <summary>Ice freezes the enemy solid. Like paralysis, guardians thaw twice as fast and then resist for a while.</summary>
+        /// <summary>Ice freezes the enemy solid. Like paralysis, guardians thaw far faster and then resist for a while.</summary>
         public void Freeze(float duration)
         {
             if (IsInvulnerable || duration <= 0f || Health <= 0) return;
@@ -422,7 +429,7 @@ namespace Slopgame
             if (Boss != null)
             {
                 if (Time.time < freezeImmuneUntil) return;
-                duration *= 0.5f;
+                duration *= BossCrowdControlDuration;
             }
             frozenUntil = Mathf.Max(frozenUntil, Time.time + duration);
             if (Boss != null) freezeImmuneUntil = frozenUntil + BossParalysisImmunity;
@@ -461,13 +468,13 @@ namespace Slopgame
         {
             var hero = Run.Player;
             return hero != null && hero.Health > 0 && hero.Powerups.Count(PowerupType.DreadAura) > 0
-                && Vector2.Distance(transform.position, hero.transform.position) <= DreadRadius ? DreadSlow : 1f;
+                && Vector2.Distance(transform.position, hero.transform.position) <= DreadRadius ? Slowed(DreadSlow) : 1f;
         }
 
         /// <summary>Breaks the enemy out of its ice at once (Shatter).</summary>
         public void Thaw() { if (!Run.IsGuest) frozenUntil = Mathf.Min(frozenUntil, Time.time); }
 
-        /// <summary>Stuns the enemy: held like paralysis. Guardians are stunned half as long and then resist for a while.</summary>
+        /// <summary>Stuns the enemy: held like paralysis. Guardians shake stuns off far faster and then resist for a while.</summary>
         public bool Stun(float duration)
         {
             if (IsInvulnerable || duration <= 0f || Health <= 0) return false;
@@ -475,7 +482,7 @@ namespace Slopgame
             if (Boss != null)
             {
                 if (Time.time < stunImmuneUntil) return false;
-                duration *= 0.5f;
+                duration *= BossCrowdControlDuration;
             }
             stunnedUntil = Mathf.Max(stunnedUntil, Time.time + duration);
             if (Boss != null) stunImmuneUntil = stunnedUntil + BossParalysisImmunity;

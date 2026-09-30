@@ -125,7 +125,7 @@ namespace Slopgame.Editor
                     Require(run.Map.CanStand(new Vector2(15, 9)) && !run.Map.CanStand(new Vector2(12, 9)), "Arena bounds are wrong.");
                     run.Player.Protect(30f);
                     run.Boss.Enemy.Chill(20f);
-                    waitUntil = Time.time + 3.05f;
+                    waitUntil = Time.time + 2.2f;
                     stage = 2;
                     return;
                 }
@@ -136,8 +136,8 @@ namespace Slopgame.Editor
                     {
                         Require(run.ProjectileRoot.GetComponentsInChildren<EnemyProjectile>().Length == 0,
                             "Chilled boss attacked at normal speed.");
-                        Require(Mathf.Abs(run.Boss.Enemy.ActionTime - 1.525f) < 0.15f,
-                            "Chill did not halve the boss action clock.");
+                        Require(Mathf.Abs(run.Boss.Enemy.ActionTime - 1.65f) < 0.15f,
+                            "Chill did not slow the boss action clock by a quarter.");
                         checkedChilledBoss = true;
                         waitUntil = Time.time + 3f;
                         return;
