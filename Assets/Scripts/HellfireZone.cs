@@ -210,7 +210,9 @@ namespace Slopgame
             {
                 case HazardShape.Inferno:
                     ScreenFx.Shake(0.55f, 1.1f);
-                    ScreenFx.Flash(new Color(1f, 0.25f, 0.05f, 0.55f), 0.6f);
+                    // Hellfire flashes orange; other styles flash their own colour (a whiteout icy blue).
+                    ScreenFx.Flash(spec.Style == HazardStyle.Hellfire || spec.Style == HazardStyle.Brimstone ? new Color(1f, 0.25f, 0.05f, 0.55f)
+                        : FlameMesh.Alpha(colors.Main, 0.55f), 0.6f);
                     HeroVfx.Pulse(root, spec.Center, spec.Radius + 0.4f, AbilityCatalog.Gold, 0.6f);
                     break;
                 case HazardShape.Pool:
@@ -283,6 +285,24 @@ namespace Slopgame
                 if (!warning)
                     for (int i = 0; i < 8; i++)
                         flames.Diamond(spec.Center + FlameMesh.Polar(i * Mathf.PI / 4f + Time.time, spec.Radius * 0.65f), 0.15f, bright);
+            }
+            else if (spec.Shape == HazardShape.Inferno)
+            {
+                // Every floor tile outside the safe zone lights up as a locked grid cell, with a scan line sweeping over them.
+                var arena = DungeonMap.Arena;
+                float sweep = Mathf.Repeat(Time.time * 8f, arena.height + 6f) + arena.yMin - 3f;
+                for (int x = arena.xMin; x < arena.xMax; x++)
+                    for (int y = arena.yMin; y < arena.yMax; y++)
+                    {
+                        var cell = new Vector2(x, y);
+                        if (Vector2.Distance(cell, spec.Center) < spec.Radius + 0.6f) continue;
+                        bool scanned = Mathf.Abs(y - sweep) < 1f;
+                        flames.Rect(cell - Vector2.one * 0.44f, cell + Vector2.one * 0.44f, scanned ? FlameMesh.Alpha(colors.Bright, fade * 0.45f) : fill);
+                        if (!warning && FlameMesh.Hash(x, y) > 0.8f) flames.Diamond(cell, 0.12f, bright);
+                    }
+                flames.Ring(spec.Center, spec.Radius, 0.14f, FlameMesh.Alpha(colors.Core, fade), 48);
+                for (int i = 0; i < 8; i++)
+                    flames.Diamond(spec.Center + FlameMesh.Polar(i * Mathf.PI / 4f - Time.time, spec.Radius + 0.35f), 0.14f, bright);
             }
             else
             {

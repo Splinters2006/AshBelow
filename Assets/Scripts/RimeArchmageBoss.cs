@@ -5,11 +5,14 @@ namespace Slopgame
     /// <summary>
     /// The Arcane Spire's second guardian: an ice-crowned archmage. She splits the arena with glacial lances, calls a
     /// blizzard of hail down on each hero and spins icicle spirals from a distance; up close she bursts in a frost nova
-    /// and batters heroes with her staff. She summons arcane golems and wisps.
+    /// and batters heroes with her staff. She also takes the arena away: a whiteout freezes everything but one warm
+    /// rune, frozen lanes leave only clear rows (a grid of safe squares when enraged), and a glacier cage closes in from
+    /// the walls, herding the party to her. She summons arcane golems and wisps.
     /// </summary>
     public sealed class RimeArchmageBoss : ArcaneBossBehaviour
     {
-        public const float LanceLength = 13f, NovaReach = 3.2f, StaffReach = 3f, StaffCone = 120f;
+        public const float WhiteoutTelegraph = 2.8f, WhiteoutDuration = 2.2f, WhiteoutReach = 8f, LaneWidth = 3f, CageWall = 2.5f, CageStep = 1.1f;
+        public const float HailRadius = 2.4f, HailInterval = 0.5f, LanceLength = 13f, NovaReach = 3.2f, StaffReach = 3f, StaffCone = 120f;
         /// <summary>The guardian's name (the encyclopedia reads it outside a fight).</summary>
         public const string FixedTitle = "ISOLDE, THE RIME ARCHMAGE";
         public override string Title => FixedTitle;
@@ -25,7 +28,8 @@ namespace Slopgame
         private static readonly string[] tells =
         {
             "GLACIAL LANCES - FIND THE GAP", "BLIZZARD - WATCH FOR FALLING HAIL", "FROST NOVA - ROLL THROUGH THE RING",
-            "ICICLE SPIRAL - WEAVE THROUGH", "SHATTERING STAFF - BACK AWAY FROM HER"
+            "ICICLE SPIRAL - WEAVE THROUGH", "SHATTERING STAFF - BACK AWAY FROM HER", "WHITEOUT - GET TO THE WARM RUNE",
+            "FROZEN LANES - KEEP TO THE CLEAR ROWS", "GLACIER CAGE - GET TO THE CENTRE"
         };
         protected override byte[] Minions => minions;
         private static readonly byte[] minions = { DungeonRun.MinionBrute, DungeonRun.MinionBasic };
@@ -33,7 +37,8 @@ namespace Slopgame
         private float angle, nextShot;
         public override int BaseHealth(int floor) => 26 + floor * 2;
 
-        private int HailFalls => IsEnraged ? 10 : 8;
+        // Big hailstones: fewer of them, further apart, and a longer warning so each one can be escaped.
+        private int HailFalls => IsEnraged ? 8 : 6;
         private int StaffBlows => IsEnraged ? 3 : 2;
 
         protected override float Attack(int index, Vector2 aim)
@@ -46,7 +51,7 @@ namespace Slopgame
                     angle = Mathf.Atan2(aim.y, aim.x);
                     Lances(center, 0f, 0.9f);
                     return IsEnraged ? 3f : 2.2f;
-                case 1: return 0.2f + HailFalls * 0.35f + 1f;
+                case 1: return 0.2f + HailFalls * HailInterval + 1.2f;
                 case 2:
                     // A burst around her feet, then a ring of frost rolling outward.
                     for (int i = 0; i < 12; i++) Line(center, FlameMesh.Polar(i * Mathf.PI / 6f, 1f), NovaReach, 1.5f, 0.7f, 0.3f);
@@ -58,10 +63,42 @@ namespace Slopgame
                     angle = Mathf.Atan2(aim.y, aim.x);
                     nextShot = 0.4f;
                     return 2.6f;
+                case 5:
+                    // The whole arena freezes but one warm rune, a run away from the party.
+                    LockdownAwayFromParty(WhiteoutReach, IsEnraged ? 2.2f : 2.6f, WhiteoutTelegraph, WhiteoutDuration);
+                    return WhiteoutTelegraph + WhiteoutDuration + 0.4f;
+                case 6:
+                    Lanes(Random.value < 0.5f, 1.3f, 3.5f);
+                    return IsEnraged ? 6f : 5f;
+                case 7: return 2f * CageStep + 1f + 2.6f + 0.4f;
                 default:
                     PlanLunge(StrikeSpot(Run.NearestHero(center), 1.3f), 0.35f, 0.25f);
                     return 0.6f + StaffBlows * 0.6f + 1f;
             }
+        }
+
+        /// <summary>Frozen strips across the whole arena with clear rows between them, at a random offset.</summary>
+        private void Lanes(bool horizontal, float telegraph, float duration)
+        {
+            var arena = DungeonMap.Arena;
+            float span = horizontal ? arena.height : arena.width, offset = Random.Range(0f, LaneWidth * 2f);
+            for (float d = offset - LaneWidth; d < span + LaneWidth; d += LaneWidth * 2f)
+            {
+                if (horizontal) Line(new Vector2(arena.xMin - 1f, arena.yMin - 0.5f + d), Vector2.right, arena.width + 1f, LaneWidth, telegraph, duration);
+                else Line(new Vector2(arena.xMin - 0.5f + d, arena.yMin - 1f), Vector2.up, arena.height + 1f, LaneWidth, telegraph, duration);
+            }
+        }
+
+        /// <summary>One ring of the glacier cage: four frost walls <paramref name="inset"/> in from the arena's edges.</summary>
+        private void CageWalls(float inset, float telegraph, float duration)
+        {
+            var arena = DungeonMap.Arena;
+            float left = arena.xMin - 0.5f + inset + CageWall * 0.5f, right = arena.xMax - 0.5f - inset - CageWall * 0.5f;
+            float bottom = arena.yMin - 0.5f + inset + CageWall * 0.5f, top = arena.yMax - 0.5f - inset - CageWall * 0.5f;
+            Line(new Vector2(arena.xMin - 1f, bottom), Vector2.right, arena.width + 1f, CageWall, telegraph, duration);
+            Line(new Vector2(arena.xMin - 1f, top), Vector2.right, arena.width + 1f, CageWall, telegraph, duration);
+            Line(new Vector2(left, arena.yMin - 1f), Vector2.up, arena.height + 1f, CageWall, telegraph, duration);
+            Line(new Vector2(right, arena.yMin - 1f), Vector2.up, arena.height + 1f, CageWall, telegraph, duration);
         }
 
         /// <summary>Eight lances radiating from her, turned by <paramref name="turn"/> radians.</summary>
@@ -81,9 +118,24 @@ namespace Slopgame
                     if (step == 1 && IsEnraged && time >= 2f) { step = 2; Lances(center, 0f, 0.7f); }
                     break;
                 case 2:
-                    if (step >= HailFalls || time < 0.2f + step * 0.35f) return;
+                    if (step >= HailFalls || time < 0.2f + step * HailInterval) return;
                     step++;
-                    foreach (Vector2 hero in LivingHeroPositions()) Scorch(hero + Random.insideUnitCircle * 1.5f, 1f, 0.9f, 0.3f);
+                    foreach (Vector2 hero in LivingHeroPositions()) Scorch(hero + Random.insideUnitCircle * 2f, HailRadius, 1.1f, 0.3f);
+                    break;
+                case 7:
+                    // Icicles chase heroes down the clear rows; enraged, crossing lanes leave only squares.
+                    if (step < 3 && time >= 1.6f + step * 0.8f) { FanAt(center, AimAt(Run.NearestHero(center)), 3, 10f, 6f); step++; }
+                    if (step == 3 && IsEnraged && time >= 2.4f) { step = 4; Lanes(Random.value < 0.5f, 1.4f, 2f); }
+                    break;
+                case 8:
+                    // The cage closes one ring at a time; every ring holds until the last has struck.
+                    if (step < 3 && time >= step * CageStep)
+                    {
+                        float strikes = step * CageStep + 1f, end = 2f * CageStep + 1f + 2.6f;
+                        CageWalls(step * CageWall, 1f, end - strikes);
+                        step++;
+                    }
+                    if (step == 3 && time >= 2f * CageStep + 1.4f) { step = 4; BoltRing(center, 10, 4.5f); }
                     break;
                 case 4:
                     if (time < nextShot || time > 2.2f) return;
