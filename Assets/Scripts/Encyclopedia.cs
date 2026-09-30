@@ -28,9 +28,11 @@ namespace Slopgame
 
         private const float RowHeight = 92f, CardWidth = 549f;
         private Page page;
-        // Talents and abilities can be narrowed to one hero; null shows everyone's.
+        // Talents and abilities can be narrowed to one hero. With filterAll off, a null hero means the general talents
+        // any hero can take (they get their own section so they don't crowd the top of every hero's list).
         private WeaponType? heroFilter;
         private bool filterAll = true;
+        private bool GeneralOnly => !filterAll && !heroFilter.HasValue;
         private Vector2 scroll;
         private readonly List<Entry> entries = new List<Entry>();
 
@@ -39,7 +41,12 @@ namespace Slopgame
             float step = 1152f / PageNames.Length;
             for (int i = 0; i < PageNames.Length; i++)
                 if (DungeonUi.Button("codexTab" + i, new Rect(70 + i * step, 250, step - 12, 42), PageNames[i], (int)page == i ? AbilityCatalog.Gold : DungeonUi.Muted))
-                { page = (Page)i; scroll = Vector2.zero; }
+                {
+                    page = (Page)i;
+                    scroll = Vector2.zero;
+                    // Abilities all belong to a hero, so the general section only exists for talents.
+                    if (page != Page.Talents && GeneralOnly) filterAll = true;
+                }
 
             bool filtered = page == Page.Talents || page == Page.Abilities;
             float listTop = 306;
@@ -72,15 +79,23 @@ namespace Slopgame
 
         private void DrawHeroFilter(DungeonRun run, Rect row)
         {
-            int count = run.Characters.Count + 1;
-            float step = row.width / count;
-            if (DungeonUi.Button("codexAll", new Rect(row.x, row.y, step - 8, row.height), "All", filterAll ? DungeonUi.Teal : DungeonUi.Muted))
+            // "All" and "General" are short, so they get narrow buttons and the heroes share what is left.
+            float x = row.x;
+            if (DungeonUi.Button("codexAll", new Rect(x, row.y, 64, row.height), "All", filterAll ? DungeonUi.Teal : DungeonUi.Muted))
             { filterAll = true; heroFilter = null; scroll = Vector2.zero; }
+            x += 72;
+            if (page == Page.Talents)
+            {
+                if (DungeonUi.Button("codexGeneral", new Rect(x, row.y, 96, row.height), "General", GeneralOnly ? DungeonUi.Teal : DungeonUi.Muted))
+                { filterAll = false; heroFilter = null; scroll = Vector2.zero; }
+                x += 104;
+            }
+            float step = (row.xMax - x + 8) / Mathf.Max(1, run.Characters.Count);
             for (int i = 0; i < run.Characters.Count; i++)
             {
                 var hero = run.Characters[i];
                 bool selected = !filterAll && heroFilter == hero.Weapon;
-                if (DungeonUi.Button("codexHero" + i, new Rect(row.x + (i + 1) * step, row.y, step - 8, row.height), hero.DisplayName, selected ? hero.Color : DungeonUi.Muted))
+                if (DungeonUi.Button("codexHero" + i, new Rect(x + i * step, row.y, step - 8, row.height), hero.DisplayName, selected ? hero.Color : DungeonUi.Muted))
                 { filterAll = false; heroFilter = hero.Weapon; scroll = Vector2.zero; }
             }
         }
@@ -118,7 +133,7 @@ namespace Slopgame
                 case Page.Talents:
                     foreach (var talent in PowerupCatalog.All)
                     {
-                        if (!filterAll && talent.ClassWeapon.HasValue && talent.ClassWeapon != heroFilter) continue;
+                        if (!filterAll && talent.ClassWeapon != heroFilter) continue;
                         string tag = talent.ClassWeapon.HasValue ? HeroName(run, talent.ClassWeapon.Value) : "ANY HERO";
                         if (talent.RequiredAbility != AbilityType.None) tag += "  /  NEEDS " + AbilityCatalog.Get(talent.RequiredAbility)?.Name.ToUpperInvariant();
                         if (talent.MaxStacks < int.MaxValue && talent.MaxStacks > 1) tag += $"  /  MAX {talent.MaxStacks}";
