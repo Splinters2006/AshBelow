@@ -51,16 +51,29 @@ namespace Slopgame
         /// still on levels 5, 10 and 15), with the wave size following the party size.
         /// </summary>
         public bool IsWaveWorld { get; }
+        /// <summary>
+        /// How much deadlier the world is than normal (1 = normal). Enemy health, speed, attack pace, numbers and
+        /// specialists, and guardian health all scale with it; see the multipliers below.
+        /// </summary>
+        public float Threat { get; }
+        public float EnemyHealthMultiplier => Threat;
+        public float EnemySpeedMultiplier => 1f + (Threat - 1f) * 0.2f;
+        /// <summary>How much faster every enemy's attack clock runs here (guardians included).</summary>
+        public float EnemyTempo => 1f + (Threat - 1f) * 0.25f;
+        public float GuardianHealthMultiplier => 1f + (Threat - 1f) * 0.6f;
+        /// <summary>Extra enemies in every combat room.</summary>
+        public int ExtraEnemiesPerRoom => Threat >= 1.5f ? 1 : 0;
 
         public WorldDefinition(int index, string name, bool highTech, Color background, Color floorA, Color floorB, Color wall, Color accent,
             Color arenaRune, string basicName, string casterName, string bruteName, Color basicTint, Color casterTint, Color bruteTint, BoltKind bolts,
             WeaponType? hero = null, bool placeholder = false, Vector2 mapPosition = default, MapLayout layout = MapLayout.Dungeon, TrapTheme[] traps = null, bool lava = false, HazardStyle element = HazardStyle.Hellfire,
-            BossKind firstGuardian = BossKind.AshWarden, bool waves = false)
+            BossKind firstGuardian = BossKind.AshWarden, bool waves = false, float threat = 1f)
         {
             Index = index; Name = name; HighTech = highTech; Background = background; FloorA = floorA; FloorB = floorB; Wall = wall; Accent = accent;
             ArenaRune = arenaRune; BasicName = basicName; CasterName = casterName; BruteName = bruteName;
             BasicTint = basicTint; CasterTint = casterTint; BruteTint = bruteTint; Bolts = bolts;
             Hero = hero; IsPlaceholder = placeholder; MapPosition = mapPosition; Layout = layout; Traps = traps ?? new TrapTheme[0]; HasLava = lava; Element = element; FirstGuardian = firstGuardian; IsWaveWorld = waves;
+            Threat = Mathf.Max(1f, threat);
         }
     }
 
@@ -70,6 +83,8 @@ namespace Slopgame
         public const int FloorsPerWorld = 15;
         public static readonly Color Neon = new Color(0.25f, 0.95f, 1f);
         public static readonly Color NeonPink = new Color(1f, 0.25f, 0.8f);
+        /// <summary>World 3 is much deadlier than the rest: 60% more enemy health, faster enemies that attack sooner, an extra enemy per room, more specialists and tougher guardians.</summary>
+        public const float InfernalCourtThreat = 1.6f;
 
         public static readonly WorldDefinition[] All =
         {
@@ -105,7 +120,7 @@ namespace Slopgame
                 {
                     new TrapTheme("Brimstone geyser", TrapKind.Vent, HazardStyle.Hellfire, 1.5f),
                     new TrapTheme("Fire jet", TrapKind.Jet, HazardStyle.Hellfire, 5f),
-                }, lava: true, firstGuardian: BossKind.HexMatriarch),
+                }, lava: true, firstGuardian: BossKind.HexMatriarch, threat: InfernalCourtThreat),
             new WorldDefinition(3, "THE ARCANE SPIRE", false, new Color(0.03f, 0.03f, 0.08f),
                 new Color(0.1f, 0.1f, 0.2f), new Color(0.12f, 0.12f, 0.23f), new Color(0.26f, 0.26f, 0.45f),
                 new Color(0.55f, 0.6f, 1f), new Color(0.4f, 0.85f, 1f),

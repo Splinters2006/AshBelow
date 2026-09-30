@@ -5,7 +5,9 @@ namespace Slopgame
     /// <summary>
     /// Area denial artillery, with a broadside that leaves a safe central corridor. It also rams across the arena on its
     /// treads, stomps out shockwaves up close, and shells everything but the ground right around itself, so the
-    /// party has to get under its guns (where its hull swipe waits).
+    /// party has to get under its guns (where its hull swipe waits). Between volleys Bastion stamps the ground: an
+    /// earthquake cracks open a band of the arena (two when enraged) and seals it off for a few seconds, squeezing the
+    /// heroes into what is left while the guns keep firing.
     /// </summary>
     public sealed class SiegeEngineBoss : NeonBossBehaviour
     {
@@ -30,6 +32,84 @@ namespace Slopgame
         public override int BaseHealth(int floor) => 28 + floor * 2;
 
         private int Rams => IsEnraged ? 2 : 1;
+
+        // ---------------------------------------------------------------- earthquakes
+
+        /// <summary>The arena splits into this many bands across; a quake seals the band the nearest hero stands in.</summary>
+        public const int QuakeBands = 4;
+        /// <summary>Real seconds of cracking-ground warning before a band is sealed: enough to walk (or roll) out of it.</summary>
+        public const float QuakeWarning = 1.6f;
+        /// <summary>How long a sealed band stays deadly, in real seconds (longer while enraged).</summary>
+        public const float QuakeHold = 4f, EnragedQuakeHold = 5f;
+        /// <summary>Attack-clock seconds from one quake to the next, and the first one's delay into the fight.</summary>
+        public const float QuakeInterval = 10f, FirstQuake = 5f;
+        /// <summary>Real seconds the whole arena stays open between one quake's end and the next quake's warning.</summary>
+        public const float QuakeGap = 1.5f;
+        /// <summary>
+        /// Co-op guests get four bits of state: attacks use 0-6 and the court 14-15, so an attack state plus a quake
+        /// warning goes out as this offset plus the state (7-13).
+        /// </summary>
+        private const byte QuakeOffset = 7;
+        private float nextQuake, quakeWarningUntil, quakeClearAt;
+        private int quakes;
+
+        public bool IsQuakeWarning => Time.time < quakeWarningUntil;
+        public override byte NetState => IsQuakeWarning && state < QuakeOffset ? (byte)(state + QuakeOffset) : state;
+        public override string Tell => IsQuakeWarning ? "EARTHQUAKE - GET OFF THE CRACKING GROUND" : base.Tell;
+
+        protected override void OnSetup()
+        {
+            base.OnSetup();
+            nextQuake = Enemy.ActionTime + FirstQuake;
+        }
+
+        public override void HostTick(Vector2 toHero)
+        {
+            base.HostTick(toHero);
+            // The next quake waits for the attack clock and for the last sealed band to reopen, so bands never stack up.
+            if (Enemy.ActionTime < nextQuake || Time.time < quakeClearAt + QuakeGap || !Run.IsPlaying) return;
+            Quake();
+            nextQuake = Enemy.ActionTime + QuakeInterval;
+        }
+
+        /// <summary>Co-op guest: states 7-13 are an attack state with a quake warning on top.</summary>
+        public override void ApplyNetState(bool charging, byte value)
+        {
+            bool quake = value >= QuakeOffset && value < QuakeOffset * 2;
+            quakeWarningUntil = quake ? Time.time + 0.5f : 0f;
+            base.ApplyNetState(charging, quake ? (byte)(value - QuakeOffset) : value);
+        }
+
+        private void Quake()
+        {
+            var arena = DungeonMap.Arena;
+            // Alternate between bands running up and down the arena and bands running across it.
+            bool vertical = quakes++ % 2 == 0;
+            float start = vertical ? arena.xMin - 0.5f : arena.yMin - 0.5f;
+            float band = (vertical ? arena.width : arena.height) / (float)QuakeBands;
+            float length = vertical ? arena.height : arena.width;
+            Vector2 hero = Run.NearestHero(transform.position);
+            int under = Mathf.Clamp(Mathf.FloorToInt(((vertical ? hero.x : hero.y) - start) / band), 0, QuakeBands - 1);
+            float hold = IsEnraged ? EnragedQuakeHold : QuakeHold;
+            SealBand(under, vertical, start, band, length, hold);
+            // Enraged, a far band cracks too; the bands beside the hero's always stay open, so there is somewhere to go.
+            if (IsEnraged) SealBand(under <= 1 ? QuakeBands - 1 : 0, vertical, start, band, length, hold);
+            quakeWarningUntil = Time.time + QuakeWarning;
+            quakeClearAt = Time.time + QuakeWarning + hold;
+            Vector2 ground = GroundPosition;
+            ScreenFx.Shake(0.35f, QuakeWarning);
+            QuakeVfx.Play(Run.ProjectileRoot, ground, 5f, 4, 0.18f, Accent);
+            CoopFx.Quake(Run, ground, 5f, 4, 0.18f, Accent);
+        }
+
+        /// <summary>One band of the arena cracks, then stays sealed: standing in it keeps hurting until it reopens.</summary>
+        private void SealBand(int index, bool vertical, float start, float band, float length, float hold)
+        {
+            var arena = DungeonMap.Arena;
+            float middle = start + (index + 0.5f) * band;
+            Vector2 from = vertical ? new Vector2(middle, arena.yMin - 0.5f) : new Vector2(arena.xMin - 0.5f, middle);
+            Hazard(HazardShape.Beam, from, vertical ? Vector2.up : Vector2.right, length, band, QuakeWarning, hold);
+        }
 
         protected override float Attack(int index, Vector2 aim)
         {

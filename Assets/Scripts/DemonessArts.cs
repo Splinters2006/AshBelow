@@ -7,7 +7,9 @@ namespace Slopgame
     /// <summary>The Demoness's expansion arts: Wing Dash, Soul Siphon and Nightmare Snap, plus Torment's tally.</summary>
     public sealed partial class DemonessAttack
     {
-        public const float WingDashDistance = 4.5f, WingDashParalysis = 1f, SiphonRadius = 5f, SiphonTime = 5f, SnapRadius = 4f;
+        public const float WingDashDistance = 4.5f, WingDashParalysis = 2f, SiphonRadius = 5f, SiphonTime = 5f, SnapRadius = 4f;
+        /// <summary>How much remaining paralysis makes Nightmare Snap's tether flare at full width.</summary>
+        private const float SnapTetherFullAt = 1f;
         private readonly Dictionary<DungeonEnemy, int> torment = new Dictionary<DungeonEnemy, int>();
 
         /// <summary>Torment: each vital stab on the same enemy adds +1 more than the last (no limit).</summary>
@@ -99,7 +101,7 @@ namespace Slopgame
                 float remaining = enemy.ConsumeParalysis();
                 int damage = Player.Damage * (2 + rank - 1 + Mathf.CeilToInt(remaining * 3f));
                 // Each victim's shackle snaps; the more paralysis it had left, the wider the nightmare's eye.
-                float strength = remaining / Mathf.Max(0.01f, WingDashParalysis);
+                float strength = remaining / SnapTetherFullAt;
                 NightmareSnapVfx.Tether(run.ProjectileRoot, at, enemy.transform.position, strength);
                 CoopFx.SnapTether(run, at, enemy.transform.position, strength);
                 HeroVfx.Sparks(run.ProjectileRoot, enemy.transform.position, Pale, 12, 4.5f, 0.35f);

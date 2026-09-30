@@ -114,6 +114,11 @@ namespace Slopgame
         public float MoveMultiplier => ActionSpeedMultiplier;
         // Attack timers follow local action time; status durations and damage-over-time use world time.
         public float ActionTime { get; private set; }
+        /// <summary>
+        /// How fast this enemy's attack clock runs: guardians fight at <see cref="DungeonBoss.AttackPace"/>, and deadlier
+        /// worlds (<see cref="WorldDefinition.EnemyTempo"/>) speed every enemy up. Movement and telegraphs are unaffected.
+        /// </summary>
+        public float Tempo => (Boss != null ? DungeonBoss.AttackPace : 1f) * (Run != null ? Run.World.EnemyTempo : 1f);
         private float contactReadyAt;
         public bool IsFlashing => Time.time < hitUntil;
         private float chilledUntil, nextBurn, paralyzedUntil, paralysisImmuneUntil, cursedUntil, frozenUntil, freezeImmuneUntil;
@@ -161,7 +166,7 @@ namespace Slopgame
         {
             if (!Run.IsPlaying || Health <= 0) return;
             if (Run.IsGuest) { GuestUpdate(); return; }
-            ActionTime += Time.deltaTime * ActionSpeedMultiplier * DreadFactor();
+            ActionTime += Time.deltaTime * ActionSpeedMultiplier * DreadFactor() * Tempo;
             if (terrorPending && !IsParalyzed) { terrorPending = false; terrorUntil = Time.time + TerrorTime; }
             UpdateCurseIndicator();
             if (burnTicks > 0 && Time.time >= nextBurn)
@@ -246,7 +251,7 @@ namespace Slopgame
         /// <summary>Co-op guest: follow the host's snapshots; only contact with the local hero is judged here.</summary>
         private void GuestUpdate()
         {
-            ActionTime += Time.deltaTime * ActionSpeedMultiplier;
+            ActionTime += Time.deltaTime * ActionSpeedMultiplier * Tempo;
             UpdateCurseIndicator();
             if (hasSnapshot)
                 transform.position = Vector2.Distance(transform.position, netPosition) > 2.5f ? netPosition

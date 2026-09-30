@@ -33,6 +33,14 @@ namespace Slopgame
         public const float HealthMultiplier = 6f;
 
         /// <summary>
+        /// Guardians fight aggressively: their attack clock runs this much faster than a normal enemy's, so windups,
+        /// cooldowns and recoveries all come round sooner. Hazard warnings still last their full time.
+        /// </summary>
+        public const float AttackPace = 1.3f;
+        /// <summary>Guardians also close in this much faster than their style's base speed.</summary>
+        public const float ChaseSpeedBoost = 1.15f;
+
+        /// <summary>
         /// A guardian's health for a party: every hero adds a full guardian's worth (normal enemies only add half),
         /// so a bigger party still has to work through every attack.
         /// </summary>
@@ -81,9 +89,11 @@ namespace Slopgame
                 : Kind == BossKind.Duelist ? gameObject.AddComponent<DuelistBoss>()
                 : Kind == BossKind.Archdemon ? (BossBehaviour)gameObject.AddComponent<ArchdemonBoss>()
                 : gameObject.AddComponent<AshWardenBoss>();
-            MaxHealth = ScaledHealth(Behaviour.BaseHealth(run.Floor), run.PartySize);
+            // Deadlier worlds (the Infernal Court) field tougher guardians too.
+            MaxHealth = Mathf.CeilToInt(ScaledHealth(Behaviour.BaseHealth(run.Floor), run.PartySize) * run.World.GuardianHealthMultiplier);
             Enemy.Health = MaxHealth;
             Behaviour.Setup(this);
+            Enemy.Speed *= ChaseSpeedBoost;
             gameObject.name = Title;
         }
 

@@ -75,7 +75,8 @@ namespace Slopgame
         /// <summary>True on a co-op guest, whose enemies are driven by the host.</summary>
         public bool IsGuest => IsNetworked && !Coop.IsHost;
         public int PartySize { get; private set; } = 1;
-        public int EnemyHealthScaled(int health) => ScaleHealth(health, PartySize);
+        /// <summary>An enemy's health for this world and party: deadlier worlds (see <see cref="WorldDefinition.Threat"/>) add to it first.</summary>
+        public int EnemyHealthScaled(int health) => ScaleHealth(Mathf.CeilToInt(health * World.EnemyHealthMultiplier), PartySize);
         /// <summary>Each extra hero adds half of an enemy's base health.</summary>
         public static int ScaleHealth(int health, int partySize) => Mathf.CeilToInt(health * (1f + 0.5f * (Mathf.Max(1, partySize) - 1)));
         private readonly int[,] distances = new int[DungeonMap.Width, DungeonMap.Height];
@@ -315,10 +316,11 @@ namespace Slopgame
             }
             for (int room = 1; !IsBossFloor && !InShop && !IsWaveFloor && room < Map.Centers.Count; room++)
             {
-                int count = Mathf.Min(4, 1 + Floor);
+                // Deadlier worlds (the Infernal Court) pack an extra enemy into every room.
+                int count = Mathf.Min(4, 1 + Floor) + World.ExtraEnemiesPerRoom;
                 for (int i = 0; i < count; i++)
                     // Introduce one specialist in the first combat room, then seed additional ones.
-                    SpawnEnemy((Vector2)Map.Centers[room] + new Vector2(i % 2, i / 2), i == 1, i == 0 && room % 2 == 0, room == 1 && i == 2,
+                    SpawnEnemy(RoomSpawnPoint(Map.Centers[room], i), i == 1, i == 0 && room % 2 == 0, room == 1 && i == 2,
                         variants, EnemyHealthScaled(EnemyHealthForFloor(Floor)));
             }
             // Urns and crates to smash for crystals (and the odd heart).
@@ -349,7 +351,7 @@ namespace Slopgame
                 World.BasicTint, 3).gameObject.AddComponent<DungeonEnemy>();
             enemy.Run = this;
             enemy.Health = health;
-            enemy.Speed = Mathf.Min(4.3f, 2.25f + Floor * 0.15f);
+            enemy.Speed = EnemySpeedForFloor(Floor) * World.EnemySpeedMultiplier;
             if (shooter) enemy.gameObject.AddComponent<EnemyShooter>();
             else if (tank)
             {
@@ -362,7 +364,8 @@ namespace Slopgame
             else
             {
                 double roll = variants.NextDouble();
-                bool specialist = Floor >= 3 && (guaranteeSpecialist || roll >= HuskChance + SkitterChance && roll < HuskChance + SkitterChance + SpecialistChance);
+                // Deadlier worlds field their specialists more often.
+                bool specialist = Floor >= 3 && (guaranteeSpecialist || roll >= HuskChance + SkitterChance && roll < HuskChance + SkitterChance + SpecialistChance * World.Threat);
                 EnemyVariant variant = specialist
                     ? WorldBestiary.AddSpecialist(enemy.gameObject, World, guaranteeSpecialist, variants)
                     : Floor >= 3 && roll < HuskChance ? enemy.gameObject.AddComponent<CinderHusk>()
@@ -373,6 +376,27 @@ namespace Slopgame
             (into ?? Enemies).Add(enemy);
             return enemy;
         }
+
+        /// <summary>A regular enemy's chase speed on a floor, before its world's <see cref="WorldDefinition.EnemySpeedMultiplier"/>.</summary>
+        public static float EnemySpeedForFloor(int floor) => Mathf.Min(4.3f, 2.25f + floor * 0.15f);
+
+        /// <summary>
+        /// Where a room's <paramref name="i"/>-th enemy stands: the first four in a 2x2 block at the centre, any extras
+        /// (deadlier worlds) on free ground beside it, or on the centre if the room is too cramped.
+        /// </summary>
+        private Vector2 RoomSpawnPoint(Vector2 center, int i)
+        {
+            if (i < 4) return center + new Vector2(i % 2, i / 2);
+            for (int k = 0; k < ExtraSpawnOffsets.Length; k++)
+            {
+                Vector2 spot = center + ExtraSpawnOffsets[(i - 4 + k) % ExtraSpawnOffsets.Length];
+                if (Map.CanStand(spot, 0.3f)) return spot;
+            }
+            return center;
+        }
+
+        private static readonly Vector2[] ExtraSpawnOffsets =
+            { new Vector2(-1f, 0f), new Vector2(-1f, 1f), new Vector2(0f, -1f), new Vector2(1f, -1f), new Vector2(2f, 0f), new Vector2(2f, 1f) };
 
         // ---------------------------------------------------------------- wave worlds
 
@@ -430,7 +454,7 @@ namespace Slopgame
             var spots = new System.Random(Seed + Floor * 7717);
             Vector2 start = Map.Centers[0];
             int count = WaveEnemyCount(LevelNumber, PartySize);
-            int health = EnemyHealthForFloor(Floor);
+            int health = Mathf.CeilToInt(EnemyHealthForFloor(Floor) * World.EnemyHealthMultiplier);
             WavesThisLevel = WavesForLevel(LevelNumber);
             waveReleaseAt = WaveReleaseThreshold(count);
             for (int wave = 0; wave < WavesThisLevel; wave++)
@@ -547,7 +571,7 @@ namespace Slopgame
             enemy.Run = this;
             enemy.IsMinion = true;
             enemy.Health = EnemyHealthScaled(EnemyHealthForFloor(Floor));
-            enemy.Speed = Mathf.Min(4.3f, 2.25f + Floor * 0.15f);
+            enemy.Speed = EnemySpeedForFloor(Floor) * World.EnemySpeedMultiplier;
             if (kind == MinionCaster) enemy.gameObject.AddComponent<EnemyShooter>();
             else if (kind == MinionBrute)
             {

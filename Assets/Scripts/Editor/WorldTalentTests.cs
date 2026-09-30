@@ -155,8 +155,14 @@ namespace Slopgame.Editor
                 Near(powers.RelicCooldownMultiplier, 0.76f, "Relic cooldown talent missing");
                 Require(powers.DamageForRoll(4, 0f) == 11 && powers.DamageForRoll(4, 1f) == 4, "Critical damage scaling wrong");
                 if (weapon == WeaponType.Staff) Near(powers.ElementalEffectChance, 0.3f, "Stormcraft missing");
+                // Frenzy is universal: every hero's sheet now holds it, for +25% attack and charge speed.
+                Near(powers.AttackIntervalMultiplier, 1f / (1f + PlayerPowerups.FrenzyAttackSpeed + powers.Permanent.AttackSpeed), "Frenzy did not add 25% attack speed");
                 UnityEngine.Object.Destroy(obj);
             }
+            // World 3 (the Infernal Court) is the deadly one; the rest play at normal strength.
+            for (int w = 0; w < WorldCatalog.All.Length; w++)
+                Require(w == 2 ? WorldCatalog.All[w].Threat > 1.4f && WorldCatalog.All[w].ExtraEnemiesPerRoom == 1 : WorldCatalog.All[w].Threat == 1f,
+                    "Wrong threat for " + WorldCatalog.All[w].Name);
         }
 
         private static void TestBreakables(DungeonRun run)

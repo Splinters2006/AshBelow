@@ -127,7 +127,8 @@ namespace Slopgame.Editor
                     Require(run.Map.CanStand(new Vector2(15, 9)) && !run.Map.CanStand(new Vector2(12, 9)), "Arena bounds are wrong.");
                     run.Player.Protect(30f);
                     run.Boss.Enemy.Chill(20f);
-                    waitUntil = Time.time + 2.2f;
+                    // Guardians' attack clocks run at AttackPace, so wait correspondingly less real time.
+                    waitUntil = Time.time + 2.2f / DungeonBoss.AttackPace;
                     stage = 2;
                     return;
                 }

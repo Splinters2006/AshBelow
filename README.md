@@ -37,12 +37,12 @@ You can rebind every action under **Controls** in the main menu. Each action get
   - **Two relics,** which last the rest of the run: Heart Crystal (+1 max HP), Ember Hone (+1 damage), Windrunner Boots (+0.7 speed), Quickfinger Gloves (+20% attack speed), Hawkeye Lens (+10% crit chance), Warding Sigil (+1 ward every floor), Vampire Fang (a rank of Soul Harvest) or Phoenix Feather (shorter dodge cooldown). Relics add ranks to the matching boon and stop selling once it's maxed.
 
   Each ware costs 50% more every time you buy it in the same shop. In co-op, everyone sees the same stock. The shop's stairs lead to the guardian.
-- **Beat the guardians.** Every fifth floor is a boss arena. Each world has three guardians, and each gets more dangerous below half health:
+- **Beat the guardians.** Every fifth floor is a boss arena. Each world has three guardians. They are aggressive: they close in fast, attack quickly, and get more dangerous below half health:
   - **The Rime Warden**, a frost caster who fills the arena with icicle fans, frost novas, blizzard spirals, hailstorms and closing rings of ice.
   - **The Steel Duelist**, a fast, fragile swordsman who dashes, throws blade fans, teleports behind you and cuts crosses of blade light.
   - **Malphas, the Hellfire Archdemon**. Watch for **Cataclysm**: the floor turns red, then everything except one golden circle erupts in fire. A gold arrow at your feet points to the circle.
   - **Grid Overseer** (Neon Arcology, floor 20): cyan scan grids, target traces and sequential firewalls. Step between the lanes.
-  - **Bastion, the Siege Engine** (floor 25): amber missile walks, cluster mines and twin rail broadsides. Clear the reticles or shelter between the rails.
+  - **Bastion, the Siege Engine** (floor 25): amber missile walks, cluster mines and twin rail broadsides. Clear the reticles or shelter between the rails. Between volleys he stamps the ground: an earthquake cracks open a band of the arena (two when he's enraged) and seals it off for a few seconds. Get off the cracking ground before it breaks.
   - **Null, the Singularity Core** (floor 30): violet spiral streams, satellite crossfire and repeated orbital pulse waves. Weave between bolts and dodge each wave.
   - **The Hex Matriarch** (Infernal Court, floor 35): rings of hex bolts, a burning pentagram around you (leave the star), and a blink behind you followed by a fan of bolts.
   - **Gorgoth, the Brimstone Hound** (floor 40): lane charges that leave burning pawprints, a sweeping fan of molten breath, and eruptions of shockwaves and falling brimstone.
@@ -51,7 +51,7 @@ You can rebind every action under **Controls** in the main menu. Each action get
 - **Claim an artifact.** A beaten guardian drops an artifact that offers three abilities from your hero's pool (four with Sanctified Relics). Pick one to learn, or raise one you already know (up to rank 3). The abilities page then lists every ability you've learned this run so you can choose which sit on **Q** and **E**; it's also the **Abilities** tab of the **Build** panel, so you can swap any time (cooldowns stay with each ability). You can also leave an artifact for 40 crystals.
 - **Death ends the run.** Boons and abilities reset, but your **Ash** and Ash shop upgrades are kept.
 
-Enemies get tougher every floor. The **minimap** in the top-right corner fills in as you explore.
+Enemies get tougher every floor. **The Infernal Court (world 3) is much deadlier than the worlds before it:** its enemies have 60% more health, move and attack faster, bring an extra fighter into every room and field their specialists more often, and its guardians are tougher too. The **minimap** in the top-right corner fills in as you explore.
 
 ### Combat tips
 
@@ -118,6 +118,8 @@ Once you have beaten the third guardian (floor 15) in a single descent, the Ash 
 ## Ash and the Ash shop
 
 You earn **Ash** from every kill (1 Ash), every cleared floor (10 Ash) and every guardian (50 Ash). Spend it in the **Ash shop** on the main menu on permanent upgrades such as health, damage, speed, attack speed and dodge. There are also class-specific upgrades for every hero, and some of each hero's abilities are unlocked here. New purchases apply from your next run.
+
+The shop lists upgrades two to a row, with the ones you can buy first, locked ones after and maxed ones last (**Hide maxed** tucks those away). A gold dot on a hero's tab means something there is affordable right now.
 
 Clearing a world for the first time (with any hero) adds two rewards to the shop:
 
