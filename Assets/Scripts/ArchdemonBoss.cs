@@ -28,10 +28,11 @@ namespace Slopgame
         private HellfireAura aura;
 
         public override string Title => HighTech ? "OMEGA, THE REACTOR TITAN" : "MALPHAS, THE HELLFIRE ARCHDEMON";
-        protected override BoltKind Bolts => HighTech ? BoltKind.Plasma : BoltKind.Ember;
-        protected override HazardStyle Hazards => HighTech ? HazardStyle.Plasma : HazardStyle.Hellfire;
+        // Hurls hellfire only in the fire worlds; elsewhere it borrows the world's element (plasma, frost, steel, venom).
+        protected override BoltKind Bolts => Run.World.Bolts;
+        protected override HazardStyle Hazards => HighTech ? HazardStyle.Plasma : Run.World.Element;
         /// <summary>His signature colour: hellfire, or the Reactor Titan's plasma.</summary>
-        private Color Glow => HighTech ? WorldCatalog.NeonPink : Hellfire;
+        private Color Glow => HighTech ? WorldCatalog.NeonPink : Hazards == HazardStyle.Hellfire ? Hellfire : EnvironmentHazard.HazardColor(Hazards);
         public override string Tell => HighTech ? TitanTell : state switch
         {
             State.Cross => "INFERNAL CROSS - GET OFF THE LINES",
