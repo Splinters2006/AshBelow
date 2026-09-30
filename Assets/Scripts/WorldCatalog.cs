@@ -114,8 +114,7 @@ namespace Slopgame
                 new Color(0.7f, 0.9f, 0.75f), new Color(0.5f, 1f, 0.7f), new Color(0.55f, 0.65f, 0.6f), BoltKind.Blade,
                 WeaponType.Daggers, true, new Vector2(0.78f, 0.68f), MapLayout.Alleys, new[]
                 {
-                    new TrapTheme("Blade trap", TrapKind.Jet, HazardStyle.Steel, 5f),
-                    new TrapTheme("Spike plate", TrapKind.Vent, HazardStyle.Steel, 0.9f),
+                    new TrapTheme("Spike plate", TrapKind.Vent, HazardStyle.Spikes, 0.9f),
                 }, element: HazardStyle.Steel),
             new WorldDefinition(5, "THE SAVAGE WILDS", false, new Color(0.03f, 0.05f, 0.025f),
                 new Color(0.12f, 0.17f, 0.09f), new Color(0.14f, 0.19f, 0.1f), new Color(0.3f, 0.36f, 0.2f),

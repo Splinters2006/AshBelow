@@ -431,9 +431,9 @@ namespace Slopgame
                 flames.Ring(spec.Center, r, 0.08f, FlameMesh.Alpha(colors.Main, 0.6f + 0.4f * pulse));
                 flames.Bar(spec.Center - Vector2.right * r * 0.6f, Vector2.right, r * 1.2f, 0.06f, FlameMesh.Alpha(colors.Bright, 0.7f), FlameMesh.Alpha(colors.Bright, 0.7f));
                 flames.Bar(spec.Center - Vector2.up * r * 0.6f, Vector2.up, r * 1.2f, 0.06f, FlameMesh.Alpha(colors.Bright, 0.7f), FlameMesh.Alpha(colors.Bright, 0.7f));
-                // The meteor (or hailstone) itself plunges in over the last moments of the warning.
+                // The meteor (or hailstone) itself plunges in over the last moments of the warning; venom just wells up.
                 float fall = Mathf.InverseLerp(Mathf.Max(0f, spec.Telegraph - 0.45f), spec.Telegraph, age);
-                if (fall > 0f)
+                if (fall > 0f && spec.Style != HazardStyle.Venom)
                 {
                     Vector2 head = Vector2.Lerp(meteorFrom, spec.Center, fall * fall);
                     Vector2 back = (meteorFrom - spec.Center).normalized;
