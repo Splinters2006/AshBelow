@@ -226,8 +226,8 @@ namespace Slopgame
         }
 
         /// <summary>
-        /// Where a movement move (roll, dash, blink, shadowstep) goes: the way the hero is walking at full range,
-        /// or, standing still, <paramref name="toCursor"/> (so cursor-limited moves still stop at the cursor).
+        /// Where the dodge roll goes: the way the hero is walking, or toward <paramref name="toCursor"/> when standing still.
+        /// (Movement abilities such as dashes and blinks always aim at the cursor.)
         /// </summary>
         public Vector2 MobilityAim(Vector2 toCursor) => MoveInput.sqrMagnitude > 0.01f ? MoveInput.normalized * 1000f : toCursor;
 

@@ -127,7 +127,6 @@ namespace Slopgame
             }
             else
             {
-                aim = Player.MobilityAim(aim);
                 Player.Abilities.Dash(aim, Mathf.Min(3f, aim.magnitude));
             }
             Player.Charge.Cancel();

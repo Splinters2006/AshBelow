@@ -112,7 +112,7 @@ namespace Slopgame
                 || Time.time < castReadyAt || CooldownRemaining(slot) > 0f || aim.sqrMagnitude < 0.001f) return false;
             var definition = AbilityCatalog.Get(equipped[slot]);
             if (definition == null) return false;
-            if (IsMovementAbility(definition.Type)) aim = Player.MobilityAim(aim);
+            // Every ability, dashes and blinks included, is aimed at the cursor.
             float cursorDistance = aim.magnitude;
             aim.Normalize();
             // Checked before anything is spent: Arcane Blink needs somewhere to land.
@@ -441,11 +441,6 @@ namespace Slopgame
             try { TryUse(slot, Player.AimDirection * 6f); }
             finally { orbCharge = -1f; }
         }
-
-        /// <summary>Dashes and blinks travel the way the hero is moving (see <see cref="DungeonPlayer.MobilityAim"/>).</summary>
-        public static bool IsMovementAbility(AbilityType type)
-            => type == AbilityType.ShieldRush || type == AbilityType.Windstep || type == AbilityType.Blink || type == AbilityType.RocketBoost
-                || type == AbilityType.HaymakerDash || type == AbilityType.WingDash;
 
         private void ForAllies(SupportKind kind, int amount, float duration)
         {
