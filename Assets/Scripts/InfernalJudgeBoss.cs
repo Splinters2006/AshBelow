@@ -12,6 +12,8 @@ namespace Slopgame
         public override string Title => "VASSAGO, THE INFERNAL JUDGE";
         protected override Color Accent => new Color(1f, 0.75f, 0.3f);
         protected override Sprite Body => InfernalBossSprites.Judge;
+        protected override Sprite Details => InfernalBossSprites.JudgeDetails;
+        protected override Color BodyTint => new Color(0.55f, 0.12f, 0.14f);
         protected override float Scale => 2.1f;
         protected override string[] AttackTells => tells;
         private static readonly string[] tells = { "CHAINS OF JUDGEMENT - FIND THE OPEN SQUARE", "SCALES OF TORMENT - WEAVE THE SPIRAL", "THE GAVEL FALLS - KEEP MOVING" };

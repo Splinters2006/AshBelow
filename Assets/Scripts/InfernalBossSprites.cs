@@ -2,29 +2,146 @@ using UnityEngine;
 
 namespace Slopgame
 {
-    /// <summary>The Infernal Court guardians' silhouettes, tinted by their accent colour like the Arcology machines.</summary>
+    /// <summary>
+    /// The Infernal Court guardians' 40x40 pixel art, drawn as left halves and mirrored. Like the Ash Below's guardians
+    /// each has two layers: a shaded body (L highlight, W base, M shade, D outline) tinted by the boss's body colour, and
+    /// a fixed-colour detail layer on top for faces, gold, gems, horns and magma.
+    /// </summary>
     public static class InfernalBossSprites
     {
-        private static Sprite matriarch, hound, judge;
-        public static Sprite Matriarch => matriarch != null ? matriarch : matriarch = Build("Hex Matriarch", new[] {
-            "....D..........D....", "...DWD...DD...DWD...", "...DWWD.DWWD.DWWD...", "..DWWWWDWWWWDWWWWD..",
-            "..DDDDDDDDDDDDDDDD..", "...DWWWWWWWWWWWWD...", "...DWEEWWWWWWEEWD...", "...DWWWWWDDWWWWWD...",
-            "....DWWDDDDDDWWD....", "..DDDWWWWWWWWWWDDD..", ".DWWDWWWWWWWWWWDWWD.", "DWWDWWWEWWWWEWWWDWWD",
-            "DWDDWWWEWWWWEWWWDDWD", ".D.DWWWWWWWWWWWWD.D.", "...DWWWWWWWWWWWWD...", "..DWWWWWWWWWWWWWWD..",
-            "..DWWDWWWWWWWWDWWD..", ".DWWDWWWWWWWWWWDWWD.", ".DWDDDWWWWWWWWDDDWD.", ".DDDDDDDDDDDDDDDDDD." });
-        public static Sprite Hound => hound != null ? hound : hound = Build("Brimstone Hound", new[] {
-            ".D................D.", ".DD..............DD.", "..DD..DDDDDDDD..DD..", "..DWDDWWWWWWWWDDWD..",
-            ".DWWWWWWWWWWWWWWWWD.", "DWWWDDWWWWWWWWDDWWWD", "DWWDEEDWWWWWWDEEDWWD", "DWWWDDWWWWWWWWDDWWWD",
-            ".DWWWWWWWWWWWWWWWWD.", "..DWWWWDDDDDDWWWWD..", "..DWWWDEDEEDEDWWWD..", "...DWWDDDDDDDDWWD...",
-            "..DWWWWWWWWWWWWWWD..", ".DWWWWWWWWWWWWWWWWD.", "DWWDWWWWWWWWWWWWDWWD", "DWDDWWWWDDDDWWWWDDWD",
-            "DWD.DWWD....DWWD.DWD", "DWD.DWWD....DWWD.DWD", "DDD.DDDD....DDDD.DDD", "...................." });
-        public static Sprite Judge => judge != null ? judge : judge = Build("Infernal Judge", new[] {
-            ".......D.DD.D.......", "......DEDEEDED......", "......DDDDDDDD......", ".....DWWWWWWWWD.....",
-            ".....DWEWWWWEWD.....", ".....DWWWWWWWWD.....", "......DWDDDDWD......", "..D.DDWWWWWWWWDD.D..",
-            ".DED.DWWWWWWWWD.DED.", "..D.DWWWWWWWWWWD.D..", "..DDWWWWWWWWWWWWDD..", "...DWWWEWWWWEWWWD...",
-            "...DWWWEWWWWEWWWD...", "...DWWWWWWWWWWWWD...", "..DWWWWWWWWWWWWWWD..", "..DWWWWWWWWWWWWWWD..",
-            ".DWWWWWWWWWWWWWWWWD.", ".DWWWWDWWWWWWDWWWWD.", "DWWWWWDWWWWWWDWWWWWD", "DDDDDDDDDDDDDDDDDDDD" });
-        private static Sprite Build(string name, string[] rows) => DungeonVisuals.PaletteSprite(name, rows, key => key switch {
-            'W' => Color.white, 'D' => new Color(0.14f, 0.04f, 0.07f), 'E' => new Color(1f, 0.95f, 0.75f), _ => Color.clear });
+        private static Sprite matriarch, matriarchDetails, hound, houndDetails, judge, judgeDetails;
+
+        // The Hex Matriarch: spiked gold crown with violet gems, long black-violet hair, a pale face with glowing violet eyes,
+        // a gold collar and hex brooch, flared sleeves with hexfire orbs in her hands, and a gown with a gold hem.
+        private static readonly string[] MatriarchGrid =
+        {
+            "...................G", "...................G", "..............G...gG", "..............Gg.gGG",
+            "..........G...GGgGGG", "..........Gg..GGGYYG", "...........GgGGGGYYG", "...........gGGGGGGGG",
+            "..........KKgggggggg", ".........KKhhKKKKKKK", "........KKhhKKKKhKKK", ".......KKhKKKKhKSSSS",
+            ".......KhKKKKhSSSSSS", "......KKhKKKKSSSSSSS", "......KhhKKSKKKKSSSS", "......KhKKKSKsEEKSSS",
+            "......KhKKKSSKEYKsSS", "......KhKKKsSSKKSSsS", ".....KKhKKKsSSSSSSsS", ".....KhhKKKKsSSSSSSs",
+            ".....KhKKKK.KsSSSRRR", ".....KhKKKK..KsssSSS", "....KKhKKDDD..DKssss", "....KhhKDLWDDDGDDGGG",
+            "...KKhKDLWWMWWWGGYGG", "...KhKDLWWMDDMWWWGOY", "..KKhKDWWMD.DMWWWGOO", "..KhKDLWMD...DWWWGGG",
+            "..KhKDWWMD..DMWWWWLW", "..Kh.DWMD..DMWWWWLWW", "..K..DWMD.DMWWWWLWWW", "....DSSSDOOODWWWLWWW",
+            "....DSsSOYYYODWLWWWW", "....DDsDOYYYODWLWWMW", ".....DD.OOOOODWLWWMW", "........DDOODLWWWWMW",
+            ".......DLWWWWWWWMWWW", "......DLWWWWWMWWWWWM", ".....DGgGgGgGgGgGgGg", ".....DDDDDDDDDDDDDDD"
+        };
+
+        // Gorgoth: curling bone horns and pointed ears, a snarling muzzle with a molten throat and fangs, shaggy neck fur,
+        // lava cracks through its hide and four clawed legs.
+        private static readonly string[] HoundGrid =
+        {
+            "....................", "..hH................", "..hHH...............", "...hHH..............",
+            "....hHH.............", ".D...hHH............", ".DLD..hHH....DD.....", ".DLWD..hHDDDDLWD....",
+            "..DWWDDLWWWWWWWWDDDD", "..DWWWLWWWWWWWWWWWWW", "...DWWWWWMMMWWWWWWWW", "...DWWWWMDDDDMWWWWWW",
+            "....DWWMWDDKKDDWWWWW", "....DWWDEYEKDDMWWWWW", "....DWWDEEKDMWWWWWLL", "....DWWWDDDMWWWWLLWW",
+            ".....DWWWWWWWWLLWDDD", "..D..DWWWWWWWLLWDKKK", "..DD.DWWWWWWWLWWDKKK", ".DWD..DWWWWWLWWWWDDD",
+            ".DWWD.DWWWWWWWDDDMMM", "..DWWDDWWWWWDDFKDDDD", "..DWWWDWWWWDFFKOOOOO", "...DWWWWWWWDDFKOYYYY",
+            "..DDWWWWWWWWDFFKOOOO", ".DLWWWOWWWWWWDDFFKKK", ".DWWWOWWWWWWWWDDDDDD", "DLWWMWOOWWWWWWWWOWWW",
+            "DWWMWWWOWWWWWWWOOWWW", "DWWMWWWWWWWWWWMWOWWW", "DWMDDWWWWWWWWMDWWWWW", "DWMD.DWWWWWWMD.DWWWW",
+            "DWMD.DLWWWWWMD..DWWW", "DWMD.DWWWWWWMD..DWWW", "DWWD.DWWWWWWMD..DWWW", "DWWD.DWWWWWMMD..DWWM",
+            "DWWMDDWWWWWMMD.DWWWM", "DFWFWDFWFWFWFD.DFWFW", ".F.F..F.F.F.F...F.F.", "...................."
+        };
+
+        // Vassago: dark curved horns around a tall gold mitre, a crimson face with a braided beard, and judge's robes with
+        // a gold stole, an ember seal at the chest and a gold hem.
+        private static readonly string[] JudgeGrid =
+        {
+            "...................Y", "..................GY", ".................GGG", ".HH.............GGYG",
+            ".hHH...........gGGGG", "..hHH.........gGGGGG", "..hhHH.......gGGYGGG", "...hhHH.....gGGGGGGG",
+            "....hhHHH..gGGGGGGGG", ".....hhhHHDDDDDDDDDD", ".......hhDSSSSSSSSSS", "........DSSSSSSSSSSS",
+            "........DSKKKKSSSSSS", "........DSsKEEKSSSSs", "........DSSsKKSSSSsS", "........DsSSSSSSSsSS",
+            "........DsSSSSSSSKsK", "........DsSSSSSSSSSS", "........DbsSSKKKKKKK", ".........DbbSSSSSSSS",
+            ".........DbBbBbBbBbB", "........DDDbBbBbBbBb", "......DDLWDDbBbBbBbB", ".....DLWWWWDDbBbBbBb",
+            "....DLWWWWWGGDbBbBbB", "...DLWWWMWWGWGDDDDGG", "...DWWWMDMWWGWWWWGOO", "..DLWWMD.DMWGWWWWGOY",
+            "..DWWMD..DWWGWWWWWGG", "..DWWMD..DWWGWWWWWWW", "..DWMD...DWWGWWWWWLW", "..DSSD...DWWGWWWWWLW",
+            "..DSsD..DLWWGWWWWWLW", "...DD...DWWWGWWWWWLW", ".......DLWWWGWWWWWMW", "......DLWWWMGWWWWMWW",
+            "......DWWWWMGWWWMWWW", ".....DLWWWMWGWWWMWWW", ".....DGGGGGGGGGGGGGG", ".....DDDDDDDDDDDDDDD"
+        };
+
+        public static Sprite Matriarch => matriarch != null ? matriarch : matriarch = Build("Hex Matriarch", MatriarchGrid, false, MatriarchColor);
+        public static Sprite MatriarchDetails => matriarchDetails != null ? matriarchDetails
+            : matriarchDetails = Build("Hex Matriarch details", MatriarchGrid, true, MatriarchColor);
+        public static Sprite Hound => hound != null ? hound : hound = Build("Brimstone Hound", HoundGrid, false, HoundColor);
+        public static Sprite HoundDetails => houndDetails != null ? houndDetails : houndDetails = Build("Brimstone Hound details", HoundGrid, true, HoundColor);
+        public static Sprite Judge => judge != null ? judge : judge = Build("Infernal Judge", JudgeGrid, false, JudgeColor);
+        public static Sprite JudgeDetails => judgeDetails != null ? judgeDetails : judgeDetails = Build("Infernal Judge details", JudgeGrid, true, JudgeColor);
+
+        // G gold, g dark gold, Y gem glow, K hair, h hair sheen, S skin, s skin shade, E eyes, R lips, O hexfire.
+        private static Color MatriarchColor(char c)
+        {
+            switch (c)
+            {
+                case 'G': return new Color(0.98f, 0.78f, 0.32f);
+                case 'g': return new Color(0.62f, 0.44f, 0.16f);
+                case 'Y': return new Color(0.95f, 0.8f, 1f);
+                case 'K': return new Color(0.08f, 0.02f, 0.12f);
+                case 'h': return new Color(0.3f, 0.12f, 0.4f);
+                case 'S': return new Color(0.92f, 0.86f, 0.96f);
+                case 's': return new Color(0.68f, 0.58f, 0.76f);
+                case 'E': return new Color(0.8f, 0.35f, 1f);
+                case 'R': return new Color(0.42f, 0.06f, 0.28f);
+                case 'O': return new Color(0.72f, 0.3f, 1f);
+                default: return Color.clear;
+            }
+        }
+
+        // H horn, h horn shade, E eyes, Y eye core, K maw and nose, F fangs and claws, O magma.
+        private static Color HoundColor(char c)
+        {
+            switch (c)
+            {
+                case 'H': return new Color(0.9f, 0.84f, 0.7f);
+                case 'h': return new Color(0.52f, 0.42f, 0.34f);
+                case 'E': return new Color(1f, 0.8f, 0.25f);
+                case 'Y': return new Color(1f, 1f, 0.85f);
+                case 'K': return new Color(0.06f, 0f, 0.02f);
+                case 'F': return new Color(0.97f, 0.94f, 0.86f);
+                case 'O': return new Color(1f, 0.45f, 0.08f);
+                default: return Color.clear;
+            }
+        }
+
+        // H horn, h horn shade, G gold, g dark gold, Y ember, S skin, s skin shade, K brow and mouth, E eyes, F teeth, O seal, B/b beard.
+        private static Color JudgeColor(char c)
+        {
+            switch (c)
+            {
+                case 'H': return new Color(0.3f, 0.16f, 0.14f);
+                case 'h': return new Color(0.1f, 0.04f, 0.05f);
+                case 'G': return new Color(1f, 0.8f, 0.35f);
+                case 'g': return new Color(0.62f, 0.44f, 0.16f);
+                case 'Y': return new Color(1f, 0.45f, 0.1f);
+                case 'S': return new Color(0.75f, 0.22f, 0.2f);
+                case 's': return new Color(0.46f, 0.1f, 0.1f);
+                case 'K': return new Color(0.05f, 0f, 0.02f);
+                case 'E': return new Color(1f, 0.9f, 0.4f);
+                case 'F': return new Color(0.95f, 0.9f, 0.8f);
+                case 'O': return new Color(1f, 0.5f, 0.1f);
+                case 'B': return new Color(0.28f, 0.07f, 0.06f);
+                case 'b': return new Color(0.16f, 0.04f, 0.04f);
+                default: return Color.clear;
+            }
+        }
+
+        /// <summary>One unit across, like the other guardian bodies; the body layer is tinted, the detail layer is not.</summary>
+        private static Sprite Build(string name, string[] halfRows, bool details, System.Func<char, Color> detailColor)
+        {
+            int half = halfRows[0].Length, width = half * 2, height = halfRows.Length;
+            var texture = new Texture2D(width, height, TextureFormat.RGBA32, false)
+            { name = name, filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Clamp };
+            var pixels = new Color[width * height];
+            for (int y = 0; y < height; y++)
+                for (int x = 0; x < width; x++)
+                {
+                    char c = halfRows[y][x < half ? x : width - 1 - x];
+                    Color? body = c == 'L' ? new Color(1f, 1f, 1f) : c == 'W' ? new Color(0.82f, 0.82f, 0.82f)
+                        : c == 'M' ? new Color(0.55f, 0.55f, 0.55f) : c == 'D' ? new Color(0.08f, 0.08f, 0.08f) : (Color?)null;
+                    pixels[(height - y - 1) * width + x] = details ? (body.HasValue ? Color.clear : detailColor(c)) : body ?? Color.clear;
+                }
+            texture.SetPixels(pixels);
+            texture.Apply(false, true);
+            return Sprite.Create(texture, new Rect(0, 0, width, height), Vector2.one * 0.5f, width);
+        }
     }
 }

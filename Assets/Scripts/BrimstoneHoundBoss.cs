@@ -12,6 +12,8 @@ namespace Slopgame
         public override string Title => "GORGOTH, THE BRIMSTONE HOUND";
         protected override Color Accent => new Color(1f, 0.42f, 0.15f);
         protected override Sprite Body => InfernalBossSprites.Hound;
+        protected override Sprite Details => InfernalBossSprites.HoundDetails;
+        protected override Color BodyTint => new Color(0.42f, 0.16f, 0.14f);
         protected override float Scale => 2.2f;
         public override float HitRadius => 1f;
         protected override string[] AttackTells => tells;

@@ -24,6 +24,10 @@ namespace Slopgame
 
         protected abstract Color Accent { get; }
         protected abstract Sprite Body { get; }
+        /// <summary>The fixed-colour layer drawn over the tinted body: faces, gold, gems, horns and magma.</summary>
+        protected abstract Sprite Details { get; }
+        /// <summary>The body's base colour; enraged it warms toward <see cref="Accent"/>, and it flashes the accent when spent.</summary>
+        protected abstract Color BodyTint { get; }
         protected abstract string[] AttackTells { get; }
         /// <summary>The minion kinds summoned each time (see <see cref="DungeonRun.MinionBasic"/>); enraged adds another of the first.</summary>
         protected abstract byte[] Minions { get; }
@@ -43,7 +47,12 @@ namespace Slopgame
         protected override void OnSetup()
         {
             transform.localScale = Vector3.one * Scale;
-            GetComponent<SpriteRenderer>().sprite = Body;
+            var body = GetComponent<SpriteRenderer>();
+            body.sprite = Body;
+            var details = new GameObject(Title + " details").AddComponent<SpriteRenderer>();
+            details.transform.SetParent(transform, false);
+            details.sprite = Details;
+            details.sortingOrder = body.sortingOrder + 1;
             Enemy.Speed = 2.3f;
             until = Enemy.ActionTime + 1.2f;
             auraObject = new GameObject(Title + " aura");
@@ -51,7 +60,7 @@ namespace Slopgame
             aura = new FlameMesh(auraObject, 5);
         }
 
-        public override Color BodyColor() => Flashing(Accent, Color.white, state == 4);
+        public override Color BodyColor() => Flashing(IsEnraged ? Color.Lerp(BodyTint, Accent, 0.3f) : BodyTint, Accent, state == 4);
 
         public override void HostTick(Vector2 toHero)
         {

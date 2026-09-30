@@ -12,6 +12,8 @@ namespace Slopgame
         public override string Title => "THE HEX MATRIARCH";
         protected override Color Accent => new Color(0.8f, 0.35f, 1f);
         protected override Sprite Body => InfernalBossSprites.Matriarch;
+        protected override Sprite Details => InfernalBossSprites.MatriarchDetails;
+        protected override Color BodyTint => new Color(0.45f, 0.22f, 0.55f);
         protected override string[] AttackTells => tells;
         private static readonly string[] tells = { "HEX CIRCLE - WEAVE THROUGH THE RINGS", "BINDING SIGIL - LEAVE THE STAR", "MIRROR STEP - SHE STRIKES FROM BEHIND" };
         protected override byte[] Minions => minions;
