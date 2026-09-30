@@ -40,7 +40,9 @@ namespace Slopgame
         // Augment.
         ThermalVent, Overheat, TargetingArray, ReactivePlating, Coolant, MissileTurret,
         // Universal talents built around immobilized enemies (paralysed, frozen, stunned or rooted).
-        SittingDuck, IronGrip, SearingHold, StaticHold, NumbingHold, Domino
+        SittingDuck, IronGrip, SearingHold, StaticHold, NumbingHold, Domino,
+        // Universal: a big one-off attack speed boost. Always append new talents here; their numbers are their IDs.
+        Frenzy
     }
 
     public sealed class PowerupDefinition
@@ -232,7 +234,8 @@ namespace Slopgame
             new PowerupDefinition(PowerupType.SearingHold, "Searing Hold", "Immobilizing an enemy sets it burning", 1),
             new PowerupDefinition(PowerupType.StaticHold, "Static Hold", "Immobilizing an enemy shocks every enemy near it", 1),
             new PowerupDefinition(PowerupType.NumbingHold, "Numbing Hold", "Immobilizing an enemy chills it, so it stays slowed for 2 seconds after it breaks free", 1),
-            new PowerupDefinition(PowerupType.Domino, "Domino", "When an immobilized enemy dies, enemies within 1.5 units are stunned for 0.75 seconds", 1)
+            new PowerupDefinition(PowerupType.Domino, "Domino", "When an immobilized enemy dies, enemies within 1.5 units are stunned for 0.75 seconds", 1),
+            new PowerupDefinition(PowerupType.Frenzy, "Frenzy", "+25% attack and charge speed", 1)
         };
 
         private static readonly Dictionary<PowerupType, PowerupDefinition> byType = BuildLookup();

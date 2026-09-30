@@ -34,7 +34,7 @@ namespace Slopgame
             return !Run.IsPlaying || new Rect(1020, 24, 236, 40).Contains(point)
                 || ((Run.CanSkipRoom || CanRestartCoop) && RestartRect.Contains(point))
                 || (showTalents && new Rect(922, 82, 334, 470).Contains(point))
-                || (ShopOpen && ShopRect.Contains(point))
+                || (ShopOpen && ShopPanelRect(Run.Shop).Contains(point))
                 || (!ShopOpen && Run.Player != null && Run.Player.Mechanic is GamblerPurse purse && purse.IsOpen && PurseRect.Contains(point));
         }
 
@@ -287,33 +287,55 @@ namespace Slopgame
                 purse.LastResult != null ? GamblerAttack.Gold : DungeonUi.Muted);
         }
 
+        /// <summary>Height of one ware's row: roomy while the stock fits, squeezed (never below 38) when it would run off the screen.</summary>
+        private static float ShopRowStep(int wares)
+            => Mathf.Clamp((DungeonUi.Height - 24f - ShopRect.y - ShopChrome) / Mathf.Max(1, wares), 38f, 58f);
+
+        /// <summary>The shop panel's header, reroll slot and footer, around the rows of wares.</summary>
+        private const float ShopChrome = 52f + 34f + 36f + 48f;
+
+        /// <summary>The crystal shop panel, grown to fit however many wares it stocks (Black Market Pass adds one).</summary>
+        private static Rect ShopPanelRect(CrystalShop shop)
+        {
+            int wares = shop != null ? shop.Stock.Count : 0;
+            float height = Mathf.Max(ShopRect.height, ShopChrome + wares * ShopRowStep(wares));
+            return new Rect(ShopRect.x, ShopRect.y, ShopRect.width, Mathf.Min(height, DungeonUi.Height - 24f - ShopRect.y));
+        }
+
         /// <summary>The crystal merchant's wares. Play goes on while it is open.</summary>
         private void DrawShop(CrystalShop shop)
         {
-            var rect = ShopRect;
+            var rect = ShopPanelRect(shop);
             var pouch = Run.Player.Crystals;
+            int wares = shop.Stock.Count;
+            float step = ShopRowStep(wares);
+            // Roomy rows show the description under the button; squeezed rows shrink both to fit.
+            float buttonHeight = step >= 52f ? 32f : step - 20f;
+            int descriptionSize = step >= 52f ? 12 : 11;
             DungeonUi.Panel(rect, DungeonUi.Background);
             DungeonUi.Label(new Rect(rect.x + 20, rect.y + 14, 220, 28), "CRYSTAL SHOP", 22, CrystalPouch.CrystalColor);
             DungeonUi.Label(new Rect(rect.x + 200, rect.y + 18, 160, 24), $"{pouch.Crystals} CRYSTALS", 16, CrystalPouch.CrystalColor, TextAnchor.UpperRight);
-            for (int i = 0; i < shop.Stock.Count; i++)
+            for (int i = 0; i < wares; i++)
             {
                 var offer = shop.Stock[i];
-                var row = new Rect(rect.x + 16, rect.y + 52 + i * 58, rect.width - 32, 52);
+                var row = new Rect(rect.x + 16, rect.y + 52 + i * step, rect.width - 32, step - 6);
                 bool maxed = offer.Powerup.HasValue && !Run.Player.Powerups.CanTake(offer.Powerup.Value);
                 string price = maxed ? "maxed" : $"{shop.Cost(offer)} crystals";
-                if (DungeonUi.Button("shop" + i, new Rect(row.x, row.y, row.width, 32), $"{offer.Name}  /  {price}", offer.Color, shop.CanBuy(offer)))
+                if (DungeonUi.Button("shop" + i, new Rect(row.x, row.y, row.width, buttonHeight), $"{offer.Name}  /  {price}", offer.Color, shop.CanBuy(offer)))
                     shop.Buy(offer);
                 string description = offer.Category == CrystalShop.Category.Relic ? "Relic: " + offer.Description : offer.Description;
-                DungeonUi.Label(new Rect(row.x + 6, row.y + 34, row.width - 12, 18), description, 12, DungeonUi.Muted);
+                DungeonUi.Label(new Rect(row.x + 6, row.y + buttonHeight + 2, row.width - 12, 18), description, descriptionSize, DungeonUi.Muted);
             }
-            if (shop.RerollsLeft > 0 && DungeonUi.Button("shopReroll", new Rect(rect.x + 16, rect.y + 52 + shop.Stock.Count * 58, rect.width - 32, 28),
+            float below = rect.y + 52 + wares * step;
+            if (shop.RerollsLeft > 0 && DungeonUi.Button("shopReroll", new Rect(rect.x + 16, below, rect.width - 32, 28),
                     $"Reroll wares  /  {shop.RerollsLeft} free", new Color(0.85f, 0.7f, 1f), Run.IsPlaying))
                 shop.Reroll();
             var boons = new System.Collections.Generic.List<string>();
             if (pouch.PendingWards > 0) boons.Add($"+{pouch.PendingWards} wards");
             if (pouch.PendingDamage > 0) boons.Add($"+{pouch.PendingDamage} damage");
             if (pouch.PendingSwiftness > 0) boons.Add($"+{pouch.PendingSwiftness * CrystalPouch.SwiftnessPerBoon:P0} speed");
-            DungeonUi.Label(new Rect(rect.x + 20, rect.y + 404, rect.width - 40, 22),
+            // Always below the reroll slot, so a longer stock pushes it down instead of drawing over it.
+            DungeonUi.Label(new Rect(rect.x + 20, Mathf.Max(rect.y + 404, below + 36), rect.width - 40, 22),
                 boons.Count > 0 ? "For the guardian:  " + string.Join("   ", boons) : "Boons last the boss fight, relics the whole run.", 13, boons.Count > 0 ? AbilityCatalog.Gold : DungeonUi.Muted);
             DungeonUi.Label(new Rect(rect.x + 20, rect.yMax - 44, rect.width - 40, 36),
                 shop.LastResult ?? $"{KeyBindings.Label(GameAction.Interact)} or walking away closes the shop. Crystals carry over to later shops.", 13,

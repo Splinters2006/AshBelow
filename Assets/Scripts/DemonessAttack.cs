@@ -19,7 +19,8 @@ namespace Slopgame
         public const float WhipRadius = 2.8f, WhipCone = 70f;
         public const float AscendDuration = 8f;
         public const float PortalRange = 8f, PortalWindup = 0.65f, PawRadius = 1.6f, PawStun = 0.6f;
-        public const float CurseRange = 7f, CurseRadius = 2.2f, CurseWindup = 0.35f, CurseParalysis = 3f, CurseDuration = 6f;
+        // The pentagram is 25% wider than it used to be (2.2 → 2.75, and each rank adds 25% more than before).
+        public const float CurseRange = 7f, CurseRadius = 2.75f, CurseRankGrowth = 0.3125f, CurseWindup = 0.35f, CurseParalysis = 3f, CurseDuration = 6f;
         public static readonly Color Violet = new Color(0.66f, 0.3f, 1f);
         public static readonly Color Abyss = new Color(0.07f, 0.02f, 0.12f);
         public static readonly Color Pale = new Color(0.96f, 0.92f, 1f);
@@ -283,7 +284,7 @@ namespace Slopgame
             if (Player.Powerups.Count(PowerupType.CursedPaw) > 0) StartCoroutine(CurseMark(center, 1));
         }
 
-        public float CurseAreaRadius(int rank) => CurseRadius + (rank - 1) * 0.25f;
+        public float CurseAreaRadius(int rank) => CurseRadius + (rank - 1) * CurseRankGrowth;
         public float CurseHold(int rank) => CurseParalysis + (rank - 1) * 0.5f + Player.Powerups.Count(PowerupType.HexMastery) * 0.5f;
 
         /// <summary>Demon Curse: a pentagram flares at the cursor, paralysing and cursing every enemy on it.</summary>

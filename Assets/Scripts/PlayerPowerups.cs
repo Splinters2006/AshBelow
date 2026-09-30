@@ -14,7 +14,9 @@ namespace Slopgame
         public float ArrowChargeMultiplier => 3f + 0.5f * Count(PowerupType.Bodkin);
         public int ReflectionDamage => 2 + Count(PowerupType.Riposte) + Permanent.ReflectionDamage;
         public int ArmorCharges { get; private set; }
-        public float AttackIntervalMultiplier => 1f / (1f + 0.2f * Count(PowerupType.AttackSpeed) + Permanent.AttackSpeed);
+        /// <summary>Frenzy's attack and charge speed bonus.</summary>
+        public const float FrenzyAttackSpeed = 0.25f;
+        public float AttackIntervalMultiplier => 1f / (1f + 0.2f * Count(PowerupType.AttackSpeed) + FrenzyAttackSpeed * Count(PowerupType.Frenzy) + Permanent.AttackSpeed);
         /// <summary>The Wizard starts with a 15% base chance (crits and elemental effects); everyone else with 5%.</summary>
         public float CritChance => (ClassWeapon == WeaponType.Staff ? 0.15f : 0.05f) + Count(PowerupType.CriticalHits) * 0.1f;
         public float ElementalEffectChance => Mathf.Min(0.9f, CritChance + Permanent.EffectChance + Count(PowerupType.Stormcraft) * 0.05f);
