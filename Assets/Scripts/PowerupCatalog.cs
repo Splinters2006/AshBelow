@@ -175,6 +175,7 @@ namespace Slopgame
             new PowerupDefinition(PowerupType.Cleave, "Knight: Cleave", "Fully charged slashes reach 0.6 farther and sweep 30 degrees wider", 1, WeaponType.Sword),
             new PowerupDefinition(PowerupType.Bastion, "Knight: Bastion", "A parry gives +1 ward (once every 15 seconds)", 1, WeaponType.Sword),
             new PowerupDefinition(PowerupType.GlacialRush, "Glacial Rush", "Shield Rush freezes everything it smashes through", 1, WeaponType.Sword, AbilityType.ShieldRush),
+            new PowerupDefinition(PowerupType.AegisBurst, "Aegis Burst", "When Aegis ends, it blasts nearby enemies back and damages them once per hit it blocked", 1, WeaponType.Sword, AbilityType.Aegis),
             new PowerupDefinition(PowerupType.HuntersMark, "Archer: Hunter's Mark", "A fully charged arrow marks its target: it takes +1 damage from everything for 4 seconds", 1, WeaponType.Bow),
             new PowerupDefinition(PowerupType.Sniper, "Archer: Sniper", "Arrows deal +1 damage for every 4 units they fly", 1, WeaponType.Bow),
             new PowerupDefinition(PowerupType.PointBlank, "Archer: Point Blank", "Fully charged arrows fired within 3 units knock the target back and stagger it", 1, WeaponType.Bow),
@@ -222,10 +223,19 @@ namespace Slopgame
             new PowerupDefinition(PowerupType.TargetingArray, "Augment: Targeting Array", "Your ray deals +1 to enemies more than 6 units away", 1, WeaponType.Beam),
             new PowerupDefinition(PowerupType.ReactivePlating, "Augment: Reactive Plating", "When you're hit, a plasma burst goes off around you", 1, WeaponType.Beam),
             new PowerupDefinition(PowerupType.Coolant, "Augment: Coolant", "Rolling vents 30% of the plasma cannon's remaining cooldown", 1, WeaponType.Beam),
-            new PowerupDefinition(PowerupType.MissileTurret, "Missile Turret", "Sentry Turret also fires a micro-missile every 2 seconds", 1, WeaponType.Beam, AbilityType.SentryTurret),
-            new PowerupDefinition(PowerupType.AegisBurst, "Aegis Burst", "When Aegis ends, it blasts nearby enemies back and damages them once per hit it blocked", 1, WeaponType.Sword, AbilityType.Aegis)
+            new PowerupDefinition(PowerupType.MissileTurret, "Missile Turret", "Sentry Turret also fires a micro-missile every 2 seconds", 1, WeaponType.Beam, AbilityType.SentryTurret)
         };
 
-        public static PowerupDefinition Get(PowerupType type) => All[(int)type];
+        private static readonly Dictionary<PowerupType, PowerupDefinition> byType = BuildLookup();
+
+        private static Dictionary<PowerupType, PowerupDefinition> BuildLookup()
+        {
+            var lookup = new Dictionary<PowerupType, PowerupDefinition>();
+            foreach (var definition in All) lookup[definition.Type] = definition;
+            return lookup;
+        }
+
+        /// <summary>Looks a talent up by type, so its class and ability gates never depend on catalog order.</summary>
+        public static PowerupDefinition Get(PowerupType type) => byType[type];
     }
 }
