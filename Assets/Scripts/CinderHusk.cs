@@ -39,18 +39,15 @@ namespace Slopgame
 
         public override Sprite Sprite => World.HighTech ? NeonSprites.Core : AshSprite;
 
-        private static Sprite AshSprite => sprite != null ? sprite : sprite = DungeonVisuals.PaletteSprite("Cinder husk", new[]
+        private static Sprite AshSprite => sprite != null ? sprite : sprite = DungeonVisuals.ShadedSprite("Cinder husk", new[]
         {
-            "................", ".....DDDDDD.....", "....DWWWWWWD....", "...DWDDWWDDWD...", "...DWWWWWWWWD...",
-            "..DDWWDDDDWWDD..", ".DWWDDEEEEDDWWD.", ".DWDDEECCEEDDWD.", ".DWDDEECCEEDDWD.", ".DWWDDEEEEDDWWD.",
-            "..DDWWDDDDWWDD..", "...DWWWWWWWWD...", "...DWWD..DWWD...", "...DDDD..DDDD...", "................", "................"
-        }, key => key switch
+            "................", ".....DDDDDD.....", "....DLWWWWMD....", "...DLDDWWDDMD...",
+            "...DWDYWWYDMD...", "..DDWWWWWWWMDD..", ".DLWDDEEEEDDWMD.", ".DWDDEECCEEDDMD.",
+            ".DWDDEECCEEDDMD.", ".DWMDDEEEEDDMMD.", "..DDWWDDDDWMDD..", "...DLWWWWWWMD...",
+            "...DWWD..DWMD...", "...DWMD..DMMD...", "...DDDD..DDDD...", "................"
+        }, new Color(0.2f, 0.22f, 0.28f), key => key switch
         {
-            'W' => Color.white,
-            'D' => new Color(0.2f, 0.22f, 0.28f),
-            'E' => new Color(1f, 0.55f, 0.2f),
-            'C' => new Color(1f, 0.92f, 0.6f),
-            _ => Color.clear
+            'E' => new Color(1f, 0.55f, 0.2f), 'C' => new Color(1f, 0.92f, 0.6f), 'Y' => new Color(1f, 0.7f, 0.3f), _ => Color.clear
         });
     }
 

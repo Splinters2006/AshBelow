@@ -32,15 +32,15 @@ namespace Slopgame
                 Radius = CloudRadius, Telegraph = 0.5f, Duration = 2.5f }, false);
         }
 
-        public override Sprite Sprite => sprite != null ? sprite : sprite = DungeonVisuals.PaletteSprite(DisplayName, new[]
+        public override Sprite Sprite => sprite != null ? sprite : sprite = DungeonVisuals.ShadedSprite(DisplayName, new[]
         {
-            "................", "................", "................", "...DD......DD...",
-            "..DYYD....DYYD..", "..DYPD....DPYD..", ".DDWWDDDDDDWWDD.", "DWWWWWWWWWWWWWWD",
-            "DWWSWWWWWWWWSWWD", "DWWWWWWSSWWWWWWD", ".DWWSWWWWWWSWWD.", "..DWWWBBBBWWWD..",
-            ".DWWDDBBBBDDWWD.", "DWWD..DDDD..DWWD", "DDD..........DDD", "................"
-        }, key => key switch
+            "................", "................", "...DD......DD...", "..DYYD....DYYD..",
+            "..DYPD....DPYD..", ".DDLWDDDDDDLWDD.", "DLWWWWWWWWWWWWMD", "DWWSWWWWWWWWSWMD",
+            "DWWWWWWSSWWWWWMD", "DWWWKKKKKKKKWWMD", ".DWWSWWWWWWSWMD.", "..DWWWBBBBWWMD..",
+            ".DWWDDBBBBDDWMD.", "DWWD..DDDD..DWMD", "DDD..........DDD", "................"
+        }, new Color(0.1f, 0.18f, 0.06f), key => key switch
         {
-            'W' => Color.white, 'D' => new Color(0.1f, 0.18f, 0.06f), 'Y' => new Color(1f, 0.85f, 0.2f), 'P' => new Color(0.05f, 0.05f, 0.02f), 'S' => new Color(0.8f, 0.95f, 0.3f), 'B' => new Color(0.9f, 0.9f, 0.7f), _ => Color.clear
+            'Y' => new Color(1f, 0.85f, 0.2f), 'P' => new Color(0.05f, 0.05f, 0.02f), 'S' => new Color(0.8f, 0.95f, 0.3f), 'B' => new Color(0.9f, 0.9f, 0.7f), 'K' => new Color(0.1f, 0.18f, 0.06f), _ => Color.clear
         });
     }
 }

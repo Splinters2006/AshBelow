@@ -25,15 +25,15 @@ namespace Slopgame
             shooter.BoltSpeed = 6f;
         }
 
-        public override Sprite Sprite => sprite != null ? sprite : sprite = DungeonVisuals.PaletteSprite(DisplayName, new[]
+        public override Sprite Sprite => sprite != null ? sprite : sprite = DungeonVisuals.ShadedSprite(DisplayName, new[]
         {
-            ".......DD.......", "......DWWD......", ".....DWWWWD.....", "....DWWWWWWD....",
-            "....DWKKKKWD....", "....DWKYYKWD....", "...DDWKKKKWDD...", "..DWWDWWWWDWWD..",
-            ".DWWDWWSSWWDWWD.", "..DDWWSWWSWWDD..", "...DWWWSSWWWD...", "...DWWWWWWWWD...",
-            "..DWWWWWWWWWWD..", "..DWWWWWWWWWWD..", "..DDDDDDDDDDDD..", "................"
-        }, key => key switch
+            ".......DD.......", "......DLWD......", ".....DLWWMD.....", "....DLWWWWMD....",
+            "....DWKKKKWD....", "...DLKYKKYKMD...", "...DWKKKKKKMD...", "..DDWWKKKKWMDD..",
+            ".DLWDWWWWWWDWMD.", ".DWWDWWSSWWDWMD.", "..DDDWSWWSWDDD..", "...DWWWSSWWMD...",
+            "...DWWWWWWWMD...", "..DLWWMWWMWWMD..", "..DWWMWWWWMWMD..", "..DDDDDDDDDDDD.."
+        }, new Color(0.15f, 0.05f, 0.2f), key => key switch
         {
-            'W' => Color.white, 'D' => new Color(0.15f, 0.05f, 0.2f), 'K' => new Color(0.05f, 0.02f, 0.07f), 'Y' => new Color(1f, 0.4f, 0.3f), 'S' => new Color(1f, 0.6f, 0.2f), _ => Color.clear
+            'K' => new Color(0.05f, 0.02f, 0.07f), 'Y' => new Color(1f, 0.4f, 0.3f), 'S' => new Color(1f, 0.6f, 0.2f), _ => Color.clear
         });
     }
 }

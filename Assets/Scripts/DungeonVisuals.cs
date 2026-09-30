@@ -20,24 +20,35 @@ namespace Slopgame
         {
             int index = tank ? 2 : ranged ? 1 : 0;
             if (enemySprites[index] == null)
-                enemySprites[index] = PixelSprite(tank ? "Iron brute" : ranged ? "Ember caster" : "Ashling", tank ? new[]
+                enemySprites[index] = tank ? ShadedSprite("Iron brute", new[]
                 {
-                    "...DDDDDDDD.....", "..DWWWWWWWWD....", ".DWWDDDDDDWWD...", ".DWDWDDWDWWWD...",
-                    "DDWWDDDDDDWWDD..", "DWWWWWWWWWWWWD..", "DWWDDWWWWDDWWD..", "DDDDWWWWWWDDDD..",
-                    ".DWWWWDDWWWWD...", ".DWWWWDDWWWWD...", "..DDDDDDDDDD....", "..DWWWDDWWWD....",
-                    "..DWWWDDWWWD....", "..DDDD..DDDD....", "..DDDD..DDDD....", "................"
-                } : ranged ? new[]
+                    "....DDDDDDDD....", "...DLLWWWWWMD...", "..DLWWWWWWWWMD..", "..DWDDDDDDDDMD..",
+                    "..DWDEEDDEEDMD..", "..DWWWWWWWWWMD..", "DDDDMWKKKKWMDDDD", "DLWWDMWWWWMDLWWD",
+                    "DWWMDLWWWWWMDWMD", "DWWMDWWMMWWMDWMD", "DDDDDWWWWWWMDDDD", "DLWD.DDDDDDD.DWD",
+                    "DDDD.DWWDWWD.DDD", ".....DWMDWMD....", "....DDMMDMMDD...", "....DDDDDDDDD..."
+                }, new Color(0.2f, 0.22f, 0.28f), key => key switch
                 {
-                    ".......WW.......", "......WWWW......", ".....WWWWWW.....", "....WDDDDDDW....",
-                    "....WDDWDDWW....", "....WDDDDDDW....", "...WWWWWWWWW..W.", "...WWDDDDWWW.WWW",
-                    "..WWWWDDWWWW..W.", "..WWWWDDWWWWW.D.", ".WWWWWDDWWWWW.D.", ".WWWWWWWWWWWW.D.",
-                    "WWWWWWWWWWWWWWD.", "WWWDDWWWWDDWWWD.", "WWD..WWWW..DWWD.", "................"
-                } : new[]
+                    'E' => new Color(1f, 0.5f, 0.2f), 'K' => new Color(0.06f, 0.06f, 0.08f), _ => Color.clear
+                })
+                    : ranged ? ShadedSprite("Ember caster", new[]
                 {
-                    "..WW......WW....", "..WWW....WWW....", "...WWWWWWWW.....", "..WWWWWWWWWW....",
-                    "..WDDWDDWDDW....", "..WDDDDDDDDW....", "...WWDDDDWW.....", "....WWWWWW......",
-                    "..WWWWWWWWWW....", ".WW.WWWWWW.WW...", ".WW.WWDDWW.WW...", "....WWWWWW......",
-                    "....WW..WW......", "...WWW..WWW.....", "...DDD..DDD.....", "................"
+                    ".......DD.......", "......DLWD....F.", ".....DLWWMD..FYF", "....DLWWWWMD.FYF",
+                    "....DWKKKKWD.DFD", "...DLKEKKEKMD.B.", "...DWKKKKKKMD.B.", "...DWWKKKKWMDDB.",
+                    "..DLWWWWWWWWMWBD", "..DWWMWWWWMWMDB.", "..DWWMWFFWMWMDB.", ".DLWWMWWWWMWWMB.",
+                    ".DWWMWWWWWWMWMB.", ".DWWMWWWWWWMWMD.", ".DDMMMWWWWMMMDD.", "..DDDDDDDDDDDD.."
+                }, new Color(0.2f, 0.22f, 0.28f), key => key switch
+                {
+                    'K' => new Color(0.05f, 0.03f, 0.05f), 'E' => new Color(1f, 0.7f, 0.3f), 'F' => new Color(1f, 0.55f, 0.15f), 'Y' => new Color(1f, 0.92f, 0.55f), 'B' => new Color(0.4f, 0.26f, 0.15f), _ => Color.clear
+                })
+                    : ShadedSprite("Ashling", new[]
+                {
+                    "...DD......DD...", "...DLD....DLD...", "....DLDDDDLD....", "...DLWWWWWWMD...",
+                    "..DLWWWWWWWWMD..", "..DWEEWWWWEEMD..", "..DWWWWWWWWWMD..", "...DWKFKKFKMD...",
+                    "....DDMWWMDD....", "..DDLWWWWWWMDD..", ".DLWDLWWWWWMDMD.", ".DWD.DWWWWMD.DD.",
+                    "..D..DWMMWMD....", ".....DWDDWMD....", "....DDMD.DMDD...", "....DDDD.DDDD..."
+                }, new Color(0.2f, 0.22f, 0.28f), key => key switch
+                {
+                    'E' => new Color(1f, 0.85f, 0.4f), 'K' => new Color(0.08f, 0.03f, 0.03f), 'F' => new Color(0.97f, 0.94f, 0.86f), _ => Color.clear
                 });
             return enemySprites[index];
         }
@@ -147,6 +158,20 @@ namespace Slopgame
             'W' => Color.white,
             _ => Color.clear
         });
+
+        /// <summary>
+        /// A tintable creature sprite one world unit wide: L highlight, W base and M shade are greys the renderer's colour
+        /// tints, D is its outline, and every other key takes its fixed colour from <paramref name="details"/>.
+        /// </summary>
+        public static Sprite ShadedSprite(string name, string[] rows, Color outline, System.Func<char, Color> details) =>
+            PaletteSprite(name, rows, key => key switch
+            {
+                'L' => Color.white,
+                'W' => new Color(0.86f, 0.86f, 0.88f),
+                'M' => new Color(0.6f, 0.6f, 0.66f),
+                'D' => outline,
+                _ => details(key)
+            });
 
         /// <summary>A pixel sprite one world unit wide, drawn from rows of palette keys.</summary>
         public static Sprite PaletteSprite(string name, string[] rows, System.Func<char, Color> palette)

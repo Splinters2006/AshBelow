@@ -50,15 +50,15 @@ namespace Slopgame
             return true;
         }
 
-        public override Sprite Sprite => sprite != null ? sprite : sprite = DungeonVisuals.PaletteSprite(DisplayName, new[]
+        public override Sprite Sprite => sprite != null ? sprite : sprite = DungeonVisuals.ShadedSprite(DisplayName, new[]
         {
             "................", "................", ".......DD.......", "..DDD..DD..DDD..",
-            ".DWWWDDDDDDWWWD.", "..DDDDWWWWDDDD..", ".....DWWWWD.....", "....DWWCCWWD....",
-            "....DWCLLCWD....", "....DWWCCWWD....", ".....DWWWWD.....", "......DWWD......",
+            ".DLWMDDDDDDLWMD.", "..DDDDLWWMDDDD..", ".....DLWWMD.....", "....DLWCCWMD....",
+            "....DWCYYCMD....", "....DWWCCMMD....", ".....DMWWMD.....", "......DMMD......",
             ".......DD.......", ".......CC.......", "................", "................"
-        }, key => key switch
+        }, new Color(0.1f, 0.12f, 0.22f), key => key switch
         {
-            'W' => Color.white, 'D' => new Color(0.1f, 0.12f, 0.22f), 'C' => WorldCatalog.NeonPink, 'L' => Color.white, _ => Color.clear
+            'C' => WorldCatalog.NeonPink, 'Y' => Color.white, _ => Color.clear
         });
     }
 }
