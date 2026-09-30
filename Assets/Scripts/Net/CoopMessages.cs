@@ -23,7 +23,7 @@ namespace Slopgame
     public enum SupportKind : byte { Heal, Protect, Bless, BlessingCredit, Revive, Ward, Intervention }
     public enum FxKind : byte { Arrow, Spell, Slash, Bolt, GlowBolt, Ring, Pulse, Rift, Execution, Singularity, Punch, RearHit, Knife, PiercingShot, Aegis, Holy, Sanctuary,
         Windstep, Shadowstep, Stab, Quake, HolySword, Venom, HeavyPunch, Flurry, SanctuaryEnd, TailStab, TailSweep, Pentagram, DemonPaw, Coin, DemonHead, Sharpen, CoinFlip, CoinRain, Angel, Jackpot,
-        PlasmaRay, PlasmaOrb, SentryTurret, MicroMissile, IceWall }
+        PlasmaRay, PlasmaOrb, SentryTurret, MicroMissile, IceWall, Wings, SoulSiphon }
 
     public struct PlayerStateMessage
     {

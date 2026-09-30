@@ -350,9 +350,14 @@ namespace Slopgame
                 for (int slot = 0; slot < PlayerAbilities.SlotCount; slot++)
                 {
                     bool here = abilities.Equipped(slot) == ability.Type;
-                    // The key it already sits on is shown lit and disabled.
-                    if (DungeonUi.Button("equip" + ability.Type + slot, new Rect(width - 104 + slot * 52, y + 8, 46, 36), SlotKey(slot),
-                        here ? ability.Color : DungeonUi.Muted, !here))
+                    var key = new Rect(width - 104 + slot * 52, y + 8, 46, 36);
+                    // The key it sits on is filled with the ability's colour (dark lettering); the other is a plain button to bind it.
+                    if (here)
+                    {
+                        DungeonUi.Panel(key, ability.Color);
+                        DungeonUi.Label(key, SlotKey(slot), 18, DungeonUi.Background, TextAnchor.MiddleCenter);
+                    }
+                    else if (DungeonUi.Button("equip" + ability.Type + slot, key, SlotKey(slot), DungeonUi.Muted))
                         abilities.Equip(ability.Type, slot);
                 }
             }

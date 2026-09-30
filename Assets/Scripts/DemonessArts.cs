@@ -29,6 +29,10 @@ namespace Slopgame
             Player.Occupy(distance / Speed);
             Player.Protect(distance / Speed + 0.2f);
             HeroVfx.Pulse(run.ProjectileRoot, from, 1.2f, Violet, 0.3f);
+            // Her wings spread and beat through the dash, on every machine.
+            float flight = distance / Speed + 0.1f;
+            WingFlapVfx.Play(run.ProjectileRoot, transform, flight, aim);
+            CoopFx.Wings(run, flight, aim);
             for (float travelled = 0f; travelled < distance; )
             {
                 if (!run.IsPlaying || Player.Health <= 0) yield break;
@@ -55,6 +59,8 @@ namespace Slopgame
         private IEnumerator SoulSiphon(float duration)
         {
             var run = Player.Run;
+            var vfx = SoulSiphonVfx.Play(run, transform, duration, SiphonRadius);
+            CoopFx.SoulSiphon(run, duration, SiphonRadius);
             for (float t = 0f; t < duration; t += 1f)
             {
                 yield return new WaitForSeconds(1f);
@@ -65,14 +71,12 @@ namespace Slopgame
                 {
                     if (enemy == null || enemy.Health <= 0 || !enemy.IsParalyzed || Vector2.Distance(at, enemy.transform.position) > SiphonRadius + enemy.HitRadius) continue;
                     drained++;
-                    CombatVfx.Bolt(run.ProjectileRoot, enemy.transform.position, at, Violet);
-                    CoopFx.Bolt(run, enemy.transform.position, at, Violet);
+                    HeroVfx.Sparks(run.ProjectileRoot, enemy.transform.position, Pale, 6, 2.5f, 0.3f, at - (Vector2)enemy.transform.position, 60f);
                     CombatDamage.Apply(Player, enemy, Player.Damage, DamageElement.Demonic, at, 0f);
                 }
-                CombatVfx.Ring(run.ProjectileRoot, at, SiphonRadius, FlameMesh.Alpha(Violet, 0.4f), 0.4f);
                 if (drained == 0) continue;
                 Player.Heal(drained);
-                HeroVfx.Motes(run.ProjectileRoot, at, 0.7f, Violet, 6 + drained * 3, 0.8f);
+                if (vfx != null) vfx.Flare(drained);
             }
         }
 
