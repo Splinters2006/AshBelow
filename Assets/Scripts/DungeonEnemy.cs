@@ -137,7 +137,7 @@ namespace Slopgame
 
         private void UpdateColor()
         {
-            body.color = IsFlashing || netFlashing || (IsRanged && shooter.IsCharging && !IsHeld) ? Color.white
+            body.color = IsFlashing || netFlashing || (((IsRanged && shooter.IsCharging) || (Variant != null && Variant.IsWindingUp)) && !IsHeld) ? Color.white
                 : IsParalyzed ? DemonessAttack.ParalyzedTint(Time.time)
                 : IsFrozen ? FrozenTint
                 : IsChilled ? AbilityCatalog.Ice : Variant != null ? Variant.Tint
@@ -194,6 +194,7 @@ namespace Slopgame
             frozenUntil = (snapshot.MoreFlags & EnemySnapshot.Frozen) != 0 ? Time.time + 0.25f : Mathf.Min(frozenUntil, Time.time);
             bool charging = (snapshot.Flags & EnemySnapshot.Charging) != 0;
             if (shooter != null) shooter.SetCharging(charging);
+            if (Variant != null) Variant.SetNetWindup(charging && (shooter == null || !shooter.IsCharging));
             if (Boss != null) Boss.ApplySnapshot(charging, (byte)(snapshot.Flags >> EnemySnapshot.BossStateShift));
         }
 

@@ -273,7 +273,8 @@ namespace Slopgame
                 if (enemy.IsChilled) flags |= EnemySnapshot.Chilled;
                 if (enemy.IsBurning) flags |= EnemySnapshot.Burning;
                 var shooter = enemy.GetComponent<EnemyShooter>();
-                if ((shooter != null && shooter.IsCharging) || (enemy.Boss != null && enemy.Boss.IsCharging)) flags |= EnemySnapshot.Charging;
+                if ((shooter != null && shooter.IsCharging) || (enemy.Boss != null && enemy.Boss.IsCharging)
+                    || (enemy.Variant != null && enemy.Variant.IsWindingUp)) flags |= EnemySnapshot.Charging;
                 if (enemy.Boss != null) flags |= (byte)(enemy.Boss.NetState << EnemySnapshot.BossStateShift);
                 byte more = (byte)((enemy.IsParalyzed ? EnemySnapshot.Paralyzed : 0) | (enemy.IsCursed ? EnemySnapshot.Cursed : 0)
                     | (enemy.IsFrozen ? EnemySnapshot.Frozen : 0) | (enemy.Boss != null ? EnemySnapshot.HasMaxHealth : 0));

@@ -203,6 +203,26 @@ namespace Slopgame
             return renderer;
         }
 
+        private static Sprite hexBolt, arcaneBolt, venomBolt;
+
+        /// <summary>The newer worlds' bolts: an Infernal hex, an Arcane Spire orb and a Savage Wilds venom glob.</summary>
+        public static SpriteRenderer CreateThemedBolt(Transform parent, Vector2 position, BoltKind kind)
+        {
+            Sprite sprite;
+            if (kind == BoltKind.Hex)
+                sprite = hexBolt != null ? hexBolt : hexBolt = BoltSprite("Hex bolt sprite", new Color(0.55f, 0.1f, 0.8f), new Color(0.6f, 0.15f, 0.85f),
+                    new Color(0.75f, 0.25f, 1f), new Color(1f, 0.35f, 0.5f), new Color(0.95f, 0.7f, 1f), new Color(1f, 0.95f, 1f));
+            else if (kind == BoltKind.Arcane)
+                sprite = arcaneBolt != null ? arcaneBolt : arcaneBolt = BoltSprite("Arcane bolt sprite", new Color(0.25f, 0.35f, 1f), new Color(0.35f, 0.45f, 1f),
+                    new Color(0.5f, 0.65f, 1f), new Color(0.75f, 0.55f, 1f), new Color(0.8f, 0.9f, 1f), Color.white);
+            else
+                sprite = venomBolt != null ? venomBolt : venomBolt = BoltSprite("Venom bolt sprite", new Color(0.2f, 0.55f, 0.1f), new Color(0.3f, 0.65f, 0.15f),
+                    new Color(0.45f, 0.85f, 0.2f), new Color(0.75f, 0.9f, 0.2f), new Color(0.8f, 1f, 0.55f), new Color(0.95f, 1f, 0.85f));
+            var renderer = Create(kind + " bolt", parent, position, Vector2.one, Color.white, 6);
+            renderer.sprite = sprite;
+            return renderer;
+        }
+
         /// <summary>A glowing bolt, hottest (or brightest) at the head, colours listed from the outer glow inward.</summary>
         private static Sprite BoltSprite(string name, Color glow, Color outerTail, Color body, Color innerTail, Color rim, Color core)
         {

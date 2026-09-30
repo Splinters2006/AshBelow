@@ -29,7 +29,7 @@ namespace Slopgame
         public BoltKind Bolts { get; }
         /// <summary>The hero this world belongs to (it will unlock them later); null for the starting world.</summary>
         public WeaponType? Hero { get; }
-        /// <summary>True while the world only reuses the Ash Below's enemies and guardians under its own names and colours.</summary>
+        /// <summary>True while the world reuses the Ash Below's basic enemies and guardians under its own names and colours (its specialists are its own, see <see cref="WorldBestiary"/>).</summary>
         public bool IsPlaceholder { get; }
         /// <summary>Where the world sits on the travel map, 0-1 across and down the map. Tweak the layout here.</summary>
         public Vector2 MapPosition { get; }
@@ -78,7 +78,7 @@ namespace Slopgame
                     new TrapTheme("Plasma laser", TrapKind.Jet, HazardStyle.Plasma, 9f),
                     new TrapTheme("Arc floor panel", TrapKind.Vent, HazardStyle.Circuit, 1.2f),
                 }),
-            // Placeholder hero worlds: their own names and colours, with the Ash Below's enemies and guardians until each is designed.
+            // Placeholder hero worlds: their own names, colours and specialists, with the Ash Below's basic enemies and guardians until each is designed.
             new WorldDefinition(2, "THE INFERNAL COURT", false, new Color(0.06f, 0.015f, 0.03f),
                 new Color(0.16f, 0.06f, 0.08f), new Color(0.19f, 0.07f, 0.1f), new Color(0.36f, 0.12f, 0.2f),
                 new Color(0.85f, 0.25f, 0.55f), new Color(0.6f, 0.2f, 0.7f),

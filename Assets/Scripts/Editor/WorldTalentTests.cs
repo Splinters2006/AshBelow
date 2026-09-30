@@ -76,6 +76,7 @@ namespace Slopgame.Editor
                     TestAsh(run);
                     TestBreakables(run);
                     TestHazards(run);
+                    TestBestiary(run);
                     TestUniversalEffects(run);
                     DebugMode.Set(true);
                     while (run.Floor < 15) run.DebugSkipRoom();
@@ -85,7 +86,7 @@ namespace Slopgame.Editor
                     return;
                 }
                 TestNeon(run);
-                Finish(!failed, "26 talent caps/class gates; crit, burn, freeze, shock, ward effects; world-cleared screen; both world spawns; breakables; environmental traps; spread fire, freeze/pause, charge/recovery/walls");
+                Finish(!failed, "26 talent caps/class gates; crit, burn, freeze, shock, ward effects; world-cleared screen; both world spawns; breakables; environmental traps; 12 world specialists; spread fire, freeze/pause, charge/recovery/walls");
             }
             catch (Exception error) { Debug.LogException(error); Finish(false, error.Message); }
         }
@@ -159,6 +160,72 @@ namespace Slopgame.Editor
             Require(victim.Health == health - zone.EnemyDamage, "Trap damage to enemies wrong: " + (health - victim.Health));
             UnityEngine.Object.Destroy(zone.gameObject);
             UnityEngine.Object.Destroy(vent.gameObject);
+        }
+
+        /// <summary>Every world specialist configures, has a sprite, and its attack loop actually strikes, moves or fires.</summary>
+        private static void TestBestiary(DungeonRun run)
+        {
+            var types = new System.Collections.Generic.HashSet<Type>();
+            for (int w = 0; w < WorldCatalog.All.Length; w++)
+            {
+                Require(WorldBestiary.Roster(w).Length >= 2, "World with too few specialists: " + WorldCatalog.All[w].Name);
+                foreach (var type in WorldBestiary.Roster(w)) Require(types.Add(type), "Specialist in two worlds: " + type.Name);
+            }
+            Vector2 hero = run.Map.Centers[1];
+            run.Player.transform.position = hero;
+            foreach (var type in types)
+            {
+                bool close = type == typeof(MagmaStomper) || type == typeof(Cutthroat);
+                Vector2 start = FindSpot(run, hero, close ? 1.5f : 3.5f);
+                var enemy = DungeonVisuals.Create("Test " + type.Name, run.ProjectileRoot, start, Vector2.one * 0.6f, Color.white, 3)
+                    .gameObject.AddComponent<DungeonEnemy>();
+                enemy.Run = run;
+                enemy.Health = 10;
+                enemy.Speed = 2.5f;
+                enemy.enabled = false;
+                var variant = (EnemyVariant)enemy.gameObject.AddComponent(type);
+                variant.Configure(enemy);
+                Require(variant.Sprite != null && enemy.name == variant.DisplayName && variant.CrystalValue > 0, "Specialist setup: " + type.Name);
+                var shooter = enemy.GetComponent<EnemyShooter>();
+                if (shooter != null) { shooter.enabled = false; Require(shooter.Kind.HasValue || type == typeof(EmberFanatic), "Specialist without its own bolts: " + type.Name); }
+                int zones = run.ProjectileRoot.GetComponentsInChildren<HellfireZone>().Length;
+                bool acted = false;
+                if (type == typeof(BlinkMagus))
+                {
+                    enemy.Hit(1, hero);
+                    acted = Vector2.Distance(enemy.transform.position, start) > 1f;
+                }
+                else if (type == typeof(BloatToad))
+                {
+                    variant.OnDeath(enemy);
+                    acted = run.ProjectileRoot.GetComponentsInChildren<HellfireZone>().Length > zones;
+                }
+                else if (shooter == null || type == typeof(OrbitingEye))
+                {
+                    for (int tick = 0; tick < 60 && !acted; tick++)
+                    {
+                        SetTime(enemy, 2f + tick * 0.2f);
+                        variant.Move(enemy, hero, true);
+                        acted = run.ProjectileRoot.GetComponentsInChildren<HellfireZone>().Length > zones
+                            || Vector2.Distance(enemy.transform.position, start) > 0.3f;
+                    }
+                }
+                else acted = true;
+                Require(acted, "Specialist never attacked or moved: " + type.Name);
+                foreach (var zone in run.ProjectileRoot.GetComponentsInChildren<HellfireZone>()) UnityEngine.Object.DestroyImmediate(zone.gameObject);
+                UnityEngine.Object.DestroyImmediate(enemy.gameObject);
+            }
+        }
+
+        /// <summary>Open ground about <paramref name="distance"/> from <paramref name="from"/>, in its line of sight.</summary>
+        private static Vector2 FindSpot(DungeonRun run, Vector2 from, float distance)
+        {
+            for (int i = 0; i < 16; i++)
+            {
+                Vector2 spot = from + (Vector2)(Quaternion.Euler(0, 0, i * 22.5f) * Vector2.right) * distance;
+                if (run.Map.CanStand(spot, 0.3f) && run.HasLineOfSight(from, spot)) return spot;
+            }
+            throw new Exception("No open ground near room center");
         }
 
         private static void TestAsh(DungeonRun run)

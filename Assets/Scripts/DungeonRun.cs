@@ -284,7 +284,7 @@ namespace Slopgame
                         // Introduce one specialist in the first combat room, then seed additional ones.
                         bool specialist = Floor >= 3 && ((room == 1 && i == 2) || roll >= HuskChance + SkitterChance && roll < HuskChance + SkitterChance + SpecialistChance);
                         EnemyVariant variant = specialist
-                            ? (World.HighTech ? (EnemyVariant)enemy.gameObject.AddComponent<NeonLancer>() : enemy.gameObject.AddComponent<EmberFanatic>())
+                            ? WorldBestiary.AddSpecialist(enemy.gameObject, World, room == 1 && i == 2, variants)
                             : Floor >= 3 && roll < HuskChance ? enemy.gameObject.AddComponent<CinderHusk>()
                             : Floor >= 2 && roll < HuskChance + SkitterChance ? enemy.gameObject.AddComponent<AshSkitter>() : null;
                         variant?.Configure(enemy);
