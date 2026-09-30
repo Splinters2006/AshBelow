@@ -49,7 +49,9 @@ namespace Slopgame
         public void Vent(float duration) => ventedUntil = Mathf.Max(ventedUntil, Time.time + duration);
         private float ventedUntil;
         public float AttackIntervalMultiplier => (IsEmpowered ? 0.7f : 1f) * (IsFurious ? 0.7f : 1f);
-        public float ChargeDurationMultiplier => (IsEmpowered ? 0.7f : 1f) * (IsRaging ? 0.5f : IsTired ? 1.5f : 1f) * (IsFurious ? 0.4f : 1f);
+        // Archdemon's Technique winds the Demoness's tail whip up 50% faster.
+        public float ChargeDurationMultiplier => (IsEmpowered ? 0.7f : 1f) * (IsRaging ? 0.5f : IsTired ? 1.5f : 1f) * (IsFurious ? 0.4f : 1f)
+            * (IsAscended ? 1f / 1.5f : 1f);
         public float AttackSizeMultiplier => (IsEmpowered ? 1.1f : 1f) * (IsFurious ? 1.5f : 1f);
         public float DamageMultiplier => (IsRaging ? 2f : IsTired ? 0.5f : 1f) * (IsFurious ? 2f : 1f) * (IsGreedy ? 2f : 1f);
         /// <summary>Snake Eyes: a lost All In doubles the Gambler's damage for a while.</summary>
