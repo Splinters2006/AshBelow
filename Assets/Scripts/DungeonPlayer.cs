@@ -187,6 +187,8 @@ namespace Slopgame
             UpdatePoison();
             UpdateIgnite();
             SetVeiledLook(IsVeiled);
+            if (IsVeiled && !wasVeiled && Powerups.Count(PowerupType.Ambush) > 0) Powerups.AmbushReady = true;
+            wasVeiled = IsVeiled;
             if (!Run.IsPlaying || Health <= 0 || IsBusy) { MoveInput = Vector2.zero; Charge.Tick(PlayerInput.Attack, false); return; }
             Vector2 cursor = Run.View.ScreenToWorldPoint(new Vector3(PlayerInput.CursorPosition.x,
                 PlayerInput.CursorPosition.y, -Run.View.transform.position.z));
@@ -323,7 +325,7 @@ namespace Slopgame
             ScreenFx.Flash(new Color(1f, 0.85f, 0.4f, 0.4f), 0.5f);
             return true;
         }
-        private bool backupDriveSpent;
+        private bool backupDriveSpent, wasVeiled;
 
         /// <summary>Standing in burning ground: one damage per second, however many fires overlap.</summary>
         public void Burn()

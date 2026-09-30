@@ -70,6 +70,19 @@ namespace Slopgame
         private int rhythmCount, spellbladeStrikes;
         private bool elementalPrimed, inBasicAttack, rhythmBeat, spellbladeActive;
         private float closeCallReadyAt;
+        /// <summary>Ambush: the next hit after the hero was hidden deals double damage.</summary>
+        public bool AmbushReady { get; set; }
+        private int bloodTrailCrits;
+
+        /// <summary>Blood Trail: every 10th critical hit heals 1 HP.</summary>
+        public void OnCritical(DungeonPlayer player)
+        {
+            if (Count(PowerupType.BloodTrail) == 0 || ++bloodTrailCrits < 10) return;
+            bloodTrailCrits = 0;
+            player.Heal(1);
+            HeroVfx.Motes(player.Run.ProjectileRoot, player.transform.position, 0.6f, DungeonEnemy.BleedColor, 8, 0.7f);
+        }
+
         /// <summary>Cheat Death's once-per-world save is spent.</summary>
         public bool CheatDeathSpent { get; set; }
 

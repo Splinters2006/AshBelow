@@ -10,7 +10,7 @@ namespace Slopgame
         Eclipse, SoulRend, ShadowReign, KnuckleSandwich, WildLeap, PrimalRage, ArchdemonTechnique, DemonPaw, DemonCurse,
         Windfall, AllIn, Jackpot, MicroMissiles, RocketBoost, SentryTurret,
         // The talents & abilities expansion.
-        ShieldThrow, Whirlwind, WarBanner, NetShot, RicochetArrow, BearTrap, IceWall, BallLightning, LightningStorm
+        ShieldThrow, Whirlwind, WarBanner, NetShot, RicochetArrow, BearTrap, IceWall, BallLightning, LightningStorm, SmokeBomb, DeathMark, ShadowClone
     }
 
     public sealed class AbilityDefinition
@@ -80,6 +80,9 @@ namespace Slopgame
             new AbilityDefinition(AbilityType.IceWall, WeaponType.Staff, "Ice Wall", "Raise a wall of ice across your aim for 4 seconds that blocks enemies and their bolts. Enough blows break it, and the shards freeze enemies right beside it. Ranks make it last longer and tougher.", "||", 11f, new Color(0.7f, 0.92f, 1f)),
             new AbilityDefinition(AbilityType.BallLightning, WeaponType.Staff, "Ball Lightning", "A slow orb of lightning drifts forward for 4 seconds, zapping and shocking every enemy it passes. Ranks add damage and time.", "o", 9f, CombatDamage.ShockColor),
             new AbilityDefinition(AbilityType.LightningStorm, WeaponType.Staff, "Lightning Storm", "For 3 seconds, lightning strikes down from above onto enemies around you, shocking each one it hits. Ranks lengthen the storm.", "!", 16f, new Color(0.6f, 0.8f, 1f), true),
+            new AbilityDefinition(AbilityType.SmokeBomb, WeaponType.Daggers, "Smoke Bomb", "A smoke cloud for 4 seconds: inside it enemies lose track of you, and your hits on enemies inside always count as backstabs. Ranks make it last longer.", "~", 12f, new Color(0.62f, 0.62f, 0.7f)),
+            new AbilityDefinition(AbilityType.DeathMark, WeaponType.Daggers, "Death Mark", "Mark the enemy nearest your cursor. After 3 seconds it takes all the damage it took while marked a second time.", "+", 14f, new Color(0.85f, 0.2f, 0.3f), true),
+            new AbilityDefinition(AbilityType.ShadowClone, WeaponType.Daggers, "Shadow Clone", "For 7.5 seconds, every backstab you land summons a shadow clone behind the victim that backstabs it again. Ranks lengthen it.", "&", 16f, ShadowstepVfx.Violet, true),
             new AbilityDefinition(AbilityType.WarBanner, WeaponType.Sword, "War Banner", "Plant a banner for 6 seconds. You and allies inside deal +1 damage, and everyone inside gains a ward when it's planted. Ranks extend it.", "F", 18f, new Color(0.9f, 0.2f, 0.25f), true)
         };
 

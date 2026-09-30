@@ -367,6 +367,7 @@ namespace Slopgame
                 else if (message.Kind == CoopDamageKind.Bleed) enemy.Bleed(message.Ticks, message.Amount);
                 else if (message.Kind == CoopDamageKind.Poison) enemy.Poison(message.Ticks, message.Amount);
                 else if (message.Kind == CoopDamageKind.Mark) enemy.Mark(message.Duration);
+                else if (message.Kind == CoopDamageKind.DeathMark) enemy.DeathMark(message.Duration);
                 else enemy.Chill(message.Duration);
             }
             finally { Attacker = LocalId; }

@@ -54,6 +54,34 @@ namespace Slopgame
         private float stunnedUntil, stunImmuneUntil, rootedUntil, nextBleed, nextPoison;
         private int bleedTicks, bleedDamage, poisonTicks, poisonDamage, peakHealth;
         private bool netBleeding, netPoisoned;
+        /// <summary>Death Mark: every hit taken is remembered and dealt again when the mark comes due.</summary>
+        public bool IsDeathMarked => deathMarkDue > 0f;
+        public const float DeathMarkTime = 3f;
+        private float deathMarkDue;
+        private int deathMarkStored;
+
+        public void DeathMark(float delay)
+        {
+            if (IsInvulnerable || delay <= 0f) return;
+            if (Run.IsGuest) { Run.Coop.ReportDamage(this, CoopDamageKind.DeathMark, 0, transform.position, 0, delay); return; }
+            deathMarkDue = Time.time + delay;
+            deathMarkStored = 0;
+            if (Run.ProjectileRoot != null) CombatVfx.Ring(Run.ProjectileRoot, transform.position, 0.8f, new Color(0.85f, 0.2f, 0.3f), delay);
+        }
+
+        /// <summary>Host: when the mark comes due, every hit it remembered lands again at once.</summary>
+        private void SettleDeathMark()
+        {
+            if (deathMarkDue <= 0f || Time.time < deathMarkDue) return;
+            deathMarkDue = 0f;
+            int owed = deathMarkStored;
+            deathMarkStored = 0;
+            if (owed <= 0) return;
+            HeroVfx.Pulse(Run.ProjectileRoot, transform.position, 1.1f, new Color(0.85f, 0.2f, 0.3f), 0.35f);
+            HeroVfx.Sparks(Run.ProjectileRoot, transform.position, new Color(0.85f, 0.2f, 0.3f), 16, 5f, 0.35f);
+            Hit(owed, transform.position, 0f);
+        }
+
         /// <summary>Hunter's Mark: takes +1 damage from every hit.</summary>
         public bool IsMarked => Time.time < markedUntil;
         private float markedUntil;
@@ -134,6 +162,8 @@ namespace Slopgame
                 if (Health <= 0) return;
                 CombatVfx.Ring(Run.ProjectileRoot, transform.position, 0.4f, burnColor, 0.2f);
             }
+            SettleDeathMark();
+            if (Health <= 0) return;
             if (bleedTicks > 0 && Time.time >= nextBleed)
             {
                 bleedTicks--;
@@ -295,6 +325,7 @@ namespace Slopgame
                 return;
             }
             Health -= CursedDamage(damage);
+            if (deathMarkDue > 0f) deathMarkStored += CursedDamage(damage);
             hitUntil = Time.time + 0.15f;
             if (Health <= 0)
             {

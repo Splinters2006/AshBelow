@@ -26,7 +26,9 @@ namespace Slopgame
         // Archer.
         HuntersMark, Sniper, PointBlank, QuickNock, StormVolley, SplittingShot,
         // Wizard.
-        ElementalClash, ArcaneEcho, Shatter, Pyromancer, StormChargedOrb, Frostblink
+        ElementalClash, ArcaneEcho, Shatter, Pyromancer, StormChargedOrb, Frostblink,
+        // Assassin.
+        Bleed, Vanish, Ambush, Poisoner, BloodTrail, VenomKnives
     }
 
     public sealed class PowerupDefinition
@@ -175,6 +177,12 @@ namespace Slopgame
             new PowerupDefinition(PowerupType.Pyromancer, "Wizard: Pyromancer", "Burning enemies take +1 from your lightning", 1, WeaponType.Staff),
             new PowerupDefinition(PowerupType.StormChargedOrb, "Storm-Charged Orb", "Hold Inferno Orb's key to charge it; at full charge its blast burns and shocks everything it hits", 1, WeaponType.Staff, AbilityType.Fireball),
             new PowerupDefinition(PowerupType.Frostblink, "Frostblink", "Arcane Blink leaves a Frost Nova where you started", 1, WeaponType.Staff, AbilityType.Blink),
+            new PowerupDefinition(PowerupType.Bleed, "Assassin: Bleed", "Backstabs make the target bleed for 3 ticks", 1, WeaponType.Daggers),
+            new PowerupDefinition(PowerupType.Vanish, "Assassin: Vanish", "A kill with Shadowstep hides you from enemies for 1 second", 1, WeaponType.Daggers),
+            new PowerupDefinition(PowerupType.Ambush, "Assassin: Ambush", "Your first hit after being hidden deals double damage", 1, WeaponType.Daggers),
+            new PowerupDefinition(PowerupType.Poisoner, "Assassin: Poisoner", "Enemies suffering damage over time (burning, bleeding, poisoned) take +1 from your stabs", 1, WeaponType.Daggers),
+            new PowerupDefinition(PowerupType.BloodTrail, "Assassin: Blood Trail", "Every 10 critical hits heal 1 HP", 1, WeaponType.Daggers),
+            new PowerupDefinition(PowerupType.VenomKnives, "Venom Knives", "Fan of Knives poisons everything it cuts", 1, WeaponType.Daggers, AbilityType.FanOfKnives),
             new PowerupDefinition(PowerupType.AegisBurst, "Aegis Burst", "When Aegis ends, it blasts nearby enemies back and damages them once per hit it blocked", 1, WeaponType.Sword, AbilityType.Aegis)
         };
 

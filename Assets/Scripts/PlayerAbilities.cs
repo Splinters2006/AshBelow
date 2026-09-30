@@ -148,6 +148,17 @@ namespace Slopgame
                     BallLightning.Launch(Player, aim, BallLightning.Duration + (rank - 1) * 0.5f, Player.Damage + rank - 1); break;
                 case AbilityType.LightningStorm:
                     LightningStorm.Call(Player, LightningStorm.Duration + (rank - 1) * 0.75f, Player.Damage * 2 + rank - 1); break;
+                case AbilityType.SmokeBomb:
+                    SmokeCloud.Drop(Player, SmokeCloud.Duration + (rank - 1) * 0.75f); break;
+                case AbilityType.DeathMark:
+                    var marked = NearestEnemy((Vector2)transform.position + aim * Mathf.Min(cursorDistance, 8f), 3f);
+                    if (marked == null) return false;
+                    marked.DeathMark(DungeonEnemy.DeathMarkTime);
+                    CombatVfx.Bolt(Player.Run.ProjectileRoot, transform.position, marked.transform.position, definition.Color);
+                    CoopFx.Bolt(Player.Run, transform.position, marked.transform.position, definition.Color);
+                    break;
+                case AbilityType.ShadowClone:
+                    ShadowClone.Activate(Player, ShadowClone.Duration + (rank - 1) * 1.5f); break;
                 case AbilityType.NetShot:
                     NetShot(aim, 2f + (rank - 1) * 0.5f, Player.Damage + rank - 1); break;
                 case AbilityType.RicochetArrow:
@@ -251,6 +262,20 @@ namespace Slopgame
             castReadyAt = Time.time + 0.2f;
             Player.Powerups.OnAbilityUsed();
             return true;
+        }
+
+        /// <summary>The living enemy nearest <paramref name="point"/> within <paramref name="radius"/>.</summary>
+        public DungeonEnemy NearestEnemy(Vector2 point, float radius)
+        {
+            DungeonEnemy best = null;
+            float bestDistance = radius;
+            foreach (var enemy in Player.Run.Enemies)
+            {
+                if (enemy == null || enemy.Health <= 0) continue;
+                float distance = Vector2.Distance(point, enemy.transform.position);
+                if (distance <= bestDistance) { best = enemy; bestDistance = distance; }
+            }
+            return best;
         }
 
         public const float NetRange = 5f, NetCone = 70f;
@@ -371,6 +396,7 @@ namespace Slopgame
                 if (enemy.Health <= 0 || (position - closest).sqrMagnitude > radius * radius) continue;
                 HeroVfx.Slash(Player.Run.ProjectileRoot, position - travel.normalized * 0.4f, travel, 0.7f, 70f, color, 0.18f);
                 CombatDamage.ApplyShadowstep(Player, enemy);
+                if (enemy.Health <= 0 && Player.Powerups.Count(PowerupType.Vanish) > 0) Player.Veil(1f);
             }
             return true;
         }

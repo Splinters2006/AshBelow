@@ -25,8 +25,10 @@ namespace Slopgame
             Vector2 source = (Vector2)enemy.transform.position - enemy.Facing.Direction;
             HitVfx(player, enemy.transform.position, source, new Color(0.8f, 0.5f, 1f), true);
             RearHitMarker.Show(player.Run, enemy);
-            enemy.Hit(ShadowstepDamageForRoll(player, Random.value), source);
+            int damage = AssassinBonus(player, enemy, ShadowstepDamageForRoll(player, Random.value));
+            enemy.Hit(damage, source);
             player.Mechanic?.OnBackstab();
+            OnBackstab(player, enemy, damage);
             CreditBlessing(player);
         }
 
@@ -96,17 +98,24 @@ namespace Slopgame
             int healthBefore = enemy.Health;
             // Opening Strike: the first hit on an unhurt enemy always crits (or, if elemental, sets off its element).
             bool opening = player != null && player.Powerups.Count(PowerupType.OpeningStrike) > 0 && enemy.IsUnhurt;
-            bool behind = enemy.Facing.IsBehind(source);
+            // Smoke Bomb: hits on enemies inside the Assassin's smoke always count as backstabs.
+            bool behind = enemy.Facing.IsBehind(source) || (player != null && player.ClassWeapon == WeaponType.Daggers && SmokeCloud.Covers(enemy.transform.position));
             if (behind) RearHitMarker.Show(player != null ? player.Run : null, enemy);
             if (element == DamageElement.Physical)
             {
                 if (player.ClassWeapon == WeaponType.Daggers && behind)
                     damage = damage * 2 + player.Powerups.Count(PowerupType.Backstab);
+                damage = AssassinBonus(player, enemy, damage);
                 int rolled = opening ? player.Powerups.CriticalDamage(damage) : player.Powerups.RollDamage(damage);
                 bool critical = rolled > damage;
+                if (critical) player.Powerups.OnCritical(player);
                 HitVfx(player, enemy.transform.position, source, infusion != DamageElement.Physical ? ElementColor(infusion) : new Color(1f, 0.95f, 0.8f), critical);
                 enemy.Hit(rolled, source, knockback);
-                if (player.ClassWeapon == WeaponType.Daggers && behind) player.Mechanic?.OnBackstab();
+                if (player.ClassWeapon == WeaponType.Daggers && behind)
+                {
+                    player.Mechanic?.OnBackstab();
+                    OnBackstab(player, enemy, rolled);
+                }
                 CreditBlessing(player);
                 if (critical && infusion != DamageElement.Physical) ApplyEffect(player, enemy, infusion, rolled);
                 if (enemy.Health <= 0) Overkill(player, enemy, rolled - healthBefore);
@@ -129,6 +138,23 @@ namespace Slopgame
             // Elemental Kills' charge is spent on the next elemental hit, even one that would have set off anyway.
             bool primed = player.Powerups.ConsumeElementalPrime();
             if (guaranteedEffect || primed || opening || Random.value < player.Powerups.ElementalEffectChance) ApplyEffect(player, enemy, element, damage);
+        }
+
+        /// <summary>The Assassin's bonuses to her own physical hits: Ambush (spent) and Poisoner.</summary>
+        private static int AssassinBonus(DungeonPlayer player, DungeonEnemy enemy, int damage)
+        {
+            if (player == null || player.ClassWeapon != WeaponType.Daggers) return damage;
+            if (player.Powerups.AmbushReady) { player.Powerups.AmbushReady = false; damage *= 2; }
+            if (player.Powerups.Count(PowerupType.Poisoner) > 0 && enemy.HasDamageOverTime) damage++;
+            return damage;
+        }
+
+        /// <summary>A backstab landed: Bleed opens a wound and Shadow Clone sends a clone to stab again.</summary>
+        private static void OnBackstab(DungeonPlayer player, DungeonEnemy enemy, int damage)
+        {
+            if (enemy == null || enemy.Health <= 0) return;
+            if (player.Powerups.Count(PowerupType.Bleed) > 0) enemy.Bleed(3, Mathf.Max(1, damage / 3));
+            ShadowClone.OnBackstab(player, enemy, Mathf.Max(1, damage / 2));
         }
 
         public const float ClashRadius = 2f;
