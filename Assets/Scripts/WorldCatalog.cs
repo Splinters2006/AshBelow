@@ -44,15 +44,18 @@ namespace Slopgame
         /// Ash Below and the Infernal Court use hellfire.
         /// </summary>
         public HazardStyle Element { get; }
+        /// <summary>The first of the world's three guardians; worlds without their own reuse the Ash Below's.</summary>
+        public BossKind FirstGuardian { get; }
 
         public WorldDefinition(int index, string name, bool highTech, Color background, Color floorA, Color floorB, Color wall, Color accent,
             Color arenaRune, string basicName, string casterName, string bruteName, Color basicTint, Color casterTint, Color bruteTint, BoltKind bolts,
-            WeaponType? hero = null, bool placeholder = false, Vector2 mapPosition = default, MapLayout layout = MapLayout.Dungeon, TrapTheme[] traps = null, bool lava = false, HazardStyle element = HazardStyle.Hellfire)
+            WeaponType? hero = null, bool placeholder = false, Vector2 mapPosition = default, MapLayout layout = MapLayout.Dungeon, TrapTheme[] traps = null, bool lava = false, HazardStyle element = HazardStyle.Hellfire,
+            BossKind firstGuardian = BossKind.AshWarden)
         {
             Index = index; Name = name; HighTech = highTech; Background = background; FloorA = floorA; FloorB = floorB; Wall = wall; Accent = accent;
             ArenaRune = arenaRune; BasicName = basicName; CasterName = casterName; BruteName = bruteName;
             BasicTint = basicTint; CasterTint = casterTint; BruteTint = bruteTint; Bolts = bolts;
-            Hero = hero; IsPlaceholder = placeholder; MapPosition = mapPosition; Layout = layout; Traps = traps ?? new TrapTheme[0]; HasLava = lava; Element = element;
+            Hero = hero; IsPlaceholder = placeholder; MapPosition = mapPosition; Layout = layout; Traps = traps ?? new TrapTheme[0]; HasLava = lava; Element = element; FirstGuardian = firstGuardian;
         }
     }
 
@@ -85,7 +88,7 @@ namespace Slopgame
                 {
                     new TrapTheme("Plasma laser", TrapKind.Jet, HazardStyle.Plasma, 9f),
                     new TrapTheme("Arc floor panel", TrapKind.Vent, HazardStyle.Circuit, 1.2f),
-                }, element: HazardStyle.Plasma),
+                }, element: HazardStyle.Plasma, firstGuardian: BossKind.GridOverseer),
             // Placeholder hero worlds: their own names, colours and specialists, with the Ash Below's basic enemies and guardians until each is designed.
             new WorldDefinition(2, "THE INFERNAL COURT", false, new Color(0.06f, 0.015f, 0.03f),
                 new Color(0.16f, 0.06f, 0.08f), new Color(0.19f, 0.07f, 0.1f), new Color(0.36f, 0.12f, 0.2f),
@@ -96,7 +99,7 @@ namespace Slopgame
                 {
                     new TrapTheme("Brimstone geyser", TrapKind.Vent, HazardStyle.Hellfire, 1.5f),
                     new TrapTheme("Fire jet", TrapKind.Jet, HazardStyle.Hellfire, 5f),
-                }, lava: true),
+                }, lava: true, firstGuardian: BossKind.HexMatriarch),
             new WorldDefinition(3, "THE ARCANE SPIRE", false, new Color(0.03f, 0.03f, 0.08f),
                 new Color(0.1f, 0.1f, 0.2f), new Color(0.12f, 0.12f, 0.23f), new Color(0.26f, 0.26f, 0.45f),
                 new Color(0.55f, 0.6f, 1f), new Color(0.4f, 0.85f, 1f),

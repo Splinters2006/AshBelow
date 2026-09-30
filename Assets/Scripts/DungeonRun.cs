@@ -305,6 +305,49 @@ namespace Slopgame
             UpdatePaths();
         }
 
+        /// <summary>Minion kinds a guardian can summon: the world's basic enemy, caster or brute, or its specialist number n as <see cref="MinionSpecialist"/> + n.</summary>
+        public const byte MinionBasic = 0, MinionCaster = 1, MinionBrute = 2, MinionSpecialist = 10;
+
+        /// <summary>
+        /// Host (or offline): a guardian summons a minion. In co-op the host numbers it and announces it, so every
+        /// machine spawns the same enemy and it syncs like any other.
+        /// </summary>
+        public DungeonEnemy SpawnMinion(Vector2 position, byte kind)
+        {
+            var enemy = CreateMinion(position, kind);
+            if (IsNetworked) Coop.RegisterMinion(enemy, kind);
+            return enemy;
+        }
+
+        /// <summary>Builds a summoned minion on this machine (also called by co-op guests when the host announces one).</summary>
+        public DungeonEnemy CreateMinion(Vector2 position, byte kind)
+        {
+            var enemy = DungeonVisuals.Create(World.BasicName, level, position, Vector2.one * 0.6f, World.BasicTint, 3).gameObject.AddComponent<DungeonEnemy>();
+            enemy.Run = this;
+            enemy.IsMinion = true;
+            enemy.Health = EnemyHealthScaled(EnemyHealthForFloor(Floor));
+            enemy.Speed = Mathf.Min(4.3f, 2.25f + Floor * 0.15f);
+            if (kind == MinionCaster) enemy.gameObject.AddComponent<EnemyShooter>();
+            else if (kind == MinionBrute)
+            {
+                enemy.IsTank = true;
+                enemy.name = World.BruteName;
+                enemy.Health *= 3;
+                enemy.Speed *= 0.6f;
+                enemy.transform.localScale = Vector2.one * 0.9f;
+            }
+            else if (kind >= MinionSpecialist)
+            {
+                var roster = WorldBestiary.Roster(World.Index);
+                var variant = (EnemyVariant)enemy.gameObject.AddComponent(roster[(kind - MinionSpecialist) % roster.Length]);
+                variant.Configure(enemy);
+            }
+            Enemies.Add(enemy);
+            HeroVfx.Pulse(level, position, 1f, World.Accent, 0.4f);
+            HeroVfx.Sparks(level, position, World.Accent, 12, 4f, 0.4f, Vector2.up, 120f);
+            return enemy;
+        }
+
         /// <summary>True when the floor after <paramref name="floor"/> is a boss floor, so the crystal shop comes first.</summary>
         public static bool IsShopNext(int floor) => floor > 0 && (floor + 1) % 5 == 0;
         /// <summary>Variant chances for eligible basic enemies; the first combat room also guarantees a specialist from floor 3.</summary>

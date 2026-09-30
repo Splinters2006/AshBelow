@@ -30,6 +30,12 @@ namespace Slopgame
         public const float PoisonDuration = 4f, PoisonSlow = 0.75f;
         public static readonly Color PoisonGreen = new Color(0.45f, 1f, 0.3f);
         private float poisonedUntil, nextPoisonMote;
+        /// <summary>Set alight by brimstone and hex fire: one damage every <see cref="IgniteInterval"/> until the ticks run out or a dodge roll smothers it.</summary>
+        public bool IsIgnited => igniteTicks > 0;
+        public const float IgniteInterval = 1.2f;
+        public static readonly Color IgniteOrange = new Color(1f, 0.5f, 0.15f);
+        private int igniteTicks;
+        private float nextIgniteAt, nextIgniteFlame;
         public bool IsInvulnerable => Time.time < invulnerableUntil || IsRolling;
         /// <summary>Shadow Veil: enemies cannot see this hero, so they neither chase nor turn toward them.</summary>
         public bool IsVeiled => Time.time < veiledUntil && Health > 0;
@@ -165,8 +171,10 @@ namespace Slopgame
             if (Health > 0 && hiddenRenderers.Count > 0) SetVisible(true);
             body.color = IsHurt ? (Mathf.Repeat(Time.time * 16f, 1f) < 0.5f ? HurtColor : Color.white)
                 : IsRolling ? new Color(0.4f, 0.65f, 1f) : IsHoldingShield ? HeroBuffs.AngryTint(characterColor) : IsInvulnerable ? Color.white
+                : IsIgnited ? Color.Lerp(Buffs.Tint(characterColor), IgniteOrange, 0.5f + 0.2f * Mathf.Sin(Time.time * 14f))
                 : IsPoisoned ? Color.Lerp(Buffs.Tint(characterColor), PoisonGreen, 0.55f) : Buffs.Tint(characterColor);
             UpdatePoison();
+            UpdateIgnite();
             SetVeiledLook(IsVeiled);
             if (!Run.IsPlaying || Health <= 0 || IsBusy) { MoveInput = Vector2.zero; Charge.Tick(PlayerInput.Attack, false); return; }
             Vector2 cursor = Run.View.ScreenToWorldPoint(new Vector3(PlayerInput.CursorPosition.x,
@@ -223,6 +231,12 @@ namespace Slopgame
             if (!Run.IsPlaying || IsRolling || IsBusy || DodgeCooldownRemaining > 0f || direction.sqrMagnitude < 0.001f) return false;
             rollDirection = direction.normalized;
             rollUntil = Time.time + RollDuration;
+            // Rolling smothers the flames.
+            if (IsIgnited)
+            {
+                igniteTicks = 0;
+                HeroVfx.Motes(Run.ProjectileRoot, transform.position, 0.5f, new Color(0.8f, 0.8f, 0.8f), 10, 0.6f);
+            }
             rollReady = Time.time + Mathf.Max(0.2f, RollCooldown * Powerups.DodgeCooldownMultiplier * Buffs.DodgeCooldownMultiplier
                 - Buffs.DodgeCooldownReduction);
             // The Brawler keeps a held punch charging through the roll; every other class loses it.
@@ -241,6 +255,30 @@ namespace Slopgame
             if (Health <= 0 || DebugMode.Enabled) return;
             if (!IsPoisoned) HeroVfx.Pulse(Run.ProjectileRoot, transform.position, 0.7f, PoisonGreen, 0.3f);
             poisonedUntil = Time.time + PoisonDuration;
+        }
+
+        /// <summary>Sets the hero alight for <paramref name="ticks"/> burns; a fresh flame tops the ticks up rather than stacking.</summary>
+        public void Ignite(int ticks)
+        {
+            if (Health <= 0 || DebugMode.Enabled || ticks <= 0) return;
+            if (!IsIgnited) nextIgniteAt = Time.time + IgniteInterval;
+            igniteTicks = Mathf.Max(igniteTicks, ticks);
+        }
+
+        private void UpdateIgnite()
+        {
+            if (!IsIgnited) return;
+            if (Health <= 0) { igniteTicks = 0; return; }
+            if (!Run.IsPlaying) { nextIgniteAt += Time.deltaTime; return; }
+            if (Time.time >= nextIgniteFlame)
+            {
+                nextIgniteFlame = Time.time + 0.1f;
+                HeroVfx.Sparks(Run.ProjectileRoot, (Vector2)transform.position + Random.insideUnitCircle * 0.2f, IgniteOrange, 2, 1.8f, 0.3f, Vector2.up, 50f, 0.8f);
+            }
+            if (Time.time < nextIgniteAt) return;
+            igniteTicks--;
+            nextIgniteAt = Time.time + IgniteInterval;
+            if (Hit()) HeroVfx.Sparks(Run.ProjectileRoot, transform.position, IgniteOrange, 10, 3.5f, 0.35f, Vector2.up, 140f);
         }
 
         /// <summary>Clears poison without its parting damage (a heart pickup).</summary>

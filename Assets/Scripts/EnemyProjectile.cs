@@ -97,7 +97,12 @@ namespace Slopgame
                 }
                 if (Vector2.Distance(next, run.Player.transform.position) <= 0.42f)
                 {
-                    if (run.Player.Hit() && Kind == BoltKind.Venom) run.Player.Poison();
+                    if (run.Player.Hit())
+                    {
+                        if (Kind == BoltKind.Venom) run.Player.Poison();
+                        // Hex fire clings: a lingering burn until it gutters out or the hero rolls.
+                        else if (Kind == BoltKind.Hex) run.Player.Ignite(1);
+                    }
                     if (run.IsNetworked) run.Coop.ReportBolt(this, CoopBoltEventKind.Consumed);
                     Consume();
                     return;

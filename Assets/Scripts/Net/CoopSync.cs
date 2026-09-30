@@ -47,6 +47,7 @@ namespace Slopgame
             Session.Handle(CoopMessages.Enemies, OnEnemies);
             Session.Handle(CoopMessages.Damage, OnDamage);
             Session.Handle(CoopMessages.Kill, OnKill);
+            Session.Handle(CoopMessages.Minion, OnMinion);
             Session.Handle(CoopMessages.Bolt, OnBolt);
             Session.Handle(CoopMessages.BoltEvent, OnBoltEvent);
             Session.Handle(CoopMessages.Fx, OnFx);
@@ -176,6 +177,7 @@ namespace Slopgame
                 spawned[i].NetId = (ushort)i;
                 enemies[(ushort)i] = spawned[i];
             }
+            nextEnemyId = (ushort)spawned.Count;
             WaitingForTeam = false;
             choicesDone.Clear();
             openChoice = null;
@@ -295,6 +297,37 @@ namespace Slopgame
                 var snapshot = EnemySnapshot.Read(reader);
                 if (enemies.TryGetValue(snapshot.Id, out var enemy) && enemy != null) enemy.ApplySnapshot(snapshot);
             }
+        }
+
+        // ---------------------------------------------------------------- summoned minions
+
+        private ushort nextEnemyId;
+
+        /// <summary>Host only: numbers a guardian's new minion and tells the guests to spawn the same one.</summary>
+        public void RegisterMinion(DungeonEnemy enemy, byte kind)
+        {
+            if (!IsHost) return;
+            enemy.NetId = nextEnemyId++;
+            enemies[enemy.NetId] = enemy;
+            using var writer = NetSession.Writer(32);
+            writer.WriteValueSafe(Run.Floor);
+            writer.WriteValueSafe(enemy.NetId);
+            writer.WriteValueSafe(kind);
+            writer.WriteValueSafe((Vector2)enemy.transform.position);
+            Session.Send(CoopMessages.Minion, writer);
+        }
+
+        private void OnMinion(ulong sender, FastBufferReader reader)
+        {
+            if (IsHost) return;
+            reader.ReadValueSafe(out int floor);
+            reader.ReadValueSafe(out ushort id);
+            reader.ReadValueSafe(out byte kind);
+            reader.ReadValueSafe(out Vector2 position);
+            if (floor != Run.Floor || enemies.ContainsKey(id) || Run.Boss == null || Run.Boss.Enemy.Health <= 0) return;
+            var enemy = Run.CreateMinion(position, kind);
+            enemy.NetId = id;
+            enemies[id] = enemy;
         }
 
         // ---------------------------------------------------------------- enemy damage and kills

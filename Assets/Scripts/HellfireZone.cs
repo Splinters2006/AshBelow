@@ -31,7 +31,9 @@ namespace Slopgame
         /// <summary>The Savage Wilds' toxic spores: green, flame-like fumes.</summary>
         Venom,
         /// <summary>The Ash Below's spike traps: holes rattle in a steel plate, then spikes stab up.</summary>
-        Spikes
+        Spikes,
+        /// <summary>The Infernal Court guardians' hellfire, which also sets the hero alight (a lingering burn a roll puts out).</summary>
+        Brimstone
     }
 
     /// <summary>Everything needed to rebuild a hazard on another machine.</summary>
@@ -89,6 +91,8 @@ namespace Slopgame
         private readonly System.Collections.Generic.Dictionary<DungeonEnemy, float> enemyHitAt = new System.Collections.Generic.Dictionary<DungeonEnemy, float>();
 
         public bool IsBurning => age >= spec.Telegraph && age < spec.Telegraph + spec.Duration;
+        /// <summary>Lingering burns a brimstone strike leaves on the hero.</summary>
+        public const int BrimstoneTicks = 2;
         /// <summary>The Cataclysm sea of fire and meteor craters are burning ground; beams and rings are strikes.</summary>
         private bool IsGround => spec.Shape == HazardShape.Inferno || spec.Shape == HazardShape.Pool;
         private float ActiveTime => age - spec.Telegraph;
@@ -150,6 +154,7 @@ namespace Slopgame
                 if (IsGround) hero.Burn();
                 else hero.Hit();
                 if (spec.Style == HazardStyle.Venom && hero.Health > 0 && hero.Health != before) hero.Poison();
+                if (spec.Style == HazardStyle.Brimstone && hero.Health > 0 && hero.Health != before) hero.Ignite(BrimstoneTicks);
                 if (hero.Health != before || hero.IsInvulnerable)
                     HeroVfx.Sparks(run.ProjectileRoot, hero.transform.position, colors.Main, 12, 4f, 0.4f, Vector2.up, 120f);
             }

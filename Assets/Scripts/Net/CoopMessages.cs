@@ -10,7 +10,7 @@ namespace Slopgame
             Damage = "ab.damage", Kill = "ab.kill", Bolt = "ab.bolt", BoltEvent = "ab.boltevent", Fx = "ab.fx",
             Support = "ab.support", Interact = "ab.interact", Choice = "ab.choice", ChoiceDone = "ab.done",
             Advance = "ab.advance", Died = "ab.died", Revived = "ab.revived", Over = "ab.over", Hazard = "ab.hazard",
-            RestartVote = "ab.restartvote", RestartVotes = "ab.restartvotes";
+            RestartVote = "ab.restartvote", RestartVotes = "ab.restartvotes", Minion = "ab.minion";
     }
 
     public enum CoopChoice : byte { Upgrade, Artifact }

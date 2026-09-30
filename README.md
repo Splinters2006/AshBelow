@@ -44,7 +44,10 @@ You can rebind every action under **Controls** in the main menu. Each action get
   - **Grid Overseer** (Neon Arcology, floor 20): cyan scan grids, target traces and sequential firewalls. Step between the lanes.
   - **Bastion, the Siege Engine** (floor 25): amber missile walks, cluster mines and twin rail broadsides. Clear the reticles or shelter between the rails.
   - **Null, the Singularity Core** (floor 30): violet spiral streams, satellite crossfire and repeated orbital pulse waves. Weave between bolts and dodge each wave.
-  The Arcology guardians vent between attacks, giving you time to punish them.
+  - **The Hex Matriarch** (Infernal Court, floor 35): rings of hex bolts, a burning pentagram around you (leave the star), and a blink behind you followed by a fan of bolts.
+  - **Gorgoth, the Brimstone Hound** (floor 40): lane charges that leave burning pawprints, a sweeping fan of molten breath, and eruptions of shockwaves and falling brimstone.
+  - **Vassago, the Infernal Judge** (floor 45): a grid of hellfire chains (find the open square), a double spiral of hex bolts, and a gavel that slams wherever you stand.
+  The Arcology guardians vent between attacks, giving you time to punish them. The Infernal Court's guardians tire the same way, summon imps, hellhounds and cultists every few attacks (their minions dissolve when they fall), and their brimstone and hex bolts set you alight: you keep burning until the flames gutter out or you dodge-roll to put them out.
 - **Claim an artifact.** A beaten guardian drops an artifact that unlocks an active ability for your class. Put it on **Q** or **E**. You can hold two at a time, and later artifacts can upgrade one (up to rank 3) or replace it. You can also leave an artifact for 40 crystals.
 - **Death ends the run.** Boons and abilities reset, but your **Ash** and Ash shop upgrades are kept.
 

@@ -16,6 +16,8 @@ namespace Slopgame
         private EnemyVariant variant;
         public DungeonBoss Boss { get; set; }
         public bool IsTank { get; set; }
+        /// <summary>Summoned by a guardian mid-fight; dissolves when its guardian falls.</summary>
+        public bool IsMinion { get; set; }
         public float HitRadius => Boss != null ? Boss.HitRadius : IsTank ? 0.5f : 0.38f;
         /// <summary>True while a boss is out of reach (such as the Archdemon in flight); blows glance off.</summary>
         public bool IsInvulnerable => Boss != null && Boss.IsInvulnerable;
