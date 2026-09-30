@@ -13,7 +13,9 @@ namespace Slopgame
         private DungeonRun run;
         private Vector2 rest, hopFrom;
         private float phase, age, size;
-        private bool magnetised;
+        private bool magnetised, pulled;
+        /// <summary>How fast a crystal pulled in by a cleared wave flies to the hero, in units per second.</summary>
+        public const float PullSpeed = 20f;
         private SpriteRenderer body;
         private Transform shadow;
         public int Value { get; private set; }
@@ -59,10 +61,10 @@ namespace Slopgame
             }
             float distance = Vector2.Distance(rest, hero);
             bool alive = pouch != null && player.Health > 0;
-            if (alive && distance <= MagnetRadius)
+            if (alive && (distance <= MagnetRadius || pulled))
             {
                 if (!magnetised) { magnetised = true; CombatVfx.Trail(gameObject, new Color(0.8f, 0.55f, 1f, 0.7f), 0.1f, 0.12f); }
-                rest = Vector2.MoveTowards(rest, hero, (7f - distance * 2f) * Time.deltaTime);
+                rest = Vector2.MoveTowards(rest, hero, (pulled ? PullSpeed : 7f - distance * 2f) * Time.deltaTime);
             }
             Place(rest, 0.12f + 0.07f * Mathf.Sin(Time.time * 3f + phase));
             // A soft shimmer pulses through the facets.
@@ -72,6 +74,20 @@ namespace Slopgame
             var root = run.ProjectileRoot;
             HeroVfx.Pulse(root, rest, 0.5f, new Color(0.78f, 0.5f, 1f, 0.7f), 0.2f);
             HeroVfx.Sparks(root, rest, CrystalPouch.CrystalColor, 8, 3f, 0.3f, Vector2.up, 150f, 0.8f);
+            Destroy(gameObject);
+        }
+
+        /// <summary>Wave worlds: once the wave is cleared the crystal flies to the hero from anywhere in the arena.</summary>
+        public void PullToHero() => pulled = true;
+
+        /// <summary>Banks the crystal straight into the hero's pouch (a wave floor closing with crystals still out).</summary>
+        public void CollectNow()
+        {
+            var pouch = run != null && run.Player != null ? run.Player.Crystals : null;
+            if (pouch == null) return;
+            pouch.Add(Value);
+            Value = 0;
+            gameObject.SetActive(false);
             Destroy(gameObject);
         }
 

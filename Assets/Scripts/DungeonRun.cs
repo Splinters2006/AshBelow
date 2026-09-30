@@ -30,6 +30,7 @@ namespace Slopgame
         public string Objective => InShop ? ShopObjective
             : Artifact != null ? "Claim the glowing artifact  /  " + KeyBindings.Label(GameAction.Interact)
             : IsBossFloor && Enemies.Count > 0 ? "Defeat the arena guardian"
+            : IsWaveFloor ? (Enemies.Count == 0 ? "Level cleared" : waveReserves.Count > 0 ? $"Survive the waves  /  {waveReserves.Count} more to come" : "Survive the final wave")
             : Enemies.Count == 0 ? "Find the gold stairs  /  " + KeyBindings.Label(GameAction.Interact) : "Clear the floor to unlock the stairs";
         private string ShopObjective => Shop != null && Shop.IsNear(Player) ? "Trade crystals with the merchant  /  " + KeyBindings.Label(GameAction.Interact)
             : IsNetworked ? "Spend crystals, then gather the party at the stairs to face the guardian"
@@ -165,6 +166,8 @@ namespace Slopgame
             if (level != null) { level.gameObject.SetActive(false); Destroy(level.gameObject); level = null; }
             if (Player != null) { Player.gameObject.SetActive(false); Destroy(Player.gameObject); Player = null; }
             Enemies.Clear();
+            waveReserves.Clear();
+            WavesThisLevel = 0;
             PartySize = 1;
         }
 
@@ -221,13 +224,20 @@ namespace Slopgame
             upgradeChoices.Clear();
             Player.Powerups.BeginFloor();
             Player.Weapon?.Hide();
+            // A wave floor's crystals and coins still on the ground go straight into the hero's pouch and purse.
+            if (level != null && IsWaveFloor) BankDrops();
             if (level != null) { level.gameObject.SetActive(false); Destroy(level.gameObject); }
             Enemies.Clear();
             // The floor before every boss leads into the crystal shop, and the shop's stairs lead to the boss.
             InShop = !InShop && IsShopNext(Floor);
             if (!InShop) Floor++;
             floorRewardGranted = false;
-            Map = InShop ? DungeonMap.Shop() : new DungeonMap(Seed + Floor * 7919, IsBossFloor);
+            // Wave worlds fight every wave in the open arena the guardians use.
+            Map = InShop ? DungeonMap.Shop() : new DungeonMap(Seed + Floor * 7919, IsBossFloor || IsWaveFloor);
+            waveClearedAt = -1f;
+            waveReserves.Clear();
+            WavesThisLevel = 0;
+            WaveBannerUntil = 0f;
             level = new GameObject(InShop ? "Crystal shop" : "Floor " + Floor).transform;
             level.SetParent(transform);
             view.backgroundColor = World.Background;
@@ -258,46 +268,218 @@ namespace Slopgame
             }
             // Seeded variants: skitters from floor 2, husks and world specialists from floor 3.
             var variants = new System.Random(Seed + Floor * 6151);
-            for (int room = 1; !IsBossFloor && !InShop && room < Map.Centers.Count; room++)
+            if (IsWaveFloor)
+            {
+                DungeonVisuals.DecorateArena(level, World);
+                SpawnWave(variants);
+            }
+            for (int room = 1; !IsBossFloor && !InShop && !IsWaveFloor && room < Map.Centers.Count; room++)
             {
                 int count = Mathf.Min(4, 1 + Floor);
                 for (int i = 0; i < count; i++)
-                {
-                    Vector2 position = (Vector2)Map.Centers[room] + new Vector2(i % 2, i / 2);
-                    var enemy = DungeonVisuals.Create(World.BasicName, level, position, Vector2.one * 0.6f,
-                        World.BasicTint, 3).gameObject.AddComponent<DungeonEnemy>();
-                    enemy.Run = this;
-                    enemy.Health = EnemyHealthScaled(EnemyHealthForFloor(Floor));
-                    enemy.Speed = Mathf.Min(4.3f, 2.25f + Floor * 0.15f);
-                    if (i == 1) enemy.gameObject.AddComponent<EnemyShooter>();
-                    else if (i == 0 && room % 2 == 0)
-                    {
-                        enemy.IsTank = true;
-                        enemy.name = World.BruteName;
-                        enemy.Health *= 3;
-                        enemy.Speed *= 0.6f;
-                        enemy.transform.localScale = Vector2.one * 0.9f;
-                    }
-                    else
-                    {
-                        double roll = variants.NextDouble();
-                        // Introduce one specialist in the first combat room, then seed additional ones.
-                        bool specialist = Floor >= 3 && ((room == 1 && i == 2) || roll >= HuskChance + SkitterChance && roll < HuskChance + SkitterChance + SpecialistChance);
-                        EnemyVariant variant = specialist
-                            ? (World.HighTech ? (EnemyVariant)enemy.gameObject.AddComponent<NeonLancer>() : enemy.gameObject.AddComponent<EmberFanatic>())
-                            : Floor >= 3 && roll < HuskChance ? enemy.gameObject.AddComponent<CinderHusk>()
-                            : Floor >= 2 && roll < HuskChance + SkitterChance ? enemy.gameObject.AddComponent<AshSkitter>() : null;
-                        variant?.Configure(enemy);
-                    }
-                    Enemies.Add(enemy);
-                }
+                    // Introduce one specialist in the first combat room, then seed additional ones.
+                    SpawnEnemy((Vector2)Map.Centers[room] + new Vector2(i % 2, i / 2), i == 1, i == 0 && room % 2 == 0, room == 1 && i == 2,
+                        variants, EnemyHealthScaled(EnemyHealthForFloor(Floor)));
             }
             lastHeroCells.Clear();
             ChoosingUpgrade = false;
             IsPlaying = true;
-            if (IsNetworked) Coop.RegisterFloor(new List<DungeonEnemy>(Enemies));
+            if (IsNetworked)
+            {
+                var all = new List<DungeonEnemy>(Enemies);
+                foreach (var wave in waveReserves) all.AddRange(wave);
+                Coop.RegisterFloor(all);
+            }
             view.transform.position = new Vector3(Player.transform.position.x, Player.transform.position.y, -10);
             UpdatePaths();
+        }
+
+        /// <summary>
+        /// One regular enemy: a caster, an armoured brute, or a basic enemy that may roll a variant (skitter, husk or the
+        /// world's specialist; <paramref name="guaranteeSpecialist"/> forces the specialist from floor 3).
+        /// </summary>
+        private DungeonEnemy SpawnEnemy(Vector2 position, bool shooter, bool tank, bool guaranteeSpecialist, System.Random variants, int health,
+            List<DungeonEnemy> into = null)
+        {
+            var enemy = DungeonVisuals.Create(World.BasicName, level, position, Vector2.one * 0.6f,
+                World.BasicTint, 3).gameObject.AddComponent<DungeonEnemy>();
+            enemy.Run = this;
+            enemy.Health = health;
+            enemy.Speed = Mathf.Min(4.3f, 2.25f + Floor * 0.15f);
+            if (shooter) enemy.gameObject.AddComponent<EnemyShooter>();
+            else if (tank)
+            {
+                enemy.IsTank = true;
+                enemy.name = World.BruteName;
+                enemy.Health *= 3;
+                enemy.Speed *= 0.6f;
+                enemy.transform.localScale = Vector2.one * 0.9f;
+            }
+            else
+            {
+                double roll = variants.NextDouble();
+                bool specialist = Floor >= 3 && (guaranteeSpecialist || roll >= HuskChance + SkitterChance && roll < HuskChance + SkitterChance + SpecialistChance);
+                EnemyVariant variant = specialist
+                    ? (World.HighTech ? (EnemyVariant)enemy.gameObject.AddComponent<NeonLancer>() : enemy.gameObject.AddComponent<EmberFanatic>())
+                    : Floor >= 3 && roll < HuskChance ? enemy.gameObject.AddComponent<CinderHusk>()
+                    : Floor >= 2 && roll < HuskChance + SkitterChance ? enemy.gameObject.AddComponent<AshSkitter>() : null;
+                variant?.Configure(enemy);
+            }
+            // A later wave's enemies go to its reserve instead of into the fight.
+            (into ?? Enemies).Add(enemy);
+            return enemy;
+        }
+
+        // ---------------------------------------------------------------- wave worlds
+
+        /// <summary>True on a wave world's regular levels: waves of enemies in the arena instead of rooms to explore.</summary>
+        public bool IsWaveFloor => World.IsWaveWorld && !IsBossFloor && !InShop && Floor > 0;
+        /// <summary>The level's number within its world, 1-15 (guardians on levels 5, 10 and 15).</summary>
+        public int LevelNumber => (Floor - 1) % WorldCatalog.FloorsPerWorld + 1;
+        /// <summary>How many waves this level sends (0 away from wave levels).</summary>
+        public int WavesThisLevel { get; private set; }
+        /// <summary>The wave now being fought, 1 to <see cref="WavesThisLevel"/>.</summary>
+        public int CurrentWave => WavesThisLevel - waveReserves.Count;
+        /// <summary>Enemies still waiting in the level's later waves.</summary>
+        public int WaveReserveCount { get { int count = 0; foreach (var wave in waveReserves) count += wave.Count; return count; } }
+        /// <summary>Until when the HUD announces the wave that just arrived.</summary>
+        public float WaveBannerUntil { get; private set; }
+        /// <summary>Seconds between the last kill of a level and the talent pick opening.</summary>
+        public const float WaveBreather = 1.25f;
+        /// <summary>Enemies spawn between these distances from where the heroes start a wave: never on top of them, and
+        /// always inside the range enemies give chase from (14 units).</summary>
+        public const float WaveSpawnClearance = 6f, WaveSpawnReach = 13f;
+        /// <summary>After a wave, how long the talent pick waits at most for the pulled-in crystals and coins to arrive.</summary>
+        public const float WaveDropWait = 2.5f;
+        /// <summary>
+        /// The most enemies in one wave. With the next wave arriving while a quarter of this one still stands, at most
+        /// 45 enemies are in play, which keeps the co-op enemy snapshot inside one unfragmented packet.
+        /// </summary>
+        public const int MaxWaveEnemies = 36;
+        private float waveClearedAt = -1f;
+        /// <summary>The next wave arrives once the fight is down to this many enemies.</summary>
+        private int waveReleaseAt;
+        /// <summary>The level's later waves, built with the level and held out of play until their turn.</summary>
+        private readonly List<List<DungeonEnemy>> waveReserves = new List<List<DungeonEnemy>>();
+
+        /// <summary>Waves per level: 3, and 4 from the world's level 8.</summary>
+        public static int WavesForLevel(int level) => level >= 8 ? 4 : 3;
+
+        /// <summary>
+        /// A wave's size: 6 + the level number, times the party's multiplier. Difficulty follows the party through the
+        /// number of enemies (their health is not party-scaled), so it grows or shrinks as heroes join or leave between levels.
+        /// </summary>
+        public static int WaveEnemyCount(int level, int partySize) => Mathf.Min(MaxWaveEnemies, Mathf.RoundToInt((6 + level) * WavePartyMultiplier(partySize)));
+
+        /// <summary>A wave arrives once the fight is down to a quarter of a wave's size (at least 2 enemies).</summary>
+        public static int WaveReleaseThreshold(int waveSize) => Mathf.Max(2, waveSize / 4);
+
+        /// <summary>More heroes fight better together than alone, so enemies grow slower than the party: 1x, 1.6x, 2.1x, 2.5x.</summary>
+        public static float WavePartyMultiplier(int partySize) => partySize <= 1 ? 1f : partySize == 2 ? 1.6f : partySize == 3 ? 2.1f : 2.5f;
+
+        /// <summary>
+        /// Builds the level's waves around the arena, away from the heroes. The first fights at once; the later ones are
+        /// built now too (seeded, so every co-op machine numbers the same enemies) and wait out of play for their turn.
+        /// </summary>
+        private void SpawnWave(System.Random variants)
+        {
+            var spots = new System.Random(Seed + Floor * 7717);
+            Vector2 start = Map.Centers[0];
+            int count = WaveEnemyCount(LevelNumber, PartySize);
+            int health = EnemyHealthForFloor(Floor);
+            WavesThisLevel = WavesForLevel(LevelNumber);
+            waveReleaseAt = WaveReleaseThreshold(count);
+            for (int wave = 0; wave < WavesThisLevel; wave++)
+            {
+                var reserve = wave == 0 ? null : new List<DungeonEnemy>();
+                // Every fourth a caster (1, 5, 9, ...), every sixth a brute (3, 9 is a caster, 15, ...), and one specialist.
+                for (int i = 0; i < count; i++)
+                {
+                    var enemy = SpawnEnemy(WaveSpawnPoint(spots, start), i % 4 == 1, i % 6 == 3, wave == 0 && i == 2, variants, health, reserve);
+                    if (reserve != null) enemy.gameObject.SetActive(false);
+                }
+                if (reserve != null) waveReserves.Add(reserve);
+            }
+        }
+
+        /// <summary>
+        /// Called on every kill: once the fight is down to the threshold, the next wave arrives around the heroes. Kills
+        /// reach every co-op machine in the same order, so each one releases the same wave at the same kill; the host's
+        /// enemy snapshots then settle any difference in where the newcomers stand.
+        /// </summary>
+        private void ReleaseNextWave()
+        {
+            if (waveReserves.Count == 0 || Enemies.Count > waveReleaseAt) return;
+            var wave = waveReserves[0];
+            waveReserves.RemoveAt(0);
+            var spots = new System.Random(Seed + Floor * 7717 + CurrentWave * 131);
+            foreach (var enemy in wave)
+            {
+                if (enemy == null) continue;
+                enemy.transform.position = ReinforcementPoint(spots);
+                enemy.gameObject.SetActive(true);
+                Enemies.Add(enemy);
+                HeroVfx.Pulse(level, enemy.transform.position, 0.7f, World.Accent, 0.35f);
+            }
+            WaveBannerUntil = Time.time + 2f;
+        }
+
+        /// <summary>Where a later wave's enemy arrives: in the arena, not on top of any hero, but within chase range of one.</summary>
+        private Vector2 ReinforcementPoint(System.Random spots)
+        {
+            var arena = DungeonMap.Arena;
+            for (int attempt = 0; attempt < 80; attempt++)
+            {
+                var point = new Vector2(arena.xMin + 1 + spots.Next(arena.width - 2), arena.yMin + 1 + spots.Next(arena.height - 2));
+                float distance = Vector2.Distance(point, NearestHero(point));
+                if (distance >= WaveSpawnClearance && distance <= WaveSpawnReach && Map.CanStand(point, 0.45f)) return point;
+            }
+            return exit;
+        }
+
+        private Vector2 WaveSpawnPoint(System.Random spots, Vector2 start)
+        {
+            var arena = DungeonMap.Arena;
+            for (int attempt = 0; attempt < 60; attempt++)
+            {
+                var point = new Vector2(arena.xMin + 1 + spots.Next(arena.width - 2), arena.yMin + 1 + spots.Next(arena.height - 2));
+                float distance = Vector2.Distance(point, start);
+                if (distance >= WaveSpawnClearance && distance <= WaveSpawnReach && Map.CanStand(point, 0.45f)) return point;
+            }
+            return exit;
+        }
+
+        /// <summary>
+        /// A cleared wave pulls every crystal and coin in the arena to the hero, then opens the talent pick by itself after a
+        /// short breather, once the drops have arrived or <see cref="WaveDropWait"/> has passed (in co-op the host opens it).
+        /// </summary>
+        private bool UpdateWave()
+        {
+            if (!IsWaveFloor || Enemies.Count > 0 || Artifact != null) return false;
+            if (waveClearedAt < 0f)
+            {
+                waveClearedAt = Time.time;
+                foreach (var crystal in level.GetComponentsInChildren<Crystal>()) crystal.PullToHero();
+                foreach (var coin in level.GetComponentsInChildren<GoldCoin>()) coin.PullToHero();
+                return false;
+            }
+            float waited = Time.time - waveClearedAt;
+            if (waited < WaveBreather || (IsNetworked && !Coop.IsHost)) return false;
+            bool dropsOut = level.GetComponentsInChildren<Crystal>().Length > 0
+                || (Player.Weapon is GamblerAttack && level.GetComponentsInChildren<GoldCoin>().Length > 0);
+            if (dropsOut && Player.Health > 0 && waited < WaveDropWait) return false;
+            waveClearedAt = float.MaxValue;
+            if (IsNetworked) Coop.RequestInteract(CoopChoice.Upgrade);
+            else BeginUpgradeChoice();
+            return true;
+        }
+
+        /// <summary>Banks every crystal and coin left on the floor (drops can land far from the hero in a wave arena).</summary>
+        private void BankDrops()
+        {
+            foreach (var crystal in level.GetComponentsInChildren<Crystal>()) crystal.CollectNow();
+            if (Player.Weapon is GamblerAttack)
+                foreach (var coin in level.GetComponentsInChildren<GoldCoin>()) coin.CollectNow();
         }
 
         /// <summary>True when the floor after <paramref name="floor"/> is a boss floor, so the crystal shop comes first.</summary>
@@ -312,6 +494,7 @@ namespace Slopgame
             { Progress.Save(); nextSaveRetry = Time.unscaledTime + 5f; }
             if (!IsPlaying) return;
             UpdatePaths();
+            if (UpdateWave()) return;
             bool canInteract = Player.Health > 0 && PlayerInput.Interact;
             if (Artifact != null && canInteract && Vector2.Distance(Player.transform.position, Artifact.transform.position) < 1.5f)
             {
@@ -359,6 +542,8 @@ namespace Slopgame
         {
             if (!Enemies.Remove(enemy)) return;
             Kills++;
+            // Wave levels: the next wave arrives before the fight runs dry, so the level is only clear after its last wave.
+            ReleaseNextWave();
             int reward = enemy.Boss != null ? 50 : 1;
             if (enemy.Boss != null) Progress.RecordGuardian(++guardiansThisRun, Player != null ? Player.ClassWeapon : (WeaponType?)null);
             if (Enemies.Count == 0 && !floorRewardGranted)

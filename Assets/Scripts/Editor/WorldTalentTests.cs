@@ -12,6 +12,7 @@ namespace Slopgame.Editor
         private static double started;
         private static int stage;
         private static bool failed;
+        private static float waveDeadline;
         private const string SessionKey = "WorldTalentSmoke";
         private const BindingFlags PrivateInstance = BindingFlags.Instance | BindingFlags.NonPublic;
 
@@ -78,11 +79,30 @@ namespace Slopgame.Editor
                     while (run.Floor < 15) run.DebugSkipRoom();
                     DebugMode.Set(false);
                     TestWorldComplete(run);
+                    // Hold the new world's first wave still at once, so no enemy walks off its spawn before the wave checks.
+                    foreach (var enemy in run.Enemies)
+                    {
+                        enemy.enabled = false;
+                        var shooter = enemy.GetComponent<EnemyShooter>();
+                        if (shooter != null) shooter.enabled = false;
+                    }
                     stage++;
                     return;
                 }
-                TestNeon(run);
-                Finish(!failed, "26 talent caps/class gates; crit, burn, freeze, shock, ward effects; world-cleared screen; both world spawns; spread fire, freeze/pause, charge/recovery/walls");
+                if (stage == 2)
+                {
+                    TestWaves(run);
+                    TestNeon(run);
+                    // Clear every wave: the talent pick should open by itself after the breather.
+                    TestWaveRelease(run);
+                    waveDeadline = Time.realtimeSinceStartup + 5f;
+                    stage++;
+                    return;
+                }
+                // Real time: the talent pick pauses the game, which stops Time.time.
+                if (!run.ChoosingUpgrade && Time.realtimeSinceStartup < waveDeadline) return;
+                Require(run.ChoosingUpgrade && run.Floor == 16 && !run.IsPlaying, "A cleared wave did not open the talent pick by itself");
+                Finish(!failed, "26 talent caps/class gates; crit, burn, freeze, shock, ward effects; world-cleared screen; both world spawns; waves; spread fire, freeze/pause, charge/recovery/walls");
             }
             catch (Exception error) { Debug.LogException(error); Finish(false, error.Message); }
         }
@@ -202,7 +222,14 @@ namespace Slopgame.Editor
             Require(run.WorldComplete && run.Floor == 15, "The stairs moved on while the world-cleared screen was open");
             run.TravelToWorld(WorldCatalog.All.Length);
             Require(run.WorldComplete && run.Floor == 15, "Travelled to a world that does not exist");
+            var hero = run.Player;
+            string build = hero.Powerups.Summary;
+            AbilityType q = hero.Abilities.Equipped(0), e = hero.Abilities.Equipped(1);
+            int crystals = hero.Crystals.Crystals, maxHealth = hero.MaxHealth, health = hero.Health;
             run.ContinueFromWorldComplete();
+            Require(run.Player == hero && hero.Powerups.Summary == build && hero.Abilities.Equipped(0) == q && hero.Abilities.Equipped(1) == e
+                && hero.Crystals.Crystals == crystals && hero.MaxHealth == maxHealth && hero.Health == health && build != "No boons yet",
+                "Travelling to the next world lost the hero's talents, abilities, crystals or health");
             Require(!run.WorldComplete && run.IsPlaying && run.Floor == 16 && run.World.Index == 1 && Time.timeScale == 1f,
                 "Next world did not carry on into the second world");
             run.TravelToWorld(3);
@@ -228,6 +255,60 @@ namespace Slopgame.Editor
                     "Wrong first floor for " + world.Name);
             }
             Require(worlds[1].Hero == WeaponType.Beam && !worlds[1].IsPlaceholder && !worlds[0].IsPlaceholder, "The Arcology is not the Augment's finished world");
+        }
+
+        /// <summary>The Arcology is a wave world: its first wave fills the arena away from the hero, sized by the party.</summary>
+        private static void TestWaves(DungeonRun run)
+        {
+            Require(run.World.IsWaveWorld && run.IsWaveFloor && run.LevelNumber == 1 && run.Floor == 16, "The Arcology's first floor is not a wave level");
+            Require(!WorldCatalog.All[0].IsWaveWorld && WorldCatalog.All[1].IsWaveWorld && !WorldCatalog.All[2].IsWaveWorld && WorldCatalog.All[3].IsWaveWorld,
+                "Worlds 2 and 4 should be the wave worlds");
+            Require(DungeonRun.WaveEnemyCount(1, 1) == 7 && DungeonRun.WaveEnemyCount(1, 2) == 11 && DungeonRun.WaveEnemyCount(1, 4) == 18
+                && DungeonRun.WaveEnemyCount(14, 4) == DungeonRun.MaxWaveEnemies, "Wave sizes do not follow the party");
+            for (int party = 1; party < 4; party++)
+                Require(DungeonRun.WaveEnemyCount(5, party + 1) > DungeonRun.WaveEnemyCount(5, party), "A bigger party did not face a bigger wave");
+            int size = DungeonRun.WaveEnemyCount(1, run.PartySize);
+            Require(run.Enemies.Count == size && run.Boss == null, "Wrong first wave size");
+            Require(run.WavesThisLevel == DungeonRun.WavesForLevel(1) && run.WavesThisLevel >= 3 && run.CurrentWave == 1
+                && run.WaveReserveCount == size * (run.WavesThisLevel - 1), "The level's later waves are not waiting in reserve");
+            Vector2 start = run.Map.Centers[0];
+            foreach (var enemy in run.Enemies)
+            {
+                float distance = Vector2.Distance(enemy.transform.position, start);
+                Require(DungeonMap.Arena.Contains(Vector2Int.RoundToInt(enemy.transform.position))
+                    && distance >= DungeonRun.WaveSpawnClearance - 0.01f && distance <= DungeonRun.WaveSpawnReach + 0.01f,
+                    "A wave enemy spawned off the arena, on the hero, or out of chase range");
+            }
+            Require(run.Enemies.Exists(e => e.Variant is NeonLancer) && run.Enemies.Exists(e => e.IsTank)
+                && run.Enemies.Exists(e => e.GetComponent<EnemyShooter>() != null), "The wave lacks a specialist, a brute or a caster");
+        }
+
+        /// <summary>Killing the first wave down to a quarter brings the next wave in around the hero; the level is only clear after the last.</summary>
+        private static void TestWaveRelease(DungeonRun run)
+        {
+            int size = DungeonRun.WaveEnemyCount(1, run.PartySize), threshold = DungeonRun.WaveReleaseThreshold(size);
+            while (run.CurrentWave == 1)
+            {
+                Require(run.Enemies.Count > threshold, "The next wave did not arrive at the threshold");
+                run.Enemies[0].Die(true);
+            }
+            Require(run.CurrentWave == 2 && run.Enemies.Count == threshold + size && run.WaveReserveCount == size * (run.WavesThisLevel - 2),
+                "The second wave did not arrive whole");
+            // The newcomers are the last in the list: in play, in the arena, clear of the hero but within chase range.
+            for (int i = threshold; i < run.Enemies.Count; i++)
+            {
+                var enemy = run.Enemies[i];
+                float distance = Vector2.Distance(enemy.transform.position, run.NearestHero(enemy.transform.position));
+                Require(enemy.gameObject.activeSelf && DungeonMap.Arena.Contains(Vector2Int.RoundToInt(enemy.transform.position))
+                    && distance >= DungeonRun.WaveSpawnClearance - 0.01f && distance <= DungeonRun.WaveSpawnReach + 0.01f,
+                    "A second-wave enemy arrived out of play, outside the arena, on the hero or out of chase range");
+            }
+            while (run.Enemies.Count > 0)
+            {
+                Require(run.IsPlaying && !run.ChoosingUpgrade, "The level ended while waves remained");
+                run.Enemies[0].Die(true);
+            }
+            Require(run.WaveReserveCount == 0 && run.CurrentWave == run.WavesThisLevel, "Waves were left over after the level was cleared");
         }
 
         private static void TestNeon(DungeonRun run)

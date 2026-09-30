@@ -97,15 +97,25 @@ namespace Slopgame
             DungeonUi.Bar(new Rect(42, 103 + coinRow, 256, 6), displayedHealth, Run.SelectedCharacter.Color);
             if (DebugMode.Enabled)
                 DungeonUi.Label(new Rect(365, 4, 550, 22), "DEBUG ADMIN MODE  /  INVINCIBLE  ONE-HIT KILLS  NO COOLDOWNS  2X SPEED  /  F1", 12, DebugColor, TextAnchor.MiddleCenter);
-            DungeonUi.Label(new Rect(405, 28, 470, 25), Run.InShop ? $"CRYSTAL SHOP  /  GUARDIAN OF FLOOR {Run.Floor + 1:00} AHEAD" : Run.IsBossFloor ? $"FLOOR {Run.Floor:00}  /  BOSS ARENA"
-                : $"FLOOR {Run.Floor:00}  /  {Run.Enemies.Count} ENEMIES", 17, Run.InShop ? CrystalPouch.CrystalColor : AbilityCatalog.Gold, TextAnchor.MiddleCenter);
+            // Wave worlds count waves (1-15) rather than floors.
+            string where = Run.World.IsWaveWorld ? $"LEVEL {Run.LevelNumber:00}" : $"FLOOR {Run.Floor:00}";
+            string guardian = Run.World.IsWaveWorld ? $"LEVEL {Run.LevelNumber + 1:00}" : $"FLOOR {Run.Floor + 1:00}";
+            if (Run.IsWaveFloor) where += $"  /  WAVE {Run.CurrentWave}/{Run.WavesThisLevel}";
+            DungeonUi.Label(new Rect(405, 28, 470, 25), Run.InShop ? $"CRYSTAL SHOP  /  GUARDIAN OF {guardian} AHEAD" : Run.IsBossFloor ? $"{where}  /  BOSS ARENA"
+                : $"{where}  /  {Run.Enemies.Count} ENEMIES", 17, Run.InShop ? CrystalPouch.CrystalColor : AbilityCatalog.Gold, TextAnchor.MiddleCenter);
             if (Run.IsPlaying && Time.time < Run.WorldBannerUntil)
             {
                 // Fades out over its last second.
                 var world = Run.World;
                 var accent = FlameMesh.Alpha(world.Accent, Mathf.Clamp01(Run.WorldBannerUntil - Time.time));
-                DungeonUi.Label(new Rect(240, 190, 800, 30), $"WORLD {world.Index + 1}", 20, accent, TextAnchor.MiddleCenter);
+                DungeonUi.Label(new Rect(240, 190, 800, 30), world.IsWaveWorld ? $"WORLD {world.Index + 1}  /  WAVES" : $"WORLD {world.Index + 1}", 20, accent, TextAnchor.MiddleCenter);
                 DungeonUi.Label(new Rect(240, 220, 800, 50), world.Name, 36, accent, TextAnchor.MiddleCenter);
+            }
+            else if (Run.IsPlaying && Run.IsWaveFloor && Time.time < Run.WaveBannerUntil)
+            {
+                // A new wave has arrived; fades out over its last second.
+                var accent = FlameMesh.Alpha(Run.World.Accent, Mathf.Clamp01(Run.WaveBannerUntil - Time.time));
+                DungeonUi.Label(new Rect(240, 196, 800, 50), $"WAVE {Run.CurrentWave} / {Run.WavesThisLevel}", 36, accent, TextAnchor.MiddleCenter);
             }
             DungeonUi.Label(new Rect(365, 59, 550, 40), Run.Objective, 17, DungeonUi.Text, TextAnchor.UpperCenter);
             if (Run.Boss != null && Run.Boss.Enemy.Health > 0)

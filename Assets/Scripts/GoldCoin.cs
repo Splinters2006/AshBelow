@@ -14,7 +14,7 @@ namespace Slopgame
         private DungeonRun run;
         private Vector2 rest, hopFrom;
         private float phase, age;
-        private bool magnetised;
+        private bool magnetised, pulled;
         private SpriteRenderer body, glint;
         private Transform shadow;
 
@@ -60,10 +60,10 @@ namespace Slopgame
             }
 
             float distance = Vector2.Distance(rest, hero);
-            if (purse != null && player.Health > 0 && distance <= MagnetRadius)
+            if (purse != null && player.Health > 0 && (distance <= MagnetRadius || pulled))
             {
                 if (!magnetised) { magnetised = true; CombatVfx.Trail(gameObject, new Color(1f, 0.82f, 0.3f, 0.7f), 0.12f, 0.12f); }
-                rest = Vector2.MoveTowards(rest, hero, (7f - distance * 2f) * Time.deltaTime);
+                rest = Vector2.MoveTowards(rest, hero, (pulled ? Crystal.PullSpeed : 7f - distance * 2f) * Time.deltaTime);
             }
             height = 0.08f + 0.06f * Mathf.Sin(Time.time * 4f + phase);
             Place(rest, height, 1f);
@@ -102,6 +102,17 @@ namespace Slopgame
                 float width = Mathf.Lerp(0.18f, 0.3f, shadowScale) * (1f - height * 0.6f);
                 shadow.localScale = new Vector3(width, width * 0.6f, 1f);
             }
+        }
+
+        /// <summary>Wave worlds: once the wave is cleared the coin flies to the Gambler from anywhere in the arena.</summary>
+        public void PullToHero() => pulled = true;
+
+        /// <summary>Adds the coin straight to the Gambler's purse (a wave floor closing with coins still out).</summary>
+        public void CollectNow()
+        {
+            var purse = run != null && run.Player != null ? run.Player.Weapon as GamblerAttack : null;
+            if (purse != null) purse.AddCoins(purse.PickupCoinsForRoll(Random.value));
+            Collect();
         }
 
         private void Collect()

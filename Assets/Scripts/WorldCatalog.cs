@@ -33,15 +33,20 @@ namespace Slopgame
         public bool IsPlaceholder { get; }
         /// <summary>Where the world sits on the travel map, 0-1 across and down the map. Tweak the layout here.</summary>
         public Vector2 MapPosition { get; }
+        /// <summary>
+        /// True for a wave world: its 15 levels are fought in the arena as waves of enemies, 3 or 4 per level (guardians
+        /// still on levels 5, 10 and 15), with the wave size following the party size.
+        /// </summary>
+        public bool IsWaveWorld { get; }
 
         public WorldDefinition(int index, string name, bool highTech, Color background, Color floorA, Color floorB, Color wall, Color accent,
             Color arenaRune, string basicName, string casterName, string bruteName, Color basicTint, Color casterTint, Color bruteTint, BoltKind bolts,
-            WeaponType? hero = null, bool placeholder = false, Vector2 mapPosition = default)
+            WeaponType? hero = null, bool placeholder = false, Vector2 mapPosition = default, bool waves = false)
         {
             Index = index; Name = name; HighTech = highTech; Background = background; FloorA = floorA; FloorB = floorB; Wall = wall; Accent = accent;
             ArenaRune = arenaRune; BasicName = basicName; CasterName = casterName; BruteName = bruteName;
             BasicTint = basicTint; CasterTint = casterTint; BruteTint = bruteTint; Bolts = bolts;
-            Hero = hero; IsPlaceholder = placeholder; MapPosition = mapPosition;
+            Hero = hero; IsPlaceholder = placeholder; MapPosition = mapPosition; IsWaveWorld = waves;
         }
     }
 
@@ -60,13 +65,13 @@ namespace Slopgame
                 "Ashling", "Ember caster", "Iron brute",
                 new Color(1f, 0.35f, 0.4f), new Color(1f, 0.65f, 0.2f), new Color(0.65f, 0.7f, 0.8f), BoltKind.Ember,
                 null, false, new Vector2(0.04f, 0.72f)),
-            // The Augment's world.
+            // The Augment's world, fought in waves.
             new WorldDefinition(1, "THE NEON ARCOLOGY", true, new Color(0.015f, 0.01f, 0.05f),
                 new Color(0.07f, 0.08f, 0.16f), new Color(0.09f, 0.1f, 0.19f), new Color(0.2f, 0.22f, 0.32f),
                 Neon, NeonPink,
                 "Drone", "Laser drone", "Heavy mech",
                 new Color(0.55f, 0.95f, 1f), new Color(1f, 0.4f, 0.85f), new Color(0.72f, 0.76f, 0.9f), BoltKind.Plasma,
-                WeaponType.Beam, false, new Vector2(0.18f, 0.25f)),
+                WeaponType.Beam, false, new Vector2(0.18f, 0.25f), true),
             // Placeholder hero worlds: their own names and colours, with the Ash Below's enemies and guardians until each is designed.
             new WorldDefinition(2, "THE INFERNAL COURT", false, new Color(0.06f, 0.015f, 0.03f),
                 new Color(0.16f, 0.06f, 0.08f), new Color(0.19f, 0.07f, 0.1f), new Color(0.36f, 0.12f, 0.2f),
@@ -79,7 +84,7 @@ namespace Slopgame
                 new Color(0.55f, 0.6f, 1f), new Color(0.4f, 0.85f, 1f),
                 "Wisp", "Apprentice", "Arcane golem",
                 new Color(0.6f, 0.8f, 1f), new Color(0.75f, 0.55f, 1f), new Color(0.6f, 0.6f, 0.75f), BoltKind.Frost,
-                WeaponType.Staff, true, new Vector2(0.46f, 0.22f)),
+                WeaponType.Staff, true, new Vector2(0.46f, 0.22f), true),
             new WorldDefinition(4, "THE SHADOW MARKET", false, new Color(0.02f, 0.04f, 0.035f),
                 new Color(0.09f, 0.12f, 0.11f), new Color(0.11f, 0.14f, 0.13f), new Color(0.22f, 0.28f, 0.26f),
                 new Color(0.45f, 0.95f, 0.7f), new Color(0.3f, 0.7f, 0.5f),
