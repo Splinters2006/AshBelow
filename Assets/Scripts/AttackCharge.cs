@@ -6,8 +6,9 @@ namespace Slopgame
     {
         public DungeonPlayer Player { get; set; }
         public bool IsCharging { get; private set; }
-        private float startedAt;
-        private bool wasHeld, fullPinged;
+        private float startedAt, fullAt;
+        // wasAutofired: autofire let the attack go while the button stayed down, so charging may start again without a new press.
+        private bool wasHeld, fullPinged, wasAutofired;
         public float Duration => (Player.ClassWeapon == WeaponType.Bow
             ? Player.Powerups.DrawTimeMultiplier : Player.ClassWeapon == WeaponType.Hammer ? PaladinAttack.ChargeDuration
             : Player.ClassWeapon == WeaponType.Daggers ? 1.2f / 1.5f : Player.ClassWeapon == WeaponType.Fists ? BrawlerAttack.ChargeDuration
@@ -22,25 +23,35 @@ namespace Slopgame
         public void Tick(bool held, bool allowed)
         {
             if (!allowed) Cancel();
-            else if (held && !wasHeld && Player.Weapon.CanAttack)
+            else if (held && (!wasHeld || wasAutofired) && Player.Weapon.CanAttack)
             {
                 startedAt = Time.time;
                 IsCharging = true;
                 fullPinged = false;
+                wasAutofired = false;
             }
-            else if (!held && IsCharging)
+            else if (!held && IsCharging) Release();
+            else if (held && IsCharging && fullPinged && GameSettings.Autofire && Time.time - fullAt >= GameSettings.AutofireDelay)
             {
-                float charge = Amount;
-                Cancel();
-                if (Player.Powerups.BasicAttack(() => Player.Weapon.TryAttack(Player.AimDirection, charge)))
-                    Breakable.SmashInArc(Player, Player.AimDirection, Breakable.SwingReach);
+                Release();
+                wasAutofired = true;
             }
             wasHeld = held;
+            if (!held) wasAutofired = false;
             if (IsCharging && !fullPinged && Amount >= 1f)
             {
                 fullPinged = true;
+                fullAt = Time.time;
                 HeroVfx.Pulse(Player.transform, Player.transform.position, 0.85f, AbilityCatalog.Gold, 0.3f);
             }
+        }
+
+        private void Release()
+        {
+            float charge = Amount;
+            Cancel();
+            if (Player.Powerups.BasicAttack(() => Player.Weapon.TryAttack(Player.AimDirection, charge)))
+                Breakable.SmashInArc(Player, Player.AimDirection, Breakable.SwingReach);
         }
 
         public int Damage(float charge)

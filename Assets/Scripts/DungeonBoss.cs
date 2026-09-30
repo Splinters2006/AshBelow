@@ -52,6 +52,20 @@ namespace Slopgame
         /// </summary>
         public static BossKind KindForFloor(int floor) => (BossKind)(Mathf.Max(0, floor / 5 - 1) % 3 + (int)WorldCatalog.ForFloor(floor).FirstGuardian);
 
+        /// <summary>The name a guardian of this kind bears, without spawning it.</summary>
+        public static string TitleFor(BossKind kind, bool highTech) => kind switch
+        {
+            BossKind.HexMatriarch => HexMatriarchBoss.FixedTitle,
+            BossKind.BrimstoneHound => BrimstoneHoundBoss.FixedTitle,
+            BossKind.InfernalJudge => InfernalJudgeBoss.FixedTitle,
+            BossKind.GridOverseer => GridOverseerBoss.FixedTitle,
+            BossKind.SiegeEngine => SiegeEngineBoss.FixedTitle,
+            BossKind.SingularityCore => SingularityCoreBoss.FixedTitle,
+            BossKind.Duelist => DuelistBoss.TitleFor(highTech),
+            BossKind.Archdemon => ArchdemonBoss.TitleFor(highTech),
+            _ => AshWardenBoss.TitleFor(highTech)
+        };
+
         public void Initialize(DungeonRun run)
         {
             Enemy = GetComponent<DungeonEnemy>();

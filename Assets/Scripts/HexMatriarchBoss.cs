@@ -9,7 +9,9 @@ namespace Slopgame
     public sealed class HexMatriarchBoss : InfernalBossBehaviour
     {
         public const float StarRadius = 2.4f;
-        public override string Title => "THE HEX MATRIARCH";
+        /// <summary>The guardian's name (the encyclopedia reads it outside a fight).</summary>
+        public const string FixedTitle = "THE HEX MATRIARCH";
+        public override string Title => FixedTitle;
         protected override Color Accent => new Color(0.8f, 0.35f, 1f);
         protected override Sprite Body => InfernalBossSprites.Matriarch;
         protected override Sprite Details => InfernalBossSprites.MatriarchDetails;

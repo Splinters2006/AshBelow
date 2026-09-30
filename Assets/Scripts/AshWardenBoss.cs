@@ -29,7 +29,9 @@ namespace Slopgame
         private Vector2 lockedAim;
         private WardenAura aura;
 
-        public override string Title => HighTech ? "THE CRYO SENTINEL" : "THE RIME WARDEN";
+        public override string Title => TitleFor(HighTech);
+        /// <summary>The guardian's name in a high-tech world or not (the encyclopedia reads it outside a fight).</summary>
+        public static string TitleFor(bool highTech) => highTech ? "THE CRYO SENTINEL" : "THE RIME WARDEN";
         public override string Tell => IsCharging ? (pattern % Patterns) switch
         {
             Fan => "ICICLE FAN - SIDESTEP",

@@ -9,7 +9,9 @@ namespace Slopgame
     /// </summary>
     public sealed class SiegeEngineBoss : NeonBossBehaviour
     {
-        public override string Title => "BASTION, THE SIEGE ENGINE";
+        /// <summary>The guardian's name (the encyclopedia reads it outside a fight).</summary>
+        public const string FixedTitle = "BASTION, THE SIEGE ENGINE";
+        public override string Title => FixedTitle;
         protected override Color Accent => new Color(1f, 0.65f, 0.15f);
         protected override Sprite Chassis => GuardianSprites.Bastion;
         protected override Sprite Details => GuardianSprites.BastionDetails;

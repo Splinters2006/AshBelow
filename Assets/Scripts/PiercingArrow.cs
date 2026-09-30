@@ -94,10 +94,10 @@ namespace Slopgame
                     nextBoom = BoomSpacing;
                     HeroVfx.Pulse(run.ProjectileRoot, next, 0.55f, FlameMesh.Alpha(Color.Lerp(color, Color.white, 0.3f), 0.8f), 0.22f);
                 }
-                for (int j = run.Enemies.Count - 1; j >= 0; j--)
+                // A hit can kill several enemies at once (Pyre Burst, Overkill, Domino) or clear the floor, so walk a copy.
+                foreach (var enemy in run.Enemies.ToArray())
                 {
-                    var enemy = run.Enemies[j];
-                    if (enemy == null || hits.Contains(enemy) || Vector2.Distance(next, enemy.transform.position) > enemy.HitRadius + 0.1f) continue;
+                    if (enemy == null || enemy.Health <= 0 || hits.Contains(enemy) || Vector2.Distance(next, enemy.transform.position) > enemy.HitRadius + 0.1f) continue;
                     hits.Add(enemy);
                     HeroVfx.Sparks(run.ProjectileRoot, next, Core, 12, 5.5f, 0.3f, direction, 80f, 1.3f);
                     CombatVfx.Ring(run.ProjectileRoot, next, 0.5f, color, 0.25f);
@@ -107,6 +107,8 @@ namespace Slopgame
                         for (int side = -1; side <= 1; side += 2)
                             PlayerProjectile.Spawn(run, next, Quaternion.Euler(0, 0, side * 18f) * direction, Mathf.Max(1, damage / 2), 8f);
                 }
+                // A killing blow can end the fight (a guardian falls) and tear down this floor mid-flight.
+                if (!run.IsPlaying) return;
             }
             remaining -= distance;
             if (remaining <= 0f) Impact();

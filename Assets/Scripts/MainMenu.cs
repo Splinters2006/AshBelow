@@ -8,13 +8,14 @@ namespace Slopgame
         private static readonly Color Ember = new Color(1f, 0.46f, 0.2f);
 
         public DungeonRun Run { get; set; }
-        private bool selecting, shopping, coop, controls;
+        private bool selecting, shopping, coop, settings, codex;
         private Vector2 heroScroll;
         private Texture2D gradient, glow;
         private readonly AshShop shop = new AshShop();
         private readonly CoopMenu coopMenu = new CoopMenu();
-        private readonly KeybindMenu keybindMenu = new KeybindMenu();
-        public void ResetPage(bool showCoop = false) { selecting = false; shopping = false; controls = false; coop = showCoop; keybindMenu.Cancel(); }
+        private readonly SettingsMenu settingsMenu = new SettingsMenu();
+        private readonly Encyclopedia encyclopedia = new Encyclopedia();
+        public void ResetPage(bool showCoop = false) { selecting = false; shopping = false; settings = false; codex = false; coop = showCoop; settingsMenu.Cancel(); }
         public void ShowCoop() => ResetPage(true);
 
         private void OnDestroy()
@@ -26,7 +27,7 @@ namespace Slopgame
         private void OnGUI()
         {
             if (Run == null || !Run.IsInMainMenu) return;
-            Matrix4x4 previous = DungeonUi.Begin();
+            Matrix4x4 previous = DungeonUi.Begin(GameSettings.MenuScale);
             try
             {
                 DrawBackdrop();
@@ -36,11 +37,16 @@ namespace Slopgame
                     shop.Draw(Run);
                     if (DungeonUi.Button("shopBack", new Rect(70, 598, 268, 48), "Back", DungeonUi.Muted)) shopping = false;
                 }
-                else if (controls)
+                else if (codex)
                 {
-                    keybindMenu.Draw();
-                    if (DungeonUi.Button("controlsBack", new Rect(70, 598, 268, 48), "Back", DungeonUi.Muted)) { keybindMenu.Cancel(); controls = false; }
-                    if (DungeonUi.Button("controlsReset", new Rect(860, 598, 350, 48), "Reset to defaults", DungeonUi.Teal)) { keybindMenu.Cancel(); KeyBindings.ResetToDefaults(); }
+                    encyclopedia.Draw(Run);
+                    if (DungeonUi.Button("codexBack", new Rect(70, 598, 268, 48), "Back", DungeonUi.Muted)) codex = false;
+                }
+                else if (settings)
+                {
+                    settingsMenu.Draw();
+                    if (DungeonUi.Button("settingsBack", new Rect(70, 598, 268, 48), "Back", DungeonUi.Muted)) { settingsMenu.Cancel(); settings = false; }
+                    if (DungeonUi.Button("settingsReset", new Rect(860, 598, 350, 48), "Reset to defaults", DungeonUi.Teal)) settingsMenu.ResetToDefaults();
                 }
                 else if (coop)
                 {
@@ -100,17 +106,22 @@ namespace Slopgame
             float t = Time.unscaledTime;
             DungeonUi.Panel(new Rect(70, 62, 36, 2), AbilityCatalog.Gold);
             DungeonUi.Label(new Rect(118, 52, 700, 25), "A ROGUELIKE DESCENT", 14, AbilityCatalog.Gold);
-            string title = shopping ? "ASH SHOP" : controls ? "CONTROLS" : coop ? "CO-OP" : "ASH / BELOW";
+            string title = shopping ? "ASH SHOP" : codex ? "ENCYCLOPEDIA" : settings ? "SETTINGS" : coop ? "CO-OP" : "ASH / BELOW";
+            // The encyclopedia and settings pages need the room, so they get a smaller title.
+            bool compact = codex || settings;
+            int size = compact ? 40 : 66;
+            float y = compact ? 80 : 88, height = compact ? 56 : 94, glow = compact ? 1.5f : 2f;
             // Soft ember glow and a hard drop shadow give the title some depth.
             float flicker = 0.1f + Mathf.PerlinNoise(t * 1.4f, 0.3f) * 0.12f;
-            DungeonUi.Label(new Rect(63, 86, 1100, 94), title, 66, new Color(Ember.r, Ember.g, Ember.b, flicker));
-            DungeonUi.Label(new Rect(67, 90, 1100, 94), title, 66, new Color(Ember.r, Ember.g, Ember.b, flicker));
-            DungeonUi.Label(new Rect(69, 93, 1100, 94), title, 66, new Color(0f, 0f, 0f, 0.6f));
-            DungeonUi.Label(new Rect(65, 88, 1100, 94), title, 66);
-            DungeonUi.Label(new Rect(70, 188, 1100, 42), shopping ? "Spend the ash you carry home. Grow stronger with every descent."
-                : controls ? "Rebind every action to the keys and mouse buttons you like. Changes save instantly."
+            DungeonUi.Label(new Rect(65 - glow, y - glow, 1100, height), title, size, new Color(Ember.r, Ember.g, Ember.b, flicker));
+            DungeonUi.Label(new Rect(65 + glow, y + glow, 1100, height), title, size, new Color(Ember.r, Ember.g, Ember.b, flicker));
+            DungeonUi.Label(new Rect(65 + glow * 2, y + glow * 2.5f, 1100, height), title, size, new Color(0f, 0f, 0f, 0.6f));
+            DungeonUi.Label(new Rect(65, y, 1100, height), title, size);
+            DungeonUi.Label(compact ? new Rect(70, 138, 1100, 30) : new Rect(70, 188, 1100, 42), shopping ? "Spend the ash you carry home. Grow stronger with every descent."
+                : codex ? "Everything you have met in the ash. Unfound entries stay hidden until a descent turns them up."
+                : settings ? "Resize the menus and HUD, toggle autofire and rebind every action. Changes save instantly."
                 : coop ? "Descend with up to three friends. Fallen heroes rise again on the next floor."
-                : selecting ? "Choose your hero. Shape your build. Claim the relics below." : "Nine heroes. Two relic abilities. One life in the ash.", 20, DungeonUi.Muted);
+                : selecting ? "Choose your hero. Shape your build. Claim the relics below." : "Nine heroes. Two relic abilities. One life in the ash.", compact ? 17 : 20, DungeonUi.Muted);
 
             bool readOnly = Run.Progress.IsReadOnly;
             DungeonUi.Panel(new Rect(990, 50, 220, 44), DungeonUi.PanelColor);
@@ -130,9 +141,10 @@ namespace Slopgame
 
             DungeonUi.Label(new Rect(755, 244, 420, 20), "MENU", 12, DungeonUi.Muted);
             if (DungeonUi.Button("chooseClass", new Rect(755, 266, 420, 64), "Choose your hero", AbilityCatalog.Gold)) selecting = true;
-            if (DungeonUi.Button("coop", new Rect(755, 342, 420, 48), "Co-op", AbilityCatalog.Gold)) coop = true;
+            if (DungeonUi.Button("coop", new Rect(755, 342, 205, 48), "Co-op", AbilityCatalog.Gold)) coop = true;
+            if (DungeonUi.Button("encyclopedia", new Rect(970, 342, 205, 48), "Encyclopedia", AbilityCatalog.Gold)) codex = true;
             if (DungeonUi.Button("shop", new Rect(755, 402, 205, 48), "Ash shop", DungeonUi.Teal)) shopping = true;
-            if (DungeonUi.Button("controls", new Rect(970, 402, 205, 48), "Controls", DungeonUi.Teal)) controls = true;
+            if (DungeonUi.Button("settings", new Rect(970, 402, 205, 48), "Settings", DungeonUi.Teal)) settings = true;
             if (DungeonUi.Button("quit", new Rect(755, 462, 420, 48), "Quit", DungeonUi.Muted))
             {
 #if UNITY_EDITOR

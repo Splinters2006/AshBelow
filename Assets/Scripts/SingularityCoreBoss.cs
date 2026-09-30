@@ -5,7 +5,9 @@ namespace Slopgame
     /// <summary>An orbital bullet pattern fight: rotating spokes, paired satellites and offset pulse waves.</summary>
     public sealed class SingularityCoreBoss : NeonBossBehaviour
     {
-        public override string Title => "NULL, THE SINGULARITY CORE";
+        /// <summary>The guardian's name (the encyclopedia reads it outside a fight).</summary>
+        public const string FixedTitle = "NULL, THE SINGULARITY CORE";
+        public override string Title => FixedTitle;
         protected override Color Accent => new Color(0.75f, 0.35f, 1f);
         protected override Sprite Chassis => GuardianSprites.Core;
         protected override Sprite Details => GuardianSprites.CoreDetails;

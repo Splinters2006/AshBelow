@@ -9,7 +9,9 @@ namespace Slopgame
     public sealed class BrimstoneHoundBoss : InfernalBossBehaviour
     {
         public const float ChargeWindup = 0.9f, ChargeTime = 0.35f;
-        public override string Title => "GORGOTH, THE BRIMSTONE HOUND";
+        /// <summary>The guardian's name (the encyclopedia reads it outside a fight).</summary>
+        public const string FixedTitle = "GORGOTH, THE BRIMSTONE HOUND";
+        public override string Title => FixedTitle;
         protected override Color Accent => new Color(1f, 0.42f, 0.15f);
         protected override Sprite Body => InfernalBossSprites.Hound;
         protected override Sprite Details => InfernalBossSprites.HoundDetails;
