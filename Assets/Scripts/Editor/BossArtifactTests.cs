@@ -24,7 +24,9 @@ namespace Slopgame.Editor
         private static bool IsDelayed(AbilityType type) => type == AbilityType.ShieldRush || type == AbilityType.Earthshatter
             || type == AbilityType.Judgment || type == AbilityType.KnuckleSandwich || type == AbilityType.FrostNova
             || type == AbilityType.VenomVial || type == AbilityType.DemonPaw || type == AbilityType.DemonCurse
-            || type == AbilityType.MicroMissiles;
+            || type == AbilityType.MicroMissiles || type == AbilityType.NetShot || type == AbilityType.RicochetArrow
+            || type == AbilityType.GrappleArm || type == AbilityType.ThunderClap || type == AbilityType.HaymakerDash || type == AbilityType.Suplex
+            || type == AbilityType.CardToss || type == AbilityType.DiceBomb || type == AbilityType.HolyLance;
 
         private static void VerifyDelayed(DungeonRun run, AbilityDefinition ability)
         {
@@ -857,6 +859,17 @@ namespace Slopgame.Editor
                     player.Buffs.Clear(); break;
                 case AbilityType.DemonPaw:
                     Require(target.Health == 100 && run.ProjectileRoot.GetComponentInChildren<DemonPawVfx>() != null, "HEEEELP slammed without a portal windup."); break;
+                case AbilityType.NetShot:
+                    Require(target.Health == 100 && run.ProjectileRoot.GetComponentInChildren<ThrownNet>() != null, "Net Shot struck instantly instead of throwing a net."); break;
+                case AbilityType.RicochetArrow:
+                case AbilityType.GrappleArm:
+                case AbilityType.ThunderClap:
+                case AbilityType.HaymakerDash:
+                case AbilityType.Suplex:
+                case AbilityType.CardToss:
+                case AbilityType.DiceBomb:
+                case AbilityType.HolyLance:
+                    Require(target.Health == 100, ability.Name + " struck instantly instead of travelling."); break;
                 case AbilityType.MicroMissiles:
                     Require(target.Health == 100 && run.ProjectileRoot.GetComponentsInChildren<MicroMissile>().Length >= CyborgAttack.BaseMissiles,
                         "Micro-Missiles struck instantly instead of flying."); break;

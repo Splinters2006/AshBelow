@@ -11,7 +11,7 @@ namespace Slopgame
         private int damage;
         /// <summary>Elemental Quiver: the element a critical hit sets off.</summary>
         private DamageElement infusion;
-        public const float MaxRange = 5f;
+        public const float MaxRange = 5f, CoinSpeed = 12f, ArrowSpeed = 15f;
         private float remainingRange = MaxRange;
         public float RemainingRange => remainingRange;
         public Vector2 Direction { get; private set; }
@@ -28,16 +28,16 @@ namespace Slopgame
             var infusion = style == ProjectileStyle.Arrow && run.Player != null && run.Player.Mechanic is ElementalQuiver quiver
                 ? quiver.Element : DamageElement.Physical;
             if (style == ProjectileStyle.Coin) CoopFx.Coin(run, position, direction, range);
-            else CoopFx.Arrow(run, position, direction, range);
+            else CoopFx.Arrow(run, position, direction, range, infusion);
             var shot = Create(run, position, direction, damage, range, style, infusion);
             return shot;
         }
 
         /// <summary>A teammate's arrow or coin: flies and stops like theirs, but their machine deals the damage.</summary>
         public static PlayerProjectile SpawnGhost(DungeonRun run, Vector2 position, Vector2 direction, float range,
-            ProjectileStyle style = ProjectileStyle.Arrow)
+            ProjectileStyle style = ProjectileStyle.Arrow, DamageElement infusion = DamageElement.Physical)
         {
-            var arrow = Create(run, position, direction, 0, range, style, DamageElement.Physical);
+            var arrow = Create(run, position, direction, 0, range, style, infusion);
             arrow.ghost = true;
             return arrow;
         }
@@ -49,7 +49,7 @@ namespace Slopgame
             Color color = coin ? GamblerAttack.Gold : infusion != DamageElement.Physical
                 ? Color.Lerp(CombatDamage.ElementColor(infusion), Color.white, 0.25f) : new Color(0.95f, 1f, 0.65f);
             var arrow = (coin ? DungeonVisuals.CreateCoin("Coin", run.ProjectileRoot, position, CoinSize, 6)
-                : DungeonVisuals.Create("Arrow", run.ProjectileRoot, position, new Vector2(0.5f, 0.1f), color, 6)).gameObject.AddComponent<PlayerProjectile>();
+                : DungeonVisuals.CreateArrow("Arrow", run.ProjectileRoot, position, 0.6f, color, 6)).gameObject.AddComponent<PlayerProjectile>();
             arrow.run = run;
             arrow.damage = damage;
             arrow.infusion = infusion;
@@ -79,12 +79,12 @@ namespace Slopgame
         public void Advance(float deltaTime)
         {
             if (IsSpent || !run.IsPlaying || deltaTime <= 0) return;
-            float distance = Mathf.Min(12f * deltaTime, remainingRange);
+            float distance = Mathf.Min((IsCoin ? CoinSpeed : ArrowSpeed) * deltaTime, remainingRange);
             int steps = Mathf.Max(1, Mathf.CeilToInt(distance / 0.08f));
             for (int i = 0; i < steps; i++)
             {
                 Vector2 next = (Vector2)transform.position + Direction * (distance / steps);
-                if (!run.Map.CanStand(next, 0.08f) || HolyBubble.Blocks(transform.position, next))
+                if (!run.Map.CanStand(next, 0.08f) || HolyBubble.Blocks(transform.position, next) || IceWall.StopsShot(transform.position, next, !ghost))
                 {
                     if (IsCoin) HeroVfx.Sparks(run.ProjectileRoot, transform.position, GamblerAttack.Gold, 7, 3f, 0.25f, -Direction, 140f, 0.8f);
                     else HeroVfx.Sparks(run.ProjectileRoot, transform.position, new Color(0.85f, 0.85f, 0.7f), 5, 2.5f, 0.2f, -Direction, 140f, 0.7f);

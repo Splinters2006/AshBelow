@@ -51,8 +51,6 @@ namespace Slopgame
                 if (step < 0.01f) break;
                 yield return null;
             }
-            CombatVfx.GlowBolt(run.ProjectileRoot, from, transform.position, Violet);
-            CoopFx.Bolt(run, from, transform.position, Violet, true);
         }
 
         /// <summary>Soul Siphon: for a few seconds she drains paralysed enemies nearby, healing 1 HP per enemy each second.</summary>
@@ -93,13 +91,17 @@ namespace Slopgame
                 if (enemy != null && enemy.Health > 0 && enemy.IsParalyzed && Vector2.Distance(at, enemy.transform.position) <= SnapRadius + enemy.HitRadius)
                     victims.Add(enemy);
             if (victims.Count == 0) return false;
-            HeroVfx.Pulse(run.ProjectileRoot, at, SnapRadius, Violet, 0.4f);
-            CoopFx.Pulse(run, at, SnapRadius, Violet, 0.4f);
+            NightmareSnapVfx.Snap(run.ProjectileRoot, at, SnapRadius);
+            CoopFx.NightmareSnap(run, at, SnapRadius);
             ScreenFx.Shake(0.2f, 0.2f);
             foreach (var enemy in victims)
             {
                 float remaining = enemy.ConsumeParalysis();
                 int damage = Player.Damage * (2 + rank - 1 + Mathf.CeilToInt(remaining * 3f));
+                // Each victim's shackle snaps; the more paralysis it had left, the wider the nightmare's eye.
+                float strength = remaining / Mathf.Max(0.01f, WingDashParalysis);
+                NightmareSnapVfx.Tether(run.ProjectileRoot, at, enemy.transform.position, strength);
+                CoopFx.SnapTether(run, at, enemy.transform.position, strength);
                 HeroVfx.Sparks(run.ProjectileRoot, enemy.transform.position, Pale, 12, 4.5f, 0.35f);
                 CombatDamage.Apply(Player, enemy, damage, DamageElement.Demonic, at, 0.8f);
             }

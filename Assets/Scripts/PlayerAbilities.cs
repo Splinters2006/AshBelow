@@ -143,7 +143,7 @@ namespace Slopgame
                 case AbilityType.WarBanner:
                     WarBanner.Plant(Player, WarBanner.Duration + (rank - 1) * 1.5f); break;
                 case AbilityType.IceWall:
-                    IceWall.Raise(Player, aim, IceWall.Duration + (rank - 1) * 0.75f, IceWall.BaseHealth + (rank - 1) * 3); break;
+                    IceWall.Raise(Player, aim, IceWall.Duration + (rank - 1) * 0.75f, IceWall.BaseHealth + (rank - 1)); break;
                 case AbilityType.BallLightning:
                     BallLightning.Launch(Player, aim, BallLightning.Duration + (rank - 1) * 0.5f, Player.Damage + rank - 1); break;
                 case AbilityType.LightningStorm:
@@ -154,8 +154,11 @@ namespace Slopgame
                     var marked = NearestEnemy((Vector2)transform.position + aim * Mathf.Min(cursorDistance, 8f), 3f);
                     if (marked == null) return false;
                     marked.DeathMark(DungeonEnemy.DeathMarkTime);
-                    CombatVfx.Bolt(Player.Run.ProjectileRoot, transform.position, marked.transform.position, definition.Color);
-                    CoopFx.Bolt(Player.Run, transform.position, marked.transform.position, definition.Color);
+                    if (!marked.IsInvulnerable)
+                    {
+                        DeathMarkVfx.Play(Player.Run.ProjectileRoot, marked, DungeonEnemy.DeathMarkTime);
+                        CoopFx.DeathMark(Player.Run, marked.transform.position, DungeonEnemy.DeathMarkTime);
+                    }
                     break;
                 case AbilityType.ShadowClone:
                     ShadowClone.Activate(Player, ShadowClone.Duration + (rank - 1) * 1.5f); break;
@@ -174,7 +177,7 @@ namespace Slopgame
                 case AbilityType.EmpPulse:
                     EmpPulse(EmpRadius, EmpStun + (rank - 1) * 0.3f); break;
                 case AbilityType.GrappleArm:
-                    StartCoroutine(Grapple(aim, Player.Damage + rank)); break;
+                    Grapple(aim, Player.Damage + rank); break;
                 case AbilityType.OrbitalLaser:
                     OrbitalLaser.Call(Player, (Vector2)transform.position + aim * Mathf.Min(cursorDistance, 6f), OrbitalLaser.Duration + (rank - 1) * 0.75f, Player.Damage + rank - 1); break;
                 case AbilityType.NetShot:
@@ -224,7 +227,7 @@ namespace Slopgame
                     ShadowstepVfx.Puff(Player.Run.ProjectileRoot, transform.position);
                     CoopFx.Shadowstep(Player.Run, transform.position, transform.position); break;
                 case AbilityType.HealingLight:
-                    ForAllies(SupportKind.Heal, 2 + rank - 1 + powers.Count(PowerupType.HealingPower), 0f); break;
+                    HealAllies(2 + rank - 1 + powers.Count(PowerupType.HealingPower)); break;
                 case AbilityType.Judgment:
                 case AbilityType.Sanctuary:
                     var paladin = Player.GetComponent<PaladinRelics>();
@@ -302,33 +305,10 @@ namespace Slopgame
             return best;
         }
 
-        public const float LanceRange = 10f, LanceWidth = 0.35f, InterventionTime = 5f;
+        public const float InterventionTime = 5f;
 
-        /// <summary>Holy Lance: a spear of light pierces a line with holy damage; the first enemy it meets is stunned.</summary>
-        private void HolyLance(Vector2 aim, int damage)
-        {
-            var run = Player.Run;
-            Vector2 from = transform.position;
-            Vector2 to = FindGroundLanding(run.Map, from, aim, LanceRange);
-            CombatVfx.GlowBolt(run.ProjectileRoot, from, to, AbilityCatalog.Gold);
-            CoopFx.Bolt(run, from, to, AbilityCatalog.Gold, true);
-            var line = new List<DungeonEnemy>();
-            float length = Vector2.Distance(from, to);
-            foreach (var enemy in run.Enemies)
-            {
-                if (enemy == null || enemy.Health <= 0) continue;
-                Vector2 offset = (Vector2)enemy.transform.position - from;
-                float along = Vector2.Dot(offset, aim);
-                if (along < 0f || along > length + enemy.HitRadius || Mathf.Abs(Vector2.Dot(offset, Vector2.Perpendicular(aim))) > LanceWidth + enemy.HitRadius) continue;
-                line.Add(enemy);
-            }
-            line.Sort((a, b) => Vector2.Dot((Vector2)a.transform.position - from, aim).CompareTo(Vector2.Dot((Vector2)b.transform.position - from, aim)));
-            for (int i = 0; i < line.Count; i++)
-            {
-                CombatDamage.Apply(Player, line[i], damage, DamageElement.Holy, from, 0.6f);
-                if (i == 0 && line[i] != null && line[i].Health > 0) line[i].Stun(1f);
-            }
-        }
+        /// <summary>Holy Lance: a lance of light flies along a wide line, piercing with holy damage; the first enemy it meets is stunned.</summary>
+        private void HolyLance(Vector2 aim, int damage) => ThrownLance.Throw(Player, aim, damage);
 
         /// <summary>Divine Intervention: the ally nearest the cursor (the Paladin, if none is closer) is watched over for a few seconds.</summary>
         private void Intervene(Vector2 cursor)
@@ -342,9 +322,9 @@ namespace Slopgame
                     { chosen = hero; target = hero.transform.position; }
             if (chosen == null) Player.Intercede(InterventionTime);
             else run.Coop.SupportAllies(target, 0.6f, SupportKind.Intervention, 0, InterventionTime);
-            HeroVfx.Motes(run.ProjectileRoot, target, 0.7f, new Color(1f, 0.95f, 0.7f), 16, 1f);
-            CombatVfx.Ring(run.ProjectileRoot, target, 0.8f, new Color(1f, 0.95f, 0.7f), 0.5f);
-            CoopFx.Ring(run, target, 0.8f, new Color(1f, 0.95f, 0.7f), 0.5f);
+            // Guardian angels circle whoever is watched over, on every machine.
+            GuardianAngelsVfx.Play(run.ProjectileRoot, chosen != null ? chosen.transform : transform, InterventionTime);
+            CoopFx.Intervention(run, target, InterventionTime);
         }
 
         public const float EmpRadius = 4f, EmpStun = 1.5f, GrappleRange = 7f;
@@ -369,57 +349,13 @@ namespace Slopgame
             }
         }
 
-        /// <summary>Grapple Arm: the hook flies out, snags the first enemy in line and hauls it in (guardians only take the hit).</summary>
-        private IEnumerator Grapple(Vector2 aim, int damage)
-        {
-            var run = Player.Run;
-            Vector2 from = transform.position;
-            Vector2 end = FindGroundLanding(run.Map, from, aim, GrappleRange);
-            DungeonEnemy caught = null;
-            float nearest = float.MaxValue;
-            foreach (var enemy in run.Enemies)
-            {
-                if (enemy == null || enemy.Health <= 0) continue;
-                Vector2 offset = (Vector2)enemy.transform.position - from;
-                float along = Vector2.Dot(offset, aim);
-                if (along < 0f || along > Vector2.Distance(from, end) + enemy.HitRadius || Mathf.Abs(Vector2.Dot(offset, Vector2.Perpendicular(aim))) > enemy.HitRadius + 0.2f) continue;
-                if (along < nearest) { nearest = along; caught = enemy; }
-            }
-            Vector2 hook = caught != null ? (Vector2)caught.transform.position : end;
-            var chain = new Color(0.7f, 0.75f, 0.85f);
-            CombatVfx.Bolt(run.ProjectileRoot, from, hook, chain);
-            CoopFx.Bolt(run, from, hook, chain);
-            if (caught == null) yield break;
-            CombatDamage.Apply(Player, caught, damage, DamageElement.Physical, from, 0f);
-            if (caught == null || caught.Health <= 0 || caught.Boss != null) yield break;
-            Vector2 start = caught.transform.position, goal = FindGroundLanding(run.Map, from, aim, 1f);
-            for (float t = 0f; t < 0.2f; t += Time.deltaTime)
-            {
-                if (caught == null || !run.IsPlaying) yield break;
-                caught.transform.position = Vector2.Lerp(start, goal, t / 0.2f);
-                yield return null;
-            }
-            if (caught != null) { caught.transform.position = goal; caught.Stun(0.3f); }
-        }
+        /// <summary>Grapple Arm: the hook flies out on its chain, snags the first enemy it touches and hauls it in (guardians only take the hit).</summary>
+        private void Grapple(Vector2 aim, int damage) => GrappleHook.Fire(Player, aim, GrappleRange, damage);
 
-        public const float NetRange = 5f, NetCone = 70f;
+        public const float NetRange = 5f;
 
-        /// <summary>Net Shot: a weighted net fans out ahead, roots everything it catches and nicks it.</summary>
-        private void NetShot(Vector2 aim, float hold, int damage)
-        {
-            var run = Player.Run;
-            var color = new Color(0.8f, 0.75f, 0.55f);
-            HeroVfx.Slash(run.ProjectileRoot, transform.position, aim, NetRange, NetCone, color, 0.3f);
-            CoopFx.Slash(run, transform.position, aim, NetRange, NetCone, color);
-            foreach (var enemy in run.Enemies.ToArray())
-            {
-                if (enemy == null || enemy.Health <= 0 || !SwordAttack.ContainsTarget(enemy.transform.position - transform.position, aim, NetRange + enemy.HitRadius, NetCone)
-                    || !run.HasLineOfSight(transform.position, enemy.transform.position)) continue;
-                CombatDamage.Apply(Player, enemy, damage, DamageElement.Physical, transform.position, 0f);
-                if (enemy.Health > 0) enemy.Root(hold);
-                HeroVfx.Sparks(run.ProjectileRoot, enemy.transform.position, color, 6, 2f, 0.3f);
-            }
-        }
+        /// <summary>Net Shot: a weighted net flies out and drops on the first enemy it reaches, rooting everything under it.</summary>
+        private void NetShot(Vector2 aim, float hold, int damage) => ThrownNet.Fire(Player, aim, NetRange, hold, damage);
 
         public const float OrbChargeTime = 1f;
         private int orbChargeSlot = -1;
@@ -442,17 +378,18 @@ namespace Slopgame
             finally { orbCharge = -1f; }
         }
 
-        private void ForAllies(SupportKind kind, int amount, float duration)
+        /// <summary>Healing Light: heals every hero within 4 units in a soft green light, kept distinct from the Paladin's gold.</summary>
+        private void HealAllies(int amount)
         {
+            const float Reach = 4f;
+            var run = Player.Run;
             foreach (var ally in FindObjectsByType<DungeonPlayer>())
-                if (ally.Run == Player.Run && ally.Health > 0 && Vector2.Distance(transform.position, ally.transform.position) <= 4f)
-                {
-                    ally.ApplySupport(kind, amount, duration);
-                    HeroVfx.Motes(Player.Run.ProjectileRoot, ally.transform.position, 0.7f, AbilityCatalog.Gold, 14, 1f);
-                }
-            Player.Run.Coop?.SupportAllies(transform.position, 4f, kind, amount, duration);
-            CombatVfx.Ring(Player.Run.ProjectileRoot, transform.position, 4f, AbilityCatalog.Gold);
-            CoopFx.Ring(Player.Run, transform.position, 4f, AbilityCatalog.Gold);
+                if (ally.Run == run && ally.Health > 0 && Vector2.Distance(transform.position, ally.transform.position) <= Reach)
+                    ally.ApplySupport(SupportKind.Heal, amount, 0f);
+            run.Coop?.SupportAllies(transform.position, Reach, SupportKind.Heal, amount, 0f);
+            HealVfx.PlayAround(run, transform.position, Reach);
+            CombatVfx.Ring(run.ProjectileRoot, transform.position, Reach, FlameMesh.Alpha(HealVfx.Mint, 0.7f), 0.5f);
+            CoopFx.Heal(run, transform.position, Reach);
         }
 
         private void Fan(Vector2 aim, int count, float spacing, int damage, float range = PlayerProjectile.MaxRange)

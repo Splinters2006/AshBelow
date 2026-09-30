@@ -100,7 +100,7 @@ namespace Slopgame
             for (int i = 0; i < steps; i++)
             {
                 Vector2 next = (Vector2)transform.position + direction * (distance / steps);
-                if (!run.Map.CanStand(next, 0.1f) || HolyBubble.Blocks(transform.position, next)) { Explode(); return; }
+                if (!run.Map.CanStand(next, 0.1f) || HolyBubble.Blocks(transform.position, next) || IceWall.StopsShot(transform.position, next, !ghost)) { Explode(); return; }
                 transform.position = next;
                 if (!ghost) Breakable.SmashAt(run, next, 0.1f);
                 for (int j = run.Enemies.Count - 1; j >= 0; j--)

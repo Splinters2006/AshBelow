@@ -239,7 +239,7 @@ namespace Slopgame
 
         // ---------------------------------------------------------------- the room
 
-        private static Sprite glowSprite, merchantSprite, merchantOutlineSprite, bottleSprite;
+        private static Sprite merchantSprite, merchantOutlineSprite, bottleSprite;
         private static readonly Color MerchantGlow = new Color(0.85f, 0.7f, 1f);
 
         /// <summary>Builds the shop's furnishings inside <paramref name="level"/>; the map and stairs are drawn by the run.</summary>
@@ -418,27 +418,7 @@ namespace Slopgame
             sparklePoints.Add(position);
         }
 
-        /// <summary>A soft round falloff for light pools, drawn tinted and translucent.</summary>
-        private static Sprite GlowSprite
-        {
-            get
-            {
-                if (glowSprite != null) return glowSprite;
-                const int size = 32;
-                var texture = new Texture2D(size, size, TextureFormat.RGBA32, false) { name = "Shop glow", filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp };
-                var pixels = new Color[size * size];
-                for (int y = 0; y < size; y++)
-                    for (int x = 0; x < size; x++)
-                    {
-                        float distance = Vector2.Distance(new Vector2(x + 0.5f, y + 0.5f), Vector2.one * size / 2f) / (size / 2f);
-                        float falloff = Mathf.Clamp01(1f - distance);
-                        pixels[y * size + x] = new Color(1f, 1f, 1f, falloff * falloff);
-                    }
-                texture.SetPixels(pixels);
-                texture.Apply(false, true);
-                return glowSprite = Sprite.Create(texture, new Rect(0, 0, size, size), Vector2.one * 0.5f, size);
-            }
-        }
+        private static Sprite GlowSprite => DungeonVisuals.GlowSprite;
 
         /// <summary>A round-bellied bottle with a cork; tinted by its contents.</summary>
         private static Sprite BottleSprite => bottleSprite != null ? bottleSprite : bottleSprite = DungeonVisuals.PaletteSprite("Shop bottle", new[]

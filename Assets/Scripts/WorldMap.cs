@@ -3,8 +3,8 @@ using UnityEngine;
 namespace Slopgame
 {
     /// <summary>
-    /// The travel map: every world as a node on a dotted trail. The main menu uses it to pick where a descent begins,
-    /// and the world-cleared screen to pick where to travel next. Node positions come from
+    /// The travel map: every world as a node on a dotted trail. The world-cleared screen uses it to pick where to travel
+    /// next; co-op teammates can browse it there while the host decides. Node positions come from
     /// <see cref="WorldDefinition.MapPosition"/>, so the layout is tweaked in <see cref="WorldCatalog"/>. Nothing is locked yet.
     /// </summary>
     public sealed class WorldMap

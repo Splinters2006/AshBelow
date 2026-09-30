@@ -14,7 +14,40 @@ namespace Slopgame
             run.Coop.SendFx(new FxMessage { Kind = kind, A = a, B = b, Color = color ?? Color.white, F1 = f1, F2 = f2, N = n });
         }
 
-        public static void Arrow(DungeonRun run, Vector2 position, Vector2 direction, float range) => Send(run, FxKind.Arrow, position, direction, null, range);
+        public static void Arrow(DungeonRun run, Vector2 position, Vector2 direction, float range, DamageElement infusion = DamageElement.Physical)
+            => Send(run, FxKind.Arrow, position, direction, null, range, 0f, (int)infusion);
+        public static void Ricochet(DungeonRun run, Vector2 position, Vector2 direction, DamageElement infusion)
+            => Send(run, FxKind.Ricochet, position, direction, null, 0f, 0f, (int)infusion);
+        public static void Net(DungeonRun run, Vector2 position, Vector2 direction, float range, float hold, DamageElement infusion)
+            => Send(run, FxKind.Net, position, direction, null, range, hold, (int)infusion);
+        /// <summary>Teammates see the Assassin's shadow clone step out and lunge.</summary>
+        public static void ShadowClone(DungeonRun run, Vector2 from, Vector2 target, float lunge) => Send(run, FxKind.ShadowClone, from, target, null, lunge);
+        /// <summary>Teammates see the Death Mark's skull and clock over the enemy nearest where it was cast.</summary>
+        public static void DeathMark(DungeonRun run, Vector2 at, float duration) => Send(run, FxKind.DeathMark, at, default, null, duration);
+        public static void RocketBoost(DungeonRun run, Vector2 from, Vector2 to, float blastRadius) => Send(run, FxKind.RocketBoost, from, to, null, blastRadius);
+        /// <summary>Starts or steers a teammate's copy of the Orbital Laser, keeping it alive a little longer.</summary>
+        public static void OrbitalLaser(DungeonRun run, Vector2 at, float keepAlive) => Send(run, FxKind.OrbitalLaser, at, default, null, keepAlive);
+        public static void Grapple(DungeonRun run, Vector2 aim, float range) => Send(run, FxKind.Grapple, default, aim, null, range);
+        public static void BrawlerMove(DungeonRun run, PunchVfx.Style style, Vector2 origin, Vector2 aim, float length, float halfWidth, Color color)
+            => Send(run, FxKind.BrawlerMove, origin, aim, color, length, halfWidth, (int)style);
+        /// <summary>Teammates see the Gambler's Insurance aura, and each claim paid (or denied) against it.</summary>
+        public static void Insurance(DungeonRun run, float duration) => Send(run, FxKind.Insurance, default, default, null, duration);
+        public static void InsuranceClaim(DungeonRun run, bool paid) => Send(run, FxKind.InsuranceClaim, default, default, null, 0f, 0f, paid ? 1 : 0);
+        public static void Card(DungeonRun run, Vector2 position, Vector2 direction, int suit) => Send(run, FxKind.Card, position, direction, null, 0f, 0f, suit);
+        public static void Dice(DungeonRun run, Vector2 from, Vector2 landing, int face, float delay) => Send(run, FxKind.Dice, from, landing, null, delay, 0f, face);
+        public static void Shield(DungeonRun run, Vector2 aim) => Send(run, FxKind.Shield, default, aim);
+        public static void Whirlwind(DungeonRun run, float duration, float radius) => Send(run, FxKind.Whirlwind, default, default, null, duration, radius);
+        public static void WarBanner(DungeonRun run, Vector2 at, float duration, float radius) => Send(run, FxKind.WarBanner, at, default, null, duration, radius);
+        public static void Consecration(DungeonRun run, Vector2 at, float duration, float radius) => Send(run, FxKind.Consecration, at, default, null, duration, radius);
+        public static void Heal(DungeonRun run, Vector2 center, float radius) => Send(run, FxKind.Heal, center, default, null, radius);
+        public static void Lance(DungeonRun run, Vector2 origin, Vector2 aim) => Send(run, FxKind.Lance, origin, aim);
+        /// <summary>Teammates see guardian angels circle the hero nearest <paramref name="at"/> (which may be themselves).</summary>
+        public static void Intervention(DungeonRun run, Vector2 at, float duration) => Send(run, FxKind.Intervention, at, default, null, duration);
+        public static void BallLightning(DungeonRun run, Vector2 origin, Vector2 aim, float duration) => Send(run, FxKind.BallLightning, origin, aim, null, duration);
+        /// <summary>An Ice Wall block broke here; every machine breaks its copy.</summary>
+        public static void IceBreak(DungeonRun run, Vector2 at) => Send(run, FxKind.IceBreak, at);
+        public static void NightmareSnap(DungeonRun run, Vector2 at, float radius) => Send(run, FxKind.NightmareSnap, at, default, null, radius);
+        public static void SnapTether(DungeonRun run, Vector2 from, Vector2 to, float strength) => Send(run, FxKind.SnapTether, from, to, null, strength);
         public static void Coin(DungeonRun run, Vector2 position, Vector2 direction, float range) => Send(run, FxKind.Coin, position, direction, null, range);
         public static void Spell(DungeonRun run, Vector2 position, Vector2 direction, Color color, float range, float radius, int pierces)
             => Send(run, FxKind.Spell, position, direction, color, range, radius, pierces);
@@ -85,6 +118,32 @@ namespace Slopgame
         public static void Missile(DungeonRun run, Vector2 origin, Vector2 direction, Vector2 goal)
             => Send(run, FxKind.MicroMissile, origin, direction, null, goal.x, goal.y);
 
+        private static DungeonEnemy NearestEnemy(DungeonRun run, Vector2 at, float within)
+        {
+            DungeonEnemy best = null;
+            foreach (var enemy in run.Enemies)
+            {
+                if (enemy == null || enemy.Health <= 0) continue;
+                float distance = Vector2.Distance(at, enemy.transform.position);
+                if (distance <= within) { within = distance; best = enemy; }
+            }
+            return best;
+        }
+
+        /// <summary>The hero on this machine (the local one or a teammate) standing nearest <paramref name="at"/>.</summary>
+        private static Transform NearestHero(DungeonRun run, Vector2 at)
+        {
+            Transform best = run.Player != null ? run.Player.transform : null;
+            float bestDistance = best != null ? Vector2.Distance(at, best.position) : float.MaxValue;
+            foreach (var hero in run.Coop.RemoteHeroes)
+            {
+                if (hero == null || !hero.IsAlive) continue;
+                float distance = Vector2.Distance(at, hero.transform.position);
+                if (distance < bestDistance) { bestDistance = distance; best = hero.transform; }
+            }
+            return best;
+        }
+
         private static RemoteHero FindHero(DungeonRun run, ulong id)
         {
             foreach (var hero in run.Coop.RemoteHeroes) if (hero != null && hero.Id == id) return hero;
@@ -109,7 +168,7 @@ namespace Slopgame
             Color color = fx.Color;
             switch (fx.Kind)
             {
-                case FxKind.Arrow: PlayerProjectile.SpawnGhost(run, fx.A, fx.B, fx.F1); break;
+                case FxKind.Arrow: PlayerProjectile.SpawnGhost(run, fx.A, fx.B, fx.F1, ProjectileStyle.Arrow, (DamageElement)fx.N); break;
                 case FxKind.IceWall: Slopgame.IceWall.Create(run, fx.A, fx.B, fx.F1, fx.F2, fx.N); break;
                 case FxKind.Wings:
                     var flyer = FindHero(run, fx.Origin);
@@ -119,6 +178,53 @@ namespace Slopgame
                     var siphoner = FindHero(run, fx.Origin);
                     if (siphoner != null) SoulSiphonVfx.Play(run, siphoner.transform, fx.F1, fx.F2);
                     break;
+                case FxKind.Ricochet: RicochetArrow.SpawnGhost(run, fx.A, fx.B, (DamageElement)fx.N); break;
+                case FxKind.Net: ThrownNet.SpawnGhost(run, fx.A, fx.B, fx.F1, fx.F2, (DamageElement)fx.N); break;
+                case FxKind.ShadowClone:
+                    var caster = FindHero(run, fx.Origin);
+                    if (caster != null) ShadowCloneVfx.Play(root, caster.transform, fx.A, fx.B, fx.F1);
+                    break;
+                case FxKind.DeathMark:
+                    var markedEnemy = NearestEnemy(run, fx.A, 1.5f);
+                    if (markedEnemy != null) DeathMarkVfx.Play(root, markedEnemy, fx.F1);
+                    break;
+                case FxKind.RocketBoost: RocketBoostVfx.Play(root, fx.A, fx.B, fx.F1); break;
+                case FxKind.OrbitalLaser: Slopgame.OrbitalLaser.Ghost(run, fx.Origin, fx.A, fx.F1); break;
+                case FxKind.Grapple:
+                    var grappler = FindHero(run, fx.Origin);
+                    if (grappler != null) GrappleHook.SpawnGhost(run, grappler.transform, fx.B, fx.F1);
+                    break;
+                case FxKind.BrawlerMove: BrawlerVfx.Move(root, (PunchVfx.Style)fx.N, fx.A, fx.B, fx.F1, fx.F2, color); break;
+                case FxKind.Insurance:
+                    var insured = FindHero(run, fx.Origin);
+                    if (insured != null) InsuranceVfx.Play(root, insured.transform, fx.F1);
+                    break;
+                case FxKind.InsuranceClaim:
+                    var claimant = FindHero(run, fx.Origin);
+                    if (claimant != null) InsuranceVfx.Claim(root, claimant.transform, fx.N == 1);
+                    break;
+                case FxKind.Card: ThrownCard.SpawnGhost(run, fx.A, fx.B, (ThrownCard.Suit)Mathf.Clamp(fx.N, 0, 3)); break;
+                case FxKind.Dice: DiceBomb.SpawnGhost(run, fx.A, fx.B, fx.N, fx.F1); break;
+                case FxKind.Shield:
+                    var knightThrower = FindHero(run, fx.Origin);
+                    if (knightThrower != null) ThrownShield.SpawnGhost(run, knightThrower.transform, fx.B);
+                    break;
+                case FxKind.Whirlwind:
+                    var spinner = FindHero(run, fx.Origin);
+                    if (spinner != null) WhirlwindVfx.Play(root, spinner.transform, fx.F1, fx.F2);
+                    break;
+                case FxKind.WarBanner: WarBannerVfx.Play(root, fx.A, fx.F1, fx.F2); break;
+                case FxKind.Consecration: ConsecrationVfx.Play(run, fx.A, fx.F1, fx.F2); break;
+                case FxKind.Heal: HealVfx.PlayAround(run, fx.A, fx.F1); break;
+                case FxKind.Lance: ThrownLance.SpawnGhost(run, fx.A, fx.B); break;
+                case FxKind.Intervention:
+                    var watched = NearestHero(run, fx.A);
+                    if (watched != null) GuardianAngelsVfx.Play(root, watched, fx.F1);
+                    break;
+                case FxKind.BallLightning: Slopgame.BallLightning.SpawnGhost(run, fx.A, fx.B, fx.F1); break;
+                case FxKind.IceBreak: Slopgame.IceWall.BreakAt(run, fx.A); break;
+                case FxKind.NightmareSnap: NightmareSnapVfx.Snap(root, fx.A, fx.F1); break;
+                case FxKind.SnapTether: NightmareSnapVfx.Tether(root, fx.A, fx.B, fx.F1); break;
                 case FxKind.Coin: PlayerProjectile.SpawnGhost(run, fx.A, fx.B, fx.F1, ProjectileStyle.Coin); break;
                 case FxKind.Spell: SpellProjectile.SpawnGhost(run, fx.A, fx.B, color, fx.F1, fx.F2, fx.N); break;
                 case FxKind.Slash: HeroVfx.Slash(root, fx.A, fx.B, fx.F1, fx.F2, color); break;

@@ -210,7 +210,14 @@ namespace Slopgame
             Vector2 velocity = IsRolling ? rollDirection * Speed * 2.6f * Buffs.DodgeSpeedMultiplier
                 : movement * Speed * Buffs.MoveMultiplier * Crystals.SpeedMultiplier * (IsPoisoned ? PoisonSlow : 1f) * Powerups.MoveMultiplier(this) * (Blessing.IsHasted ? DamageBlessing.ShepherdSpeed : 1f) * (Weapon.IsHeavyAttacking ? 0.55f : Charge.IsCharging ? 0.7f : 1f);
             if (DebugMode.Enabled) velocity *= DebugMode.SpeedMultiplier;
-            transform.position = Run.Map.Move(transform.position, velocity * Time.deltaTime);
+            // Ice walls stop heroes too; slide along them rather than sticking.
+            Vector2 here = transform.position, moved = Run.Map.Move(here, velocity * Time.deltaTime);
+            if (IceWall.BlocksHero(here, moved))
+            {
+                Vector2 alongX = Run.Map.Move(here, new Vector2(velocity.x, 0f) * Time.deltaTime), alongY = Run.Map.Move(here, new Vector2(0f, velocity.y) * Time.deltaTime);
+                moved = !IceWall.BlocksHero(here, alongX) ? alongX : !IceWall.BlocksHero(here, alongY) ? alongY : here;
+            }
+            transform.position = moved;
             // Rolling into an urn smashes it.
             if (IsRolling) Breakable.SmashAt(Run, transform.position, 0.3f);
             // Abilities and heavy attacks get the full offset to the cursor, so targeted and mobility moves
@@ -344,7 +351,9 @@ namespace Slopgame
         public void Insure(float duration)
         {
             insuredUntil = Mathf.Max(insuredUntil, Time.time + duration);
-            HeroVfx.Pulse(Run.ProjectileRoot, transform.position, 1.1f, new Color(0.35f, 0.9f, 0.5f), 0.4f);
+            HeroVfx.Pulse(Run.ProjectileRoot, transform.position, 1.1f, InsuranceVfx.Policy, 0.4f);
+            InsuranceVfx.Play(Run.ProjectileRoot, transform, duration);
+            CoopFx.Insurance(Run, duration);
         }
 
         /// <summary>Divine Intervention: for a while, a killing blow is turned aside.</summary>
@@ -354,6 +363,7 @@ namespace Slopgame
         private void Rescue()
         {
             interventionUntil = 0f;
+            GuardianAngelsVfx.Rescued(transform);
             Health = Mathf.Max(1, Mathf.CeilToInt(MaxHealth * 0.25f));
             Protect(2f);
             Blessing.Apply(2, 2f);
@@ -375,8 +385,14 @@ namespace Slopgame
             if (!Run.IsPlaying || IsInvulnerable || Health <= 0) return false;
             if (DebugMode.Enabled) { Health = MaxHealth; return false; }
             // Insurance: while the policy holds, the Gambler pays in coins instead of blood.
-            bool insured = Time.time < insuredUntil && Weapon is GamblerAttack purse && purse.Spend(InsurancePremium);
-            if (insured) HeroVfx.Sparks(Run.ProjectileRoot, transform.position, GamblerAttack.Gold, 14, 4f, 0.35f, Vector2.up, 160f);
+            bool claiming = Time.time < insuredUntil && Weapon is GamblerAttack;
+            bool insured = claiming && ((GamblerAttack)Weapon).Spend(InsurancePremium);
+            if (claiming)
+            {
+                // Paid out in coins, or denied when the purse can't cover the premium.
+                InsuranceVfx.Claim(Run.ProjectileRoot, transform, insured);
+                CoopFx.InsuranceClaim(Run, insured);
+            }
             bool warded = insured || Powerups.AbsorbHit();
             if (!warded)
             {
@@ -444,7 +460,7 @@ namespace Slopgame
         {
             if (kind == SupportKind.Heal) Heal(amount);
             else if (kind == SupportKind.Protect) Protect(duration);
-            else if (kind == SupportKind.Ward) Powerups.AddWard();
+            else if (kind == SupportKind.Ward) for (int i = 0; i < Mathf.Max(1, amount); i++) Powerups.AddWard();
             else if (kind == SupportKind.Intervention) Intercede(duration);
             else if (kind == SupportKind.Bless)
             {

@@ -30,7 +30,7 @@ namespace Slopgame
         private float nextDeflect;
 
         /// <summary>Guardians have this many times their style's base health, so a fight lasts through several attack cycles.</summary>
-        public const float HealthMultiplier = 3f;
+        public const float HealthMultiplier = 6f;
 
         /// <summary>
         /// A guardian's health for a party: every hero adds a full guardian's worth (normal enemies only add half),

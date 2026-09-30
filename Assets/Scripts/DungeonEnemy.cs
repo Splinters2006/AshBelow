@@ -54,9 +54,12 @@ namespace Slopgame
         private float stunnedUntil, stunImmuneUntil, rootedUntil, nextBleed, nextPoison;
         private int bleedTicks, bleedDamage, poisonTicks, poisonDamage, peakHealth;
         private bool netBleeding, netPoisoned;
-        /// <summary>Death Mark: every hit taken is remembered and dealt again when the mark comes due.</summary>
+        /// <summary>
+        /// Death Mark: every hit taken is remembered. If the enemy dies while marked, all of it bursts out onto every
+        /// enemy around it; if it survives, it takes it all again when the mark comes due.
+        /// </summary>
         public bool IsDeathMarked => deathMarkDue > 0f;
-        public const float DeathMarkTime = 3f;
+        public const float DeathMarkTime = 6f, DeathMarkBurstRadius = 2.5f;
         private float deathMarkDue;
         private int deathMarkStored;
 
@@ -66,7 +69,6 @@ namespace Slopgame
             if (Run.IsGuest) { Run.Coop.ReportDamage(this, CoopDamageKind.DeathMark, 0, transform.position, 0, delay); return; }
             deathMarkDue = Time.time + delay;
             deathMarkStored = 0;
-            if (Run.ProjectileRoot != null) CombatVfx.Ring(Run.ProjectileRoot, transform.position, 0.8f, new Color(0.85f, 0.2f, 0.3f), delay);
         }
 
         /// <summary>Host: when the mark comes due, every hit it remembered lands again at once.</summary>
@@ -359,10 +361,24 @@ namespace Slopgame
             hiddenRenderers.Clear();
         }
 
+        /// <summary>Host: a marked enemy fell, and every hit it took while marked bursts out onto the enemies around it.</summary>
+        private void DeathMarkBurst()
+        {
+            int owed = deathMarkStored;
+            deathMarkDue = 0f;
+            deathMarkStored = 0;
+            if (owed <= 0) return;
+            Vector2 at = transform.position;
+            foreach (var enemy in Run.Enemies.ToArray())
+                if (enemy != null && enemy != this && enemy.Health > 0 && Vector2.Distance(at, enemy.transform.position) <= DeathMarkBurstRadius + enemy.HitRadius)
+                    enemy.Hit(owed, at, 1.5f);
+        }
+
         /// <summary>Removes the enemy with its death effects and rewards; kill talents apply only to the killer.</summary>
         public void Die(bool localKill)
         {
             Health = Mathf.Min(Health, 0);
+            if (!Run.IsGuest && deathMarkDue > 0f) DeathMarkBurst();
             Run.EnemyDefeated(this);
             if (localKill && Run.Player.Health > 0) Run.Player.Powerups.OnKill(Run.Player, this);
             Boss?.Defeated();

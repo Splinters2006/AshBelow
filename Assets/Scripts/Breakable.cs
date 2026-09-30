@@ -70,6 +70,8 @@ namespace Slopgame
             if (player == null || player.Health <= 0) return;
             Vector2 origin = player.transform.position;
             Vector2 facing = aim.sqrMagnitude > 0.0001f ? aim.normalized : Vector2.right;
+            // The same swing chips any Ice Wall block in reach.
+            IceWall.HitInArc(player.Run, origin, facing, reach);
             for (int i = active.Count - 1; i >= 0; i--)
             {
                 var target = active[i];

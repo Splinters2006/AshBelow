@@ -16,7 +16,8 @@ namespace Slopgame
         // S skin, s skin shade, E eyes, H hair, I glow, F white cloth, f bowstring,
         // A floppy-ear / tail fur, R boxing glove, r glove shade, P pink tongue.
         // N demon horn / tail black, n horn sheen, V dark violet hair, U hair highlight, v glowing violet eyes,
-        // T glowing tail tip, C pale skin, c pale skin shade.
+        // T glowing tail tip, C pale skin, c pale skin shade. Wings: X leather, x crease, Z bone, Y outline, y claw,
+        // w glowing violet edge.
         // The Gambler reuses G / g for his gold tooth, coins and purse.
         // J glowing plasma, j deep plasma, O gunmetal (the Augment's implant eye, power core and arm cannon).
         private static readonly Dictionary<WeaponType, string[]> Grids = new Dictionary<WeaponType, string[]>
@@ -63,12 +64,12 @@ namespace Slopgame
                 "A..DLWWWWWFFRRRr", "AA.DLWWWWWMDRRRr", ".AADWWMWWWMD.rr.", "..DDDDgGgDDD....",
                 "...DMWWDWWMD....", "....DSSDSsD.....", "....DkkDkkD.....", "...DDDD.DDDD....",
             } },
-            { WeaponType.Tail, new[] // Demoness: a pale girl with curled black ram horns, long dark violet hair, glowing eyes, a spade-tipped tail and bat wings
+            { WeaponType.Tail, new[] // Demoness: a pale girl with curled black ram horns, long dark violet hair, glowing eyes, a spade-tipped tail and bat wings drawn like Wing Dash's (clawed wrist, finger bones, scalloped violet-lit edge)
             {
-                "........................", "......NNNn....nNNN......", ".y...NnnNNDDDDNNnnN...y.", "YXY.Nn.DVUUUVVVVD.nN.YXY",
-                "YXxYNnNVUVVVVVVVVNnNYxXY", "YXZXYNNVVVVVCCVVVNNYXZXY", "YxXZXYDVVVCCCCCCVDYXZXxY", "YXxXZYDVVCCEvCCEvDYZXxXY",
-                "YXYxXYDVVCCCCCCCcDYXxYXY", "Y.YXxDVVVcCCCPCcD.YxXY.Y", "...YTDVVVVDcCCcD..YXY...", "....TTDVVDLWWWWWD.YY....",
-                ".....TNDVDLWFFWMCD......", "......NDDWWWMWWMcD......", "......NDWWWWWWWWWD......", ".......NDDCcDDCcD.......",
+                ".y..........................y.", ".yY......NNNn....nNNN......Yy.", ".YZY....NnnNNDDDDNNnnN....YZY.", ".YZZYY.Nn.DVUUUVVVVD.nN.YYZZY.",
+                "YZxXZZYNnNVUVVVVVVVVNnNYZZXxZY", "YwxXXZZYNNVVVVVCCVVVNNYZZXXxwY", "YXxZXxZZYDVVVCCCCCCVDYZZxXZxXY", "ZwwxXXxxZDVVCCEvCCEvDZxxXXxwwZ",
+                "YYwxXXXxxDVVCCCCCCCcDxxXXXxwYY", ".YwwZwwwDVVVcCCCPCcDxxwwwZwwY.", ".YwYwwYTDVVVVDcCCcD.wwwYwwYwY.", ".YwYYwYTTDVVDLWWWWWDwYYYwYYwY.",
+                "..Y.YZY.TNDVDLWFFWMCD..YZY.Y..", ".....Y...NDDWWWMWWMcD...Y.....", ".........NDWWWWWWWWWD.........", "..........NDDCcDDCcD..........",
             } },
             { WeaponType.Coins, new[] // Gambler: a travelling merchant in a wide-brimmed hat, gold-toothed grin, fat coin purse and a flipped coin
             {
@@ -179,6 +180,8 @@ namespace Slopgame
                 case 'Z': return new Color(0.07f, 0.025f, 0.04f);
                 case 'Y': return new Color(0.04f, 0.02f, 0.03f);
                 case 'y': return new Color(0.6f, 0.54f, 0.48f);
+                // The glowing violet trailing edge along the wings' scallops, as in Wing Dash.
+                case 'w': return new Color(0.66f, 0.3f, 1f);
                 default: return Color.clear;
             }
         }

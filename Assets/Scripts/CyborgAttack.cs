@@ -283,11 +283,9 @@ namespace Slopgame
                 }
             }
             Vector2 landing = transform.position;
-            CyborgVfx.Thrusters(run.ProjectileRoot, from, landing);
-            CoopFx.Bolt(run, from, landing, MissileColor, true);
-            // Touchdown: a burst of thruster flame that may set the enemies around him alight.
-            HeroVfx.Pulse(run.ProjectileRoot, landing, BoostBlastRadius, MissileColor, 0.35f);
-            CoopFx.Pulse(run, landing, BoostBlastRadius, MissileColor, 0.35f);
+            // Thruster exhaust along the path, and a touchdown burst of flame that may set the enemies around him alight.
+            RocketBoostVfx.Play(run.ProjectileRoot, from, landing, BoostBlastRadius);
+            CoopFx.RocketBoost(run, from, landing, BoostBlastRadius);
             foreach (var enemy in run.Enemies.ToArray())
                 if (enemy != null && enemy.Health > 0 && Vector2.Distance(landing, enemy.transform.position) <= BoostBlastRadius + enemy.HitRadius
                     && run.HasLineOfSight(landing, enemy.transform.position))

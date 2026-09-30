@@ -20,6 +20,19 @@ namespace Slopgame
             PunchVfx.Play(root, PunchVfx.Style.Heavy, origin, aim, length, halfWidth, color, 0.6f);
         }
 
+        public const float UppercutTime = 0.55f, ClapTime = 0.6f, DashTime = 0.3f;
+
+        /// <summary>
+        /// The techniques' moves (uppercut, thunder clap, dash), shared with the copies teammates see. For a clap,
+        /// <paramref name="length"/> is its reach and <paramref name="halfWidth"/> half its cone in degrees.
+        /// </summary>
+        public static void Move(Transform root, PunchVfx.Style style, Vector2 origin, Vector2 aim, float length, float halfWidth, Color color)
+        {
+            if (root == null || aim.sqrMagnitude < 0.0001f) return;
+            float duration = style == PunchVfx.Style.Uppercut ? UppercutTime : style == PunchVfx.Style.Clap ? ClapTime : DashTime;
+            PunchVfx.Play(root, style, origin, aim, length, halfWidth, color, duration);
+        }
+
         /// <summary>Knuckle Sandwich's windup, locked to the Brawler's position and to the aim she committed to.</summary>
         public static PunchVfx Windup(Transform root, Transform hero, Vector2 aim, float length, float halfWidth, Color color, float duration)
         {

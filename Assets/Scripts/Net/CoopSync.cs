@@ -504,7 +504,8 @@ namespace Slopgame
             foreach (var hero in remoteHeroes)
             {
                 if (!hero.IsAlive || Vector2.Distance(center, hero.transform.position) > radius) continue;
-                HeroVfx.Motes(Run.ProjectileRoot, hero.transform.position, 0.7f, AbilityCatalog.Gold, 14, 1f);
+                // Heals draw their own green light (HealVfx); everything else glitters gold.
+                if (kind != SupportKind.Heal) HeroVfx.Motes(Run.ProjectileRoot, hero.transform.position, 0.7f, AbilityCatalog.Gold, 14, 1f);
                 SendSupport(hero.Id, kind, amount, duration);
             }
         }

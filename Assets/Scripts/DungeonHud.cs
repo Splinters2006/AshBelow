@@ -14,6 +14,9 @@ namespace Slopgame
         // The world-cleared screen's travel map (the host's, in co-op) and whether it is showing.
         private readonly WorldMap travelMap = new WorldMap();
         private bool showTravelMap;
+        // A talent or ability pick waits for a second, deliberate click so a stray press can't learn the wrong thing.
+        private int pendingUpgrade = -1;
+        private AbilityType pendingAbility = AbilityType.None;
         private static readonly Rect RestartRect = new Rect(896, 24, 112, 40);
         private static readonly Rect PurseRect = new Rect(900, 262, 356, 260);
         private static readonly Rect ShopRect = new Rect(876, 84, 380, 476);
@@ -43,6 +46,8 @@ namespace Slopgame
             if (Run.Boss != null) displayedBossHealth = Mathf.Lerp(displayedBossHealth, Run.Boss.Enemy.Health / (float)Run.Boss.MaxHealth, smooth);
             else displayedBossHealth = 1f;
             if (!Run.WorldComplete) showTravelMap = false;
+            if (!Run.ChoosingUpgrade || pendingUpgrade >= Run.UpgradeChoices.Count) pendingUpgrade = -1;
+            if (!Run.ChoosingArtifact || Run.ArrangingAbilities) pendingAbility = AbilityType.None;
             modalFade = Mathf.MoveTowards(modalFade, Run.IsPlaying || DeathPending ? 0f : 1f, Time.unscaledDeltaTime * 5f);
         }
 
@@ -435,11 +440,36 @@ namespace Slopgame
                 int rank = Run.Player.Powerups.Count(power.Type) + 1;
                 Card(rect, $"RANK {rank}  /  {(power.ClassWeapon.HasValue ? "CLASS TALENT" : "TALENT")}", power.Name,
                     power.Description, power.ClassWeapon.HasValue ? Run.SelectedCharacter.Color : DungeonUi.Teal, "+");
-                if (DungeonUi.Button("upgrade" + i, new Rect(rect.x + 24, rect.yMax - 60, 268, 40), "Choose talent", DungeonUi.Teal))
-                { Run.ChooseUpgrade(i); return; }
+                if (DungeonUi.Button("upgrade" + i, new Rect(rect.x + 24, rect.yMax - 60, 268, 40), "Choose talent", DungeonUi.Teal, pendingUpgrade < 0))
+                    pendingUpgrade = i;
             }
-            if (Run.CanRerollTalents && DungeonUi.Button("rerollTalents", new Rect(520, 650, 240, 36), "Reroll  /  Scholar's Reroll", AbilityCatalog.Gold))
+            if (Run.CanRerollTalents && DungeonUi.Button("rerollTalents", new Rect(520, 650, 240, 36), "Reroll  /  Scholar's Reroll", AbilityCatalog.Gold, pendingUpgrade < 0))
                 Run.RerollTalents();
+            if (pendingUpgrade < 0) return;
+            var chosen = Run.UpgradeChoices[pendingUpgrade];
+            int chosenRank = Run.Player.Powerups.Count(chosen.Type) + 1;
+            var answer = ConfirmPick(chosenRank > 1 ? $"Take {chosen.Name} to rank {chosenRank}?" : $"Take {chosen.Name}?", chosen.Description,
+                chosen.ClassWeapon.HasValue ? Run.SelectedCharacter.Color : DungeonUi.Teal, "Take talent");
+            if (answer == true) { int choice = pendingUpgrade; pendingUpgrade = -1; Run.ChooseUpgrade(choice); }
+            else if (answer == false) pendingUpgrade = -1;
+        }
+
+        /// <summary>
+        /// The confirmation over a talent or ability pick: true when confirmed, false when backed out of, null while
+        /// it waits. Escape also backs out.
+        /// </summary>
+        private static bool? ConfirmPick(string question, string description, Color color, string confirmText)
+        {
+            DungeonUi.Panel(new Rect(0, 0, 1280, 720), new Color(0.01f, 0.018f, 0.035f, 0.7f));
+            var panel = new Rect(390, 250, 500, 250);
+            DungeonUi.Panel(panel, DungeonUi.Background);
+            DungeonUi.Panel(new Rect(panel.x, panel.y, panel.width, 4), color);
+            DungeonUi.Label(new Rect(panel.x + 24, panel.y + 22, panel.width - 48, 60), question, 24, DungeonUi.Text, TextAnchor.MiddleCenter);
+            DungeonUi.ScrollingText("confirm" + question, new Rect(panel.x + 30, panel.y + 90, panel.width - 60, 80), description, 16, DungeonUi.Muted);
+            if (Event.current.type == EventType.KeyDown && Event.current.keyCode == KeyCode.Escape) { Event.current.Use(); return false; }
+            if (DungeonUi.Button("confirmBack", new Rect(panel.x + 24, panel.yMax - 64, 210, 42), "Back", DungeonUi.Muted)) return false;
+            if (DungeonUi.Button("confirmYes", new Rect(panel.xMax - 234, panel.yMax - 64, 210, 42), confirmText, color)) return true;
+            return null;
         }
 
         private void DrawArtifacts()
@@ -459,12 +489,20 @@ namespace Slopgame
                 int rank = Run.Player.Abilities.Rank(ability.Type);
                 Card(rect, rank > 0 ? $"KNOWN  /  RANK {rank}" : $"NEW ABILITY  /  {ability.Cooldown:0}s COOLDOWN", ability.Name, ability.Description, ability.Color, ability.Glyph);
                 if (DungeonUi.Button("offer" + ability.Type, new Rect(rect.x + 24, rect.yMax - 60, rect.width - 48, 40),
-                    rank > 0 ? $"Raise to rank {rank + 1}" : "Learn", ability.Color))
-                { Run.PickAbility(ability.Type); return; }
+                    rank > 0 ? $"Raise to rank {rank + 1}" : "Learn", ability.Color, pendingAbility == AbilityType.None))
+                    pendingAbility = ability.Type;
             }
             if (offers.Count == 0)
                 DungeonUi.Label(new Rect(240, 380, 800, 60), $"You have mastered every ability this guardian could teach. Leave the artifact for {DungeonRun.LeftArtifactCrystals} crystals.", 20, DungeonUi.Muted, TextAnchor.MiddleCenter);
-            if (DungeonUi.Button("leaveArtifact", new Rect(470, 661, 340, 35), $"Leave it  /  +{DungeonRun.LeftArtifactCrystals} crystals", CrystalPouch.CrystalColor)) Run.LeaveArtifact();
+            if (DungeonUi.Button("leaveArtifact", new Rect(470, 661, 340, 35), $"Leave it  /  +{DungeonRun.LeftArtifactCrystals} crystals", CrystalPouch.CrystalColor,
+                pendingAbility == AbilityType.None)) Run.LeaveArtifact();
+            if (pendingAbility == AbilityType.None) return;
+            var picked = AbilityCatalog.Get(pendingAbility);
+            int known = Run.Player.Abilities.Rank(picked.Type);
+            var answer = ConfirmPick(known > 0 ? $"Raise {picked.Name} to rank {known + 1}?" : $"Learn {picked.Name}?", picked.Description, picked.Color,
+                known > 0 ? "Raise rank" : "Learn");
+            if (answer == true) { var type = pendingAbility; pendingAbility = AbilityType.None; Run.PickAbility(type); }
+            else if (answer == false) pendingAbility = AbilityType.None;
         }
 
         /// <summary>After the pick: every learned ability, and which sit on Q and E.</summary>
@@ -480,7 +518,7 @@ namespace Slopgame
         private void DrawWorldComplete()
         {
             bool decides = !Run.IsNetworked || Run.Coop.IsHost;
-            if (showTravelMap && decides) { DrawTravelMap(); return; }
+            if (showTravelMap) { DrawTravelMap(decides); return; }
             var world = Run.World;
             string ahead = Run.HasNextWorld ? "Ahead:  " + WorldCatalog.All[world.Index + 1].Name : "No world lies beyond. The descent goes on without end.";
             ModalTitle($"WORLD {world.Index + 1} CLEARED", world.Name,
@@ -496,15 +534,27 @@ namespace Slopgame
                 {
                     if (DungeonUi.Button("worldLobby", new Rect(450, 450, 380, 50), "Back to the party", DungeonUi.Teal)) Run.Coop.HostReturnToLobby();
                 }
-                else DungeonUi.Label(new Rect(450, 380, 380, 40), "Waiting for the host…", 18, DungeonUi.Muted, TextAnchor.MiddleCenter);
+                else
+                {
+                    // Teammates can look over the map while the host decides where the party goes.
+                    DungeonUi.Label(new Rect(450, 326, 380, 36), "Waiting for the host to choose…", 18, DungeonUi.Muted, TextAnchor.MiddleCenter);
+                    if (DungeonUi.Button("worldMapGuest", new Rect(450, 370, 380, 62), "World map", world.Accent))
+                    {
+                        travelMap.Selected = Run.HasNextWorld ? world.Index + 1 : world.Index;
+                        showTravelMap = true;
+                    }
+                }
                 if (DungeonUi.Button("worldLeave", new Rect(450, 520, 380, 44), "Leave party", DungeonUi.Muted)) Run.ShowMainMenu();
                 return;
             }
             if (DungeonUi.Button("worldMenu", new Rect(450, 450, 380, 50), "Main menu", DungeonUi.Muted)) Run.ShowMainMenu();
         }
 
-        /// <summary>The travel map between worlds: pick any world (nothing is locked yet) and travel there.</summary>
-        private void DrawTravelMap()
+        /// <summary>
+        /// The travel map between worlds: pick any world (nothing is locked yet) and travel there. Co-op teammates
+        /// browse the same map, but only the host sends the party on.
+        /// </summary>
+        private void DrawTravelMap(bool decides)
         {
             var world = Run.World;
             // Below the dimmed floor label and objective, which sit at the top of the screen.
@@ -513,6 +563,11 @@ namespace Slopgame
             travelMap.Draw(Run, new Rect(70, 186, 1140, 396), world.Index, true);
             var target = WorldCatalog.All[travelMap.Selected];
             if (DungeonUi.Button("mapBack", new Rect(70, 598, 268, 48), "Back", DungeonUi.Muted)) showTravelMap = false;
+            if (!decides)
+            {
+                DungeonUi.Label(new Rect(450, 598, 760, 48), "The host chooses where the party travels.", 18, DungeonUi.Muted, TextAnchor.MiddleCenter);
+                return;
+            }
             // Past the last world, the descent can also simply carry on.
             if (!Run.HasNextWorld && DungeonUi.Button("mapDescend", new Rect(450, 598, 380, 48), "Keep descending", world.Accent))
                 Run.ContinueFromWorldComplete();

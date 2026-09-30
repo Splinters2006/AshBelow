@@ -142,12 +142,12 @@ namespace Slopgame
                     leap = StartCoroutine(Leap(target, rank));
                     return true;
                 case AbilityType.PrimalRage: PrimalRage(rank); return true;
-                case AbilityType.ThunderClap: ThunderClap(aim, rank); return true;
+                case AbilityType.ThunderClap: StartCoroutine(ThunderClap(aim, rank)); return true;
                 case AbilityType.HaymakerDash: StartCoroutine(HaymakerDash(aim, rank)); return true;
                 case AbilityType.Suplex:
                     var grabbed = FindSuplexTarget();
                     if (grabbed == null) return false;
-                    StartCoroutine(Suplex(grabbed, aim, rank));
+                    StartCoroutine(Suplex(grabbed, rank));
                     return true;
                 default: return false;
             }

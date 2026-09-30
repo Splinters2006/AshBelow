@@ -256,6 +256,61 @@ namespace Slopgame
             return Sprite.Create(texture, new Rect(0, 0, width, height), new Vector2(23f / width, 0.5f), 40f);
         }
 
+        private static Sprite glowSprite;
+
+        /// <summary>A soft round falloff for light pools and halos, drawn tinted and translucent. One world unit across.</summary>
+        public static Sprite GlowSprite
+        {
+            get
+            {
+                if (glowSprite != null) return glowSprite;
+                const int size = 32;
+                var texture = new Texture2D(size, size, TextureFormat.RGBA32, false) { name = "Soft glow", filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp };
+                var pixels = new Color[size * size];
+                for (int y = 0; y < size; y++)
+                    for (int x = 0; x < size; x++)
+                    {
+                        float distance = Vector2.Distance(new Vector2(x + 0.5f, y + 0.5f), Vector2.one * size / 2f) / (size / 2f);
+                        float falloff = Mathf.Clamp01(1f - distance);
+                        pixels[y * size + x] = new Color(1f, 1f, 1f, falloff * falloff);
+                    }
+                texture.SetPixels(pixels);
+                texture.Apply(false, true);
+                return glowSprite = Sprite.Create(texture, new Rect(0, 0, size, size), Vector2.one * 0.5f, size);
+            }
+        }
+
+        private static Sprite arrowSprite;
+
+        /// <summary>
+        /// An arrow pointing right: a steel broadhead, a pale wooden shaft and split fletching. Light enough to take a
+        /// tint (the Archer's element) without losing its shape. One world unit long before scaling.
+        /// </summary>
+        public static Sprite ArrowSprite => arrowSprite != null ? arrowSprite : arrowSprite = PaletteSprite("Arrow", new[]
+        {
+            "FF............H...",
+            ".FF..........HHH..",
+            "NFFSSSSSSSSSSHHWHH",
+            ".FF..........HHH..",
+            "FF............H...",
+        }, key => key switch
+        {
+            'F' => new Color(1f, 1f, 1f),
+            'N' => new Color(0.7f, 0.6f, 0.5f),
+            'S' => new Color(0.85f, 0.72f, 0.55f),
+            'H' => new Color(0.8f, 0.84f, 0.9f),
+            'W' => Color.white,
+            _ => Color.clear
+        });
+
+        /// <summary>An arrow renderer <paramref name="length"/> long, pointing along its local +x.</summary>
+        public static SpriteRenderer CreateArrow(string name, Transform parent, Vector2 position, float length, Color tint, int order)
+        {
+            var renderer = Create(name, parent, position, Vector2.one * length, tint, order);
+            renderer.sprite = ArrowSprite;
+            return renderer;
+        }
+
         /// <summary>A thrown steel blade: the point sits at the collision position, the hilt trails behind.</summary>
         public static SpriteRenderer CreateThrownBlade(Transform parent, Vector2 position)
         {

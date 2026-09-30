@@ -151,12 +151,16 @@ namespace Slopgame
             && (upgrade.ClassWeapon.HasValue ? GuardiansDefeatedAs(upgrade.ClassWeapon.Value) : data.guardians) >= upgrade.RequiredGuardians
             && (upgrade.RequiredWorld < 0 || HasClearedWorld(upgrade.RequiredWorld));
 
-        public bool HasClearedWorld(int index) => data.clearedWorlds.Contains(index);
+        /// <summary>
+        /// True once this world or any later one has been cleared: getting past a world counts, so worlds skipped on
+        /// the travel map (or cleared before clears were saved) don't keep their rewards locked.
+        /// </summary>
+        public bool HasClearedWorld(int index) => data.clearedWorlds.Exists(world => world >= index);
 
-        /// <summary>A world was cleared (its third guardian beaten): its two Ash shop rewards unlock.</summary>
+        /// <summary>A world was cleared (its third guardian beaten): its Ash shop rewards, and every earlier world's, unlock.</summary>
         public void RecordWorldCleared(int index)
         {
-            if (IsReadOnly || HasClearedWorld(index)) return;
+            if (IsReadOnly || data.clearedWorlds.Contains(index)) return;
             data.clearedWorlds.Add(index);
             dirty = true;
             Save();

@@ -7,7 +7,7 @@ namespace Slopgame
         private static string LockedText(PermanentUpgradeDefinition item)
         {
             if (item.RequiredWorld >= 0 && item.RequiredWorld < WorldCatalog.All.Length)
-                return $"Clear {WorldCatalog.All[item.RequiredWorld].Name} to unlock";
+                return $"Clear {WorldCatalog.All[item.RequiredWorld].Name} or any later world to unlock";
             string hero = item.ClassWeapon.HasValue ? Tabs[System.Array.IndexOf(Weapons, item.ClassWeapon)] : null;
             string guardian = item.RequiredGuardians == 3 ? "the third guardian" : $"{item.RequiredGuardians} guardians in one descent";
             return hero != null ? $"Defeat {guardian} as the {hero} to unlock" : $"Defeat {guardian} to unlock";

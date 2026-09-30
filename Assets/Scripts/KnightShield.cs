@@ -34,7 +34,7 @@ namespace Slopgame
 
         public bool Raise(Vector2 aim)
         {
-            if (!Player.Run.IsPlaying || Player.IsRolling || IsThrown || CooldownRemaining > 0f || aim.sqrMagnitude < 0.001f) return false;
+            if (!Player.Run.IsPlaying || Player.IsRolling || IsThrown || Whirlwind.IsSpinningOn(Player) || CooldownRemaining > 0f || aim.sqrMagnitude < 0.001f) return false;
             Direction = aim.normalized;
             blockingUntil = Time.time + Duration;
             readyAt = Time.time + Cooldown * Player.Powerups.SkillCooldownMultiplier;

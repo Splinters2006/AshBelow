@@ -113,7 +113,7 @@ namespace Slopgame
                 enemy.Hit(rolled, source, knockback);
                 if (player.ClassWeapon == WeaponType.Daggers && behind)
                 {
-                    player.Mechanic?.OnBackstab();
+                    if (!ShadowClone.IsStriking) player.Mechanic?.OnBackstab();
                     OnBackstab(player, enemy, rolled);
                 }
                 CreditBlessing(player);

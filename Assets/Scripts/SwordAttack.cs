@@ -9,6 +9,8 @@ namespace Slopgame
         /// <summary>The Assassin stabs rather than sweeps, so her hit area is a narrow wedge.</summary>
         public const float StabAngle = 40f;
         public bool ShowChargePreview { get; set; } = true;
+        /// <summary>Enemies are hit when any part of their body is inside the cone, so what the cone shows is what gets hit.</summary>
+        public bool HitsWholeBody { get; set; }
         public bool IsHeavyAttacking => Player.Shield != null && Player.Shield.IsBlocking;
         public float HeavyCooldownRemaining => Player.Shield != null ? Player.Shield.CooldownRemaining : DebugMode.Cooldown(Mathf.Max(0f, shadowReadyAt - Time.time));
         public void ReduceHeavyCooldown(float seconds)
@@ -16,7 +18,7 @@ namespace Slopgame
             if (Player.Shield != null) Player.Shield.ReduceCooldown(seconds);
             else shadowReadyAt = Cooldowns.Shorten(shadowReadyAt, seconds);
         }
-        public bool CanAttack => Player.Run.IsPlaying && !Player.IsRolling && !IsHeavyAttacking && Time.time >= readyAt;
+        public bool CanAttack => Player.Run.IsPlaying && !Player.IsRolling && !IsHeavyAttacking && Time.time >= readyAt && !Whirlwind.IsSpinningOn(Player);
         public DungeonPlayer Player { get; set; }
         private float readyAt, visibleUntil;
         private float shadowReadyAt;
@@ -79,11 +81,27 @@ namespace Slopgame
         }
         private bool fullSlash;
 
+        /// <summary>Whether any part of a body of <paramref name="radius"/> at <paramref name="offset"/> lies inside the cone.</summary>
+        public static bool OverlapsCone(Vector2 offset, Vector2 aim, float reach, float coneAngle, float radius)
+        {
+            if (ContainsTarget(offset, aim, reach, coneAngle)) return true;
+            if (offset.sqrMagnitude > (reach + radius) * (reach + radius)) return false;
+            // Otherwise it can only reach in across one of the cone's two straight edges or its curved rim.
+            float aimAngle = Mathf.Atan2(aim.y, aim.x), half = coneAngle * 0.5f * Mathf.Deg2Rad;
+            for (int side = -1; side <= 1; side += 2)
+            {
+                Vector2 edge = new Vector2(Mathf.Cos(aimAngle + side * half), Mathf.Sin(aimAngle + side * half));
+                float along = Mathf.Clamp(Vector2.Dot(offset, edge), 0f, reach);
+                if ((offset - edge * along).sqrMagnitude <= radius * radius) return true;
+            }
+            return offset.magnitude <= reach + radius && ContainsTarget(offset.normalized * Mathf.Min(offset.magnitude, reach * 0.99f), aim, reach, coneAngle);
+        }
+
         public bool TrySwipe(Vector2 aim, int damage, float reach, float cone)
         {
             if (!CanAttack || aim.sqrMagnitude < 0.001f) return false;
             SetArc(reach, cone, Player.ClassWeapon == WeaponType.Daggers
-                ? new Color(0.75f, 0.45f, 1f, 0.55f) : new Color(0.4f, 1f, 0.85f, 0.45f));
+                ? new Color(0.75f, 0.45f, 1f, 0.55f) : HitsWholeBody ? new Color(1f, 0.85f, 0.35f, 0.45f) : new Color(0.4f, 1f, 0.85f, 0.45f));
             readyAt = Time.time + 0.42f * Player.Powerups.AttackIntervalMultiplier;
             FaceArc(aim);
             if (Player.ClassWeapon == WeaponType.Daggers)
@@ -104,8 +122,9 @@ namespace Slopgame
             for (int i = Player.Run.Enemies.Count - 1; i >= 0; i--)
             {
                 var enemy = Player.Run.Enemies[i];
-                if (ContainsTarget(enemy.transform.position - transform.position, aim, reach, cone)
-                    && Player.Run.HasLineOfSight(transform.position, enemy.transform.position))
+                Vector2 offset = enemy.transform.position - transform.position;
+                bool inside = HitsWholeBody ? OverlapsCone(offset, aim, reach, cone, enemy.HitRadius) : ContainsTarget(offset, aim, reach, cone);
+                if (inside && Player.Run.HasLineOfSight(transform.position, enemy.transform.position))
                 {
                     // Counterweight: a full slash hurls enemies back and staggers them.
                     bool counterweight = fullSlash && Player.Powerups.Count(PowerupType.Counterweight) > 0;

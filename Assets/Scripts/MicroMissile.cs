@@ -3,20 +3,21 @@ using UnityEngine;
 namespace Slopgame
 {
     /// <summary>
-    /// One of the Augment's Micro-Missiles. It leaves the pod on a spread heading, then curves in on its target (tighter
-    /// the longer it flies, so it never circles) and bursts on impact, a wall, or when its fuel runs out.
+    /// One of the Augment's Micro-Missiles. It leaves the pod on a spread heading, then curves hard in on its target
+    /// (tighter the longer it flies and the closer it gets, so it never circles), switching to the nearest enemy if its
+    /// target falls, and bursts on impact, a wall, or when its fuel runs out.
     /// Teammates see a copy fly to where the target stood at launch.
     /// </summary>
     public sealed class MicroMissile : MonoBehaviour
     {
-        public const float Speed = 9f, Lifetime = 2.2f, BlastRadius = 0.9f;
+        public const float Speed = 9f, Lifetime = 2.2f, BlastRadius = 0.9f, TurnRate = 540f, TurnGrowth = 1600f, RetargetRange = 7f;
         private DungeonRun run;
         private DungeonPlayer shooter;
         private DungeonEnemy target;
         private Vector2 direction, goal;
         private float age;
         private int damage;
-        private bool ghost;
+        private bool ghost, tracking;
         public bool IsSpent { get; private set; }
 
         public static MicroMissile Launch(DungeonPlayer shooter, Vector2 origin, Vector2 direction, DungeonEnemy target, int damage)
@@ -31,6 +32,7 @@ namespace Slopgame
             missile.damage = damage;
             // With nobody to chase, a missile flies straight out and bursts 6 units away.
             missile.target = tracking ? target : null;
+            missile.tracking = tracking;
             return missile;
         }
 
@@ -60,14 +62,18 @@ namespace Slopgame
         {
             if (IsSpent || run == null || !run.IsPlaying || deltaTime <= 0f) return;
             age += deltaTime;
+            // If its target falls first, it locks onto whoever is nearest instead of flying on to an empty spot.
+            if ((target == null || target.Health <= 0) && !ghost && tracking) target = Nearest(transform.position);
             if (target != null && target.Health > 0) goal = target.transform.position;
             else target = null;
             Vector2 position = transform.position;
             Vector2 wanted = goal - position;
             if (wanted.sqrMagnitude > 0.0001f)
             {
-                // Turns harder the longer it flies, so it closes in instead of orbiting.
-                float turn = (240f + 900f * age) * Mathf.Deg2Rad * deltaTime;
+                // Turns hard from the start and harder the longer it flies, so it closes in instead of orbiting;
+                // close to its prey it all but snaps onto it.
+                float close = Mathf.Clamp01(1f - wanted.magnitude / 2.5f);
+                float turn = (TurnRate + TurnGrowth * age + 720f * close) * Mathf.Deg2Rad * deltaTime;
                 direction = ((Vector2)Vector3.RotateTowards(direction, wanted.normalized, turn, 0f)).normalized;
                 Face();
             }
@@ -84,6 +90,19 @@ namespace Slopgame
                     { Explode(next); return; }
             }
             if (age >= Lifetime) Explode(transform.position);
+        }
+
+        private DungeonEnemy Nearest(Vector2 from)
+        {
+            DungeonEnemy best = null;
+            float bestDistance = RetargetRange;
+            foreach (var enemy in run.Enemies)
+            {
+                if (enemy == null || enemy.Health <= 0) continue;
+                float distance = Vector2.Distance(from, enemy.transform.position);
+                if (distance < bestDistance && run.HasLineOfSight(from, enemy.transform.position)) { bestDistance = distance; best = enemy; }
+            }
+            return best;
         }
 
         private void Explode(Vector2 center)

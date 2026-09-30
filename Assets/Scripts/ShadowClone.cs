@@ -4,16 +4,18 @@ using UnityEngine;
 namespace Slopgame
 {
     /// <summary>
-    /// Shadow Clone: for a while after it is cast, every backstab the Assassin lands summons a shadow clone behind the
-    /// victim that backstabs it again.
+    /// Shadow Clone: for a while after it is cast, every backstab the Assassin lands summons a shadow copy of her behind
+    /// the victim that lunges in and backstabs it again. Each clone stab adds a Sharpened Dagger stack.
     /// </summary>
     public sealed class ShadowClone : MonoBehaviour
     {
-        public const float Duration = 7.5f, Delay = 0.2f;
+        public const float Duration = 7.5f, Delay = 0.25f;
         private DungeonPlayer player;
         private float until;
         /// <summary>True while a clone's own stab resolves, so it does not summon clones of its own.</summary>
         private static bool striking;
+        /// <summary>A clone's stab is resolving; it sharpens the dagger itself, so the hit must not count it again.</summary>
+        public static bool IsStriking => striking;
 
         public static void Activate(DungeonPlayer player, float duration)
         {
@@ -35,18 +37,18 @@ namespace Slopgame
         private IEnumerator Stab(DungeonEnemy enemy, int damage)
         {
             var run = player.Run;
-            Vector2 behind = (Vector2)enemy.transform.position - enemy.Facing.Direction * 0.7f;
-            var shade = DungeonVisuals.Create("Shadow clone", run.ProjectileRoot, behind, Vector2.one * 0.65f, new Color(0.35f, 0.2f, 0.55f, 0.75f), 4);
-            shade.sprite = HeroSprites.Body(WeaponType.Daggers);
-            shade.gameObject.AddComponent<FadingSprite>().Duration = Delay + 0.35f;
-            ShadowstepVfx.Puff(run.ProjectileRoot, behind);
-            CoopFx.Shadowstep(run, behind, behind);
+            Vector2 behind = (Vector2)enemy.transform.position - enemy.Facing.Direction * 0.9f;
+            // A shadow copy of the Assassin herself steps out of the smoke behind the victim and lunges in.
+            ShadowCloneVfx.Play(run.ProjectileRoot, player.transform, behind, enemy.transform.position, Delay);
+            CoopFx.ShadowClone(run, behind, enemy.transform.position, Delay);
             yield return new WaitForSeconds(Delay);
             if (enemy == null || enemy.Health <= 0 || !run.IsPlaying) yield break;
             striking = true;
             // From behind, so it is itself a backstab.
             try { CombatDamage.Apply(player, enemy, damage, DamageElement.Physical, (Vector2)enemy.transform.position - enemy.Facing.Direction, 0.3f); }
             finally { striking = false; }
+            // Every clone's stab sharpens the Assassin's dagger like one of her own backstabs.
+            player.Mechanic?.OnBackstab();
         }
     }
 }

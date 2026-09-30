@@ -10,7 +10,7 @@ namespace Slopgame
     /// </summary>
     public sealed class PiercingArrow : MonoBehaviour
     {
-        public const float Range = 18f, Speed = 28f, BoomSpacing = 1.8f;
+        public const float Range = 18f, Speed = 35f, BoomSpacing = 1.8f;
         public static readonly Color Core = new Color(1f, 0.97f, 0.8f);
         private DungeonRun run;
         private DungeonPlayer shooter;

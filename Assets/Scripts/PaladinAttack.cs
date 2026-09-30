@@ -25,6 +25,8 @@ namespace Slopgame
         private PaladinRelics relics;
         private float readyAt, swordReadyAt;
         public const int RetributionBonus = 3;
+        /// <summary>The left-click swing's hit area, which the cone flashed on each swing shows exactly.</summary>
+        public const float SwingReach = 1.9f, SwingCone = 80f, RetributionReach = 2.3f, RetributionCone = 140f;
         private bool retributionReady;
 
         public void Initialize(DungeonPlayer player, SwordAttack sword)
@@ -32,6 +34,7 @@ namespace Slopgame
             Player = player;
             swipe = sword;
             swipe.ShowChargePreview = false;
+            swipe.HitsWholeBody = true;
             relics = GetComponent<PaladinRelics>();
             Player.Struck += warded => { if (Player.Powerups.Count(PowerupType.Retribution) > 0) retributionReady = true; };
             // Teammates see the same ring through RemoteHero.
@@ -48,10 +51,9 @@ namespace Slopgame
                 if (retributionReady)
                 {
                     retributionReady = false;
-                    HeroVfx.Slash(Player.Run.ProjectileRoot, transform.position, aim, 2f, 140f, AbilityCatalog.Gold, 0.25f);
-                    return swipe.TrySwipe(aim, Mathf.Max(1, Player.BaseDamage / 2) + Player.Blessing.BonusDamage + RetributionBonus, 2f, 140f);
+                    return swipe.TrySwipe(aim, Mathf.Max(1, Player.BaseDamage / 2) + Player.Blessing.BonusDamage + RetributionBonus, RetributionReach, RetributionCone);
                 }
-                return swipe.TrySwipe(aim, Mathf.Max(1, Player.BaseDamage / 2) + Player.Blessing.BonusDamage, 1.6f, SwordAttack.ConeAngle);
+                return swipe.TrySwipe(aim, Mathf.Max(1, Player.BaseDamage / 2) + Player.Blessing.BonusDamage, SwingReach, SwingCone);
             }
             // Zeal: ten stacks double the blessing.
             int blessing = Player.Powerups.ConsumeZeal() ? BlessingDamage * 2 : BlessingDamage;
