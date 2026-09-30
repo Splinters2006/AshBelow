@@ -19,7 +19,7 @@ namespace Slopgame
         // T glowing tail tip, C pale skin, c pale skin shade. Wings: X leather, x crease, Z bone, Y outline, y claw,
         // w glowing violet edge.
         // i blue iris / visor glint, l green iris, h brown hair highlight, a blond hair, e blond hair shade, o auburn hair,
-        // p blush, m mouth, t fur highlight.
+        // p blush, m mouth, t fur highlight, u dark fur (the inside of the Brawler's ears).
         // The Gambler reuses G / g for his gold tooth, coins and purse.
         // J glowing plasma, j deep plasma, O gunmetal (the Augment's implant eye, power core and arm cannon).
         private static readonly Dictionary<WeaponType, string[]> Grids = new Dictionary<WeaponType, string[]>
@@ -59,12 +59,12 @@ namespace Slopgame
                 "....DSSSSSSSSpsD.B..", "....DaSSSmmSSsaD.B..", "...DGDaSSSSSSaDGDB..", "..DGGDDFWWWWFDDGgBs.",
                 "..DLWFDFWGGWFMDGDs..", "..DFGFDWWgGWWMDD....", "...DFDDLWWWWWMD.....", "....DDDKKDDKKDD.....",
             } },
-            { WeaponType.Fists, new[] // Brawler: a puppygirl pit-fighter with auburn hair, floppy ears, green eyes and a pink tongue, a collar, a wagging tail and big gloves
+            { WeaponType.Fists, new[] // Brawler: a puppygirl pit-fighter with auburn hair, big droopy dog ears, green eyes, a button nose and a :3 mouth with her tongue out, a tagged collar, a wagging tail and big gloves
             {
-                "....................", ".....DDDDDDDDD......", "...DDoohhooooDD.....", "..DAoohoooooooAD....",
-                ".DAAoooooooooooAD...", ".DAtoSSSSSSSSSoAD...", ".DAtSSSElSSElSSAD...", ".DAAoSSSSSSSSpsAD...",
-                ".DAAoSSSSPSSSsoAD...", "..DDDDSSSSSSsDDDD...", "A...DDrrGrrDD.DRRr..", "AA.DLWWWWWFFDDRRRRr.",
-                ".AADWWWWWWMMDRRRRRr.", "...DDDgGgDDD.DrrrD..", "....DSSDSsD.........", "...DDkkDkkDD........",
+                "....................", "......DDDDDDDD......", "..DDDoohhooooooDDD..", ".DAAtDohooooooDtAAD.",
+                "DAtAADooooooooDAAtAD", "DAAAuDoSSSSSSoDuAAAD", "DAAAuDSSElSSElDuAAAD", "DAAAuDSpSSSESpDuAAAD",
+                ".DAAuDsSSSmSmSDuAAD.", ".DD.DDDsSSSPsDDD.DD.", "DtD..DDrrrGrrDD.DRRr", "DAtDDLWWWWWFFDDRRRRr",
+                "DAAADWWWWWWMMDRRRRRr", ".DDDDDDgGgDDD.DrrrD.", "....DSSDDSsD........", "...DDkkD.DkkDD......",
             } },
             { WeaponType.Tail, new[] // Demoness: a pale girl with curled black ram horns, long dark violet hair, glowing eyes, a spade-tipped tail and bat wings drawn like Wing Dash's (clawed wrist, finger bones, scalloped violet-lit edge)
             {
@@ -221,6 +221,7 @@ namespace Slopgame
                 case 'o': return new Color(0.62f, 0.26f, 0.16f);
                 case 'p': return new Color(1f, 0.62f, 0.62f);
                 case 'm': return new Color(0.55f, 0.16f, 0.2f);
+                case 'u': return new Color(0.36f, 0.2f, 0.11f);
                 case 't': return new Color(0.76f, 0.54f, 0.34f);
                 // The Demoness's bat wings: dark oxblood leather with lighter creases, veins and near-black bone.
                 case 'X': return new Color(0.13f, 0.05f, 0.07f);
