@@ -17,7 +17,7 @@ namespace Slopgame
             1 => new[] { typeof(NeonLancer), typeof(SniperDrone), typeof(MineCrawler) },
             2 => new[] { typeof(BrimstoneCultist), typeof(BlinkImp) },
             3 => new[] { typeof(BlinkMagus), typeof(OrbitingEye) },
-            4 => new[] { typeof(Cutthroat), typeof(BladeJuggler) },
+            4 => new[] { typeof(Cutthroat), typeof(BladeJuggler), typeof(Shadowstepper) },
             5 => new[] { typeof(BloatToad), typeof(WildRaptor) },
             _ => new[] { typeof(EmberFanatic) }
         };
