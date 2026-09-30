@@ -14,7 +14,7 @@ namespace Slopgame
     }
 
     public enum CoopChoice : byte { Upgrade, Artifact }
-    public enum CoopDamageKind : byte { Hit, Burn, Chill, Paralyze, Curse, Freeze, Fear }
+    public enum CoopDamageKind : byte { Hit, Burn, Chill, Paralyze, Curse, Freeze, Fear, Stun, Root, Bleed, Poison }
     public enum CoopBoltEventKind : byte { Reflected, Consumed }
     /// <summary>
     /// Heal, Protect and Bless help a teammate. BlessingCredit tells a Paladin how much bonus damage their blessing
@@ -61,7 +61,7 @@ namespace Slopgame
         /// <summary>The top four bits carry the boss's attack state (see <see cref="DungeonBoss.NetState"/>).</summary>
         public const int BossStateShift = 4;
         /// <summary>Bits of <see cref="MoreFlags"/>.</summary>
-        public const byte Paralyzed = 1, Cursed = 2, Frozen = 4, HasMaxHealth = 8;
+        public const byte Paralyzed = 1, Cursed = 2, Frozen = 4, HasMaxHealth = 8, Stunned = 16, Rooted = 32, Bleeding = 64, Poisoned = 128;
         public ushort Id;
         public Vector2 Position, Facing;
         public int Health;

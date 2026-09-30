@@ -17,7 +17,10 @@ namespace Slopgame
         DeadlyPrecision, SlowBurn, Permafrost, StaticField, RelicTraining, SoulShield,
         GuardDrills, Longsword, VolleyDrills, Farshot, StormRhythm, Stormcraft, ShadowDance, LongDaggers,
         DivineCadence, PatientFaith, SecondRound, HeavyGloves, TailRhythm, CruelTouch, QuickDeal, LuckyStreak,
-        HeatSink, WideBeam, NightCycle, DarkHorizon
+        HeatSink, WideBeam, NightCycle, DarkHorizon,
+        // Universal talents from the talents & abilities expansion.
+        GlassCannon, LastStand, Berserker, OpeningStrike, Executioner, Rhythm, Spellblade, Overkill, ElementalKills, Thorns,
+        CloseCall, CheatDeath
     }
 
     public sealed class PowerupDefinition
@@ -94,13 +97,13 @@ namespace Slopgame
             new PowerupDefinition(PowerupType.RiggedOdds, "Rigged Odds", "+5% odds on All In", 3, WeaponType.Coins, AbilityType.AllIn),
             new PowerupDefinition(PowerupType.HighRoller, "High Roller", "+2 seconds of Jackpot buffs", 3, WeaponType.Coins, AbilityType.Jackpot),
             // Universal boons: any class can find them as room rewards or buy them as crystal shop relics.
-            new PowerupDefinition(PowerupType.NerveSnap, "Nerve Snap", "Killing a paralysed or frozen enemy resets your class skill", 1),
+            new PowerupDefinition(PowerupType.NerveSnap, "Nerve Snap", "Killing an immobilized enemy (paralysed, frozen, stunned or rooted) resets your class skill", 1),
             new PowerupDefinition(PowerupType.PyreBurst, "Pyre Burst", "Burning enemies explode when they die, hurting everything nearby", 1),
             new PowerupDefinition(PowerupType.Kindling, "Kindling", "Every elemental effect you set off also sets the enemy burning", 1),
             new PowerupDefinition(PowerupType.Massacre, "Massacre", "Killing 5 enemies within 1 second resets your class skill", 1),
             new PowerupDefinition(PowerupType.Momentum, "Momentum", "Killing 2 enemies within 1 second resets your dodge", 1),
             new PowerupDefinition(PowerupType.Bloodrush, "Bloodrush", "Every kill takes 0.5 seconds off all your cooldowns", 1),
-            new PowerupDefinition(PowerupType.StillHunter, "Still Hunter", "Killing a paralysed or frozen enemy takes 0.5 seconds off all your cooldowns", 1),
+            new PowerupDefinition(PowerupType.StillHunter, "Still Hunter", "Killing an immobilized enemy (paralysed, frozen, stunned or rooted) takes 0.5 seconds off all your cooldowns", 1),
             new PowerupDefinition(PowerupType.Prospector, "Prospector", "Kills have a 50% / 100% chance by rank to drop extra crystals", 2),
             new PowerupDefinition(PowerupType.Haggler, "Haggler", "Crystal shop prices 25% / 50% lower by rank", 2),
             new PowerupDefinition(PowerupType.MerchantsFavor, "Merchant's Favor", "One free reroll of every crystal shop's wares", 1),
@@ -135,7 +138,20 @@ namespace Slopgame
             new PowerupDefinition(PowerupType.HeatSink, "Augment: Heat Sink", "Plasma Cannon cooldown is 10% shorter per rank", 3, WeaponType.Beam),
             new PowerupDefinition(PowerupType.WideBeam, "Augment: Wide Beam", "Plasma ray width +0.08 per rank", 3, WeaponType.Beam),
             new PowerupDefinition(PowerupType.NightCycle, "Admin: Night Cycle", "Nightfall cooldown is 10% shorter per rank", 3, WeaponType.Shadow),
-            new PowerupDefinition(PowerupType.DarkHorizon, "Admin: Dark Horizon", "Nightfall radius +1 per rank", 3, WeaponType.Shadow)
+            new PowerupDefinition(PowerupType.DarkHorizon, "Admin: Dark Horizon", "Nightfall radius +1 per rank", 3, WeaponType.Shadow),
+            // Universal talents built on conditions and trade-offs rather than flat stat bumps.
+            new PowerupDefinition(PowerupType.GlassCannon, "Glass Cannon", "Deal 1.5x damage, but your maximum HP is halved (later max HP gains are halved too)", 1),
+            new PowerupDefinition(PowerupType.LastStand, "Last Stand", "While at 1 HP, deal double damage and move 20% faster", 1),
+            new PowerupDefinition(PowerupType.Berserker, "Berserker", "+1% damage for every 1% of your HP that is missing", 1),
+            new PowerupDefinition(PowerupType.OpeningStrike, "Opening Strike", "Your first hit on an unhurt enemy is always a critical hit (or sets off its element)", 1),
+            new PowerupDefinition(PowerupType.Executioner, "Executioner", "+50% damage to enemies below 25% health", 1),
+            new PowerupDefinition(PowerupType.Rhythm, "Rhythm", "Every 4th basic attack or class skill deals double damage", 1),
+            new PowerupDefinition(PowerupType.Spellblade, "Spellblade", "Using a Q or E ability makes your next 3 basic attacks deal +2", 1),
+            new PowerupDefinition(PowerupType.Overkill, "Overkill", "Damage left over from a killing blow hits the nearest enemy; bigger overkills reach farther", 1),
+            new PowerupDefinition(PowerupType.ElementalKills, "Elemental Kills", "Every kill makes your next elemental hit set off its element", 1),
+            new PowerupDefinition(PowerupType.Thorns, "Thorns", "When you're hit, deal your damage to every enemy within 1 unit", 1),
+            new PowerupDefinition(PowerupType.CloseCall, "Close Call", "Rolling through an enemy bolt gives +1 ward (once every 5 seconds)", 1),
+            new PowerupDefinition(PowerupType.CheatDeath, "Cheat Death", "Once per world, a hit that would kill you leaves you at 1 HP", 1)
         };
 
         public static PowerupDefinition Get(PowerupType type) => All[(int)type];

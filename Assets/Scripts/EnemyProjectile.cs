@@ -97,6 +97,8 @@ namespace Slopgame
                 }
                 if (Vector2.Distance(next, run.Player.transform.position) <= 0.42f)
                 {
+                    // Close Call: the roll slipped through this bolt.
+                    if (run.Player.IsRolling) run.Player.Powerups.OnCloseCall(run.Player);
                     if (run.Player.Hit())
                     {
                         if (Kind == BoltKind.Venom) run.Player.Poison();

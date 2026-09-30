@@ -279,7 +279,9 @@ namespace Slopgame
                     || (enemy.Variant != null && enemy.Variant.IsWindingUp)) flags |= EnemySnapshot.Charging;
                 if (enemy.Boss != null) flags |= (byte)(enemy.Boss.NetState << EnemySnapshot.BossStateShift);
                 byte more = (byte)((enemy.IsParalyzed ? EnemySnapshot.Paralyzed : 0) | (enemy.IsCursed ? EnemySnapshot.Cursed : 0)
-                    | (enemy.IsFrozen ? EnemySnapshot.Frozen : 0) | (enemy.Boss != null ? EnemySnapshot.HasMaxHealth : 0));
+                    | (enemy.IsFrozen ? EnemySnapshot.Frozen : 0) | (enemy.Boss != null ? EnemySnapshot.HasMaxHealth : 0)
+                    | (enemy.IsStunned ? EnemySnapshot.Stunned : 0) | (enemy.IsRooted ? EnemySnapshot.Rooted : 0)
+                    | (enemy.IsBleeding ? EnemySnapshot.Bleeding : 0) | (enemy.IsPoisoned ? EnemySnapshot.Poisoned : 0));
                 new EnemySnapshot { Id = enemy.NetId, Position = enemy.transform.position, Facing = enemy.Facing.Direction, Health = enemy.Health,
                     MaxHealth = enemy.Boss != null ? enemy.Boss.MaxHealth : 0, Flags = flags, MoreFlags = more }.Write(writer);
             }
@@ -360,6 +362,10 @@ namespace Slopgame
                 else if (message.Kind == CoopDamageKind.Curse) enemy.Curse(message.Duration);
                 else if (message.Kind == CoopDamageKind.Freeze) enemy.Freeze(message.Duration);
                 else if (message.Kind == CoopDamageKind.Fear) enemy.Fear(message.Source, message.Duration);
+                else if (message.Kind == CoopDamageKind.Stun) enemy.Stun(message.Duration);
+                else if (message.Kind == CoopDamageKind.Root) enemy.Root(message.Duration);
+                else if (message.Kind == CoopDamageKind.Bleed) enemy.Bleed(message.Ticks, message.Amount);
+                else if (message.Kind == CoopDamageKind.Poison) enemy.Poison(message.Ticks, message.Amount);
                 else enemy.Chill(message.Duration);
             }
             finally { Attacker = LocalId; }

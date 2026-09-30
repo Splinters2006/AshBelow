@@ -173,6 +173,7 @@ namespace Slopgame
                 + (definition.Type == AbilityType.PrimalRage ? Player.Buffs.RageCycleRemaining
                     : definition.Type == AbilityType.ArchdemonTechnique ? Player.Buffs.AscendRemaining : 0f);
             castReadyAt = Time.time + 0.2f;
+            Player.Powerups.OnAbilityUsed();
             return true;
         }
 

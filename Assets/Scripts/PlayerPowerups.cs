@@ -63,6 +63,85 @@ namespace Slopgame
             return true;
         }
 
+        // ---------------------------------------------------------------- universal expansion talents
+
+        public const float LastStandSpeed = 1.2f, CloseCallCooldown = 5f, ThornsRadius = 1f;
+        public const int RhythmBeat = 4, SpellbladeStrikes = 3, SpellbladeBonus = 2;
+        private int rhythmCount, spellbladeStrikes;
+        private bool elementalPrimed, inBasicAttack, rhythmBeat, spellbladeActive;
+        private float closeCallReadyAt;
+        /// <summary>Cheat Death's once-per-world save is spent.</summary>
+        public bool CheatDeathSpent { get; set; }
+
+        /// <summary>
+        /// Damage multiplier from the hero's own state: Glass Cannon, Last Stand, Berserker and the Ash shop's Infernal Pact,
+        /// plus Rhythm's double beat while a basic attack is being thrown.
+        /// </summary>
+        public float DamageMultiplier(DungeonPlayer player)
+        {
+            float multiplier = Permanent.DamageMultiplier;
+            if (Count(PowerupType.GlassCannon) > 0) multiplier *= 1.5f;
+            if (Count(PowerupType.LastStand) > 0 && player.Health == 1) multiplier *= 2f;
+            if (Count(PowerupType.Berserker) > 0 && player.MaxHealth > 0)
+                multiplier *= 1f + (player.MaxHealth - Mathf.Max(0, player.Health)) / (float)player.MaxHealth;
+            if (inBasicAttack && rhythmBeat) multiplier *= 2f;
+            return multiplier;
+        }
+        /// <summary>Flat damage added while a basic attack is being thrown (Spellblade).</summary>
+        public int BasicAttackBonus => inBasicAttack && spellbladeActive ? SpellbladeBonus : 0;
+        /// <summary>Glass Cannon and the Ash shop's Infernal Pact scale maximum HP.</summary>
+        public float MaxHealthMultiplier => (Count(PowerupType.GlassCannon) > 0 ? 0.5f : 1f) * Permanent.MaxHealthMultiplier;
+        public float MoveMultiplier(DungeonPlayer player) => Count(PowerupType.LastStand) > 0 && player.Health == 1 ? LastStandSpeed : 1f;
+
+        /// <summary>
+        /// Wraps a basic attack or class skill (left or right click) so Rhythm and Spellblade apply to the damage it
+        /// deals as it is thrown. Returns whether the attack went off; only then does it count toward the beat.
+        /// </summary>
+        public bool BasicAttack(System.Func<bool> attack)
+        {
+            rhythmBeat = Count(PowerupType.Rhythm) > 0 && (rhythmCount + 1) % RhythmBeat == 0;
+            spellbladeActive = spellbladeStrikes > 0;
+            inBasicAttack = true;
+            bool thrown;
+            try { thrown = attack(); }
+            finally { inBasicAttack = false; }
+            if (!thrown) return false;
+            if (Count(PowerupType.Rhythm) > 0) rhythmCount++;
+            if (spellbladeActive) spellbladeStrikes--;
+            return true;
+        }
+
+        /// <summary>A Q or E ability was used: Spellblade charges the next basic attacks.</summary>
+        public void OnAbilityUsed() { if (Count(PowerupType.Spellblade) > 0) spellbladeStrikes = SpellbladeStrikes; }
+
+        /// <summary>Elemental Kills: whether this elemental hit sets off its element for free (and spends the charge).</summary>
+        public bool ConsumeElementalPrime()
+        {
+            if (!elementalPrimed) return false;
+            elementalPrimed = false;
+            return true;
+        }
+
+        /// <summary>Close Call: a roll just slipped through an enemy bolt.</summary>
+        public void OnCloseCall(DungeonPlayer player)
+        {
+            if (Count(PowerupType.CloseCall) == 0 || Time.time < closeCallReadyAt) return;
+            closeCallReadyAt = Time.time + CloseCallCooldown;
+            AddWard();
+            HeroVfx.Pulse(player.transform, player.transform.position, 0.9f, AbilityCatalog.Ice, 0.35f);
+        }
+
+        /// <summary>Thorns: when the hero is hit, everything within a unit takes their damage.</summary>
+        public void OnStruck(DungeonPlayer player)
+        {
+            if (Count(PowerupType.Thorns) == 0) return;
+            Vector2 center = player.transform.position;
+            HeroVfx.Pulse(player.Run.ProjectileRoot, center, ThornsRadius, new Color(0.6f, 0.9f, 0.4f), 0.25f);
+            foreach (var enemy in player.Run.Enemies.ToArray())
+                if (enemy != null && enemy.Health > 0 && Vector2.Distance(center, enemy.transform.position) <= ThornsRadius + enemy.HitRadius)
+                    CombatDamage.Apply(player, enemy, player.Damage, DamageElement.Physical, center, 0.8f);
+        }
+
         public const float KillStreakWindow = 1f, KillCooldownCut = 0.5f, PyreRadius = 2f;
         public const int MassacreKills = 5, MomentumKills = 2;
         private readonly Queue<float> recentKills = new Queue<float>();
@@ -84,7 +163,9 @@ namespace Slopgame
             if (recentKills.Count == MomentumKills && Count(PowerupType.Momentum) > 0) player.ResetDodge();
             if (recentKills.Count == MassacreKills && Count(PowerupType.Massacre) > 0) player.ResetClassSkill();
 
-            bool held = enemy != null && enemy.IsHeld;
+            // Nerve Snap and Still Hunter count any immobilized enemy: paralysed, frozen, stunned or rooted.
+            bool held = enemy != null && enemy.IsImmobilized;
+            if (Count(PowerupType.ElementalKills) > 0) elementalPrimed = true;
             if (held && Count(PowerupType.NerveSnap) > 0) player.ResetClassSkill();
             float cut = (Count(PowerupType.Bloodrush) > 0 ? KillCooldownCut : 0f) + (held && Count(PowerupType.StillHunter) > 0 ? KillCooldownCut : 0f);
             if (cut > 0f) player.ReduceCooldowns(cut);

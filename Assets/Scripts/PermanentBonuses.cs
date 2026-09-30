@@ -24,6 +24,14 @@ namespace Slopgame
         public float CannonCooldownMultiplier { get; } = 1f;
         /// <summary>The class mechanic on R, bought in the Ash shop.</summary>
         public bool MechanicUnlocked { get; }
+        /// <summary>Scales all damage (the Ash shop's Infernal Pact).</summary>
+        public float DamageMultiplier { get; } = 1f;
+        /// <summary>Scales maximum HP (the Ash shop's Infernal Pact).</summary>
+        public float MaxHealthMultiplier { get; } = 1f;
+        /// <summary>The Ash shop's Backup Drive: once per descent, a killing blow leaves the hero at 1 HP.</summary>
+        public bool BackupDrive { get; }
+        /// <summary>The Ash shop's Apex Predator: extra damage share against guardians and armoured brutes.</summary>
+        public float GuardianDamage { get; }
 
         public PermanentBonuses(PermanentProgress progress, WeaponType weapon)
         {

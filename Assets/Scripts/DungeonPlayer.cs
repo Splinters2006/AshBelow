@@ -5,12 +5,20 @@ namespace Slopgame
     public sealed class DungeonPlayer : MonoBehaviour
     {
         public DungeonRun Run { get; set; }
-        public int MaxHealth { get; private set; } = 6;
+        /// <summary>
+        /// Maximum HP after Glass Cannon and the Infernal Pact scale it (rounded up); every max HP gain adds to the
+        /// unscaled total, so Glass Cannon also halves later gains.
+        /// </summary>
+        public int MaxHealth => Mathf.Max(1, Mathf.CeilToInt(rawMaxHealth * (Powerups != null ? Powerups.MaxHealthMultiplier : 1f)));
+        private int rawMaxHealth = 6;
+        /// <summary>Fired when a hit lands on this hero (true when a ward took it); Thorns and class talents listen.</summary>
+        public event System.Action<bool> Struck;
         public int Health { get; private set; } = 6;
         public int BaseDamage { get; private set; } = 1;
         public int Damage => Mathf.Max(1, Mathf.RoundToInt((BaseDamage + (Blessing != null ? Blessing.BonusDamage : 0)
-            + (Mechanic != null ? Mechanic.BonusDamage : 0) + (Buffs != null ? Buffs.JackpotDamage : 0) + (Crystals != null ? Crystals.BonusDamage : 0))
-            * (Buffs != null ? Buffs.DamageMultiplier : 1f)));
+            + (Mechanic != null ? Mechanic.BonusDamage : 0) + (Buffs != null ? Buffs.JackpotDamage : 0) + (Crystals != null ? Crystals.BonusDamage : 0)
+            + (Powerups != null ? Powerups.BasicAttackBonus : 0))
+            * (Buffs != null ? Buffs.DamageMultiplier : 1f) * (Powerups != null ? Powerups.DamageMultiplier(this) : 1f)));
         /// <summary>The class mechanic on R, or null if this hero has not bought it.</summary>
         public ClassMechanic Mechanic { get; private set; }
         /// <summary>Shield Taunt: enemies go for this Knight first.</summary>
@@ -74,7 +82,8 @@ namespace Slopgame
             Powerups = gameObject.AddComponent<PlayerPowerups>();
             Permanent = new PermanentBonuses(Run?.Progress, character.Weapon);
             Powerups.Permanent = Permanent;
-            MaxHealth = Health = character.StartingHealth + Permanent.Health;
+            rawMaxHealth = character.StartingHealth + Permanent.Health;
+            Health = MaxHealth;
             BaseDamage = character.StartingDamage + Permanent.Damage;
             Blessing = gameObject.AddComponent<DamageBlessing>();
             Buffs = gameObject.AddComponent<HeroBuffs>();
@@ -188,7 +197,7 @@ namespace Slopgame
             // A roll can be steered: it keeps its speed and length but follows the movement keys.
             if (IsRolling && movement.sqrMagnitude > 0.01f) rollDirection = movement.normalized;
             Vector2 velocity = IsRolling ? rollDirection * Speed * 2.6f * Buffs.DodgeSpeedMultiplier
-                : movement * Speed * Buffs.MoveMultiplier * Crystals.SpeedMultiplier * (IsPoisoned ? PoisonSlow : 1f) * (Weapon.IsHeavyAttacking ? 0.55f : Charge.IsCharging ? 0.7f : 1f);
+                : movement * Speed * Buffs.MoveMultiplier * Crystals.SpeedMultiplier * (IsPoisoned ? PoisonSlow : 1f) * Powerups.MoveMultiplier(this) * (Weapon.IsHeavyAttacking ? 0.55f : Charge.IsCharging ? 0.7f : 1f);
             if (DebugMode.Enabled) velocity *= DebugMode.SpeedMultiplier;
             transform.position = Run.Map.Move(transform.position, velocity * Time.deltaTime);
             // Rolling into an urn smashes it.
@@ -201,7 +210,7 @@ namespace Slopgame
             if (!usedAbility && PlayerInput.ActiveE) usedAbility = Abilities.TryUse(1, toCursor);
             if (!usedAbility && Mechanic != null && PlayerInput.Mechanic) usedAbility = Mechanic.TryActivate(toCursor);
             if (IsBusy) { Charge.Cancel(); return; }
-            if (!usedAbility && !Run.IsPointerOverHud && PlayerInput.HeavyAttack && !IsRolling && Weapon.TryHeavyAttack(toCursor))
+            if (!usedAbility && !Run.IsPointerOverHud && PlayerInput.HeavyAttack && !IsRolling && Powerups.BasicAttack(() => Weapon.TryHeavyAttack(toCursor)))
                 Breakable.SmashInArc(this, toCursor, Breakable.HeavyReach);
             // Brawler mid-roll: the charge is left alone, then keeps building (or fires, if released) once the roll ends.
             if (IsRolling && Weapon is BrawlerAttack) return;
@@ -300,6 +309,20 @@ namespace Slopgame
             if (Hit()) HeroVfx.Sparks(Run.ProjectileRoot, transform.position, PoisonGreen, 10, 3.5f, 0.35f, Vector2.up, 140f);
         }
 
+        /// <summary>Whether a killing blow is survived at 1 HP (and spends that save).</summary>
+        private bool TryDefyDeath()
+        {
+            bool saved = false;
+            if (Powerups.Count(PowerupType.CheatDeath) > 0 && !Powerups.CheatDeathSpent) { Powerups.CheatDeathSpent = true; saved = true; }
+            else if (Permanent.BackupDrive && !backupDriveSpent) { backupDriveSpent = true; saved = true; }
+            if (!saved) return false;
+            HeroVfx.Pulse(Run.ProjectileRoot, transform.position, 1.6f, AbilityCatalog.Gold, 0.6f);
+            HeroVfx.Motes(Run.ProjectileRoot, transform.position, 0.9f, AbilityCatalog.Gold, 18, 1f);
+            ScreenFx.Flash(new Color(1f, 0.85f, 0.4f, 0.4f), 0.5f);
+            return true;
+        }
+        private bool backupDriveSpent;
+
         /// <summary>Standing in burning ground: one damage per second, however many fires overlap.</summary>
         public void Burn()
         {
@@ -314,9 +337,13 @@ namespace Slopgame
             bool warded = Powerups.AbsorbHit();
             if (!warded)
             {
-                Health--;
+                // Cheat Death (once per world), then the Ash shop's Backup Drive (once per descent), turn a killing blow into 1 HP.
+                if (Health == 1 && TryDefyDeath()) { }
+                else Health--;
                 Mechanic?.OnDamaged();
             }
+            Powerups.OnStruck(this);
+            Struck?.Invoke(warded);
             if (Run.ProjectileRoot != null)
             {
                 if (warded) HeroVfx.Pulse(transform, transform.position, 0.95f, AbilityCatalog.Ice, 0.3f);
@@ -388,7 +415,8 @@ namespace Slopgame
         {
             if (!Powerups.Add(type)) return false;
             if (type == PowerupType.Damage) BaseDamage++;
-            if (type == PowerupType.Vitality) { MaxHealth += 2; if (Health > 0) Health = MaxHealth; }
+            if (type == PowerupType.Vitality) { rawMaxHealth += 2; if (Health > 0) Health = MaxHealth; }
+            if (type == PowerupType.GlassCannon) Health = Mathf.Min(Health, MaxHealth);
             if (type == PowerupType.Movement) Speed += 0.7f;
             return true;
         }
@@ -416,7 +444,7 @@ namespace Slopgame
         public void RaiseMaxHealth(int amount)
         {
             if (amount <= 0) return;
-            MaxHealth += amount;
+            rawMaxHealth += amount;
             Heal(amount);
         }
         public void Protect(float duration) { invulnerableUntil = Mathf.Max(invulnerableUntil, Time.time + duration); }

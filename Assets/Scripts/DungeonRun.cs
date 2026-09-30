@@ -253,6 +253,8 @@ namespace Slopgame
             arrivingByTravel = false;
             if (!InShop && (WorldCatalog.EntersWorld(Floor) || travelled))
             {
+                // Cheat Death refreshes in every new world.
+                Player.Powerups.CheatDeathSpent = false;
                 ScreenFx.Flash(FlameMesh.Alpha(World.Accent, 0.6f), 1.2f);
                 WorldBannerUntil = Time.time + 4f;
                 HeroVfx.Pulse(level, Player.transform.position, 3f, World.Accent, 0.9f);

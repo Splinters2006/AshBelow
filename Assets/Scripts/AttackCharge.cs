@@ -31,7 +31,8 @@ namespace Slopgame
             {
                 float charge = Amount;
                 Cancel();
-                if (Player.Weapon.TryAttack(Player.AimDirection, charge)) Breakable.SmashInArc(Player, Player.AimDirection, Breakable.SwingReach);
+                if (Player.Powerups.BasicAttack(() => Player.Weapon.TryAttack(Player.AimDirection, charge)))
+                    Breakable.SmashInArc(Player, Player.AimDirection, Breakable.SwingReach);
             }
             wasHeld = held;
             if (IsCharging && !fullPinged && Amount >= 1f)
