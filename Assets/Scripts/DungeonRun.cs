@@ -488,13 +488,55 @@ namespace Slopgame
         {
             if (Artifact == null) Artifact = ArtifactPickup.Spawn(level, position);
         }
+        /// <summary>The abilities a guardian's artifact offers: 3 from the hero's pool, or 4 with the Ash shop's Sanctified Relics.</summary>
+        public IReadOnlyList<AbilityDefinition> AbilityOffers => abilityOffers;
+        private readonly List<AbilityDefinition> abilityOffers = new List<AbilityDefinition>();
+        /// <summary>True once the guardian's ability is picked, while the hero arranges which learned abilities sit on Q and E.</summary>
+        public bool ArrangingAbilities { get; private set; }
+        public const string SanctifiedRelicsId = "sanctified_relics";
+        public int AbilityOfferCount => Progress != null && Progress.Rank(SanctifiedRelicsId) > 0 ? 4 : 3;
+
         public void BeginArtifactChoice()
         {
             if (!IsPlaying || Artifact == null || Enemies.Count != 0) return;
             IsPlaying = false;
             ChoosingArtifact = true;
+            ArrangingAbilities = false;
+            RollAbilityOffers();
             Player.Weapon?.Hide();
             if (!IsNetworked) Time.timeScale = 0f;
+        }
+
+        /// <summary>Picks the offers from the hero's pool (Ash shop abilities once bought), skipping any already at maximum rank.</summary>
+        private void RollAbilityOffers()
+        {
+            abilityOffers.Clear();
+            var pool = AbilityCatalog.PoolFor(Player.ClassWeapon, Progress);
+            pool.RemoveAll(ability => Player.Abilities.Rank(ability.Type) >= PlayerAbilities.MaxRank);
+            for (int i = 0; i < AbilityOfferCount && pool.Count > 0; i++)
+            {
+                int pick = UnityEngine.Random.Range(0, pool.Count);
+                abilityOffers.Add(pool[pick]);
+                pool.RemoveAt(pick);
+            }
+        }
+
+        /// <summary>Takes one of the guardian's offers: learned at rank 1, or ranked up. The abilities page follows.</summary>
+        public bool PickAbility(AbilityType type)
+        {
+            if (!ChoosingArtifact || ArrangingAbilities || (IsNetworked && Coop.WaitingForTeam)
+                || !abilityOffers.Exists(offer => offer.Type == type) || !Player.Abilities.Learn(type)) return false;
+            Player.Heal(2);
+            ArrangingAbilities = true;
+            return true;
+        }
+
+        /// <summary>Closes the abilities page after a pick and resumes the descent.</summary>
+        public void FinishAbilityLoadout()
+        {
+            if (!ArrangingAbilities) return;
+            ArrangingAbilities = false;
+            FinishArtifactChoice();
         }
         public bool ChooseArtifact(AbilityType type, int slot)
         {
@@ -509,7 +551,7 @@ namespace Slopgame
         /// <summary>Leaves the guardian's artifact behind for a pile of crystals instead of an ability.</summary>
         public bool LeaveArtifact()
         {
-            if (!ChoosingArtifact || (IsNetworked && Coop.WaitingForTeam)) return false;
+            if (!ChoosingArtifact || ArrangingAbilities || (IsNetworked && Coop.WaitingForTeam)) return false;
             Player.Crystals.Add(LeftArtifactCrystals);
             if (ProjectileRoot != null)
                 HeroVfx.Motes(ProjectileRoot, Player.transform.position, 0.9f, CrystalPouch.CrystalColor, 20, 1.1f);
@@ -536,6 +578,7 @@ namespace Slopgame
             if (Artifact != null) Destroy(Artifact.gameObject);
             Artifact = null;
             ChoosingArtifact = false;
+            ArrangingAbilities = false;
             IsPlaying = true;
             Time.timeScale = 1f;
         }

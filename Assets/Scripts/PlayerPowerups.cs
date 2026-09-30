@@ -25,7 +25,7 @@ namespace Slopgame
         public bool CanTake(PowerupType type) => Count(type) < PowerupCatalog.Get(type).MaxStacks
             && (!PowerupCatalog.Get(type).ClassWeapon.HasValue || PowerupCatalog.Get(type).ClassWeapon == ClassWeapon)
             && (PowerupCatalog.Get(type).RequiredAbility == AbilityType.None
-                || (Abilities != null && Abilities.IsEquipped(PowerupCatalog.Get(type).RequiredAbility)));
+                || (Abilities != null && Abilities.IsLearned(PowerupCatalog.Get(type).RequiredAbility)));
 
         public bool Add(PowerupType type)
         {

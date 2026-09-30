@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Slopgame
@@ -19,10 +20,15 @@ namespace Slopgame
         public string Glyph { get; }
         public float Cooldown { get; }
         public Color Color { get; }
-        public AbilityDefinition(AbilityType type, WeaponType weapon, string name, string description, string glyph, float cooldown, Color color)
+        /// <summary>True when the ability must be bought in the Ash shop before guardians can offer it.</summary>
+        public bool ShopUnlock { get; }
+        /// <summary>The Ash shop upgrade that unlocks a <see cref="ShopUnlock"/> ability.</summary>
+        public string UnlockId => "ability_" + Type.ToString().ToLowerInvariant();
+        public AbilityDefinition(AbilityType type, WeaponType weapon, string name, string description, string glyph, float cooldown, Color color,
+            bool shopUnlock = false)
         {
             Type = type; ClassWeapon = weapon; Name = name; Description = description;
-            Glyph = glyph; Cooldown = cooldown; Color = color;
+            Glyph = glyph; Cooldown = cooldown; Color = color; ShopUnlock = shopUnlock;
         }
     }
 
@@ -65,6 +71,15 @@ namespace Slopgame
             new AbilityDefinition(AbilityType.RocketBoost, WeaponType.Beam, "Rocket Boost", "Blast forward on your leg thrusters, ramming through every enemy in your path, and land in a burst of flame that can set them burning. Briefly invulnerable.", ">>", 8f, CyborgAttack.MissileColor),
             new AbilityDefinition(AbilityType.SentryTurret, WeaponType.Beam, "Sentry Turret", "Deploy a turret at the cursor (up to 4 units away). For 6 seconds it fires a piercing plasma ray at the nearest enemy. Ranks add a second and damage.", "T", 16f, CyborgAttack.Plasma)
         };
+
+        /// <summary>What guardians can offer this hero: their class's abilities, less any not yet bought in the Ash shop.</summary>
+        public static List<AbilityDefinition> PoolFor(WeaponType weapon, PermanentProgress progress)
+        {
+            var pool = new List<AbilityDefinition>();
+            foreach (var ability in All)
+                if (ability.ClassWeapon == weapon && (!ability.ShopUnlock || (progress != null && progress.Rank(ability.UnlockId) > 0))) pool.Add(ability);
+            return pool;
+        }
 
         public static AbilityDefinition Get(AbilityType type)
         {

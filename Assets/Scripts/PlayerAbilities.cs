@@ -16,23 +16,63 @@ namespace Slopgame
         public const float EarthshatterRadius = 3.25f;
         public const float VeilDuration = 3f, VeilProtection = 1.5f;
         private readonly AbilityType[] equipped = new AbilityType[SlotCount];
-        private readonly float[] readyAt = new float[SlotCount];
+        // Cooldowns belong to the ability, not the key, so swapping Q and E never refreshes one.
+        private readonly Dictionary<AbilityType, float> readyAt = new Dictionary<AbilityType, float>();
         private readonly Dictionary<AbilityType, int> ranks = new Dictionary<AbilityType, int>();
         private float castReadyAt;
         public AbilityType Equipped(int slot) => slot >= 0 && slot < SlotCount ? equipped[slot] : AbilityType.None;
         public int Rank(AbilityType type) => ranks.TryGetValue(type, out int value) ? value : 0;
         public bool IsEquipped(AbilityType type) => type != AbilityType.None && (equipped[0] == type || equipped[1] == type);
+        /// <summary>Learned this run (whether or not it sits on Q or E); hybrid talents need their ability learned.</summary>
+        public bool IsLearned(AbilityType type) => type != AbilityType.None && Rank(type) > 0;
+        /// <summary>Every ability learned this run, in catalog order (the abilities page).</summary>
+        public IEnumerable<AbilityDefinition> Learned
+        {
+            get { foreach (var ability in AbilityCatalog.All) if (IsLearned(ability.Type)) yield return ability; }
+        }
         /// <summary>Kill talents: takes time off every relic ability's cooldown.</summary>
         public void ReduceCooldowns(float seconds)
         {
-            for (int slot = 0; slot < SlotCount; slot++) readyAt[slot] = Cooldowns.Shorten(readyAt[slot], seconds);
+            foreach (var type in new List<AbilityType>(readyAt.Keys)) readyAt[type] = Cooldowns.Shorten(readyAt[type], seconds);
         }
 
         // Capped at the ability's own cooldown, so a delayed start (Primal Rage, Archdemon's Technique) reads as a paused timer.
-        public float CooldownRemaining(int slot) => DebugMode.Cooldown(Mathf.Min(Mathf.Max(0f, readyAt[slot] - Time.time),
-            AbilityCatalog.Get(equipped[slot])?.Cooldown ?? float.MaxValue));
+        public float CooldownRemaining(int slot) => CooldownRemaining(Equipped(slot));
+        public float CooldownRemaining(AbilityType type) => type == AbilityType.None ? 0f
+            : DebugMode.Cooldown(Mathf.Min(Mathf.Max(0f, (readyAt.TryGetValue(type, out float ready) ? ready : 0f) - Time.time),
+                AbilityCatalog.Get(type)?.Cooldown ?? float.MaxValue));
         public int EmptySlot => equipped[0] == AbilityType.None ? 0 : equipped[1] == AbilityType.None ? 1 : -1;
 
+        /// <summary>
+        /// A guardian's ability pick: learns the ability at rank 1 (putting it on an empty key if there is one), or raises
+        /// the rank of one already learned.
+        /// </summary>
+        public bool Learn(AbilityType type)
+        {
+            var definition = AbilityCatalog.Get(type);
+            if (definition == null || definition.ClassWeapon != Player.ClassWeapon) return false;
+            if (IsLearned(type))
+            {
+                if (Rank(type) >= MaxRank) return false;
+                ranks[type] = Rank(type) + 1;
+                return true;
+            }
+            ranks[type] = 1;
+            if (EmptySlot >= 0) equipped[EmptySlot] = type;
+            return true;
+        }
+
+        /// <summary>Puts a learned ability on Q or E; if it already sits on the other key, the two swap.</summary>
+        public bool Equip(AbilityType type, int slot)
+        {
+            if (!IsLearned(type) || slot < 0 || slot >= SlotCount) return false;
+            int other = 1 - slot;
+            if (equipped[other] == type) equipped[other] = equipped[slot];
+            equipped[slot] = type;
+            return true;
+        }
+
+        /// <summary>Learns (or ranks up) an ability and puts it on <paramref name="slot"/>; an equipped ability just ranks up.</summary>
         public bool Claim(AbilityType type, int slot)
         {
             var definition = AbilityCatalog.Get(type);
@@ -43,8 +83,8 @@ namespace Slopgame
                 ranks[type] = Rank(type) + 1;
                 return true;
             }
-            equipped[slot] = type;
             if (Rank(type) == 0) ranks[type] = 1;
+            equipped[slot] = type;
             return true;
         }
 
@@ -169,7 +209,7 @@ namespace Slopgame
                 HeroVfx.Sparks(Player.Run.ProjectileRoot, transform.position, definition.Color, 10, 3.5f, 0.35f);
             }
             // Primal Rage's and Archdemon's Technique's cooldowns only start once their effects have ended.
-            readyAt[slot] = Time.time + definition.Cooldown * Player.Powerups.RelicCooldownMultiplier
+            readyAt[definition.Type] = Time.time + definition.Cooldown * Player.Powerups.RelicCooldownMultiplier
                 + (definition.Type == AbilityType.PrimalRage ? Player.Buffs.RageCycleRemaining
                     : definition.Type == AbilityType.ArchdemonTechnique ? Player.Buffs.AscendRemaining : 0f);
             castReadyAt = Time.time + 0.2f;

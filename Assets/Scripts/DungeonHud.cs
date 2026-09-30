@@ -7,11 +7,8 @@ namespace Slopgame
         public static readonly Color DebugColor = new Color(1f, 0.38f, 0.62f);
         public DungeonRun Run { get; set; }
         private float displayedHealth = 1f, displayedBossHealth = 1f, modalFade;
-        private bool showTalents;
-        // A relic waiting for the player to confirm it should overwrite an equipped one.
-        private AbilityType pendingRelic = AbilityType.None;
-        private int pendingSlot = -1;
-        private Vector2 talentScroll;
+        private bool showTalents, showAbilitiesTab;
+        private Vector2 talentScroll, abilityScroll;
         // Co-op restart asks for a second click so a stray press does not throw away the party's run.
         private float restartConfirmUntil;
         // The world-cleared screen's travel map (the host's, in co-op) and whether it is showing.
@@ -42,7 +39,6 @@ namespace Slopgame
             displayedHealth = Mathf.Lerp(displayedHealth, Run.Player.Health / (float)Run.Player.MaxHealth, smooth);
             if (Run.Boss != null) displayedBossHealth = Mathf.Lerp(displayedBossHealth, Run.Boss.Enemy.Health / (float)Run.Boss.MaxHealth, smooth);
             else displayedBossHealth = 1f;
-            if (!Run.ChoosingArtifact) pendingRelic = AbilityType.None;
             if (!Run.WorldComplete) showTravelMap = false;
             modalFade = Mathf.MoveTowards(modalFade, Run.IsPlaying ? 0f : 1f, Time.unscaledDeltaTime * 5f);
         }
@@ -131,7 +127,7 @@ namespace Slopgame
                     else restartConfirmUntil = Time.unscaledTime + 3f;
                 }
             }
-            if (DungeonUi.Button("talents", new Rect(1020, 24, 112, 40), "Talents", DungeonUi.Teal)) showTalents = !showTalents;
+            if (DungeonUi.Button("talents", new Rect(1020, 24, 112, 40), "Build", DungeonUi.Teal)) showTalents = !showTalents;
             if (DungeonUi.Button("menu", new Rect(1144, 24, 112, 40), Run.IsNetworked ? "Leave" : "Menu", DungeonUi.Muted)) Run.ShowMainMenu();
         }
 
@@ -309,11 +305,18 @@ namespace Slopgame
         private void DrawTalents()
         {
             DungeonUi.Panel(new Rect(922, 82, 334, 470), DungeonUi.Background);
-            DungeonUi.Label(new Rect(946, 103, 288, 30), "YOUR BUILD", 24, DungeonUi.Teal);
-            DungeonUi.Label(new Rect(946, 141, 288, 48), $"Physical crit {Run.Player.Powerups.PhysicalCritChance:P0}\nElemental effect {Run.Player.Powerups.ElementalEffectChance:P0}", 15, DungeonUi.Muted);
+            if (DungeonUi.Button("buildTab", new Rect(940, 96, 144, 30), "Talents", DungeonUi.Teal, showAbilitiesTab)) showAbilitiesTab = false;
+            if (DungeonUi.Button("abilitiesTab", new Rect(1094, 96, 144, 30), "Abilities", AbilityCatalog.Gold, !showAbilitiesTab)) showAbilitiesTab = true;
+            if (showAbilitiesTab)
+            {
+                DungeonUi.Label(new Rect(946, 136, 288, 40), $"Choose which abilities sit on {SlotKey(0)} and {SlotKey(1)}.\nCooldowns stay with each ability.", 14, DungeonUi.Muted);
+                DrawAbilityRows(new Rect(944, 184, 290, 350), ref abilityScroll);
+                return;
+            }
+            DungeonUi.Label(new Rect(946, 136, 288, 48), $"Physical crit {Run.Player.Powerups.PhysicalCritChance:P0}\nElemental effect {Run.Player.Powerups.ElementalEffectChance:P0}", 15, DungeonUi.Muted);
             int count = 0;
             foreach (var power in PowerupCatalog.All) if (Run.Player.Powerups.Count(power.Type) > 0) count++;
-            talentScroll = GUI.BeginScrollView(new Rect(944, 205, 290, 324), talentScroll, new Rect(0, 0, 268, Mathf.Max(310, count * 45)));
+            talentScroll = GUI.BeginScrollView(new Rect(944, 200, 290, 330), talentScroll, new Rect(0, 0, 268, Mathf.Max(316, count * 45)));
             int row = 0;
             foreach (var power in PowerupCatalog.All)
             {
@@ -321,7 +324,39 @@ namespace Slopgame
                 if (rank == 0) continue;
                 DungeonUi.Label(new Rect(0, row++ * 45, 260, 42), $"{power.Name}  /  {rank}", 16);
             }
-            if (row == 0) DungeonUi.Label(new Rect(0, 0, 260, 80), "Clear floors to earn talents.\nBoss relics unlock active abilities.", 16, DungeonUi.Muted);
+            if (row == 0) DungeonUi.Label(new Rect(0, 0, 260, 80), "Clear floors to earn talents.\nGuardians offer active abilities.", 16, DungeonUi.Muted);
+            GUI.EndScrollView();
+        }
+
+        /// <summary>
+        /// The abilities page: every ability learned this run with its rank, and buttons to put it on Q or E (an ability
+        /// already on the other key swaps over).
+        /// </summary>
+        private void DrawAbilityRows(Rect area, ref Vector2 scroll)
+        {
+            var abilities = Run.Player.Abilities;
+            var learned = new System.Collections.Generic.List<AbilityDefinition>(abilities.Learned);
+            const float RowHeight = 58f;
+            scroll = GUI.BeginScrollView(area, scroll, new Rect(0, 0, area.width - 22, Mathf.Max(area.height - 4, learned.Count * RowHeight)));
+            float width = area.width - 22;
+            for (int i = 0; i < learned.Count; i++)
+            {
+                var ability = learned[i];
+                float y = i * RowHeight;
+                DungeonUi.Panel(new Rect(0, y, width, RowHeight - 6), DungeonUi.PanelColor);
+                DungeonUi.Label(new Rect(10, y + 4, 34, 44), ability.Glyph, 20, ability.Color, TextAnchor.MiddleCenter);
+                DungeonUi.Label(new Rect(50, y + 4, width - 160, 24), ability.Name, 15);
+                DungeonUi.Label(new Rect(50, y + 26, width - 160, 20), $"Rank {abilities.Rank(ability.Type)}", 12, DungeonUi.Muted);
+                for (int slot = 0; slot < PlayerAbilities.SlotCount; slot++)
+                {
+                    bool here = abilities.Equipped(slot) == ability.Type;
+                    // The key it already sits on is shown lit and disabled.
+                    if (DungeonUi.Button("equip" + ability.Type + slot, new Rect(width - 104 + slot * 52, y + 8, 46, 36), SlotKey(slot),
+                        here ? ability.Color : DungeonUi.Muted, !here))
+                        abilities.Equip(ability.Type, slot);
+                }
+            }
+            if (learned.Count == 0) DungeonUi.Label(new Rect(0, 0, width, 80), "No abilities learned yet.\nDefeat a guardian to choose one.", 15, DungeonUi.Muted);
             GUI.EndScrollView();
         }
 
@@ -399,72 +434,39 @@ namespace Slopgame
 
         private void DrawArtifacts()
         {
-            if (DrawWaiting()) { pendingRelic = AbilityType.None; return; }
-            if (pendingRelic != AbilityType.None) { DrawReplaceConfirmation(); return; }
-            ModalTitle("GUARDIAN DEFEATED", "An artifact awakens", $"Choose an active ability for your class. {SlotKey(0)} and {SlotKey(1)} hold two abilities. Choosing an equipped ability raises its rank.");
-            int index = 0;
-            foreach (var ability in AbilityCatalog.All)
+            if (DrawWaiting()) return;
+            if (Run.ArrangingAbilities) { DrawLoadout(); return; }
+            var offers = Run.AbilityOffers;
+            ModalTitle("GUARDIAN DEFEATED", "An artifact awakens", "Choose an ability to learn, or raise the rank of one you know. Then pick what sits on "
+                + $"{SlotKey(0)} and {SlotKey(1)}.");
+            const float Gap = 24f;
+            float width = offers.Count >= 4 ? 280f : 316f;
+            float left = (1280f - (offers.Count * width + (offers.Count - 1) * Gap)) / 2f;
+            for (int i = 0; i < offers.Count; i++)
             {
-                if (ability.ClassWeapon != Run.Player.ClassWeapon) continue;
-                Rect rect = new Rect(142 + index++ * 340, 300, 316, 340);
-                bool equipped = Run.Player.Abilities.IsEquipped(ability.Type);
+                var ability = offers[i];
+                Rect rect = new Rect(left + i * (width + Gap), 300, width, 340);
                 int rank = Run.Player.Abilities.Rank(ability.Type);
-                string binding = SlotKey(Run.Player.Abilities.Equipped(0) == ability.Type ? 0 : 1);
-                Card(rect, equipped ? $"{binding} EQUIPPED  /  RANK {rank}" : $"ACTIVE  /  {ability.Cooldown:0}s COOLDOWN", ability.Name, ability.Description, ability.Color, ability.Glyph);
-                if (equipped)
-                {
-                    string label = rank >= PlayerAbilities.MaxRank ? "Maximum rank" : $"Upgrade to rank {rank + 1}";
-                    if (DungeonUi.Button("artifact" + ability.Type, new Rect(rect.x + 24, rect.yMax - 60, 268, 40), label, ability.Color, rank < PlayerAbilities.MaxRank))
-                    { Run.ChooseArtifact(ability.Type, Run.Player.Abilities.Equipped(0) == ability.Type ? 0 : 1); return; }
-                }
-                else
-                {
-                    for (int slot = 0; slot < PlayerAbilities.SlotCount; slot++)
-                    {
-                        bool occupied = Run.Player.Abilities.Equipped(slot) != AbilityType.None;
-                        if (!DungeonUi.Button("bind" + ability.Type + slot, new Rect(rect.x + 24 + slot * 140, rect.yMax - 60, 128, 40),
-                            $"{(occupied ? "Replace" : "Bind to")} {SlotKey(slot)}", ability.Color)) continue;
-                        // Overwriting an equipped relic unequips it, so ask first.
-                        if (occupied) { pendingRelic = ability.Type; pendingSlot = slot; }
-                        else Run.ChooseArtifact(ability.Type, slot);
-                        return;
-                    }
-                }
+                Card(rect, rank > 0 ? $"KNOWN  /  RANK {rank}" : $"NEW ABILITY  /  {ability.Cooldown:0}s COOLDOWN", ability.Name, ability.Description, ability.Color, ability.Glyph);
+                if (DungeonUi.Button("offer" + ability.Type, new Rect(rect.x + 24, rect.yMax - 60, rect.width - 48, 40),
+                    rank > 0 ? $"Raise to rank {rank + 1}" : "Learn", ability.Color))
+                { Run.PickAbility(ability.Type); return; }
             }
-            if (index == 0)
-                DungeonUi.Label(new Rect(240, 380, 800, 60), $"No relic answers to your class yet. Leave the artifact for {DungeonRun.LeftArtifactCrystals} crystals and descend.", 20, DungeonUi.Muted, TextAnchor.MiddleCenter);
+            if (offers.Count == 0)
+                DungeonUi.Label(new Rect(240, 380, 800, 60), $"You have mastered every ability this guardian could teach. Leave the artifact for {DungeonRun.LeftArtifactCrystals} crystals.", 20, DungeonUi.Muted, TextAnchor.MiddleCenter);
             if (DungeonUi.Button("leaveArtifact", new Rect(470, 661, 340, 35), $"Leave it  /  +{DungeonRun.LeftArtifactCrystals} crystals", CrystalPouch.CrystalColor)) Run.LeaveArtifact();
         }
 
-        private void DrawReplaceConfirmation()
+        /// <summary>After the pick: every learned ability, and which sit on Q and E.</summary>
+        private void DrawLoadout()
         {
-            var incoming = AbilityCatalog.Get(pendingRelic);
-            var current = AbilityCatalog.Get(Run.Player.Abilities.Equipped(pendingSlot));
-            if (incoming == null || current == null) { pendingRelic = AbilityType.None; return; }
-            string key = SlotKey(pendingSlot);
-            ModalTitle("REPLACE RELIC?", $"Replace {current.Name}?", $"{incoming.Name} will take the {key} slot and {current.Name} will be unequipped.");
-            var panel = new Rect(390, 300, 500, 250);
-            DungeonUi.Panel(panel, DungeonUi.PanelColor);
-            DungeonUi.Label(new Rect(panel.x + 24, panel.y + 28, 200, 24), $"{key}  NOW", 13, DungeonUi.Muted);
-            DungeonUi.Label(new Rect(panel.x + 24, panel.y + 52, 210, 60), current.Name, 22, current.Color);
-            DungeonUi.Label(new Rect(panel.x + 250, panel.y + 28, 230, 24), "BECOMES", 13, DungeonUi.Muted);
-            DungeonUi.Label(new Rect(panel.x + 250, panel.y + 52, 230, 60), incoming.Name, 22, incoming.Color);
-            DungeonUi.Label(new Rect(panel.x + 24, panel.y + 120, 452, 40), "Its rank is kept if a later relic lets you equip it again.", 15, DungeonUi.Muted);
-            if (DungeonUi.Button("cancelReplace", new Rect(panel.x + 24, panel.yMax - 64, 214, 44), "Keep " + current.Name, DungeonUi.Muted))
-                pendingRelic = AbilityType.None;
-            else if (DungeonUi.Button("confirmReplace", new Rect(panel.xMax - 238, panel.yMax - 64, 214, 44), $"Replace {key}", incoming.Color))
-            {
-                AbilityType type = pendingRelic;
-                int slot = pendingSlot;
-                pendingRelic = AbilityType.None;
-                Run.ChooseArtifact(type, slot);
-            }
+            ModalTitle("ABILITIES", "Arrange your abilities", $"Every ability you've learned this run. Choose which sit on {SlotKey(0)} and {SlotKey(1)}; you can change this any time from the Talents panel.");
+            var panel = new Rect(390, 290, 500, 330);
+            DungeonUi.Panel(panel, DungeonUi.Background);
+            DrawAbilityRows(new Rect(panel.x + 16, panel.y + 16, panel.width - 32, panel.height - 32), ref abilityScroll);
+            if (DungeonUi.Button("loadoutDone", new Rect(520, 640, 240, 42), "Continue the descent", AbilityCatalog.Gold)) Run.FinishAbilityLoadout();
         }
 
-        /// <summary>
-        /// After a world's third guardian: Next world opens the travel map (the next world picked), or leave for the menu.
-        /// In co-op the host decides for the party.
-        /// </summary>
         private void DrawWorldComplete()
         {
             bool decides = !Run.IsNetworked || Run.Coop.IsHost;
