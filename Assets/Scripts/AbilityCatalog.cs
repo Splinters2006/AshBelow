@@ -10,7 +10,7 @@ namespace Slopgame
         Eclipse, SoulRend, ShadowReign, KnuckleSandwich, WildLeap, PrimalRage, ArchdemonTechnique, DemonPaw, DemonCurse,
         Windfall, AllIn, Jackpot, MicroMissiles, RocketBoost, SentryTurret,
         // The talents & abilities expansion.
-        ShieldThrow, Whirlwind, WarBanner, NetShot, RicochetArrow, BearTrap, IceWall, BallLightning, LightningStorm, SmokeBomb, DeathMark, ShadowClone, HolyLance, Consecration, DivineIntervention
+        ShieldThrow, Whirlwind, WarBanner, NetShot, RicochetArrow, BearTrap, IceWall, BallLightning, LightningStorm, SmokeBomb, DeathMark, ShadowClone, HolyLance, Consecration, DivineIntervention, ThunderClap, HaymakerDash, Suplex
     }
 
     public sealed class AbilityDefinition
@@ -86,6 +86,9 @@ namespace Slopgame
             new AbilityDefinition(AbilityType.HolyLance, WeaponType.Hammer, "Holy Lance", "Throw a spear of light that pierces a line with holy damage and stuns the first enemy for 1 second. Ranks add damage.", "|", 8f, Gold),
             new AbilityDefinition(AbilityType.Consecration, WeaponType.Hammer, "Consecration", "Sanctify the ground around you for 5 seconds: enemies inside take holy damage every second, and allies inside are blessed. Ranks make it last longer.", "#", 14f, Gold),
             new AbilityDefinition(AbilityType.DivineIntervention, WeaponType.Hammer, "Divine Intervention", "Mark the ally nearest your cursor (or yourself). If they fall in the next 5 seconds they rise at 25% HP, untouchable and +2 damage for 2 seconds.", "+", 20f, new Color(1f, 0.95f, 0.7f), true),
+            new AbilityDefinition(AbilityType.ThunderClap, WeaponType.Fists, "Thunder Clap", "Clap to send a shockwave in a cone that knocks enemies back and stuns them for 0.75 seconds. Ranks add damage.", "))", 9f, new Color(0.8f, 0.9f, 1f)),
+            new AbilityDefinition(AbilityType.HaymakerDash, WeaponType.Fists, "Haymaker Dash", "Dash forward and uppercut the first enemy, launching it into the enemies behind it. Ranks add damage.", ">!", 8f, BrawlerAttack.Glove),
+            new AbilityDefinition(AbilityType.Suplex, WeaponType.Fists, "Suplex", "Grab the nearest enemy and slam it down behind you, hurting everything where it lands. Guardians are too heavy. Ranks add damage.", "U", 10f, new Color(0.85f, 0.7f, 0.5f), true),
             new AbilityDefinition(AbilityType.WarBanner, WeaponType.Sword, "War Banner", "Plant a banner for 6 seconds. You and allies inside deal +1 damage, and everyone inside gains a ward when it's planted. Ranks extend it.", "F", 18f, new Color(0.9f, 0.2f, 0.25f), true)
         };
 

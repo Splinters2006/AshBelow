@@ -232,6 +232,9 @@ namespace Slopgame
                 case AbilityType.KnuckleSandwich:
                 case AbilityType.WildLeap:
                 case AbilityType.PrimalRage:
+                case AbilityType.ThunderClap:
+                case AbilityType.HaymakerDash:
+                case AbilityType.Suplex:
                     var brawler = Player.GetComponent<BrawlerAttack>();
                     if (brawler == null || !brawler.CastArtifact(definition.Type, aim, rank)) return false;
                     break;
@@ -371,7 +374,8 @@ namespace Slopgame
 
         /// <summary>Dashes and blinks travel the way the hero is moving (see <see cref="DungeonPlayer.MobilityAim"/>).</summary>
         public static bool IsMovementAbility(AbilityType type)
-            => type == AbilityType.ShieldRush || type == AbilityType.Windstep || type == AbilityType.Blink || type == AbilityType.RocketBoost;
+            => type == AbilityType.ShieldRush || type == AbilityType.Windstep || type == AbilityType.Blink || type == AbilityType.RocketBoost
+                || type == AbilityType.HaymakerDash;
 
         private void ForAllies(SupportKind kind, int amount, float duration)
         {

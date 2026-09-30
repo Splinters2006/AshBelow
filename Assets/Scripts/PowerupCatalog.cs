@@ -30,7 +30,9 @@ namespace Slopgame
         // Assassin.
         Bleed, Vanish, Ambush, Poisoner, BloodTrail, VenomKnives,
         // Paladin.
-        Zeal, HolyGround, Retribution, Shepherd, BlessedJudgment, HealingSanctuary
+        Zeal, HolyGround, Retribution, Shepherd, BlessedJudgment, HealingSanctuary,
+        // Brawler.
+        ComboCounter, Footwork, Brawl, Knockout, MeteorLeap, SandwichSpecial
     }
 
     public sealed class PowerupDefinition
@@ -191,6 +193,12 @@ namespace Slopgame
             new PowerupDefinition(PowerupType.Shepherd, "Paladin: Shepherd", "Your blessings also give +10% movement speed", 1, WeaponType.Hammer),
             new PowerupDefinition(PowerupType.BlessedJudgment, "Blessed Judgment", "Judgment also blesses everyone standing near the mark", 1, WeaponType.Hammer, AbilityType.Judgment),
             new PowerupDefinition(PowerupType.HealingSanctuary, "Healing Sanctuary", "Dropping Sanctuary heals you and allies inside for 1 HP", 1, WeaponType.Hammer, AbilityType.Sanctuary),
+            new PowerupDefinition(PowerupType.ComboCounter, "Brawler: Combo Counter", "Every punch that lands in a barrage adds +1 damage to its final punch", 1, WeaponType.Fists),
+            new PowerupDefinition(PowerupType.Footwork, "Brawler: Footwork", "Your dodge roll keeps you untouchable a little longer", 1, WeaponType.Fists),
+            new PowerupDefinition(PowerupType.Brawl, "Brawler: Brawl", "+1 damage for each enemy within 2 units (a guardian counts as 3)", 1, WeaponType.Fists),
+            new PowerupDefinition(PowerupType.Knockout, "Brawler: Knockout", "The last punch of a charged barrage stuns for 1 second", 1, WeaponType.Fists),
+            new PowerupDefinition(PowerupType.MeteorLeap, "Meteor Leap", "Wild Leap's slam sets enemies burning", 1, WeaponType.Fists, AbilityType.WildLeap),
+            new PowerupDefinition(PowerupType.SandwichSpecial, "Sandwich Special", "Knuckle Sandwich sends a shockwave rolling forward past its box", 1, WeaponType.Fists, AbilityType.KnuckleSandwich),
             new PowerupDefinition(PowerupType.AegisBurst, "Aegis Burst", "When Aegis ends, it blasts nearby enemies back and damages them once per hit it blocked", 1, WeaponType.Sword, AbilityType.Aegis)
         };
 

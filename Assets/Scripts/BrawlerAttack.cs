@@ -8,7 +8,7 @@ namespace Slopgame
     /// punches in a bigger rectangle. RMB Empowers her for a few seconds, and her boss artifacts
     /// (Knuckle Sandwich, Wild Leap, Primal Rage) are cast from here.
     /// </summary>
-    public sealed class BrawlerAttack : MonoBehaviour, IPlayerWeapon
+    public sealed partial class BrawlerAttack : MonoBehaviour, IPlayerWeapon
     {
         // 15% faster than the original 1.8 seconds.
         public const float ChargeDuration = 1.8f / 1.15f;
@@ -85,6 +85,7 @@ namespace Slopgame
             flurry = BrawlerVfx.Flurry(root, transform, () => Player.AimDirection, BarrageLength * Size, BarrageHalfWidth * Size, PunchColor, flurryTime);
             CoopFx.Flurry(Player.Run, BarrageLength * Size, BarrageHalfWidth * Size, PunchColor, flurryTime);
             ScreenFx.Shake(0.05f, flurryTime);
+            int landed = 0;
             for (int i = 0; i < count; i++)
             {
                 if (!Player.Run.IsPlaying || Player.Health <= 0 || root != Player.Run.ProjectileRoot) break;
@@ -93,7 +94,10 @@ namespace Slopgame
                 Vector2 aim = Player.AimDirection;
                 float length = BarrageLength * Size, halfWidth = BarrageHalfWidth * Size;
                 // Light hits keep enemies inside the rectangle; the last punch sends them flying.
-                Strike(origin, aim, length, halfWidth, finisher ? Player.Damage * 2 : Player.Damage, finisher ? 2f : 0.1f);
+                // Combo Counter: every punch that landed adds 1 to the finisher. Knockout: the finisher stuns.
+                int combo = finisher && Player.Powerups.Count(PowerupType.ComboCounter) > 0 ? landed : 0;
+                float stun = finisher && Player.Powerups.Count(PowerupType.Knockout) > 0 ? KnockoutStun : 0f;
+                if (Strike(origin, aim, length, halfWidth, finisher ? Player.Damage * 2 + combo : Player.Damage, finisher ? 2f : 0.1f, stun) > 0) landed++;
                 float fist = finisher ? halfWidth : 0.28f;
                 Vector2 lane = Vector2.Perpendicular(aim) * (finisher ? 0f : Random.Range(-1f, 1f) * (halfWidth - fist));
                 DrawPunch(origin + lane, aim, length, fist, finisher ? Color.Lerp(PunchColor, Color.white, 0.3f) : PunchColor, finisher ? 0.22f : 0.1f);
@@ -138,6 +142,13 @@ namespace Slopgame
                     leap = StartCoroutine(Leap(target, rank));
                     return true;
                 case AbilityType.PrimalRage: PrimalRage(rank); return true;
+                case AbilityType.ThunderClap: ThunderClap(aim, rank); return true;
+                case AbilityType.HaymakerDash: StartCoroutine(HaymakerDash(aim, rank)); return true;
+                case AbilityType.Suplex:
+                    var grabbed = FindSuplexTarget();
+                    if (grabbed == null) return false;
+                    StartCoroutine(Suplex(grabbed, aim, rank));
+                    return true;
                 default: return false;
             }
         }
@@ -171,6 +182,7 @@ namespace Slopgame
             transform.position = run.Map.Move(start, aim * 0.4f);
             Vector2 from = transform.position, impact = from + aim * length;
             Strike(from, aim, length, halfWidth, Player.Damage * (4 + rank), 4f);
+            if (Player.Powerups.Count(PowerupType.SandwichSpecial) > 0) StartCoroutine(SandwichShockwave(impact, aim, halfWidth, Player.Damage * 2 + rank));
             BrawlerVfx.HeavyPunch(root, from, aim, length, halfWidth, color);
             CoopFx.HeavyPunch(run, from, aim, length, halfWidth, color);
             HeroVfx.Pulse(root, impact, halfWidth * 1.6f, color, 0.45f);
@@ -294,19 +306,29 @@ namespace Slopgame
                 if (enemy == null || enemy.Health <= 0 || Vector2.Distance(center, enemy.transform.position) > radius + enemy.HitRadius
                     || !Player.Run.HasLineOfSight(center, enemy.transform.position)) continue;
                 CombatDamage.Apply(Player, enemy, damage, DamageElement.Physical, center, 1.5f);
-                if (enemy.Health > 0) enemy.Chill(1f);
+                if (enemy.Health <= 0) continue;
+                enemy.Chill(1f);
+                // Meteor Leap: the slam sets them burning.
+                if (Player.Powerups.Count(PowerupType.MeteorLeap) > 0) enemy.Burn(CombatDamage.BurnTicks, CombatDamage.BurnTickDamage(damage));
             }
         }
 
-        private void Strike(Vector2 origin, Vector2 aim, float length, float halfWidth, int damage, float knockback)
+        public const float KnockoutStun = 1f;
+
+        /// <summary>Hits everything in the rectangle; returns how many it struck.</summary>
+        private int Strike(Vector2 origin, Vector2 aim, float length, float halfWidth, int damage, float knockback, float stun = 0f)
         {
+            int struck = 0;
             foreach (var enemy in Player.Run.Enemies.ToArray())
             {
                 if (enemy == null || enemy.Health <= 0
                     || !InRectangle((Vector2)enemy.transform.position - origin, aim, length, halfWidth, enemy.HitRadius)
                     || !Player.Run.HasLineOfSight(origin, enemy.transform.position)) continue;
                 CombatDamage.Apply(Player, enemy, damage, DamageElement.Physical, origin, knockback);
+                struck++;
+                if (stun > 0f && enemy != null && enemy.Health > 0) enemy.Stun(stun);
             }
+            return struck;
         }
 
         private void DrawPunch(Vector2 origin, Vector2 aim, float length, float halfWidth, Color color, float duration = 0.16f)

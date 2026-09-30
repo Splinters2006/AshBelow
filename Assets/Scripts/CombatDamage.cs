@@ -105,7 +105,7 @@ namespace Slopgame
             {
                 if (player.ClassWeapon == WeaponType.Daggers && behind)
                     damage = damage * 2 + player.Powerups.Count(PowerupType.Backstab);
-                damage = AssassinBonus(player, enemy, damage);
+                damage = AssassinBonus(player, enemy, damage) + BrawlBonus(player);
                 int rolled = opening ? player.Powerups.CriticalDamage(damage) : player.Powerups.RollDamage(damage);
                 bool critical = rolled > damage;
                 if (critical) player.Powerups.OnCritical(player);
@@ -147,6 +147,20 @@ namespace Slopgame
             if (player.Powerups.AmbushReady) { player.Powerups.AmbushReady = false; damage *= 2; }
             if (player.Powerups.Count(PowerupType.Poisoner) > 0 && enemy.HasDamageOverTime) damage++;
             return damage;
+        }
+
+        public const float BrawlRadius = 2f;
+
+        /// <summary>Brawl: +1 for every enemy crowding the Brawler (a guardian counts as 3).</summary>
+        private static int BrawlBonus(DungeonPlayer player)
+        {
+            if (player == null || player.ClassWeapon != WeaponType.Fists || player.Powerups.Count(PowerupType.Brawl) == 0) return 0;
+            int bonus = 0;
+            Vector2 at = player.transform.position;
+            foreach (var enemy in player.Run.Enemies)
+                if (enemy != null && enemy.Health > 0 && Vector2.Distance(at, enemy.transform.position) <= BrawlRadius + enemy.HitRadius)
+                    bonus += enemy.Boss != null ? 3 : 1;
+            return bonus;
         }
 
         /// <summary>A backstab landed: Bleed opens a wound and Shadow Clone sends a clone to stab again.</summary>

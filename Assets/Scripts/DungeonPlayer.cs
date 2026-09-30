@@ -53,6 +53,7 @@ namespace Slopgame
         /// <summary>This frame's movement input (zero while standing still).</summary>
         public Vector2 MoveInput { get; private set; }
         private const float RollDuration = 0.25f;
+        public const float FootworkGrace = 0.25f;
         public const float RollCooldown = 1.4f;
         /// <summary>Seconds between burning-ground damage ticks.</summary>
         public const float BurnInterval = 1f;
@@ -244,6 +245,8 @@ namespace Slopgame
             if (!Run.IsPlaying || IsRolling || IsBusy || DodgeCooldownRemaining > 0f || direction.sqrMagnitude < 0.001f) return false;
             rollDirection = direction.normalized;
             rollUntil = Time.time + RollDuration;
+            // Footwork: the Brawler stays untouchable a beat after the roll.
+            if (Powerups.Count(PowerupType.Footwork) > 0) Protect(RollDuration + FootworkGrace);
             // Rolling smothers the flames.
             if (IsIgnited)
             {
