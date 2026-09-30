@@ -8,13 +8,14 @@ namespace Slopgame
         private static readonly Color Ember = new Color(1f, 0.46f, 0.2f);
 
         public DungeonRun Run { get; set; }
-        private bool selecting, shopping, coop, controls;
+        private bool selecting, shopping, coop, controls, codex;
         private Vector2 heroScroll;
         private Texture2D gradient, glow;
         private readonly AshShop shop = new AshShop();
         private readonly CoopMenu coopMenu = new CoopMenu();
         private readonly KeybindMenu keybindMenu = new KeybindMenu();
-        public void ResetPage(bool showCoop = false) { selecting = false; shopping = false; controls = false; coop = showCoop; keybindMenu.Cancel(); }
+        private readonly Encyclopedia encyclopedia = new Encyclopedia();
+        public void ResetPage(bool showCoop = false) { selecting = false; shopping = false; controls = false; codex = false; coop = showCoop; keybindMenu.Cancel(); }
         public void ShowCoop() => ResetPage(true);
 
         private void OnDestroy()
@@ -35,6 +36,11 @@ namespace Slopgame
                 {
                     shop.Draw(Run);
                     if (DungeonUi.Button("shopBack", new Rect(70, 598, 268, 48), "Back", DungeonUi.Muted)) shopping = false;
+                }
+                else if (codex)
+                {
+                    encyclopedia.Draw(Run);
+                    if (DungeonUi.Button("codexBack", new Rect(70, 598, 268, 48), "Back", DungeonUi.Muted)) codex = false;
                 }
                 else if (controls)
                 {
@@ -100,7 +106,7 @@ namespace Slopgame
             float t = Time.unscaledTime;
             DungeonUi.Panel(new Rect(70, 62, 36, 2), AbilityCatalog.Gold);
             DungeonUi.Label(new Rect(118, 52, 700, 25), "A ROGUELIKE DESCENT", 14, AbilityCatalog.Gold);
-            string title = shopping ? "ASH SHOP" : controls ? "CONTROLS" : coop ? "CO-OP" : "ASH / BELOW";
+            string title = shopping ? "ASH SHOP" : codex ? "ENCYCLOPEDIA" : controls ? "CONTROLS" : coop ? "CO-OP" : "ASH / BELOW";
             // Soft ember glow and a hard drop shadow give the title some depth.
             float flicker = 0.1f + Mathf.PerlinNoise(t * 1.4f, 0.3f) * 0.12f;
             DungeonUi.Label(new Rect(63, 86, 1100, 94), title, 66, new Color(Ember.r, Ember.g, Ember.b, flicker));
@@ -108,6 +114,7 @@ namespace Slopgame
             DungeonUi.Label(new Rect(69, 93, 1100, 94), title, 66, new Color(0f, 0f, 0f, 0.6f));
             DungeonUi.Label(new Rect(65, 88, 1100, 94), title, 66);
             DungeonUi.Label(new Rect(70, 188, 1100, 42), shopping ? "Spend the ash you carry home. Grow stronger with every descent."
+                : codex ? "Everything you have met in the ash. Unfound entries stay hidden until a descent turns them up."
                 : controls ? "Rebind every action to the keys and mouse buttons you like. Changes save instantly."
                 : coop ? "Descend with up to three friends. Fallen heroes rise again on the next floor."
                 : selecting ? "Choose your hero. Shape your build. Claim the relics below." : "Nine heroes. Two relic abilities. One life in the ash.", 20, DungeonUi.Muted);
@@ -130,7 +137,8 @@ namespace Slopgame
 
             DungeonUi.Label(new Rect(755, 244, 420, 20), "MENU", 12, DungeonUi.Muted);
             if (DungeonUi.Button("chooseClass", new Rect(755, 266, 420, 64), "Choose your hero", AbilityCatalog.Gold)) selecting = true;
-            if (DungeonUi.Button("coop", new Rect(755, 342, 420, 48), "Co-op", AbilityCatalog.Gold)) coop = true;
+            if (DungeonUi.Button("coop", new Rect(755, 342, 205, 48), "Co-op", AbilityCatalog.Gold)) coop = true;
+            if (DungeonUi.Button("encyclopedia", new Rect(970, 342, 205, 48), "Encyclopedia", AbilityCatalog.Gold)) codex = true;
             if (DungeonUi.Button("shop", new Rect(755, 402, 205, 48), "Ash shop", DungeonUi.Teal)) shopping = true;
             if (DungeonUi.Button("controls", new Rect(970, 402, 205, 48), "Controls", DungeonUi.Teal)) controls = true;
             if (DungeonUi.Button("quit", new Rect(755, 462, 420, 48), "Quit", DungeonUi.Muted))

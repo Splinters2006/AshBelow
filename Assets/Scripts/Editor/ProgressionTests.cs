@@ -56,6 +56,10 @@ namespace Slopgame.Editor
             foreach (WeaponType weapon in Enum.GetValues(typeof(WeaponType))) save.RecordGuardian(3, weapon);
             save.RecordGuardian(1, WeaponType.Sword);
             Require(save.GuardiansDefeated == 3 && save.GuardiansDefeatedAs(WeaponType.Sword) == 3, "A shallower descent lowered the guardian record.");
+            string talent = Encyclopedia.TalentId(PowerupType.Thorns);
+            save.Discover(talent);
+            save.Discover(talent);
+            Require(new PermanentProgress(root).IsDiscovered(talent) && save.Discovered.Count == 1, "An encyclopedia discovery was not saved exactly once.");
             foreach (var upgrade in PermanentUpgradeCatalog.All)
             {
                 int before = save.Ash;

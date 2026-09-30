@@ -203,6 +203,7 @@ namespace Slopgame
                 SelectedCharacter.Color, 4).gameObject.AddComponent<DungeonPlayer>();
             Player.Run = this;
             Player.Initialize(SelectedCharacter);
+            Progress.Discover(Encyclopedia.HeroId(SelectedCharacter.Weapon));
             crystalsStashed = false;
             // Smuggler's Stash: last descent's crystals come along.
             Player.Crystals.Add(Progress.TakeStash());
@@ -265,6 +266,7 @@ namespace Slopgame
             // The floor before every boss leads into the crystal shop, and the shop's stairs lead to the boss.
             InShop = !InShop && IsShopNext(Floor);
             if (!InShop) Floor++;
+            Progress.Discover(Encyclopedia.WorldId(World.Index));
             floorRewardGranted = false;
             // Wave worlds fight every wave in the open arena the guardians use.
             Map = InShop ? DungeonMap.Shop() : new DungeonMap(Seed + Floor * 7919, IsBossFloor || IsWaveFloor, World.Layout, World.HasLava && !IsBossFloor);
@@ -630,7 +632,11 @@ namespace Slopgame
             // Wave levels: the next wave arrives before the fight runs dry, so the level is only clear after its last wave.
             ReleaseNextWave();
             int reward = enemy.Boss != null ? 50 : 1;
-            if (enemy.Boss != null) Progress.RecordGuardian(++guardiansThisRun, Player != null ? Player.ClassWeapon : (WeaponType?)null);
+            if (enemy.Boss != null)
+            {
+                Progress.RecordGuardian(++guardiansThisRun, Player != null ? Player.ClassWeapon : (WeaponType?)null);
+                Progress.Discover(Encyclopedia.GuardianId(enemy.Boss.Title));
+            }
             if (Enemies.Count == 0 && !floorRewardGranted)
             { reward += 10; floorRewardGranted = true; }
             RunAshEarned += reward;
@@ -747,6 +753,7 @@ namespace Slopgame
         {
             if (!ChoosingArtifact || ArrangingAbilities || (IsNetworked && Coop.WaitingForTeam)
                 || !abilityOffers.Exists(offer => offer.Type == type) || !Player.Abilities.Learn(type)) return false;
+            Progress.Discover(Encyclopedia.AbilityId(type));
             Player.Heal(2);
             ArrangingAbilities = true;
             return true;
@@ -762,6 +769,7 @@ namespace Slopgame
         public bool ChooseArtifact(AbilityType type, int slot)
         {
             if (!ChoosingArtifact || (IsNetworked && Coop.WaitingForTeam) || !Player.Abilities.Claim(type, slot)) return false;
+            Progress.Discover(Encyclopedia.AbilityId(type));
             Player.Heal(2);
             FinishArtifactChoice();
             return true;

@@ -25,6 +25,8 @@ namespace Slopgame
             public int stashedCrystals;
             /// <summary>Switched-off toggles, such as the Infernal Pact.</summary>
             public List<string> flags;
+            /// <summary>Encyclopedia entries met in any descent: heroes, talents, abilities, guardians and worlds.</summary>
+            public List<string> discovered;
         }
         private SaveData data = Fresh();
         private bool dirty, recoveredBackup;
@@ -43,7 +45,7 @@ namespace Slopgame
         }
 
         private static SaveData Fresh() => new SaveData { version = 1, ash = 0, classGuardians = new List<RankEntry>(), upgrades = new List<RankEntry>(),
-            clearedWorlds = new List<int>(), flags = new List<string>() };
+            clearedWorlds = new List<int>(), flags = new List<string>(), discovered = new List<string>() };
         private static string ClassKey(WeaponType weapon) => weapon.ToString().ToLowerInvariant();
 
         /// <summary>The most guardians beaten in a single descent as this class.</summary>
@@ -72,6 +74,7 @@ namespace Slopgame
             if (loaded.classGuardians == null) loaded.classGuardians = new List<RankEntry>();
             if (loaded.clearedWorlds == null) loaded.clearedWorlds = new List<int>();
             if (loaded.flags == null) loaded.flags = new List<string>();
+            if (loaded.discovered == null) loaded.discovered = new List<string>();
             if (loaded.stashedCrystals < 0) loaded.stashedCrystals = 0;
             ids.Clear();
             foreach (var entry in loaded.classGuardians)
@@ -198,6 +201,20 @@ namespace Slopgame
             if (IsReadOnly || IsSwitchedOff(id) == !on) return;
             if (on) data.flags.Remove(id);
             else data.flags.Add(id);
+            dirty = true;
+            Save();
+            Changed?.Invoke();
+        }
+
+        /// <summary>True once an encyclopedia entry has turned up in any descent.</summary>
+        public IReadOnlyList<string> Discovered => data.discovered;
+        public bool IsDiscovered(string id) => data.discovered.Contains(id);
+
+        /// <summary>Records an encyclopedia entry (see <see cref="Encyclopedia"/> for the id scheme); saves only when it is new.</summary>
+        public void Discover(string id)
+        {
+            if (IsReadOnly || string.IsNullOrEmpty(id) || data.discovered.Contains(id)) return;
+            data.discovered.Add(id);
             dirty = true;
             Save();
             Changed?.Invoke();

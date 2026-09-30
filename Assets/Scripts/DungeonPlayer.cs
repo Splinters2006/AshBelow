@@ -479,6 +479,7 @@ namespace Slopgame
         public bool GrantPowerup(PowerupType type)
         {
             if (!Powerups.Add(type)) return false;
+            Run?.Progress?.Discover(Encyclopedia.TalentId(type));
             if (type == PowerupType.Damage) BaseDamage++;
             if (type == PowerupType.Vitality) { rawMaxHealth += 2; if (Health > 0) Health = MaxHealth; }
             if (type == PowerupType.GlassCannon) Health = Mathf.Min(Health, MaxHealth);
