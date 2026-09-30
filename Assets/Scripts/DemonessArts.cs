@@ -7,7 +7,7 @@ namespace Slopgame
     /// <summary>The Demoness's expansion arts: Wing Dash, Soul Siphon and Nightmare Snap, plus Torment's tally.</summary>
     public sealed partial class DemonessAttack
     {
-        public const float WingDashDistance = 4.5f, WingDashParalysis = 1f, SiphonRadius = 3.5f, SiphonTime = 3f, SnapRadius = 4f;
+        public const float WingDashDistance = 4.5f, WingDashParalysis = 1f, SiphonRadius = 3.5f, SiphonTime = 5f, SnapRadius = 4f;
         private readonly Dictionary<DungeonEnemy, int> torment = new Dictionary<DungeonEnemy, int>();
 
         /// <summary>Torment: each vital stab on the same enemy adds +1 more than the last (no limit).</summary>
