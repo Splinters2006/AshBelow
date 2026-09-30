@@ -145,6 +145,7 @@ namespace Slopgame
                 // Burning ground ticks once a second; pillars and fire walls strike like any other blow.
                 if (IsGround) hero.Burn();
                 else hero.Hit();
+                if (spec.Style == HazardStyle.Venom && hero.Health > 0 && hero.Health != before) hero.Poison();
                 if (hero.Health != before || hero.IsInvulnerable)
                     HeroVfx.Sparks(run.ProjectileRoot, hero.transform.position, colors.Main, 12, 4f, 0.4f, Vector2.up, 120f);
             }

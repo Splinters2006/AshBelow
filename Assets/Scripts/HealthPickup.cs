@@ -53,6 +53,7 @@ namespace Slopgame
             Place(rest, 0.12f + 0.07f * Mathf.Sin(Time.time * 3f + phase));
             if (!wounded || Vector2.Distance(rest, hero) > PickupRadius) return;
             player.Heal(HealAmount);
+            player.CurePoison();
             HeroVfx.Motes(run.ProjectileRoot, hero, 0.7f, HeartColor, 10, 0.8f);
             HeroVfx.Pulse(run.ProjectileRoot, rest, 0.5f, new Color(1f, 0.4f, 0.45f, 0.7f), 0.2f);
             Destroy(gameObject);

@@ -25,6 +25,11 @@ namespace Slopgame
         public bool IsHoldingShield => Mechanic is ShieldTaunt taunt && taunt.IsTaunting;
         public float Speed { get; private set; } = 5f;
         public bool IsRolling => Time.time < rollUntil;
+        /// <summary>Poisoned by the Savage Wilds' venom: slowed and tinted green, then one damage when it wears off.</summary>
+        public bool IsPoisoned => poisonedUntil > 0f;
+        public const float PoisonDuration = 4f, PoisonSlow = 0.75f;
+        public static readonly Color PoisonGreen = new Color(0.45f, 1f, 0.3f);
+        private float poisonedUntil, nextPoisonMote;
         public bool IsInvulnerable => Time.time < invulnerableUntil || IsRolling;
         /// <summary>Shadow Veil: enemies cannot see this hero, so they neither chase nor turn toward them.</summary>
         public bool IsVeiled => Time.time < veiledUntil && Health > 0;
@@ -159,7 +164,9 @@ namespace Slopgame
             // Safety net: a hero with health must never stay hidden, however that health came back.
             if (Health > 0 && hiddenRenderers.Count > 0) SetVisible(true);
             body.color = IsHurt ? (Mathf.Repeat(Time.time * 16f, 1f) < 0.5f ? HurtColor : Color.white)
-                : IsRolling ? new Color(0.4f, 0.65f, 1f) : IsHoldingShield ? HeroBuffs.AngryTint(characterColor) : IsInvulnerable ? Color.white : Buffs.Tint(characterColor);
+                : IsRolling ? new Color(0.4f, 0.65f, 1f) : IsHoldingShield ? HeroBuffs.AngryTint(characterColor) : IsInvulnerable ? Color.white
+                : IsPoisoned ? Color.Lerp(Buffs.Tint(characterColor), PoisonGreen, 0.55f) : Buffs.Tint(characterColor);
+            UpdatePoison();
             SetVeiledLook(IsVeiled);
             if (!Run.IsPlaying || Health <= 0 || IsBusy) { MoveInput = Vector2.zero; Charge.Tick(PlayerInput.Attack, false); return; }
             Vector2 cursor = Run.View.ScreenToWorldPoint(new Vector3(PlayerInput.CursorPosition.x,
@@ -173,7 +180,7 @@ namespace Slopgame
             // A roll can be steered: it keeps its speed and length but follows the movement keys.
             if (IsRolling && movement.sqrMagnitude > 0.01f) rollDirection = movement.normalized;
             Vector2 velocity = IsRolling ? rollDirection * Speed * 2.6f * Buffs.DodgeSpeedMultiplier
-                : movement * Speed * Buffs.MoveMultiplier * Crystals.SpeedMultiplier * (Weapon.IsHeavyAttacking ? 0.55f : Charge.IsCharging ? 0.7f : 1f);
+                : movement * Speed * Buffs.MoveMultiplier * Crystals.SpeedMultiplier * (IsPoisoned ? PoisonSlow : 1f) * (Weapon.IsHeavyAttacking ? 0.55f : Charge.IsCharging ? 0.7f : 1f);
             if (DebugMode.Enabled) velocity *= DebugMode.SpeedMultiplier;
             transform.position = Run.Map.Move(transform.position, velocity * Time.deltaTime);
             // Rolling into an urn smashes it.
@@ -226,6 +233,33 @@ namespace Slopgame
                 Charge.Cancel();
             }
             return true;
+        }
+
+        /// <summary>Venom poisons a living hero; a fresh dose restarts the timer rather than stacking.</summary>
+        public void Poison()
+        {
+            if (Health <= 0 || DebugMode.Enabled) return;
+            if (!IsPoisoned) HeroVfx.Pulse(Run.ProjectileRoot, transform.position, 0.7f, PoisonGreen, 0.3f);
+            poisonedUntil = Time.time + PoisonDuration;
+        }
+
+        /// <summary>Clears poison without its parting damage (a heart pickup).</summary>
+        public void CurePoison() => poisonedUntil = 0f;
+
+        private void UpdatePoison()
+        {
+            if (!IsPoisoned) return;
+            if (Health <= 0) { poisonedUntil = 0f; return; }
+            if (!Run.IsPlaying) { poisonedUntil += Time.deltaTime; return; }
+            if (Time.time >= nextPoisonMote)
+            {
+                nextPoisonMote = Time.time + 0.35f;
+                HeroVfx.Sparks(Run.ProjectileRoot, (Vector2)transform.position + Vector2.up * 0.2f, PoisonGreen, 2, 1.2f, 0.4f, Vector2.up, 60f, 0.7f);
+            }
+            if (Time.time < poisonedUntil) return;
+            poisonedUntil = 0f;
+            // The venom's parting sting; a ward still absorbs it.
+            if (Hit()) HeroVfx.Sparks(Run.ProjectileRoot, transform.position, PoisonGreen, 10, 3.5f, 0.35f, Vector2.up, 140f);
         }
 
         /// <summary>Standing in burning ground: one damage per second, however many fires overlap.</summary>

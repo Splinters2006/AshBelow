@@ -86,7 +86,7 @@ namespace Slopgame.Editor
                     return;
                 }
                 TestNeon(run);
-                Finish(!failed, "26 talent caps/class gates; crit, burn, freeze, shock, ward effects; world-cleared screen; both world spawns; breakables; environmental traps; 12 world specialists; spread fire, freeze/pause, charge/recovery/walls");
+                Finish(!failed, "26 talent caps/class gates; crit, burn, freeze, shock, ward effects; world-cleared screen; both world spawns; breakables; environmental traps, lava, poison, world elements; 13 world specialists; spread fire, freeze/pause, charge/recovery/walls");
             }
             catch (Exception error) { Debug.LogException(error); Finish(false, error.Message); }
         }
@@ -137,7 +137,19 @@ namespace Slopgame.Editor
 
         private static void TestHazards(DungeonRun run)
         {
-            foreach (var world in WorldCatalog.All) Require(world.Traps.Length > 0, "World without traps: " + world.Name);
+            foreach (var world in WorldCatalog.All)
+            {
+                Require(world.Traps.Length > 0, "World without traps: " + world.Name);
+                bool fiery = world.Index == 0 || world.Index == 2;
+                Require(fiery == (world.Bolts == BoltKind.Ember) && fiery == (world.Element == HazardStyle.Hellfire), "Fireballs outside the fire worlds: " + world.Name);
+                Require(world.HasLava == (world.Index == 2), "Lava in the wrong world: " + world.Name);
+            }
+            Require(WorldCatalog.All[5].Bolts == BoltKind.Venom, "The Wilds do not spit venom");
+            // Venom poisons: slowed and tinted until a heart cures it.
+            run.Player.Poison();
+            Require(run.Player.IsPoisoned, "Venom did not poison the hero");
+            run.Player.CurePoison();
+            Require(!run.Player.IsPoisoned, "Poison was not cured");
             Require(EnvironmentHazard.CountForFloor(1) == 0 && EnvironmentHazard.CountForFloor(3) > 0, "Wrong trap counts");
             Require(EnvironmentHazard.Active.Count > 0, "No traps on a combat floor");
             foreach (var trap in EnvironmentHazard.Active)

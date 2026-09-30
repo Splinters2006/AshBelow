@@ -39,15 +39,20 @@ namespace Slopgame
         public TrapTheme[] Traps { get; }
         /// <summary>True when the world's combat floors carry lava pools that burn heroes (the Infernal Court).</summary>
         public bool HasLava { get; }
+        /// <summary>
+        /// What the world's reused guardians strike with (the archdemon's bolts follow <see cref="Bolts"/>): only the
+        /// Ash Below and the Infernal Court use hellfire.
+        /// </summary>
+        public HazardStyle Element { get; }
 
         public WorldDefinition(int index, string name, bool highTech, Color background, Color floorA, Color floorB, Color wall, Color accent,
             Color arenaRune, string basicName, string casterName, string bruteName, Color basicTint, Color casterTint, Color bruteTint, BoltKind bolts,
-            WeaponType? hero = null, bool placeholder = false, Vector2 mapPosition = default, MapLayout layout = MapLayout.Dungeon, TrapTheme[] traps = null, bool lava = false)
+            WeaponType? hero = null, bool placeholder = false, Vector2 mapPosition = default, MapLayout layout = MapLayout.Dungeon, TrapTheme[] traps = null, bool lava = false, HazardStyle element = HazardStyle.Hellfire)
         {
             Index = index; Name = name; HighTech = highTech; Background = background; FloorA = floorA; FloorB = floorB; Wall = wall; Accent = accent;
             ArenaRune = arenaRune; BasicName = basicName; CasterName = casterName; BruteName = bruteName;
             BasicTint = basicTint; CasterTint = casterTint; BruteTint = bruteTint; Bolts = bolts;
-            Hero = hero; IsPlaceholder = placeholder; MapPosition = mapPosition; Layout = layout; Traps = traps ?? new TrapTheme[0]; HasLava = lava;
+            Hero = hero; IsPlaceholder = placeholder; MapPosition = mapPosition; Layout = layout; Traps = traps ?? new TrapTheme[0]; HasLava = lava; Element = element;
         }
     }
 
@@ -79,7 +84,7 @@ namespace Slopgame
                 {
                     new TrapTheme("Plasma laser", TrapKind.Jet, HazardStyle.Plasma, 9f),
                     new TrapTheme("Arc floor panel", TrapKind.Vent, HazardStyle.Circuit, 1.2f),
-                }),
+                }, element: HazardStyle.Plasma),
             // Placeholder hero worlds: their own names, colours and specialists, with the Ash Below's basic enemies and guardians until each is designed.
             new WorldDefinition(2, "THE INFERNAL COURT", false, new Color(0.06f, 0.015f, 0.03f),
                 new Color(0.16f, 0.06f, 0.08f), new Color(0.19f, 0.07f, 0.1f), new Color(0.36f, 0.12f, 0.2f),
@@ -100,7 +105,7 @@ namespace Slopgame
                 {
                     new TrapTheme("Frost rune", TrapKind.Rune, HazardStyle.Frost, 2.8f),
                     new TrapTheme("Arcane ray", TrapKind.Jet, HazardStyle.Void, 8f),
-                }),
+                }, element: HazardStyle.Frost),
             new WorldDefinition(4, "THE SHADOW MARKET", false, new Color(0.02f, 0.04f, 0.035f),
                 new Color(0.09f, 0.12f, 0.11f), new Color(0.11f, 0.14f, 0.13f), new Color(0.22f, 0.28f, 0.26f),
                 new Color(0.45f, 0.95f, 0.7f), new Color(0.3f, 0.7f, 0.5f),
@@ -110,16 +115,16 @@ namespace Slopgame
                 {
                     new TrapTheme("Blade trap", TrapKind.Jet, HazardStyle.Steel, 5f),
                     new TrapTheme("Spike plate", TrapKind.Vent, HazardStyle.Steel, 0.9f),
-                }),
+                }, element: HazardStyle.Steel),
             new WorldDefinition(5, "THE SAVAGE WILDS", false, new Color(0.03f, 0.05f, 0.025f),
                 new Color(0.12f, 0.17f, 0.09f), new Color(0.14f, 0.19f, 0.1f), new Color(0.3f, 0.36f, 0.2f),
                 new Color(0.95f, 0.6f, 0.25f), new Color(0.6f, 0.85f, 0.35f),
                 "Wild boar", "Spear hunter", "Ape brute",
-                new Color(0.85f, 0.6f, 0.45f), new Color(0.7f, 0.9f, 0.4f), new Color(0.55f, 0.45f, 0.35f), BoltKind.Blade,
+                new Color(0.85f, 0.6f, 0.45f), new Color(0.7f, 0.9f, 0.4f), new Color(0.55f, 0.45f, 0.35f), BoltKind.Venom,
                 WeaponType.Fists, true, new Vector2(0.96f, 0.26f), MapLayout.Clearings, new[]
                 {
                     new TrapTheme("Spore pod", TrapKind.Vent, HazardStyle.Venom, 1.4f),
-                }),
+                }, element: HazardStyle.Venom),
         };
 
         /// <summary>The world a floor belongs to; floors past the last world stay in it.</summary>

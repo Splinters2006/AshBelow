@@ -97,7 +97,7 @@ namespace Slopgame
                 }
                 if (Vector2.Distance(next, run.Player.transform.position) <= 0.42f)
                 {
-                    run.Player.Hit();
+                    if (run.Player.Hit() && Kind == BoltKind.Venom) run.Player.Poison();
                     if (run.IsNetworked) run.Coop.ReportBolt(this, CoopBoltEventKind.Consumed);
                     Consume();
                     return;
