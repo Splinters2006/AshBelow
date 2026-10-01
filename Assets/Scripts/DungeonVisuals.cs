@@ -9,7 +9,7 @@ namespace Slopgame
         private static Sprite thrownBlade;
 
         private static readonly Sprite[] enemySprites = new Sprite[3];
-        private static Sprite flameSprite, shadowHero, duelistSprite, archdemonSprite, wardenSprite,
+        private static Sprite flameSprite, duelistSprite, archdemonSprite, wardenSprite,
             sentinelDetails, titanDetails;
         public static Sprite FlameSprite => flameSprite != null ? flameSprite : flameSprite = PixelSprite("Burn flame", new[]
         {
@@ -404,31 +404,13 @@ namespace Slopgame
             part.transform.localPosition = offset;
         }
 
-        /// <summary>The Admin's shadow-sovereign sprite (tinted by the class colour).</summary>
-        public static Sprite ShadowHeroSprite => shadowHero != null ? shadowHero : shadowHero = PixelSprite("Shadow sovereign", new[]
-        {
-            "...W....W....W..", "...WW..WWW..WW..", "....WWWWWWWWW...", "...WWWWWWWWWWW..",
-            "...WDDDDDDDDDW..", "...WDWWDDWWDDW..", "...WDDDDDDDDDW..", "....WDDDDDDDW...",
-            "...WWWWWWWWWWW..", "..WWWDDWWDDWWW..", ".WWWWDDWWDDWWWW.", "WWWWWDDWWDDWWWWW",
-            ".WWWWWDDDDWWWWW.", "..WWWWDDDDWWWW..", "..WWW..WW..WWW..", "...W........W..."
-        });
-
         /// <summary>
-        /// Dresses the hero. Returns the fixed-colour detail layer for regular heroes (so it can be flipped
-        /// with the body), or null for the Admin.
+        /// Dresses the hero. Returns the fixed-colour detail layer (so it can be flipped with the body), or null
+        /// for a class without a hero sprite.
         /// </summary>
         public static SpriteRenderer DecorateHero(Transform hero, WeaponType weapon, Color tint)
         {
             var body = hero.GetComponent<SpriteRenderer>();
-            if (weapon == WeaponType.Shadow)
-            {
-                body.sprite = ShadowHeroSprite;
-                Detail(hero, "Void mantle", new Vector2(0, -0.15f), new Vector2(1.15f, 0.72f), new Color(0.035f, 0.012f, 0.075f), 3);
-                Detail(hero, "Left soul eye", new Vector2(-0.16f, 0.12f), new Vector2(0.15f, 0.06f), AbilityCatalog.Ice, 7);
-                Detail(hero, "Right soul eye", new Vector2(0.16f, 0.12f), new Vector2(0.15f, 0.06f), AbilityCatalog.Ice, 7);
-                ShadowVfx.Aura(hero);
-                return null;
-            }
             // A soft oval ground shadow under the feet (two overlapping bars read as an ellipse).
             Detail(hero, "Shadow", new Vector2(0f, -0.66f), new Vector2(0.95f, 0.14f), new Color(0.01f, 0.02f, 0.04f, 0.35f), 2);
             Detail(hero, "Shadow core", new Vector2(0f, -0.66f), new Vector2(0.65f, 0.22f), new Color(0.01f, 0.02f, 0.04f, 0.3f), 2);

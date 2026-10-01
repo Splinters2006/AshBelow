@@ -322,7 +322,7 @@ namespace Slopgame
         /// <summary>Contact damage against the local hero (each machine judges its own hero).</summary>
         public void TryContactHit(float reach)
         {
-            if (!Run.IsPlaying || Health <= 0 || IsHeld || ActionTime < contactReadyAt || Run.Player.IsInvulnerable || Run.Player.IsIntangible || Run.Player.Health <= 0
+            if (!Run.IsPlaying || Health <= 0 || IsHeld || ActionTime < contactReadyAt || Run.Player.IsInvulnerable || Run.Player.IgnoresContact || Run.Player.Health <= 0
                 || Vector2.Distance(transform.position, Run.Player.transform.position) >= reach) return;
             Run.Player.Hit(Boss != null ? Run.World.GuardianHitDamage : 1);
             contactReadyAt = ActionTime + 1f;
@@ -409,6 +409,8 @@ namespace Slopgame
             if (localKill) ScrapPickup.TryDrop(Run, this);
             // The Reaper takes the souls of the soul-bound, and fear he has sown spreads from the fallen.
             if (Run.Player != null && Run.Player.Weapon is ReaperAttack reaper) reaper.OnEnemyDied(this, localKill);
+            // The Specimen's chains pass a binding on (Shackles), and kills stretch an upgraded Overdrive.
+            if (Run.Player != null && Run.Player.Weapon is SpecimenAttack specimen) specimen.OnEnemyDied(this, localKill);
             // Every fallen enemy leaves crystals for the shop before the next boss. In co-op they are shared: every machine
             // drops the same ones, and whoever picks them up, the whole party is paid (Prospector's extras stay the hero's own).
             if (Run.Player != null)
@@ -417,7 +419,7 @@ namespace Slopgame
                 if (Run.Player.Powerups.RollExtraCrystals()) Crystal.Drop(Run, transform.position, Crystal.ValueFor(this));
             }
             CombatVfx.Ring(Run.ProjectileRoot, transform.position, Boss != null ? 1.6f : 0.45f, AbilityCatalog.Gold);
-            if (Run.Player != null && Run.Player.ClassWeapon != WeaponType.Shadow)
+            if (Run.Player != null)
             {
                 HeroVfx.Sparks(Run.ProjectileRoot, transform.position, new Color(1f, 0.62f, 0.25f), Boss != null ? 28 : 12,
                     Boss != null ? 6f : 4.2f, Boss != null ? 0.6f : 0.4f);

@@ -27,8 +27,8 @@ namespace Slopgame
         private string notice;
         private bool hideMaxed;
         private readonly List<PermanentUpgradeDefinition> shown = new List<PermanentUpgradeDefinition>();
-        private static readonly string[] Tabs = { "All heroes", "Knight", "Archer", "Wizard", "Assassin", "Paladin", "Brawler", "Demoness", "Gambler", "Augment", "Reaper" };
-        private static readonly WeaponType?[] Weapons = { null, WeaponType.Sword, WeaponType.Bow, WeaponType.Staff, WeaponType.Daggers, WeaponType.Hammer, WeaponType.Fists, WeaponType.Tail, WeaponType.Coins, WeaponType.Beam, WeaponType.Scythe };
+        private static readonly string[] Tabs = { "All heroes", "Knight", "Archer", "Wizard", "Assassin", "Paladin", "Brawler", "Demoness", "Gambler", "Augment", "Reaper", "Specimen" };
+        private static readonly WeaponType?[] Weapons = { null, WeaponType.Sword, WeaponType.Bow, WeaponType.Staff, WeaponType.Daggers, WeaponType.Hammer, WeaponType.Fists, WeaponType.Tail, WeaponType.Coins, WeaponType.Beam, WeaponType.Scythe, WeaponType.Mutation };
 
         // Layout, in the 1280x720 menu space.
         private static readonly Rect ListRect = new Rect(70, 318, 1140, 270);
@@ -95,7 +95,8 @@ namespace Slopgame
             for (int i = 0; i < Tabs.Length; i++)
             {
                 var rect = new Rect(70 + i * step, 240, step - 12, 40);
-                if (DungeonUi.Button("shopTab" + i, rect, Tabs[i], tab == i ? AbilityCatalog.Gold : DungeonUi.Muted))
+                // Twelve tabs share the row, so the labels are a size smaller to fit.
+                if (DungeonUi.Button("shopTab" + i, rect, Tabs[i], tab == i ? AbilityCatalog.Gold : DungeonUi.Muted, true, Tabs.Length > 11 ? 15 : 18))
                 { tab = i; scroll = Vector2.zero; notice = null; }
                 foreach (var item in PermanentUpgradeCatalog.All)
                 {

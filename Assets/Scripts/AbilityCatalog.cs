@@ -7,12 +7,14 @@ namespace Slopgame
     {
         None, ShieldRush, Earthshatter, Aegis, Volley, PiercingShot, Windstep,
         Fireball, FrostNova, Blink, FanOfKnives, VenomVial, ShadowVeil, HealingLight, Judgment, Sanctuary,
-        Eclipse, SoulRend, ShadowReign, KnuckleSandwich, WildLeap, PrimalRage, ArchdemonTechnique, DemonPaw, DemonCurse,
+        Heartbeat, FightOrFlight, Bulldoze, KnuckleSandwich, WildLeap, PrimalRage, ArchdemonTechnique, DemonPaw, DemonCurse,
         Windfall, AllIn, Jackpot, MicroMissiles, RocketBoost, SentryTurret,
         // The talents & abilities expansion.
         ShieldThrow, Whirlwind, WarBanner, NetShot, RicochetArrow, BearTrap, IceWall, BallLightning, LightningStorm, SmokeBomb, DeathMark, ShadowClone, HolyLance, Consecration, DivineIntervention, ThunderClap, HaymakerDash, Suplex, WingDash, SoulSiphon, NightmareSnap, CardToss, DiceBomb, Insurance, EmpPulse, GrappleArm, OrbitalLaser,
         // The Reaper.
-        ShadeWalk, FearIncarnate, Feast, Sow, Reap, ReapersTechnique
+        ShadeWalk, FearIncarnate, Feast, Sow, Reap, ReapersTechnique,
+        // The Specimen (Heartbeat, Fight or Flight and Bulldoze took over the retired Admin's three slots above).
+        BoulderToss, IronSkin, GiantSwing, SwingLine, AnkleWrap, Bind, RoundUp
     }
 
     public sealed class AbilityDefinition
@@ -59,9 +61,9 @@ namespace Slopgame
             new AbilityDefinition(AbilityType.HealingLight, WeaponType.Hammer, "Healing Light", "Restore 2 HP to yourself and nearby allies.", "+", 30f, HealVfx.Mint),
             new AbilityDefinition(AbilityType.Judgment, WeaponType.Hammer, "Judgment", "Call down a column of holy light at the cursor. After a short windup it smites and slows enemies around the mark.", "!", 10f, Gold),
             new AbilityDefinition(AbilityType.Sanctuary, WeaponType.Hammer, "Sanctuary", "Surround yourself with a bubble of holy light that moves with you, destroys every projectile inside it, shoves enemies out and slows any that return. Recast to drop it. You cannot attack while it holds.", "O", 16f, Ice),
-            new AbilityDefinition(AbilityType.Eclipse, WeaponType.Shadow, "Eclipse", "A vast black sun executes every visible enemy within 11 units, including guardians. Ranks widen its reach.", "O", 6f, Violet),
-            new AbilityDefinition(AbilityType.SoulRend, WeaponType.Shadow, "Soul Rend", "Tear open a 14-unit shadow corridor for triple fully charged damage. Ranks multiply its damage.", "///", 3f, Ice),
-            new AbilityDefinition(AbilityType.ShadowReign, WeaponType.Shadow, "Shadow Reign", "Detonate nearby shadows. Become invulnerable and double rift damage for 3 seconds. Ranks extend the reign.", "*", 8f, Violet),
+            new AbilityDefinition(AbilityType.Heartbeat, WeaponType.Mutation, "Heartbeat", "A thump of force from your chest knocks back every enemy within 2.5 units. As the Behemoth it reaches farther and stuns for 1 second; as the Edge every enemy it hits takes critical hits from you for 2 seconds. Ranks add damage and lengthen the stun or the exposure.", "<3", 10f, SpecimenCatalog.Vital),
+            new AbilityDefinition(AbilityType.FightOrFlight, WeaponType.Mutation, "Fight or Flight", "For 4 seconds you move 40% faster and your dodge is ready at once. The Behemoth also stores 2 Force; the Edge also attacks 50% faster. Ranks add a second.", ">>", 15f, SpecimenCatalog.Vital),
+            new AbilityDefinition(AbilityType.Bulldoze, WeaponType.Mutation, "Bulldoze", "Behemoth only. Charge 5 units with your arms crossed, carrying every enemy in your path and slamming them at the end. Bolts that hit you on the way become Force. Ranks add damage.", "=>", 9f, SpecimenCatalog.Amber),
             new AbilityDefinition(AbilityType.KnuckleSandwich, WeaponType.Fists, "Knuckle Sandwich", "Wind up and throw a HEAVY punch that smashes everything in a big rectangle ahead. Ranks increase its size and damage.", "[]", 7f, BrawlerAttack.Glove),
             new AbilityDefinition(AbilityType.WildLeap, WeaponType.Fists, "Wild Leap", "Pounce onto an enemy, even over walls, and slam down for massive damage. The farther you leap, the wider the slam. Invulnerable while airborne.", "^", 16f, Gold),
             new AbilityDefinition(AbilityType.PrimalRage, WeaponType.Fists, "Primal Rage", "10 seconds of huge damage, charge, movement and dodge buffs, then 5 seconds tired. Cooldown starts once rested.", "!!", 25f, new Color(1f, 0.25f, 0.2f)),
@@ -106,7 +108,14 @@ namespace Slopgame
             new AbilityDefinition(AbilityType.Feast, WeaponType.Scythe, "Feast!", "Eat 1, 3 or 5 souls to heal 1, 2 or 3 HP: always the most you can afford, but never more than the wound needs. Ranks leave you untouchable for a second each.", "+", 10f, HealVfx.Mint),
             new AbilityDefinition(AbilityType.Sow, WeaponType.Scythe, "Sow", "Sow fear into the enemy nearest your cursor for 2 seconds. Deals no damage. If it dies while afraid, the fear spreads to every enemy within 3 units. Ranks lengthen the fear.", "v", 8f, ReaperAttack.Soul),
             new AbilityDefinition(AbilityType.Reap, WeaponType.Scythe, "Reap", "Reap the fear out of every frightened enemy: each full second of fear it had left gives you a soul and deals damage. Only fear is reaped, no other hold. Ranks add damage.", "^", 9f, ReaperAttack.Bone),
-            new AbilityDefinition(AbilityType.ReapersTechnique, WeaponType.Scythe, "Reaper's Technique", "For 10 seconds your quick cuts become a string of three scythe arts that hit harder: a wide cut, a doubled back-cut and a full spin. Charging to harvest is unchanged. Ranks add 2 seconds.", "S", 16f, ReaperAttack.Soul, true)
+            new AbilityDefinition(AbilityType.ReapersTechnique, WeaponType.Scythe, "Reaper's Technique", "For 10 seconds your quick cuts become a string of three scythe arts that hit harder: a wide cut, a doubled back-cut and a full spin. Charging to harvest is unchanged. Ranks add 2 seconds.", "S", 16f, ReaperAttack.Soul, true),
+            new AbilityDefinition(AbilityType.BoulderToss, WeaponType.Mutation, "Boulder Toss", "Behemoth only. Rip a chunk out of the floor and hurl it. It shatters on the first enemy it hits, showering the enemies around it, and leaves a rock wall that blocks bolts for 4 seconds. Ranks add damage.", "@", 10f, SpecimenCatalog.Amber),
+            new AbilityDefinition(AbilityType.IronSkin, WeaponType.Mutation, "Iron Skin", "Behemoth only. For 4 seconds the next 3 hits on you do no damage, and each one sends a shockwave through the enemies around you. Ranks add half a second.", "[]", 16f, SpecimenCatalog.Amber),
+            new AbilityDefinition(AbilityType.GiantSwing, WeaponType.Mutation, "Giant Swing", "Behemoth only. Grab the nearest enemy, swing it around you like a club through everything nearby, then fling it. Guardians are too big to grab: they take a huge punch instead. Ranks add damage.", "O", 14f, SpecimenCatalog.Amber, true),
+            new AbilityDefinition(AbilityType.SwingLine, WeaponType.Mutation, "Swing Line", "Edge only. Hook a wall or an enemy up to 6 units toward the cursor and zip to it, kicking whatever waits at the end. Ranks add damage.", "~>", 8f, SpecimenCatalog.Keen),
+            new AbilityDefinition(AbilityType.AnkleWrap, WeaponType.Mutation, "Ankle Wrap", "Edge only. A low lash across a half circle wraps every enemy's legs: they trip and are stunned for 1 second. Ranks lengthen the stun.", "_", 9f, SpecimenCatalog.Keen),
+            new AbilityDefinition(AbilityType.Bind, WeaponType.Mutation, "Bind", "Edge only. Wrap the enemy nearest the cursor in your chain: it is rooted for 2 seconds, and every hit you land on it while it is bound is a critical hit. Ranks lengthen the bind.", "&", 7f, SpecimenCatalog.Keen),
+            new AbilityDefinition(AbilityType.RoundUp, WeaponType.Mutation, "Round-Up", "Edge only. Hook up to 4 enemies in a wide cone and smash them together in front of you: each takes collision damage and is stunned for 1 second. Guardians only take the hit. Ranks add damage.", "><", 14f, SpecimenCatalog.Keen, true)
         };
 
         /// <summary>What guardians can offer this hero: their class's abilities, less any not yet bought in the Ash shop.</summary>

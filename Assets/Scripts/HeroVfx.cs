@@ -6,7 +6,6 @@ namespace Slopgame
     /// <summary>
     /// Mid-intensity combat effects for the regular heroes: slash sweeps, hit sparks, pulses,
     /// rising motes and a soft ground aura. Each effect is one small mesh sharing a single material.
-    /// Deliberately calmer than <see cref="ShadowVfx"/>, which stays exclusive to the Admin class.
     /// </summary>
     public sealed class HeroVfx : MonoBehaviour
     {

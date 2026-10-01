@@ -15,6 +15,7 @@ namespace Slopgame
             : Player.ClassWeapon == WeaponType.Tail ? DemonessAttack.ChargeDuration
             : Player.ClassWeapon == WeaponType.Beam ? CyborgAttack.ChargeDuration
             : Player.ClassWeapon == WeaponType.Scythe ? ReaperAttack.ChargeDuration
+            : Player.ClassWeapon == WeaponType.Mutation ? SpecimenAttack.ChargeTimeFor(Player)
             : Player.ClassWeapon == WeaponType.Sword ? KnightChargeDuration : 1.2f)
             * Player.Powerups.AttackIntervalMultiplier * Player.Buffs.ChargeDurationMultiplier
             // Seeing Red: the upgraded Super Angry charges barrages faster still.

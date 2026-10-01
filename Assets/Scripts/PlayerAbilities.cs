@@ -62,6 +62,27 @@ namespace Slopgame
             return true;
         }
 
+        /// <summary>
+        /// The Specimen's transformation trades an ability from the path that lost him for one of his own: the new one
+        /// takes the old one's rank and key, and starts ready.
+        /// </summary>
+        public void Replace(AbilityType from, AbilityType to, int rank)
+        {
+            if (!IsLearned(from) || to == AbilityType.None || IsLearned(to)) return;
+            ranks.Remove(from);
+            readyAt.Remove(from);
+            ranks[to] = Mathf.Clamp(rank, 1, MaxRank);
+            for (int slot = 0; slot < SlotCount; slot++) if (equipped[slot] == from) equipped[slot] = to;
+        }
+
+        /// <summary>Unlearns an ability (taking it off its key).</summary>
+        public void Forget(AbilityType type)
+        {
+            ranks.Remove(type);
+            readyAt.Remove(type);
+            for (int slot = 0; slot < SlotCount; slot++) if (equipped[slot] == type) equipped[slot] = AbilityType.None;
+        }
+
         /// <summary>Puts a learned ability on Q or E; if it already sits on the other key, the two swap.</summary>
         public bool Equip(AbilityType type, int slot)
         {
@@ -119,6 +140,8 @@ namespace Slopgame
             Vector2 blinkLanding = default;
             if (definition.Type == AbilityType.Blink && !FindShadowstepLanding(Player.Run.Map, transform.position, aim,
                     Mathf.Min(BlinkDistance + Player.Powerups.Count(PowerupType.BlinkDistance) * 0.5f, cursorDistance), out blinkLanding)) return false;
+            // A Specimen ability asleep in his current form does nothing, so it mustn't drop his guard or charge either.
+            if (Player.Weapon is SpecimenAttack sleeper && !sleeper.CanUseAbility(definition.Type)) return false;
             Player.Weapon?.Hide();
             int rank = Rank(definition.Type);
             int damage = Player.Damage * 3 + rank - 1;
@@ -239,11 +262,18 @@ namespace Slopgame
                     else paladin.Sanctuary(PaladinRelics.SanctuaryRadius + powers.Count(PowerupType.SanctuarySize) * 0.5f,
                         PaladinRelics.SanctuaryDuration + (rank - 1) * 0.5f);
                     break;
-                case AbilityType.Eclipse:
-                case AbilityType.SoulRend:
-                case AbilityType.ShadowReign:
-                    var admin = Player.GetComponent<AdminAttack>();
-                    if (admin == null || !admin.CastRelic(definition.Type, aim, rank)) return false;
+                case AbilityType.Heartbeat:
+                case AbilityType.FightOrFlight:
+                case AbilityType.Bulldoze:
+                case AbilityType.BoulderToss:
+                case AbilityType.IronSkin:
+                case AbilityType.GiantSwing:
+                case AbilityType.SwingLine:
+                case AbilityType.AnkleWrap:
+                case AbilityType.Bind:
+                case AbilityType.RoundUp:
+                    var specimen = Player.Weapon as SpecimenAttack;
+                    if (specimen == null || !SpecimenArts.Cast(specimen, definition.Type, aim, rank, cursorDistance)) return false;
                     break;
                 case AbilityType.KnuckleSandwich:
                 case AbilityType.WildLeap:
@@ -287,15 +317,14 @@ namespace Slopgame
             }
             CombatVfx.Ring(Player.Run.ProjectileRoot, transform.position, 0.65f, definition.Color);
             CoopFx.Ring(Player.Run, transform.position, 0.65f, definition.Color);
-            if (Player.ClassWeapon != WeaponType.Shadow)
-            {
-                HeroVfx.Pulse(Player.Run.ProjectileRoot, transform.position, 1.1f, definition.Color, 0.35f);
-                HeroVfx.Sparks(Player.Run.ProjectileRoot, transform.position, definition.Color, 10, 3.5f, 0.35f);
-            }
+            HeroVfx.Pulse(Player.Run.ProjectileRoot, transform.position, 1.1f, definition.Color, 0.35f);
+            HeroVfx.Sparks(Player.Run.ProjectileRoot, transform.position, definition.Color, 10, 3.5f, 0.35f);
             // Primal Rage's and Archdemon's Technique's cooldowns only start once their effects have ended.
             readyAt[definition.Type] = Time.time + definition.Cooldown * Player.Powerups.RelicCooldownMultiplier
                 + (definition.Type == AbilityType.PrimalRage ? Player.Buffs.RageCycleRemaining
                     : definition.Type == AbilityType.ArchdemonTechnique ? Player.Buffs.AscendRemaining : 0f);
+            // Zipline: a killing Swing Line is ready again at once.
+            if (Player.Weapon is SpecimenAttack refunded && refunded.ConsumeRefund(definition.Type)) readyAt[definition.Type] = Time.time;
             castReadyAt = Time.time + 0.2f;
             Player.Powerups.OnAbilityUsed();
             return true;

@@ -71,6 +71,8 @@ namespace Slopgame
             new PermanentUpgradeDefinition("augment_health", "Titanium Frame", "+1 Augment maximum HP per rank", 3, 35, 25, WeaponType.Beam),
             new PermanentUpgradeDefinition("reaper_souls", "Soul Echo", "Each soul the Reaper gains has a 10% / 25% / 50% chance by rank to bring an extra soul", 3, 45, 35, WeaponType.Scythe),
             new PermanentUpgradeDefinition("reaper_health", "Deathless", "+1 Reaper maximum HP per rank", 3, 35, 25, WeaponType.Scythe),
+            new PermanentUpgradeDefinition("specimen_health", "Thick Blood", "+1 Specimen maximum HP per rank", 3, 35, 25, WeaponType.Mutation),
+            new PermanentUpgradeDefinition("specimen_tissue", "Adaptive Tissue", "Transforming or growing heals 1 / 2 / 3 HP by rank", 3, 45, 35, WeaponType.Mutation),
             AbilityUnlock(AbilityType.WarBanner, 150),
             AbilityUnlock(AbilityType.BearTrap, 150),
             AbilityUnlock(AbilityType.LightningStorm, 180),
@@ -82,6 +84,8 @@ namespace Slopgame
             AbilityUnlock(AbilityType.Insurance, 160),
             AbilityUnlock(AbilityType.OrbitalLaser, 200),
             AbilityUnlock(AbilityType.ReapersTechnique, 180),
+            AbilityUnlock(AbilityType.GiantSwing, 180),
+            AbilityUnlock(AbilityType.RoundUp, 180),
             Mechanic(WeaponType.Sword, "Shield Taunt", "R: turn red with rage for 2.25s. You can walk; you block bolts from every side (+1 ward each) and draw the enemies' attention"),
             Mechanic(WeaponType.Bow, "Elemental Quiver", "R: cycle fire, freeze and shock arrows. Critical hits set off the arrow's element"),
             Mechanic(WeaponType.Staff, "Wild Storm", "R: after 10 elemental effects, summon a storm that hurls fire, lightning and ice, every strike sure to burn, shock or freeze"),
@@ -91,6 +95,7 @@ namespace Slopgame
             Mechanic(WeaponType.Tail, "Demonic Power", "R: after immobilizing enemies 7 times (paralysis, freeze, stun or root), split your tail in two for 10s: tail sweeps cover twice the cone and reach 25% farther"),
             Mechanic(WeaponType.Coins, "The Purse", "R: open your purse, a shop paid for in coins: healing, wards or loaded dice"),
             Mechanic(WeaponType.Beam, "Overclock", "R: after your plasma ray strikes 25 enemies, overclock for 8s: fully charged rays at double speed and a vented, faster cannon"),
+            Mechanic(WeaponType.Mutation, "Breaking Point", "R: once you have taken or soaked 10 hits (frail or Behemoth) or landed 10 crits (Edge), break loose: the Behemoth Rampages at double size, the Edge goes into Overdrive, and while frail you Snap into the form you lean toward for 10s"),
             Mechanic(WeaponType.Scythe, "Army of the Dead", "R: spend 3 souls to raise a skeleton that fights for you. Frail and weak, but its health and damage grow with yours, and its blows strike fear for 1 second"),
             // R upgrades: one per class mechanic, sold once the Neon Arcology is cleared and the mechanic itself is owned.
             MechanicUpgrade(WeaponType.Sword, "Retribution", "When Shield Taunt ends, every nearby enemy takes your damage multiplied by the hits you blocked or took while it lasted"),
@@ -102,6 +107,7 @@ namespace Slopgame
             MechanicUpgrade(WeaponType.Coins, "The Safe", "Your purse holds a safe: deposit 10 coins per click, every guardian you defeat multiplies its contents by 1.1, and each withdrawal takes out exactly 50% of it"),
             MechanicUpgrade(WeaponType.Beam, "Missile Rack", "While overclocked, every plasma ray you fire also launches a homing mini missile"),
             MechanicUpgrade(WeaponType.Tail, "Dread Presence", "During Demonic Power, every enemy that comes within 5 units of you is paralysed for 2 seconds"),
+            MechanicUpgrade(WeaponType.Mutation, "Apex Mutation", "Rampage ends in a roar that draws every enemy to you and stuns everything nearby for 2 seconds, and every kill during Overdrive adds 0.5 seconds to it"),
             MechanicUpgrade(WeaponType.Scythe, "Avatar of Death", "With 99 souls, R spends 99 instead of raising a skeleton: for 5 seconds you are the incarnation of death, dealing double damage and striking 1 second of fear with every hit")
         });
 

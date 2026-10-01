@@ -62,10 +62,9 @@ namespace Slopgame
             => Send(run, FxKind.Ring, center, default, color, radius, duration);
         public static void Pulse(DungeonRun run, Vector2 center, float radius, Color color, float duration = 0.35f)
             => Send(run, FxKind.Pulse, center, default, color, radius, duration);
-        public static void Rift(DungeonRun run, Vector2 from, Vector2 to, float strength) => Send(run, FxKind.Rift, from, to, null, strength);
-        public static void Execution(DungeonRun run, Vector2 center, float radius) => Send(run, FxKind.Execution, center, default, null, radius);
-        public static void Singularity(DungeonRun run, Vector2 center, float radius, float duration = 1.1f)
-            => Send(run, FxKind.Singularity, center, default, null, radius, duration);
+        /// <summary>The Specimen's Boulder Toss leaves a rock wall that blocks bolts on every machine.</summary>
+        public static void RockCover(DungeonRun run, Vector2 center, Vector2 facing, float width, float duration)
+            => Send(run, FxKind.RockCover, center, facing, null, width, duration);
 
         public static void Punch(DungeonRun run, Vector2 origin, Vector2 aim, float length, float halfWidth, Color color)
             => Send(run, FxKind.Punch, origin, aim, color, length, halfWidth);
@@ -248,9 +247,7 @@ namespace Slopgame
                 case FxKind.GlowBolt: CombatVfx.GlowBolt(root, fx.A, fx.B, color); break;
                 case FxKind.Ring: CombatVfx.Ring(root, fx.A, fx.F1, color, fx.F2); break;
                 case FxKind.Pulse: HeroVfx.Pulse(root, fx.A, fx.F1, color, fx.F2); break;
-                case FxKind.Rift: ShadowVfx.Rift(root, fx.A, fx.B, fx.F1); break;
-                case FxKind.Execution: ShadowVfx.Execution(root, fx.A, fx.F1); break;
-                case FxKind.Singularity: ShadowVfx.Singularity(root, fx.A, fx.F1, fx.F2); break;
+                case FxKind.RockCover: Slopgame.RockCover.Raise(run, fx.A, fx.B, fx.F1, fx.F2, true); break;
                 case FxKind.Punch: BrawlerVfx.Punch(root, fx.A, fx.B, fx.F1, fx.F2, color); break;
                 case FxKind.RearHit: RearHitMarker.Draw(root, fx.A, fx.B, fx.F1); break;
                 case FxKind.Knife:

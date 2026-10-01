@@ -24,6 +24,8 @@ namespace Slopgame
         public static readonly float[] ExtraSoulChances = { 0f, 0.1f, 0.25f, 0.5f };
         /// <summary>Soul Echo: the chance for each soul the Reaper gains to bring an extra one.</summary>
         public float ExtraSoulChance { get; }
+        /// <summary>Adaptive Tissue: HP the Specimen heals every time his body changes.</summary>
+        public int TransformHeal { get; }
         /// <summary>Capacitor Bank: scales the Augment's plasma cannon cooldown.</summary>
         public float CannonCooldownMultiplier { get; } = 1f;
         /// <summary>The class mechanic on R, bought in the Ash shop.</summary>
@@ -96,6 +98,9 @@ namespace Slopgame
                 case WeaponType.Scythe:
                     Health += progress.Rank("reaper_health");
                     ExtraSoulChance = ExtraSoulChances[UnityEngine.Mathf.Clamp(progress.Rank("reaper_souls"), 0, ExtraSoulChances.Length - 1)]; break;
+                case WeaponType.Mutation:
+                    Health += progress.Rank("specimen_health");
+                    TransformHeal = progress.Rank("specimen_tissue"); break;
                 case WeaponType.Beam:
                     Health += progress.Rank("augment_health");
                     CannonCooldownMultiplier = 1f - progress.Rank("augment_capacitor") * 0.1f; break;

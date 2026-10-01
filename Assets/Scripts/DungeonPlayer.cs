@@ -23,8 +23,14 @@ namespace Slopgame
             * (Buffs != null ? Buffs.DamageMultiplier : 1f) * (Powerups != null ? Powerups.DamageMultiplier(this) : 1f)));
         /// <summary>The class mechanic on R, or null if this hero has not bought it.</summary>
         public ClassMechanic Mechanic { get; private set; }
-        /// <summary>Shield Taunt: enemies go for this Knight first.</summary>
-        public bool DrawsAggro => Mechanic is ShieldTaunt taunt && taunt.DrawsAggro;
+        /// <summary>Shield Taunt (and the Specimen's Apex Mutation roar): enemies go for this hero first.</summary>
+        public bool DrawsAggro => (Mechanic is ShieldTaunt taunt && taunt.DrawsAggro) || (Weapon is SpecimenAttack roar && roar.IsRoaring);
+        /// <summary>The Specimen's Behemoth: enemies near him go for him first.</summary>
+        public bool IsBigTarget => Weapon is SpecimenAttack specimen && specimen.IsBigTarget;
+        /// <summary>How close an enemy bolt must come to strike this hero; the Behemoth is a bigger target.</summary>
+        public float HitRadius => 0.42f * (Weapon is SpecimenAttack specimen ? specimen.BodyScale : 1f);
+        /// <summary>Enemies' touch cannot hurt this hero: Shade Walk, or the Behemoth's Rooted Stance.</summary>
+        public bool IgnoresContact => IsIntangible || (Weapon is SpecimenAttack specimen && specimen.IgnoresContact);
         public DamageBlessing Blessing { get; private set; }
         public HeroBuffs Buffs { get; private set; }
         /// <summary>Crystals for the shop before each boss, and the boss boons bought there.</summary>
@@ -125,11 +131,11 @@ namespace Slopgame
         private void Start()
         {
             body = GetComponent<SpriteRenderer>();
-            if (weaponType == WeaponType.Shadow)
+            if (weaponType == WeaponType.Mutation)
             {
-                var admin = gameObject.AddComponent<AdminAttack>();
-                admin.Player = this;
-                Weapon = admin;
+                var specimen = gameObject.AddComponent<SpecimenAttack>();
+                specimen.Player = this;
+                Weapon = specimen;
             }
             else if (weaponType == WeaponType.Bow)
             {
@@ -193,7 +199,7 @@ namespace Slopgame
             // Safety net: a hero with health must never stay hidden, however that health came back.
             if (Health > 0 && hiddenRenderers.Count > 0) SetVisible(true);
             body.color = IsHurt ? (Mathf.Repeat(Time.time * 16f, 1f) < 0.5f ? HurtColor : Color.white)
-                : IsRolling ? new Color(0.4f, 0.65f, 1f) : IsHoldingShield ? HeroBuffs.AngryTint(characterColor) : IsInvulnerable ? Color.white
+                : IsRolling ? new Color(0.4f, 0.65f, 1f) : IsHoldingShield || (Weapon is SpecimenAttack rampage && rampage.IsRampaging) ? HeroBuffs.AngryTint(characterColor) : IsInvulnerable ? Color.white
                 : IsIgnited ? Color.Lerp(Buffs.Tint(characterColor), IgniteOrange, 0.5f + 0.2f * Mathf.Sin(Time.time * 14f))
                 : IsPoisoned ? Color.Lerp(Buffs.Tint(characterColor), PoisonGreen, 0.55f) : Buffs.Tint(characterColor);
             UpdatePoison();
@@ -213,8 +219,12 @@ namespace Slopgame
             if (PlayerInput.Dodge && !holdingShield) TryRoll(MobilityAim(AimDirection));
             // A roll can be steered: it keeps its speed and length but follows the movement keys.
             if (IsRolling && movement.sqrMagnitude > 0.01f) rollDirection = movement.normalized;
-            Vector2 velocity = IsRolling ? rollDirection * Speed * 2.6f * Buffs.DodgeSpeedMultiplier
-                : movement * Speed * Buffs.MoveMultiplier * Crystals.SpeedMultiplier * (IsPoisoned ? PoisonSlow : 1f) * Powerups.MoveMultiplier(this) * (Blessing.IsHasted ? DamageBlessing.ShepherdSpeed : 1f) * (Weapon.IsHeavyAttacking ? 0.55f : Charge.IsCharging ? 0.7f : 1f);
+            var specimen = Weapon as SpecimenAttack;
+            float speed = Speed + (specimen != null ? specimen.BonusSpeed : 0f);
+            Vector2 velocity = IsRolling ? rollDirection * speed * 2.6f * Buffs.DodgeSpeedMultiplier
+                : movement * speed * Buffs.MoveMultiplier * Crystals.SpeedMultiplier * (IsPoisoned ? PoisonSlow : 1f) * Powerups.MoveMultiplier(this) * (Blessing.IsHasted ? DamageBlessing.ShepherdSpeed : 1f)
+                    * (specimen != null ? specimen.MoveMultiplier : 1f)
+                    * (Weapon.IsHeavyAttacking ? (specimen != null ? specimen.GuardMoveMultiplier : 0.55f) : Charge.IsCharging ? 0.7f : 1f);
             if (DebugMode.Enabled) velocity *= DebugMode.SpeedMultiplier;
             // Ice walls stop heroes too; slide along them rather than sticking.
             Vector2 here = transform.position, moved = Run.Map.Move(here, velocity * Time.deltaTime);
@@ -275,7 +285,7 @@ namespace Slopgame
                 HeroVfx.Motes(Run.ProjectileRoot, transform.position, 0.5f, new Color(0.8f, 0.8f, 0.8f), 10, 0.6f);
             }
             rollReady = Time.time + Mathf.Max(0.2f, RollCooldown * Powerups.DodgeCooldownMultiplier * Buffs.DodgeCooldownMultiplier
-                - Buffs.DodgeCooldownReduction);
+                * (Weapon is SpecimenAttack light ? light.DodgeCooldownMultiplier : 1f) - Buffs.DodgeCooldownReduction);
             // The Brawler keeps a held punch charging through the roll; every other class loses it.
             // Mastered Technique (her passive): she does not even stop a running barrage.
             if (Weapon is BrawlerAttack brawler) { if (!brawler.KeepsBarrageWhileRolling) brawler.StopBarrage(); }
@@ -284,6 +294,8 @@ namespace Slopgame
                 Weapon?.Hide();
                 Charge.Cancel();
             }
+            // Light on His Feet: the Edge's next lash after a roll is a critical hit.
+            (Weapon as SpecimenAttack)?.OnRolled();
             return true;
         }
 
@@ -414,7 +426,8 @@ namespace Slopgame
                 InsuranceVfx.Claim(Run.ProjectileRoot, transform, insured);
                 CoopFx.InsuranceClaim(Run, insured);
             }
-            bool warded = insured || Powerups.AbsorbHit();
+            // Iron Skin turns the blow aside like a ward (and answers it with a shockwave).
+            bool warded = insured || (Weapon is SpecimenAttack skin && skin.TryIronSkin()) || Powerups.AbsorbHit();
             if (!warded)
             {
                 // Cheat Death (once per world), then the Ash shop's Backup Drive (once per descent), turn a killing blow into 1 HP.
@@ -503,9 +516,12 @@ namespace Slopgame
             Run?.Progress?.Discover(Encyclopedia.TalentId(type));
             if (type == PowerupType.Damage) BaseDamage++;
             if (type == PowerupType.Vitality) { rawMaxHealth += 2; if (Health > 0) Health = MaxHealth; }
+            if (type == PowerupType.BulkUp) { rawMaxHealth += 2; Heal(2); }
             if (type == PowerupType.GlassCannon) Health = Mathf.Min(Health, MaxHealth);
             if (type == PowerupType.BloodPact) { rawMaxHealth = Mathf.Max(1, rawMaxHealth - 1); Health = Mathf.Min(Health, MaxHealth); }
             if (type == PowerupType.Movement) Speed += 0.7f;
+            // The Specimen's picks are what transform him.
+            (Weapon as SpecimenAttack)?.OnTalentTaken(type);
             return true;
         }
 
@@ -536,6 +552,16 @@ namespace Slopgame
             Heal(amount);
         }
         public void Protect(float duration) { invulnerableUntil = Mathf.Max(invulnerableUntil, Time.time + duration); }
+        /// <summary>Changes the hero's base speed (the Specimen's forms).</summary>
+        public void AdjustSpeed(float delta) => Speed = Mathf.Max(1f, Speed + delta);
+
+        /// <summary>Puts on a new body and detail sprite (the Specimen's forms).</summary>
+        public void SetLook(Sprite bodySprite, Sprite accentSprite)
+        {
+            if (body == null) body = GetComponent<SpriteRenderer>();
+            if (body != null && bodySprite != null) body.sprite = bodySprite;
+            if (details != null && accentSprite != null) details.sprite = accentSprite;
+        }
         public void Veil(float duration) { veiledUntil = Mathf.Max(veiledUntil, Time.time + duration); }
 
         /// <summary>Shade Walk: the Reaper's body is intangible, so enemies' touch passes through him (bolts and hazards still land).</summary>

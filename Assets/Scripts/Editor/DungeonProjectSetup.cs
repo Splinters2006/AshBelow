@@ -586,13 +586,12 @@ namespace Slopgame.Editor
                 "A shadow-cloaked killer. Charge into a narrow, deadly stab, hit from behind for double damage, and Shadowstep through walls to backstab everything in your path.");
             EnsureHero("Paladin", WeaponType.Hammer, 7, 4.5f, new Color(0.95f, 0.78f, 0.4f),
                 "A holy warrior who would die for his allies. Hold to bless nearby friends with extra damage, and call down holy swords on the enemies around you.");
-            EnsureHero("Admin", WeaponType.Shadow, 12, 6.4f, new Color(0.58f, 0.25f, 0.95f),
-                "An unbound shadow sovereign. Tear through enemies with shadow rifts, while Nightfall executes every nearby enemy, even guardians. Intentionally overpowered.", 32);
             EnsureHero("Brawler", WeaponType.Fists, 6, 5.3f, new Color(0.98f, 0.62f, 0.42f), BrawlerDescription);
             EnsureHero("Demoness", WeaponType.Tail, 5, 5.2f, new Color(0.6f, 0.36f, 0.9f), DemonessDescription);
             EnsureHero("Gambler", WeaponType.Coins, 5, 5.1f, new Color(0.35f, 0.72f, 0.45f), GamblerDescription);
             EnsureHero("Augment", WeaponType.Beam, 5, 5f, new Color(0.55f, 0.68f, 0.9f), AugmentDescription);
             EnsureHero("Reaper", WeaponType.Scythe, 5, 4.8f, new Color(0.5f, 0.56f, 0.7f), ReaperDescription);
+            EnsureHero("Specimen", WeaponType.Mutation, 3, 5f, new Color(0.62f, 0.74f, 0.7f), SpecimenDescription);
             AssetDatabase.SaveAssets();
             Debug.Log("CHARACTER_ASSETS_OK: Eleven classes ready.");
         }
@@ -601,6 +600,7 @@ namespace Slopgame.Editor
         private const string ReaperDescription = "A skull-faced spectre adrift in a great cloak. Sweep a scythe in slow, wide arcs, charge it fully to harvest souls, and spend them on skulls that bite, frighten and hunt.";
         private const string GamblerDescription = "A travelling merchant hopelessly addicted to gambling. Throw coins and scoop up the gold every fallen foe drops, fling a volley of every coin you carry, and open your purse to spend or bet it all.";
         private const string AugmentDescription = "A soldier rebuilt with steel and plasma. Fire a plasma ray that pierces every enemy in a line, charge it longer and wider, and hold the arm cannon to launch a plasma orb that bursts in flame.";
+        private const string SpecimenDescription = "An escaped lab subject who starts every descent frail. Feed him Bulk talents and he swells into the Behemoth, a stone-skinned wall who soaks enemy bolts and hurls them back; feed him Edge talents and he becomes a quick, crit-hungry fighter with a chain whip.";
         private const string BrawlerDescription = "A scrappy puppygirl pit-fighter in big red gloves. Jab fast, charge a hammering barrage of punches, and Empower to hit harder, faster and wider.";
 
         private static void EnsureHero(string name, WeaponType weapon, int health, float speed, Color color, string description, int damage = 1)

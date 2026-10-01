@@ -73,13 +73,27 @@ Enemies get tougher every floor. **The Infernal Court (world 3) is much deadlier
 | **Demoness** | Tail stab (charge to strike the vitals and paralyse) / tail sweep that hits paralysed foes twice as hard | Archdemon's Technique, HEEEELP, Demon Curse, Wing Dash, Soul Siphon, Nightmare Snap* |
 | **Gambler** | Throw a coin / a volley of one coin per coin you carry across a 90° cone | Windfall, All In, Jackpot, Card Toss, Dice Bomb, Insurance* |
 | **Augment** | Plasma ray that pierces every enemy in a line (charge it for a longer, wider, stronger ray) / hold to charge the arm cannon, release to fire a plasma orb that bursts in flame | Micro-Missiles, Rocket Boost, Sentry Turret, EMP Pulse, Grapple Arm, Orbital Laser* |
-| **Admin** | Shadow rifts / Nightfall, which executes every nearby enemy | Eclipse, Soul Rend, Shadow Reign |
+| **Specimen** | Changes with his form (see below): palm strike / Flinch Guard while frail, heavy hands and kicks / Arm Guard as the Behemoth, chain whip / Hook as the Edge | Heartbeat, Fight or Flight; Behemoth: Bulldoze, Boulder Toss, Iron Skin, Giant Swing\*; Edge: Swing Line, Ankle Wrap, Bind, Round-Up\* |
 
 \* Bought in the Ash shop before guardians can offer it.
 
 Enemies can now be **immobilized**: paralysed, frozen, stunned (Holy Lance, Thunder Clap, EMP Pulse) or rooted (Net Shot, Bear Trap; rooted enemies can still attack). Talents that care about immobilized enemies count all four.
 
-**Admin** is deliberately overpowered, for when you just want to wreck things.
+**Specimen:** an escaped lab subject who starts every descent frail (3 HP) and grows into whatever his talents feed. While he's frail, every floor offers him one **Bulk** talent and one **Edge** talent, and a bar under his health shows which way he leans. The first path to reach three picks claims him for the rest of the descent, and six picks grow him again. Talents left on the other path wither into max HP.
+- **Behemoth (Bulk):** 1.35× size, +4 HP and a little slower. Tapping runs Palm Shove, Stomp Kick and Ground Pound; a full charge is an **Axe Kick** that cracks the floor in a line and stuns. Any enemy he knocks into a wall or another enemy is **wall-slammed** (+1 damage and a short stun). Hold right click for his **Arm Guard**: it soaks enemy bolts as **Force** (up to 5) and pushes whatever stands in front of him along, and letting go **Repels**, throwing every stored bolt back in a fan. Enemies near him go for him first. At six picks he becomes the **Colossus** (1.6× size, +3 HP, 8 Force and a 180° guard).
+- **Edge:** stays his size, faster, with +1 HP and +10% crit chance. His chain whip's tip is a sweet spot that always crits, and a full charge spins a **Chain Cyclone**. Right click throws a **Hook** that yanks an enemy to his feet, stunned (guardians and brutes are too heavy, so it pulls him to them instead). At six picks every lash cracks twice and the hook drags in two enemies.
+
+**Specimen artifacts:** Heartbeat and Fight or Flight work in any form and change with it. The others only work in their own form and sleep until he takes it.
+- **Heartbeat:** a thump of force knocks back everything near him. The Behemoth's reaches farther and stuns; the Edge's leaves enemies taking crits from every hit for 2 seconds.
+- **Fight or Flight:** 4 seconds of +40% speed and an instant dodge reset. The Behemoth also gains 2 Force; the Edge also attacks 50% faster.
+- **Bulldoze:** charges with his arms crossed, carrying every enemy in his path, and slams them where the charge stops. Bolts that hit his arms on the way become Force.
+- **Boulder Toss:** rips up a chunk of floor and hurls it. It shatters on the first enemy and leaves a rock wall that stops bolts for 4 seconds.
+- **Iron Skin:** for 4 seconds the next 3 hits do nothing, and each one sends a shockwave through the enemies around him.
+- **Giant Swing\*:** swings the nearest enemy round like a club, then throws it. Guardians can't be lifted, so they take a huge punch instead.
+- **Swing Line:** the chain bites the first enemy or wall toward the cursor and zips him there, kicking whatever waits at the end.
+- **Ankle Wrap:** a low lash across a half circle trips every enemy it reaches.
+- **Bind:** the chain wraps the enemy nearest the cursor, rooting it, and every hit on it crits while it's bound.
+- **Round-Up\*:** hooks up to four enemies in a wide cone and smashes them together in front of him.
 
 **Demoness artifacts:**
 - **Archdemon's Technique:** for 8 seconds every click is a vital stab, and a full charge becomes a paralysing tail whip.
@@ -114,6 +128,7 @@ Once you have beaten the third guardian (floor 15) in a single descent, the Ash 
 | **Brawler** | **Super Angry:** after taking 5 damage, go berserk with huge speed, reach, area, charge speed and damage for 8 s. |
 | **Demoness** | **Demonic Power:** after 7 paralyses, the Demon Lord's massive head rises behind you and roars, terrifying every enemy around you: they turn their backs and are paralysed. |
 | **Augment** | **Overclock:** after your plasma ray strikes 25 enemies, overclock for 8 s: every ray is fully charged and fires twice as fast, and the cannon is ready at once, fires fully charged and cools down twice as fast. |
+| **Specimen** | **Breaking Point:** fills as he takes hits and soaks bolts (frail or Behemoth) or lands critical hits (Edge). The Behemoth **Rampages** for 8 s (2.2× size, every blow a Ground Pound, walking through enemies throws them aside, every 4 wall slams heal 1 HP); the Edge goes into **Overdrive** for 6 s (twice the attack speed, a burst from every lash's tip, half the dodge cooldown); while frail he **Snaps** into the form he leans toward for 10 s. |
 
 ## Ash and the Ash shop
 

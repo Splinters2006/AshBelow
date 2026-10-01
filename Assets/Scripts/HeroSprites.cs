@@ -4,7 +4,7 @@ using UnityEngine;
 namespace Slopgame
 {
     /// <summary>
-    /// 16-pixel-tall chibi pixel-art sprites for the regular heroes (every class except Admin, which keeps its own sprite).
+    /// 16-pixel-tall chibi pixel-art sprites for every hero (the Specimen has one per form).
     /// Each hero has two layers built from one grid: a body layer drawn in greys so the SpriteRenderer's colour
     /// tints it with the class colour (keeping the dodge/hit flashes), and an accent layer with fixed colours for
     /// skin, steel, gold, wood, fur, gloves and horns. Sprites face right; flip them to face left.
@@ -22,6 +22,7 @@ namespace Slopgame
         // p blush, m mouth, t fur highlight, u dark fur (the inside of the Brawler's ears).
         // The Gambler reuses G / g for his gold tooth, coins and purse.
         // J glowing plasma, j deep plasma, O gunmetal (the Augment's implant eye, power core and arm cannon).
+        // The Specimen: 1 amber vein glow, 2 stone skin, 3 stone shade, 4 dark messy hair, 5 bandage, 8 amber eye core, 9 stone highlight.
         private static readonly Dictionary<WeaponType, string[]> Grids = new Dictionary<WeaponType, string[]>
         {
             { WeaponType.Sword, new[] // Knight: a plumed great helm with eyes glinting through the visor, a gold-bossed shield and a raised sword
@@ -94,6 +95,13 @@ namespace Slopgame
                 "...DWMDFNFDWMDB.....", "..DLWWMDDDWWMDB.....", "..DLWWWWWWWWMFFB....", ".DLWWWWWWWWWMDDB....",
                 ".DLWWWWWWWWMMD.DB...", ".DWWMWWWMWWWMD..B...", "..DWDDWMDDWMDD..b...", "..D...DD...D........",
             } },
+            { WeaponType.Mutation, new[] // Specimen (frail): a scrawny escaped lab subject with messy dark hair, plasters on his cheeks, a hospital gown and bandaged wrists
+            {
+                "........D.DD.D......", "......DD4D44D4DD....", ".....D44444444444D..", "....D4444444444444D.",
+                "....D44SSSSSSSS44D..", "....D4SSSSSSSSSSsD..", "....DSSEESSSSEESsD..", "....DSSEiSSSSEiSsD..",
+                "....DSs5sSSSs5ssSD..", ".....DSSSSssSSSsD...", "......DDDsSSsDDD....", ".....DLWWWWWWWMD....",
+                "....DFDLWWWWWWMDFD..", "....D5DWWMWWWMMD5D..", "....DSDLWWWWWWMDSD..", ".....DDDsDDDsDDD....",
+            } },
         };
         // Drawn about 1.45 units tall before the hero's 0.65 scale, matching the old hero footprint.
         private const float WorldSize = 1.45f;
@@ -107,6 +115,41 @@ namespace Slopgame
 
         /// <summary>The fixed-colour detail layer, or null for classes without a regular hero sprite.</summary>
         public static Sprite Accent(WeaponType weapon) => Get(weapon, accents, true);
+
+        // The Specimen's grown forms. The Behemoth is a hulking slab of stone-grey muscle with glowing amber veins and
+        // eyes, his gown torn to a rag round his middle (drawn wider than the others, then scaled up by his form).
+        // The Edge is still the same size as his frail self, now with a headband and a chain whip coiled in his hand.
+        private static readonly string[] BehemothGrid =
+        {
+            "..........DDDD..........", ".........D4444D.........", "........D433334D........", "........D282282D........",
+            "....DDDDD322223DDDDD....", "...D99222D2222D22299D...", "..D9222221D99D1222229D..", ".D22221222922922212222D.",
+            "D222D2229D2222D9222D222D", "D212D22DLWWWWWWLD22D212D", "D222D2DLWWMWWMWWLD2D222D", "D2223DDDLWWWWWWLDDD3222D",
+            "D29992D.D22DD22D.D29992D", "D22222D.D23DD32D.D22222D", ".DDDDD..D33DD33D..DDDDD.", "........DDDDDDDD........",
+        };
+        private static readonly string[] EdgeGrid =
+        {
+            "....................", "......DD4D4DDD..QQ..", ".....D44444444D...Q.", "....D4444444444D..K.",
+            ".LWDDLWWWWWWWWMD..k.", "LW..DSEESSSEESsD.K..", ".W..DSSEESSSEEsD.k..", "....DSSElSSSElsDK...",
+            "....DSSSSSSSSssDk...", ".....DSSSssSSsDK....", "......DDsSSsDDSk....", ".....DLWWWWWWMDS....",
+            "....DFDLWWWWWMDD....", "....D5DWW5WWMMD.....", ".....DLWWDWWMD......", ".....DDsD.DsDD......",
+        };
+        private static readonly Sprite[] specimenBodies = new Sprite[3], specimenAccents = new Sprite[3];
+
+        /// <summary>The Specimen's body layer for a form (frail, Behemoth or Edge).</summary>
+        public static Sprite SpecimenBody(SpecimenForm form) => SpecimenSprite(form, false);
+
+        /// <summary>The Specimen's detail layer for a form.</summary>
+        public static Sprite SpecimenAccent(SpecimenForm form) => SpecimenSprite(form, true);
+
+        private static Sprite SpecimenSprite(SpecimenForm form, bool accent)
+        {
+            if (form == SpecimenForm.Frail) return accent ? Accent(WeaponType.Mutation) : Body(WeaponType.Mutation);
+            int index = (int)form;
+            var cache = accent ? specimenAccents : specimenBodies;
+            if (cache[index] != null) return cache[index];
+            var rows = form == SpecimenForm.Behemoth ? BehemothGrid : EdgeGrid;
+            return cache[index] = Build("Specimen " + form + (accent ? " details" : " body"), rows, accent, (x, c) => true, Vector2.one * 0.5f);
+        }
 
         private static Sprite Get(WeaponType weapon, Dictionary<WeaponType, Sprite> cache, bool accent)
         {
@@ -246,6 +289,13 @@ namespace Slopgame
                 case 'y': return new Color(0.6f, 0.54f, 0.48f);
                 // The glowing violet trailing edge along the wings' scallops, as in Wing Dash.
                 case 'w': return new Color(0.66f, 0.3f, 1f);
+                case '1': return new Color(1f, 0.62f, 0.2f);
+                case '2': return new Color(0.6f, 0.59f, 0.57f);
+                case '3': return new Color(0.4f, 0.39f, 0.39f);
+                case '4': return new Color(0.17f, 0.15f, 0.18f);
+                case '5': return new Color(0.72f, 0.7f, 0.64f);
+                case '8': return new Color(1f, 0.93f, 0.62f);
+                case '9': return new Color(0.78f, 0.76f, 0.72f);
                 default: return Color.clear;
             }
         }

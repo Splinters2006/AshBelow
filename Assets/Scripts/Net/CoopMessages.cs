@@ -28,16 +28,20 @@ namespace Slopgame
     /// dealt (it charges their angels); Revive raises a fallen teammate with half health.
     /// </summary>
     public enum SupportKind : byte { Heal, Protect, Bless, BlessingCredit, Revive, Ward, Intervention }
-    public enum FxKind : byte { Arrow, Spell, Slash, Bolt, GlowBolt, Ring, Pulse, Rift, Execution, Singularity, Punch, RearHit, Knife, PiercingShot, Aegis, Holy, Sanctuary,
+    public enum FxKind : byte { Arrow, Spell, Slash, Bolt, GlowBolt, Ring, Pulse, Punch, RearHit, Knife, PiercingShot, Aegis, Holy, Sanctuary,
         Windstep, Shadowstep, Stab, Quake, HolySword, Venom, HeavyPunch, Flurry, SanctuaryEnd, TailStab, TailSweep, Pentagram, DemonPaw, Coin, DemonHead, Sharpen, CoinFlip, CoinRain, Angel, Jackpot,
         PlasmaRay, PlasmaOrb, SentryTurret, MicroMissile, IceWall, Wings, SoulSiphon, Ricochet, Net, ShadowClone, DeathMark, RocketBoost, OrbitalLaser, Grapple, BrawlerMove, Insurance, InsuranceClaim, Card, Dice,
-        Shield, Whirlwind, WarBanner, Consecration, Heal, Lance, Intervention, BallLightning, IceBreak, NightmareSnap, SnapTether, InterventionSaved, AvatarOfDeath }
+        Shield, Whirlwind, WarBanner, Consecration, Heal, Lance, Intervention, BallLightning, IceBreak, NightmareSnap, SnapTether, InterventionSaved, AvatarOfDeath, RockCover }
 
     public struct PlayerStateMessage
     {
         public const byte Rolling = 1, Blocking = 2, Charging = 4, Dead = 8, Invulnerable = 16, Empowered = 32, Raging = 64, Tired = 128;
         /// <summary>Bits of <see cref="MoreFlags"/>.</summary>
         public const byte Blessed = 1, Veiled = 2, Ascended = 4, Taunting = 8, Furious = 16;
+        /// <summary>The Specimen's body in <see cref="MoreFlags"/>: bits 5-6 hold his form (0 frail, 1 Behemoth, 2 Edge,
+        /// 3 rampaging Behemoth) and bit 7 is set once he has grown (the Colossus, or the Edge's second stage).</summary>
+        public const byte SpecimenFormMask = 96, SpecimenGrown = 128;
+        public const int SpecimenFormShift = 5;
         public ulong Id;
         public int Floor;
         public Vector2 Position, Aim;

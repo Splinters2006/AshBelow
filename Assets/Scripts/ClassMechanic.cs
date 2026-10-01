@@ -54,6 +54,7 @@ namespace Slopgame
                 WeaponType.Coins => player.gameObject.AddComponent<GamblerPurse>(),
                 WeaponType.Beam => player.gameObject.AddComponent<Overclock>(),
                 WeaponType.Scythe => player.gameObject.AddComponent<ArmyOfTheDead>(),
+                WeaponType.Mutation => player.gameObject.AddComponent<BreakingPoint>(),
                 _ => null
             };
             if (mechanic != null) mechanic.Player = player;

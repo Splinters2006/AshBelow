@@ -209,12 +209,12 @@ namespace Slopgame.Editor
                     var player = run.Player;
                     var character = run.SelectedCharacter;
                     int expectedHealth = character.StartingHealth + 1 + (Classes[hero] == WeaponType.Sword || Classes[hero] == WeaponType.Hammer || Classes[hero] == WeaponType.Fists
-                        || Classes[hero] == WeaponType.Tail || Classes[hero] == WeaponType.Beam ? 1 : 0);
+                        || Classes[hero] == WeaponType.Tail || Classes[hero] == WeaponType.Beam || Classes[hero] == WeaponType.Mutation ? 1 : 0);
                     Require(player.MaxHealth == expectedHealth && player.Health == expectedHealth, "Permanent HP did not apply or leaked between classes.");
                     Require(player.BaseDamage == character.StartingDamage + 1 + (Classes[hero] == WeaponType.Bow ? 1 : 0), "Permanent damage did not apply or leaked.");
                     Require(Mathf.Abs(player.Powerups.AttackIntervalMultiplier - 1f / 1.05f) < 0.001f, "Permanent attack speed missing.");
                     Require(Mathf.Abs(player.Powerups.DodgeCooldownMultiplier - 0.97f) < 0.001f, "Permanent dodge reduction missing.");
-                    Require((player.Mechanic != null) == (Classes[hero] != WeaponType.Shadow), "Bought class mechanic missing on R.");
+                    Require(player.Mechanic != null, "Bought class mechanic missing on R.");
                     switch (Classes[hero])
                     {
                         case WeaponType.Sword: Require(player.Powerups.ReflectionDamage == 3, "Knight reflection upgrade missing."); break;

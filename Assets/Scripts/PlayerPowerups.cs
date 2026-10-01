@@ -10,6 +10,10 @@ namespace Slopgame
         public WeaponType ClassWeapon { get; set; }
         public PermanentBonuses Permanent { get; set; } = new PermanentBonuses(null, WeaponType.Sword);
         public PlayerAbilities Abilities { get; set; }
+        /// <summary>The Specimen's path once one has claimed him: the other path's talents stop being takeable.</summary>
+        public SpecimenPath MutationPath { get; set; }
+        /// <summary>Extra crit chance from the Specimen's current form (the Edge) and his Razor Tip.</summary>
+        public float FormCritBonus { get; set; }
         public float DrawTimeMultiplier => (1f - 0.15f * Count(PowerupType.QuickDraw)) * Permanent.DrawMultiplier;
         public float ArrowChargeMultiplier => 3f + 0.5f * Count(PowerupType.Bodkin);
         public int ReflectionDamage => 2 + Count(PowerupType.Riposte) + Permanent.ReflectionDamage;
@@ -18,7 +22,7 @@ namespace Slopgame
         public const float FrenzyAttackSpeed = 0.25f;
         public float AttackIntervalMultiplier => 1f / (1f + 0.2f * Count(PowerupType.AttackSpeed) + FrenzyAttackSpeed * Count(PowerupType.Frenzy) + Permanent.AttackSpeed);
         /// <summary>The Wizard starts with a 15% base chance (crits and elemental effects); everyone else with 5%.</summary>
-        public float CritChance => (ClassWeapon == WeaponType.Staff ? 0.15f : 0.05f) + Count(PowerupType.CriticalHits) * 0.1f;
+        public float CritChance => (ClassWeapon == WeaponType.Staff ? 0.15f : 0.05f) + Count(PowerupType.CriticalHits) * 0.1f + FormCritBonus;
         public float ElementalEffectChance => Mathf.Min(0.9f, CritChance + Permanent.EffectChance + Count(PowerupType.Stormcraft) * 0.05f);
         public float PhysicalCritChance => Mathf.Min(0.9f, CritChance + Permanent.PhysicalCritChance
             + (ClassWeapon == WeaponType.Daggers ? 0.1f + Count(PowerupType.AssassinCrit) * 0.05f : 0f));
@@ -27,7 +31,8 @@ namespace Slopgame
         public bool CanTake(PowerupType type) => Count(type) < PowerupCatalog.Get(type).MaxStacks
             && (!PowerupCatalog.Get(type).ClassWeapon.HasValue || PowerupCatalog.Get(type).ClassWeapon == ClassWeapon)
             && (PowerupCatalog.Get(type).RequiredAbility == AbilityType.None
-                || (Abilities != null && Abilities.IsLearned(PowerupCatalog.Get(type).RequiredAbility)));
+                || (Abilities != null && Abilities.IsLearned(PowerupCatalog.Get(type).RequiredAbility)))
+            && SpecimenCatalog.Allows(MutationPath, type);
 
         public bool Add(PowerupType type)
         {
@@ -39,7 +44,9 @@ namespace Slopgame
 
         public float CriticalMultiplier => 2f + Count(PowerupType.DeadlyPrecision) * 0.25f;
         public float RelicCooldownMultiplier => 1f - Count(PowerupType.RelicTraining) * 0.08f;
-        public float SkillCooldownMultiplier => 1f - 0.1f * Count(ClassWeapon switch
+        public float SkillCooldownMultiplier => ClassSkillTalent(ClassWeapon) is PowerupType drills ? 1f - 0.1f * Count(drills) : 1f;
+        /// <summary>The class talent that shortens this hero's class skill (right click) by 10% a rank; null for heroes without one.</summary>
+        public static PowerupType? ClassSkillTalent(WeaponType weapon) => weapon switch
         {
             WeaponType.Sword => PowerupType.GuardDrills,
             WeaponType.Bow => PowerupType.VolleyDrills,
@@ -50,8 +57,8 @@ namespace Slopgame
             WeaponType.Tail => PowerupType.TailRhythm,
             WeaponType.Coins => PowerupType.QuickDeal,
             WeaponType.Beam => PowerupType.HeatSink,
-            _ => PowerupType.NightCycle
-        });
+            _ => (PowerupType?)null
+        };
         public int CriticalDamage(int damage) => Mathf.RoundToInt(damage * CriticalMultiplier);
         public int DamageForRoll(int damage, float roll) => roll < PhysicalCritChance ? CriticalDamage(damage) : damage;
         public int RollDamage(int damage) => DamageForRoll(damage, Random.value);

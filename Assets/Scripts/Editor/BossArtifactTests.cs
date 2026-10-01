@@ -14,7 +14,7 @@ namespace Slopgame.Editor
         private static float waitUntil;
         private static bool variantsTested;
         private static bool failed, checkedChilledBoss;
-        private static readonly List<WeaponType> classes = new List<WeaponType> { WeaponType.Sword, WeaponType.Bow, WeaponType.Staff, WeaponType.Daggers, WeaponType.Hammer, WeaponType.Shadow, WeaponType.Fists, WeaponType.Tail, WeaponType.Coins, WeaponType.Beam };
+        private static readonly List<WeaponType> classes = new List<WeaponType> { WeaponType.Sword, WeaponType.Bow, WeaponType.Staff, WeaponType.Daggers, WeaponType.Hammer, WeaponType.Mutation, WeaponType.Fists, WeaponType.Tail, WeaponType.Coins, WeaponType.Beam };
         private static int classIndex;
         private static int abilityIndex;
         private static bool activeCast;
@@ -26,7 +26,8 @@ namespace Slopgame.Editor
             || type == AbilityType.VenomVial || type == AbilityType.DemonPaw || type == AbilityType.DemonCurse
             || type == AbilityType.MicroMissiles || type == AbilityType.NetShot || type == AbilityType.RicochetArrow
             || type == AbilityType.GrappleArm || type == AbilityType.ThunderClap || type == AbilityType.HaymakerDash || type == AbilityType.Suplex
-            || type == AbilityType.CardToss || type == AbilityType.DiceBomb || type == AbilityType.HolyLance;
+            || type == AbilityType.CardToss || type == AbilityType.DiceBomb || type == AbilityType.HolyLance
+            || type == AbilityType.Bulldoze || type == AbilityType.BoulderToss || type == AbilityType.GiantSwing || type == AbilityType.RoundUp;
 
         private static void VerifyDelayed(DungeonRun run, AbilityDefinition ability)
         {
@@ -575,6 +576,7 @@ namespace Slopgame.Editor
             if (type == WeaponType.Fists) TestBrawler(run);
             if (type == WeaponType.Tail) TestDemoness(run);
             if (type == WeaponType.Beam) TestAugment(run);
+            if (type == WeaponType.Mutation) TestSpecimen(run);
             int slot = 0;
             foreach (var ability in AbilityCatalog.All)
             {
@@ -678,6 +680,31 @@ namespace Slopgame.Editor
             target.transform.position = player.transform.position + Vector3.right * 2f;
         }
 
+        /// <summary>The Specimen starts frail, three Bulk picks make him the Behemoth, and his Arm Guard soaks a bolt as Force.</summary>
+        private static void TestSpecimen(DungeonRun run)
+        {
+            var player = run.Player;
+            var specimen = player.Weapon as SpecimenAttack;
+            Require(specimen != null && specimen.Form == SpecimenForm.Frail && player.Powerups.MutationPath == SpecimenPath.None && player.MaxHealth == 3,
+                "The Specimen did not start frail.");
+            var target = run.Enemies[0];
+            target.transform.position = player.transform.position + Vector3.right;
+            target.Health = 100;
+            Require(specimen.TryAttack(Vector2.right, 0f) && target.Health < 100, "The frail palm strike missed.");
+            int health = player.MaxHealth;
+            Require(player.GrantPowerup(PowerupType.IronForearms) && player.GrantPowerup(PowerupType.BoneBreaker), "Bulk talents were refused.");
+            Require(specimen.Form == SpecimenForm.Frail, "Two Bulk picks transformed him early.");
+            Require(player.GrantPowerup(PowerupType.Aftershock), "A third Bulk talent was refused.");
+            Require(specimen.Form == SpecimenForm.Behemoth && player.Powerups.MutationPath == SpecimenPath.Bulk, "Three Bulk picks did not make the Behemoth.");
+            Require(player.MaxHealth == health + SpecimenAttack.BehemothHealth, "The Behemoth's health is wrong.");
+            Require(!player.Powerups.CanTake(PowerupType.RazorTip) && player.Powerups.CanTake(PowerupType.BulkUp), "The locked path did not shut out Edge talents.");
+            Require(player.IsBigTarget && player.HitRadius > 0.42f, "The Behemoth did not grow.");
+            Require(specimen.TryHeavyAttack(Vector2.right) && specimen.IsGuarding, "The Arm Guard did not go up.");
+            Vector2 facing = player.AimDirection;
+            Require(specimen.TryAbsorb((Vector2)player.transform.position + facing * 0.5f, -facing) && specimen.Force == 1, "The Arm Guard did not soak a bolt as Force.");
+            specimen.Hide();
+        }
+
         private static void TestDemoness(DungeonRun run)
         {
             var player = run.Player;
@@ -760,6 +787,14 @@ namespace Slopgame.Editor
         private static void TestActive(DungeonRun run, AbilityDefinition ability)
         {
             var player = run.Player;
+            // The Specimen's path abilities only work in their own form: three picks on the path put him in it.
+            if (player.Weapon is SpecimenAttack specimen && SpecimenCatalog.PathOf(ability.Type) != SpecimenPath.None)
+            {
+                var path = SpecimenCatalog.PathOf(ability.Type);
+                var pick = path == SpecimenPath.Bulk ? PowerupType.BulkUp : PowerupType.RazorTip;
+                for (int i = 0; i < SpecimenCatalog.TransformPicks; i++) player.GrantPowerup(pick);
+                Require(specimen.Form == SpecimenCatalog.FormOf(path) && specimen.CanUseAbility(ability.Type), "The Specimen did not take the form " + ability.Name + " needs.");
+            }
             Require(player.Abilities.Claim(ability.Type, 0), "Ability failed to equip: " + ability.Name);
             var target = run.Enemies[0];
             // Casts aim right, so stand where the ground is open on both sides whatever the floor's layout.
@@ -887,6 +922,25 @@ namespace Slopgame.Editor
                     Require(player.Buffs.IsRaging && player.Damage == player.BaseDamage * 2
                         && Mathf.Abs(player.Abilities.CooldownRemaining(0) - ability.Cooldown) < 0.01f,
                         "Primal Rage did not buff damage or started its cooldown before the rage ended."); break;
+                case AbilityType.FightOrFlight:
+                    Require(((SpecimenAttack)player.Weapon).IsFleeing && target.Health == 100, "Fight or Flight did not speed the Specimen up, or it dealt damage."); break;
+                case AbilityType.IronSkin:
+                    var skin = (SpecimenAttack)player.Weapon;
+                    Require(skin.HasIronSkin && skin.IronSkinCharges == SpecimenArts.IronSkinHits, "Iron Skin did not harden the Behemoth.");
+                    int healthBefore = player.Health;
+                    player.Hit();
+                    Require(player.Health == healthBefore && skin.IronSkinCharges == SpecimenArts.IronSkinHits - 1 && target.Health < 100,
+                        "Iron Skin did not turn a hit aside with a shockwave."); break;
+                case AbilityType.Bind:
+                    Require(target.IsRooted && ((SpecimenAttack)player.Weapon).IsBound(target) && target.Health == 100, "Bind did not root and bind its target."); break;
+                case AbilityType.Bulldoze:
+                    Require(player.IsBusy && target.Health == 100, "Bulldoze slammed at once instead of charging."); break;
+                case AbilityType.GiantSwing:
+                    Require(player.IsBusy && target.Health == 100, "Giant Swing threw at once instead of swinging."); break;
+                case AbilityType.BoulderToss:
+                    Require(target.Health == 100 && run.ProjectileRoot.GetComponentInChildren<ThrownBoulder>() != null, "Boulder Toss struck at once instead of flying."); break;
+                case AbilityType.RoundUp:
+                    Require(target.Health == 100, "Round-Up struck at once instead of hauling its catch in."); break;
                 case AbilityType.Blink:
                 case AbilityType.Windstep:
                     Require(Vector2.Distance(origin, player.transform.position) > 0.5f && run.Map.CanStand(player.transform.position), "Dash failed or landed in a wall.");

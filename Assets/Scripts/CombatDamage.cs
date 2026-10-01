@@ -48,8 +48,7 @@ namespace Slopgame
         /// <summary>Impact sparks sprayed away from the attacker; critical hits add a gold flash.</summary>
         private static void HitVfx(DungeonPlayer player, Vector2 position, Vector2 source, Color color, bool critical)
         {
-            // The Admin class keeps its own shadow effects.
-            if (player == null || player.ClassWeapon == WeaponType.Shadow || player.Run == null || player.Run.ProjectileRoot == null) return;
+            if (player == null || player.Run == null || player.Run.ProjectileRoot == null) return;
             var root = player.Run.ProjectileRoot;
             HeroVfx.Sparks(root, position, color, critical ? 12 : 6, critical ? 5.5f : 3.8f, critical ? 0.35f : 0.25f,
                 position - source, 120f, critical ? 1.3f : 1f);
@@ -114,8 +113,9 @@ namespace Slopgame
         /// hit also sets off that element's effect.
         /// </param>
         /// <param name="guaranteedEffect">An elemental hit skips its effect roll and always sets off its element (Wild Storm, a storm-charged Inferno Orb, a full plasma cannon).</param>
+        /// <param name="guaranteedCrit">A physical hit that is always critical (the tip of the Specimen's chain whip).</param>
         public static void Apply(DungeonPlayer player, DungeonEnemy enemy, int damage, DamageElement element, Vector2 source, float knockback = 1f,
-            DamageElement infusion = DamageElement.Physical, bool guaranteedEffect = false)
+            DamageElement infusion = DamageElement.Physical, bool guaranteedEffect = false, bool guaranteedCrit = false)
         {
             if (enemy == null || enemy.Health <= 0) return;
             if (enemy.IsInvulnerable) { enemy.Hit(0, source); return; }
@@ -133,12 +133,15 @@ namespace Slopgame
                 if (player.ClassWeapon == WeaponType.Daggers && behind)
                     damage = KillerInstinct(player, damage * 2 + player.Powerups.Count(PowerupType.Backstab));
                 damage = AssassinBonus(player, enemy, damage) + BrawlBonus(player);
-                int rolled = opening ? player.Powerups.CriticalDamage(damage) : player.Powerups.RollDamage(damage);
+                // The Specimen's exposed, bound and tripped enemies take a critical hit from every blow.
+                bool forced = guaranteedCrit || (player.Weapon is SpecimenAttack marks && marks.ForcesCrit(enemy));
+                int rolled = opening || forced ? player.Powerups.CriticalDamage(damage) : player.Powerups.RollDamage(damage);
                 bool critical = rolled > damage;
                 if (critical) player.Powerups.OnCritical(player);
                 HitVfx(player, enemy.transform.position, source, infusion != DamageElement.Physical ? ElementColor(infusion) : new Color(1f, 0.95f, 0.8f), critical);
                 enemy.Hit(rolled, source, knockback);
                 if (seize) enemy.Stun(ElementalImmobilizationStun);
+                if (critical && player.Weapon is SpecimenAttack specimen) specimen.OnCritical(enemy, rolled);
                 if (player.ClassWeapon == WeaponType.Daggers && behind)
                 {
                     if (!ShadowClone.IsStriking) player.Mechanic?.OnBackstab();

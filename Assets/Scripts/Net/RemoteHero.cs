@@ -18,6 +18,11 @@ namespace Slopgame
         public bool IsCharging => (flags & PlayerStateMessage.Charging) != 0;
         /// <summary>Shield Taunt: enemies target this teammate first.</summary>
         public bool IsTaunting => IsAlive && (moreFlags & PlayerStateMessage.Taunting) != 0;
+        /// <summary>The Specimen's form (0 frail, 1 Behemoth, 2 Edge, 3 rampaging Behemoth); 0 for every other hero.</summary>
+        private int FormBits => Character != null && Character.Weapon == WeaponType.Mutation
+            ? (moreFlags & PlayerStateMessage.SpecimenFormMask) >> PlayerStateMessage.SpecimenFormShift : 0;
+        /// <summary>A Behemoth teammate is a big target: enemies near him go for him first.</summary>
+        public bool IsBigTarget => IsAlive && (FormBits == 1 || FormBits == 3);
         /// <summary>When this teammate last fell (Heavenly Host revives whoever has been down longest).</summary>
         public float DiedAt { get; private set; }
         public float ChargeAmount { get; private set; }
@@ -28,6 +33,7 @@ namespace Slopgame
         private Vector2 target;
         private byte flags, moreFlags;
         private bool facingLeft, visible = true;
+        private int lookKey;
 
         public static RemoteHero Create(DungeonRun run, ulong id, string playerName, CharacterDefinition character, Vector2 position)
         {
@@ -80,9 +86,10 @@ namespace Slopgame
             transform.position = Vector2.Lerp(transform.position, target, 1f - Mathf.Exp(-18f * Time.deltaTime));
             SetVisible(IsAlive);
             if (!IsAlive) return;
+            if (Character.Weapon == WeaponType.Mutation) ApplySpecimenLook();
             bool blocking = (flags & PlayerStateMessage.Blocking) != 0;
             body.color = IsRolling ? new Color(0.4f, 0.65f, 1f)
-                : IsTaunting ? HeroBuffs.AngryTint(Character.Color)
+                : IsTaunting || FormBits == 3 ? HeroBuffs.AngryTint(Character.Color)
                 : (flags & PlayerStateMessage.Invulnerable) != 0 && Mathf.Repeat(Time.time * 8f, 1f) > 0.5f ? Color.white
                 : HeroBuffs.Tint(Character.Color, (flags & PlayerStateMessage.Empowered) != 0,
                     (flags & PlayerStateMessage.Raging) != 0, (flags & PlayerStateMessage.Tired) != 0,
@@ -109,6 +116,21 @@ namespace Slopgame
                 shield.transform.localScale = new Vector3(0.14f, 1.3f, 1f);
                 shield.transform.localRotation = Quaternion.Euler(0, 0, Mathf.Atan2(Aim.y, Aim.x) * Mathf.Rad2Deg);
             }
+        }
+
+        /// <summary>A Specimen teammate wears his current form's sprite, at its size.</summary>
+        private void ApplySpecimenLook()
+        {
+            int key = moreFlags & (PlayerStateMessage.SpecimenFormMask | PlayerStateMessage.SpecimenGrown);
+            if (key == lookKey) return;
+            lookKey = key;
+            int form = FormBits;
+            bool grown = (moreFlags & PlayerStateMessage.SpecimenGrown) != 0;
+            var shape = form == 1 || form == 3 ? SpecimenForm.Behemoth : form == 2 ? SpecimenForm.Edge : SpecimenForm.Frail;
+            body.sprite = HeroSprites.SpecimenBody(shape);
+            if (details != null) details.sprite = HeroSprites.SpecimenAccent(shape);
+            float scale = form == 3 ? SpecimenAttack.RampageScale : form == 1 ? (grown ? SpecimenAttack.ColossusScale : SpecimenAttack.BehemothScale) : 1f;
+            transform.localScale = new Vector3(0.65f * scale, 0.65f * scale, 1f);
         }
 
         private void SetVisible(bool value)

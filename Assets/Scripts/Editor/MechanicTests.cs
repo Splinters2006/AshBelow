@@ -21,7 +21,7 @@ namespace Slopgame.Editor
         private static readonly WeaponType[] Classes =
         {
             WeaponType.Sword, WeaponType.Bow, WeaponType.Staff, WeaponType.Daggers, WeaponType.Hammer, WeaponType.Fists, WeaponType.Tail, WeaponType.Coins,
-            WeaponType.Beam
+            WeaponType.Beam, WeaponType.Mutation
         };
 
         [InitializeOnLoadMethod]
@@ -108,7 +108,7 @@ namespace Slopgame.Editor
                 }
                 hero++;
                 if (hero < Classes.Length) { StartHero(run); return; }
-                Finish(!failed, "Burn / freeze / shock, universal kill and shop boons, Shield Taunt, Elemental Quiver, Wild Storm, Sharpened Dagger, Heavenly Host, Super Angry, Demonic Power, the Gambler and Overclock");
+                Finish(!failed, "Burn / freeze / shock, universal kill and shop boons, Shield Taunt, Elemental Quiver, Wild Storm, Sharpened Dagger, Heavenly Host, Super Angry, Demonic Power, the Gambler, Overclock and Breaking Point");
             }
             catch (Exception error) { Debug.LogException(error); Finish(false, error.Message); }
         }
@@ -284,6 +284,19 @@ namespace Slopgame.Editor
                     Require(overclock.TryActivate(aim) && overclock.Charge == 0 && cannon.IsOverclocked && cannon.HeavyCooldownRemaining == 0f,
                         "Overclock did not activate or vent the cannon.");
                     Require(cannon.CannonCooldownTime < CyborgAttack.CannonCooldown, "Overclock did not speed up the cannon.");
+                    return false;
+                }
+                case WeaponType.Mutation:
+                {
+                    var specimen = (SpecimenAttack)player.Weapon;
+                    var breaking = (BreakingPoint)player.Mechanic;
+                    player.Hit();
+                    Require(breaking.Charge == 1, "Taking damage did not charge Breaking Point.");
+                    for (int i = 1; i < BreakingPoint.Charges; i++) breaking.OnDamaged();
+                    // Frail, it Snaps him into the form he leans toward for a while (with no picks yet, the Behemoth).
+                    Require(breaking.TryActivate(aim) && specimen.IsSnapped && specimen.Form == SpecimenForm.Behemoth && player.Powerups.MutationPath == SpecimenPath.None,
+                        "Breaking Point did not Snap the frail Specimen into the Behemoth for a while.");
+                    Require(!breaking.TryActivate(aim), "Breaking Point fired twice on one charge.");
                     return false;
                 }
                 case WeaponType.Coins:

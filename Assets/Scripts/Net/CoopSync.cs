@@ -244,7 +244,8 @@ namespace Slopgame
                     | (player.IsVeiled ? PlayerStateMessage.Veiled : 0)
                     | (player.Buffs != null && player.Buffs.IsAscended ? PlayerStateMessage.Ascended : 0)
                     | (player.DrawsAggro ? PlayerStateMessage.Taunting : 0)
-                    | (player.Buffs != null && player.Buffs.IsFurious ? PlayerStateMessage.Furious : 0)),
+                    | (player.Buffs != null && player.Buffs.IsFurious ? PlayerStateMessage.Furious : 0)
+                    | (player.Weapon is SpecimenAttack specimen ? specimen.NetFormBits : 0)),
                 Health = (short)player.Health, MaxHealth = (short)player.MaxHealth,
                 Charge = (byte)Mathf.RoundToInt((player.Charge != null ? player.Charge.Amount : 0f) * 255f)
             };

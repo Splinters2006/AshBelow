@@ -218,7 +218,7 @@ namespace Slopgame
 
         private static string GlyphFor(WeaponType weapon) => weapon switch
         {
-            WeaponType.Shadow => "///", WeaponType.Staff => "*", WeaponType.Bow => ">", WeaponType.Daggers => "//", WeaponType.Fists => "[]",
+            WeaponType.Mutation => "%", WeaponType.Staff => "*", WeaponType.Bow => ">", WeaponType.Daggers => "//", WeaponType.Fists => "[]",
             WeaponType.Tail => "~>", WeaponType.Coins => "$", WeaponType.Beam => "=>", WeaponType.Scythe => "?", WeaponType.Hammer => "T", _ => "+"
         };
     }

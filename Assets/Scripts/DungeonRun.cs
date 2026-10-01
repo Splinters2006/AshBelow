@@ -94,8 +94,7 @@ namespace Slopgame
             string saveDirectory = Application.persistentDataPath;
 #if UNITY_EDITOR
             // Automated tests must never read or change the player's real wallet.
-            if (Application.isBatchMode || UnityEditor.SessionState.GetBool("SlopgamePreview", false)
-                || UnityEditor.SessionState.GetBool("AdminPreview", false))
+            if (Application.isBatchMode || UnityEditor.SessionState.GetBool("SlopgamePreview", false))
                 saveDirectory = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "ashbelow-tests", System.Guid.NewGuid().ToString("N"));
 #endif
 #if DEBUG || UNITY_EDITOR
@@ -741,20 +740,27 @@ namespace Slopgame
         /// <summary>A taunting Knight counts as this many times closer when enemies pick a target.</summary>
         public const float AggroPull = 3f;
 
-        /// <summary>Squared distance for targeting, shrunk for a hero drawing aggro with Shield Taunt.</summary>
-        private static float TargetDistance(Vector2 hero, Vector2 from, bool aggro)
-            => Vector2.SqrMagnitude(hero - from) / (aggro ? AggroPull * AggroPull : 1f);
+        /// <summary>
+        /// Squared distance for targeting, shrunk for a hero drawing aggro with Shield Taunt, and for the Specimen's
+        /// Behemoth when he is close (a big target).
+        /// </summary>
+        private static float TargetDistance(Vector2 hero, Vector2 from, bool aggro, bool bigTarget = false)
+        {
+            float distance = Vector2.SqrMagnitude(hero - from);
+            bool pulled = aggro || (bigTarget && distance <= SpecimenAttack.BigTargetRadius * SpecimenAttack.BigTargetRadius);
+            return distance / (pulled ? AggroPull * AggroPull : 1f);
+        }
 
         /// <summary>The living heroes enemies can target: the local hero plus teammates.</summary>
         public Vector2 NearestHero(Vector2 from)
         {
             Vector2 best = Player.transform.position;
-            float bestDistance = Player.Health > 0 ? TargetDistance(best, from, Player.DrawsAggro) : float.PositiveInfinity;
+            float bestDistance = Player.Health > 0 ? TargetDistance(best, from, Player.DrawsAggro, Player.IsBigTarget) : float.PositiveInfinity;
             if (IsNetworked)
                 foreach (var hero in Coop.RemoteHeroes)
                 {
                     if (hero == null || !hero.IsAlive) continue;
-                    float distance = TargetDistance(hero.transform.position, from, hero.IsTaunting);
+                    float distance = TargetDistance(hero.transform.position, from, hero.IsTaunting, hero.IsBigTarget);
                     if (distance < bestDistance) { bestDistance = distance; best = hero.transform.position; }
                 }
             return best;
@@ -771,13 +777,13 @@ namespace Slopgame
             if (Player.Health > 0 && !Player.IsVeiled)
             {
                 best = Player.transform.position;
-                bestDistance = TargetDistance(best, from, Player.DrawsAggro);
+                bestDistance = TargetDistance(best, from, Player.DrawsAggro, Player.IsBigTarget);
             }
             if (IsNetworked)
                 foreach (var hero in Coop.RemoteHeroes)
                 {
                     if (hero == null || !hero.IsAlive || hero.IsVeiled) continue;
-                    float distance = TargetDistance(hero.transform.position, from, hero.IsTaunting);
+                    float distance = TargetDistance(hero.transform.position, from, hero.IsTaunting, hero.IsBigTarget);
                     if (distance < bestDistance) { bestDistance = distance; best = hero.transform.position; }
                 }
             return !float.IsPositiveInfinity(bestDistance);
@@ -811,7 +817,9 @@ namespace Slopgame
             abilityOffers.Clear();
             var pool = AbilityCatalog.PoolFor(Player.ClassWeapon, Progress);
             pool.RemoveAll(ability => Player.Abilities.Rank(ability.Type) >= PlayerAbilities.MaxRank);
-            for (int i = 0; i < AbilityOfferCount && pool.Count > 0; i++)
+            // The Specimen is offered his form's abilities, or one from each path while he is still frail.
+            if (Player.Weapon is SpecimenAttack specimen) specimen.ShapeAbilityOffers(pool, AbilityOfferCount, abilityOffers);
+            for (int i = abilityOffers.Count; i < AbilityOfferCount && pool.Count > 0; i++)
             {
                 int pick = UnityEngine.Random.Range(0, pool.Count);
                 abilityOffers.Add(pool[pick]);
@@ -907,7 +915,20 @@ namespace Slopgame
             upgradeChoices.Clear();
             var random = new System.Random(seed);
             var talents = pool.FindAll(powerup => powerup.ClassWeapon.HasValue);
-            if (talents.Count > 0)
+            if (Player.Weapon is SpecimenAttack specimen && specimen.LockedPath == SpecimenPath.None)
+            {
+                // The Specimen's fork: one Bulk talent and one Edge talent every floor until a path claims him, then one for everyone.
+                foreach (var path in new[] { SpecimenPath.Bulk, SpecimenPath.Edge })
+                {
+                    var side = talents.FindAll(powerup => SpecimenCatalog.PathOf(powerup.Type) == path);
+                    if (side.Count == 0) continue;
+                    var talent = side[random.Next(side.Count)];
+                    upgradeChoices.Add(talent);
+                    pool.Remove(talent);
+                }
+                if (upgradeChoices.Count > 0) pool.RemoveAll(powerup => powerup.ClassWeapon.HasValue);
+            }
+            else if (talents.Count > 0)
             {
                 var talent = talents[random.Next(talents.Count)];
                 upgradeChoices.Add(talent);

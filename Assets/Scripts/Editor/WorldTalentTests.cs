@@ -135,7 +135,7 @@ namespace Slopgame.Editor
             }
             Require(PowerupCatalog.All.Count == Enum.GetValues(typeof(PowerupType)).Length, "Catalog/enum size mismatch");
             for (int i = 0; i < PowerupCatalog.All.Count; i++) Require((int)PowerupCatalog.All[i].Type == i, "Catalog IDs shifted");
-            Require((int)PowerupType.DarkHorizon - (int)PowerupType.ExtendedBattery == 26, "Expected 26 new talents");
+            Require((int)PowerupType.RootedStance - (int)PowerupType.ExtendedBattery == 26, "Expected 26 new talents");
             foreach (WeaponType weapon in Enum.GetValues(typeof(WeaponType)))
             {
                 var obj = new GameObject("Talent test");
@@ -151,7 +151,7 @@ namespace Slopgame.Editor
                     for (int rank = 0; rank < talent.MaxStacks; rank++) Require(powers.Add(talent.Type), "Missing rank: " + talent.Name);
                     Require(!powers.Add(talent.Type), "Exceeded stack cap: " + talent.Name);
                 }
-                Near(powers.SkillCooldownMultiplier, 0.7f, "Class cooldown talent missing for " + weapon);
+                if (PlayerPowerups.ClassSkillTalent(weapon).HasValue) Near(powers.SkillCooldownMultiplier, 0.7f, "Class cooldown talent missing for " + weapon);
                 Near(powers.RelicCooldownMultiplier, 0.76f, "Relic cooldown talent missing");
                 Require(powers.DamageForRoll(4, 0f) == 11 && powers.DamageForRoll(4, 1f) == 4, "Critical damage scaling wrong");
                 if (weapon == WeaponType.Staff) Near(powers.ElementalEffectChance, 0.3f, "Stormcraft missing");
@@ -468,7 +468,7 @@ namespace Slopgame.Editor
                 Require(world.MapPosition.x >= 0f && world.MapPosition.x <= 1f && world.MapPosition.y >= 0f && world.MapPosition.y <= 1f,
                     "World off the travel map: " + world.Name);
                 Require(i == 0 ? !world.Hero.HasValue : world.Hero.HasValue && heroes.Add(world.Hero.Value), "Hero world missing or doubled: " + world.Name);
-                Require(!world.Hero.HasValue || (world.Hero != WeaponType.Sword && world.Hero != WeaponType.Bow && world.Hero != WeaponType.Shadow),
+                Require(!world.Hero.HasValue || (world.Hero != WeaponType.Sword && world.Hero != WeaponType.Bow && world.Hero != WeaponType.Mutation),
                     "A starting hero got a world: " + world.Name);
                 Require(WorldCatalog.FirstFloor(i) == i * WorldCatalog.FloorsPerWorld + 1 && WorldCatalog.IndexForFloor(WorldCatalog.FirstFloor(i)) == i,
                     "Wrong first floor for " + world.Name);

@@ -125,7 +125,8 @@ namespace Slopgame
             var gambler = player.Weapon as GamblerAttack;
             // The Gambler's coins get their own row, so the panel (and everything under it) grows to fit.
             var reaper = player.Weapon as ReaperAttack;
-            float coinRow = gambler != null || reaper != null ? 26f : 0f;
+            var specimen = player.Weapon as SpecimenAttack;
+            float coinRow = gambler != null || reaper != null || specimen != null ? 26f : 0f;
             DungeonUi.Panel(new Rect(24, 24, 292, 100 + coinRow), DungeonUi.PanelColor);
             DungeonUi.Label(new Rect(42, 37, 250, 28), Run.SelectedCharacter.DisplayName.ToUpperInvariant(), 22, Run.SelectedCharacter.Color);
             DungeonUi.Label(new Rect(176, 41, 122, 22), $"{player.Crystals.Crystals} CRYSTALS", 14, CrystalPouch.CrystalColor, TextAnchor.UpperRight);
@@ -151,6 +152,7 @@ namespace Slopgame
                 if (spent > 0f)
                     DungeonUi.Label(new Rect(176, 97, 122, 26), $"-{reaper.LastSpent} {(reaper.LastSpent == 1 ? "SOUL" : "SOULS")}", 18, FlameMesh.Alpha(DungeonPlayer.HurtColor, Mathf.Clamp01(spent * 2f)), TextAnchor.UpperRight);
             }
+            if (specimen != null) DrawSpecimenRow(specimen);
             DungeonUi.Label(new Rect(24, 135 + coinRow, 300, 26), $"ASH  {Run.Progress.Ash}   /   +{Run.RunAshEarned} this run", 16, AbilityCatalog.Gold);
             if (!string.IsNullOrEmpty(Run.Progress.LastError))
                 DungeonUi.Label(new Rect(24, 165 + coinRow, 310, 70), Run.Progress.LastError, 14, AbilityCatalog.Gold);
@@ -209,14 +211,22 @@ namespace Slopgame
         private void DrawHotbar()
         {
             var player = Run.Player;
-            // Every class but the Admin has a class mechanic slot, locked until it is bought in the Ash shop.
-            bool mechanicSlot = player.ClassWeapon != WeaponType.Shadow;
-            float left = mechanicSlot ? 164 : 260;
-            Slot(new Rect(left, 596, 180, 78), KeyBindings.Label(GameAction.Special), DungeonUi.SpecialName(player.ClassWeapon), player.Weapon?.HeavyCooldownRemaining ?? 0f,
-                DungeonUi.SpecialCooldown(player.ClassWeapon), Run.SelectedCharacter.Color);
+            // Every class has a class mechanic slot, locked until it is bought in the Ash shop.
+            const bool mechanicSlot = true;
+            float left = 164;
+            var specimen = player.Weapon as SpecimenAttack;
+            Slot(new Rect(left, 596, 180, 78), KeyBindings.Label(GameAction.Special), specimen != null ? specimen.SpecialName : DungeonUi.SpecialName(player.ClassWeapon),
+                player.Weapon?.HeavyCooldownRemaining ?? 0f, specimen != null ? specimen.SpecialCooldownTime : DungeonUi.SpecialCooldown(player.ClassWeapon), Run.SelectedCharacter.Color);
             for (int i = 0; i < PlayerAbilities.SlotCount; i++)
             {
                 var ability = AbilityCatalog.Get(player.Abilities.Equipped(i));
+                // The Specimen's path abilities sleep until he is in their form.
+                if (ability != null && specimen != null && !specimen.CanUseAbility(ability.Type))
+                {
+                    Slot(new Rect(left + 192 + i * 192, 596, 180, 78), SlotKey(i), $"{ability.Name}  /  {SpecimenFormTag(ability.Type).ToLowerInvariant()}",
+                        0f, 1f, ability.Color, true, "ASLEEP");
+                    continue;
+                }
                 Slot(new Rect(left + 192 + i * 192, 596, 180, 78), SlotKey(i), ability == null ? "Boss relic required" : ability.Name,
                     player.Abilities.CooldownRemaining(i), ability?.Cooldown ?? 1f, ability?.Color ?? DungeonUi.Muted, ability == null);
             }
@@ -246,6 +256,12 @@ namespace Slopgame
                     ? player.Charge.Amount >= 1f ? "RELEASE TO FIRE A FULL RAY" : $"FOCUSING RAY  {player.Charge.Amount:P0}"
                     : player.ClassWeapon == WeaponType.Scythe
                     ? player.Charge.Amount >= 1f ? "RELEASE TO HARVEST SOULS" : $"RAISING THE SCYTHE  {player.Charge.Amount:P0}"
+                    : specimen != null && specimen.Form == SpecimenForm.Behemoth && !specimen.IsRampaging
+                    ? player.Charge.Amount >= 1f ? "RELEASE FOR AN AXE KICK" : $"RAISING HIS HEEL  {player.Charge.Amount:P0}"
+                    : specimen != null && specimen.Form == SpecimenForm.Edge
+                    ? player.Charge.Amount >= 1f ? "RELEASE FOR A CHAIN CYCLONE" : $"WHIRLING THE CHAIN  {player.Charge.Amount:P0}"
+                    : specimen != null && specimen.Form == SpecimenForm.Frail
+                    ? player.Charge.Amount >= 1f ? "RELEASE FOR A SNAP KICK" : $"WINDING UP A KICK  {player.Charge.Amount:P0}"
                     : player.Charge.Amount >= 1f ? "FULL CHARGE  /  RELEASE" : $"CHARGING  {player.Charge.Amount:P0}", 14, AbilityCatalog.Gold, TextAnchor.MiddleCenter);
                 DungeonUi.Bar(new Rect(500, 568, 280, 5), player.Charge.Amount, AbilityCatalog.Gold);
             }
@@ -265,6 +281,12 @@ namespace Slopgame
                     14, ReaperAttack.Soul, TextAnchor.MiddleCenter);
                 DungeonUi.Bar(new Rect(500, 568, 280, 5), skulls.SkullCharge, ReaperAttack.Soul);
             }
+            if (specimen != null && specimen.IsGuarding)
+            {
+                DungeonUi.Label(new Rect(440, 535, 400, 24), $"ARM GUARD  {specimen.GuardRemaining:0.0}s  /  FORCE {specimen.Force}/{specimen.ForceCapacity}  /  RELEASE TO REPEL",
+                    14, SpecimenCatalog.Amber, TextAnchor.MiddleCenter);
+                DungeonUi.Bar(new Rect(500, 568, 280, 5), specimen.GuardRemaining / Mathf.Max(0.01f, specimen.GuardDuration), SpecimenCatalog.Amber);
+            }
             string attack = KeyBindings.Label(GameAction.Attack), interact = KeyBindings.Label(GameAction.Interact);
             DungeonUi.Label(new Rect(250, 690, 780, 22), player.ClassWeapon == WeaponType.Hammer
                 ? $"{attack}  weak swipe     HOLD / RELEASE {attack}  bless allies     {interact}  interact"
@@ -278,7 +300,54 @@ namespace Slopgame
                 ? $"{attack}  scythe sweep     HOLD / RELEASE {attack}  harvest souls     HOLD / RELEASE {KeyBindings.Label(GameAction.Special)}  soul skulls     {(player.Mechanic != null ? KeyBindings.Label(GameAction.Mechanic) + "  raise skeleton     " : "")}{interact}  interact"
                 : player.ClassWeapon == WeaponType.Beam
                 ? $"{attack}  plasma ray     HOLD / RELEASE {attack}  charged ray     HOLD / RELEASE {KeyBindings.Label(GameAction.Special)}  plasma cannon     {interact}  interact"
+                : specimen != null
+                ? SpecimenHints(specimen, attack, interact, player.Mechanic != null)
                 : $"{KeyBindings.MovementLabel()}  move     HOLD / RELEASE {attack}  charge attack     {interact}  interact", 13, DungeonUi.Muted, TextAnchor.UpperCenter);
+        }
+
+        /// <summary>
+        /// The Specimen's row under his health: while frail, which way his talents are pulling him (Bulk on the left,
+        /// Edge on the right, a marker sliding toward the path he leans to); in a form, its name and its numbers.
+        /// </summary>
+        private static void DrawSpecimenRow(SpecimenAttack specimen)
+        {
+            const float y = 99f;
+            if (specimen.LockedPath == SpecimenPath.None && !specimen.IsSnapped)
+            {
+                int bulk = specimen.BulkPoints, edge = specimen.EdgePoints;
+                DungeonUi.Label(new Rect(42, y, 90, 24), $"BULK {bulk}", 14, SpecimenCatalog.Amber);
+                DungeonUi.Label(new Rect(208, y, 90, 24), $"EDGE {edge}", 14, SpecimenCatalog.Keen, TextAnchor.UpperRight);
+                var track = new Rect(124, y + 9, 92, 4);
+                DungeonUi.Panel(track, DungeonUi.PanelColor);
+                DungeonUi.Panel(new Rect(track.center.x - 1, track.y - 3, 2, 10), DungeonUi.Muted);
+                float lean = Mathf.Clamp((edge - bulk) / (float)SpecimenCatalog.TransformPicks, -1f, 1f);
+                Color marker = lean < 0f ? SpecimenCatalog.Amber : lean > 0f ? SpecimenCatalog.Keen : DungeonUi.Text;
+                DungeonUi.Panel(new Rect(track.center.x + lean * (track.width * 0.5f - 4f) - 4f, track.y - 4, 8, 12), marker);
+                return;
+            }
+            var form = specimen.Form;
+            DungeonUi.Label(new Rect(42, y, 130, 24), SpecimenCatalog.FormName(form, specimen.IsGrown && !specimen.IsSnapped), 16, SpecimenCatalog.FormColor(form));
+            string numbers = form == SpecimenForm.Behemoth ? $"FORCE {specimen.Force}/{specimen.ForceCapacity}"
+                : $"CRIT +{specimen.Player.Powerups.FormCritBonus:P0}";
+            DungeonUi.Label(new Rect(166, y + 1, 132, 24), numbers, 14, SpecimenCatalog.FormColor(form), TextAnchor.UpperRight);
+        }
+
+        /// <summary>The Specimen's path progress, shown over his talent choices.</summary>
+        private static string SpecimenProgress(SpecimenAttack specimen)
+        {
+            if (specimen.LockedPath == SpecimenPath.None)
+                return $"BULK {specimen.BulkPoints}/{SpecimenCatalog.TransformPicks}  /  EDGE {specimen.EdgePoints}/{SpecimenCatalog.TransformPicks}  -  three on one path transform him for the descent.";
+            var form = SpecimenCatalog.FormOf(specimen.LockedPath);
+            int points = SpecimenCatalog.Points(specimen.Player.Powerups, specimen.LockedPath);
+            return specimen.IsGrown ? $"{SpecimenCatalog.FormName(form, true)}  /  fully grown."
+                : $"{SpecimenCatalog.FormName(form, false)}  /  {points}/{SpecimenCatalog.GrowPicks} picks on his path to grow again.";
+        }
+
+        /// <summary>Which form one of the Specimen's abilities needs ("" for the ones that work in any form).</summary>
+        private static string SpecimenFormTag(AbilityType type)
+        {
+            var path = SpecimenCatalog.PathOf(type);
+            return path == SpecimenPath.None ? "" : SpecimenCatalog.FormName(SpecimenCatalog.FormOf(path), false);
         }
 
         /// <summary>Zeal stacks as a row of pips over the Paladin's special; a full row means the next blessing is doubled.</summary>
@@ -292,6 +361,23 @@ namespace Slopgame
             for (int i = 0; i < PlayerPowerups.ZealStacks; i++)
                 DungeonUi.Panel(new Rect(rect.x + i * (width + gap), rect.yMax - 8, width, 6),
                     i < zeal ? FlameMesh.Alpha(full ? FlameMesh.Core : AbilityCatalog.Gold, pulse) : DungeonUi.PanelColor);
+        }
+
+        private static string SpecimenHints(SpecimenAttack specimen, string attack, string interact, bool mechanic)
+        {
+            string special = KeyBindings.Label(GameAction.Special);
+            string breaking = mechanic ? KeyBindings.Label(GameAction.Mechanic) + "  breaking point     " : "";
+            switch (specimen.Form)
+            {
+                case SpecimenForm.Behemoth:
+                    return specimen.IsRampaging
+                        ? $"{attack}  ground pound     walk through enemies to trample them     {interact}  interact"
+                        : $"{attack}  shove / stomp / pound     HOLD / RELEASE {attack}  axe kick     HOLD {special}  arm guard, release to repel     {breaking}{interact}  interact";
+                case SpecimenForm.Edge:
+                    return $"{attack}  lash (the tip always crits)     HOLD / RELEASE {attack}  chain cyclone     {special}  hook     {breaking}{interact}  interact";
+                default:
+                    return $"{attack}  palm strike     HOLD / RELEASE {attack}  snap kick     {special}  flinch guard     {breaking}{interact}  interact";
+            }
         }
 
         /// <summary>The key bound to relic slot 0 or 1.</summary>
@@ -323,11 +409,11 @@ namespace Slopgame
             return parts.Count == 0 ? null : string.Join("  /  ", parts);
         }
 
-        private static void Slot(Rect rect, string key, string name, float cooldown, float total, Color accent, bool locked = false)
+        private static void Slot(Rect rect, string key, string name, float cooldown, float total, Color accent, bool locked = false, string lockedLabel = "LOCKED")
         {
             DungeonUi.Panel(rect, DungeonUi.PanelColor);
             DungeonUi.Label(new Rect(rect.x + 14, rect.y + 10, 66, 22), key, 14, accent);
-            DungeonUi.Label(new Rect(rect.x + 88, rect.y + 10, 76, 22), locked ? "LOCKED" : cooldown > 0f ? $"{cooldown:0.0}s" : "READY", 13,
+            DungeonUi.Label(new Rect(rect.x + 88, rect.y + 10, 76, 22), locked ? lockedLabel : cooldown > 0f ? $"{cooldown:0.0}s" : "READY", 13,
                 cooldown > 0 ? DungeonUi.Muted : accent, TextAnchor.UpperRight);
             DungeonUi.Label(new Rect(rect.x + 14, rect.y + 37, rect.width - 28, 28), name, locked ? 13 : 16, locked ? DungeonUi.Muted : DungeonUi.Text);
             DungeonUi.Bar(new Rect(rect.x + 12, rect.yMax - 7, rect.width - 24, 3), locked ? 0f : 1f - cooldown / total, accent);
@@ -471,7 +557,10 @@ namespace Slopgame
             {
                 int rank = Run.Player.Powerups.Count(power.Type);
                 if (rank == 0) continue;
-                DungeonUi.Label(new Rect(0, row++ * 45, 260, 42), $"{power.Name}  /  {rank}", 16);
+                // The Specimen's talents from the path he did not take wither once he transforms.
+                bool withered = Run.Player.Weapon is SpecimenAttack specimen && specimen.LockedPath != SpecimenPath.None
+                    && SpecimenCatalog.PathOf(power.Type) == SpecimenCatalog.Other(specimen.LockedPath);
+                DungeonUi.Label(new Rect(0, row++ * 45, 260, 42), withered ? $"{power.Name}  /  {rank}  (withered)" : $"{power.Name}  /  {rank}", 16, withered ? DungeonUi.Muted : (Color?)null);
             }
             if (row == 0) DungeonUi.Label(new Rect(0, 0, 260, 80), "Clear floors to earn talents.\nGuardians offer active abilities.", 16, DungeonUi.Muted);
             GUI.EndScrollView();
@@ -495,7 +584,8 @@ namespace Slopgame
                 DungeonUi.Panel(new Rect(0, y, width, RowHeight - 6), DungeonUi.PanelColor);
                 DungeonUi.Label(new Rect(10, y + 4, 34, 44), ability.Glyph, 20, ability.Color, TextAnchor.MiddleCenter);
                 DungeonUi.Label(new Rect(50, y + 4, width - 160, 24), ability.Name, 15);
-                DungeonUi.Label(new Rect(50, y + 26, width - 160, 20), abilities.Rank(ability.Type) >= PlayerAbilities.MaxRank ? $"Rank {abilities.Rank(ability.Type)}  /  MAX" : $"Rank {abilities.Rank(ability.Type)}",
+                string formOnly = Run.Player.Weapon is SpecimenAttack && SpecimenFormTag(ability.Type) != "" ? $"  /  {SpecimenFormTag(ability.Type).ToLowerInvariant()}" : "";
+                DungeonUi.Label(new Rect(50, y + 26, width - 160, 20), (abilities.Rank(ability.Type) >= PlayerAbilities.MaxRank ? $"Rank {abilities.Rank(ability.Type)}  /  MAX" : $"Rank {abilities.Rank(ability.Type)}") + formOnly,
                     12, abilities.Rank(ability.Type) >= PlayerAbilities.MaxRank ? AbilityCatalog.Gold : DungeonUi.Muted);
                 for (int slot = 0; slot < PlayerAbilities.SlotCount; slot++)
                 {
@@ -587,14 +677,20 @@ namespace Slopgame
         private void DrawUpgrades()
         {
             if (DrawWaiting()) return;
-            ModalTitle("FLOOR CLEARED", "A moment of respite", "Choose a talent. Restore 2 HP and descend deeper.");
+            var specimen = Run.Player.Weapon as SpecimenAttack;
+            ModalTitle("FLOOR CLEARED", "A moment of respite", specimen != null
+                ? "Choose a talent. Restore 2 HP and descend deeper.\n" + SpecimenProgress(specimen) : "Choose a talent. Restore 2 HP and descend deeper.");
             for (int i = 0; i < Run.UpgradeChoices.Count; i++)
             {
                 var power = Run.UpgradeChoices[i];
                 Rect rect = new Rect(142 + i * 340, 300, 316, 330);
                 int rank = Run.Player.Powerups.Count(power.Type) + 1;
-                Card(rect, $"RANK {rank}  /  {(power.ClassWeapon.HasValue ? "CLASS TALENT" : "TALENT")}", power.Name,
-                    power.Description, power.ClassWeapon.HasValue ? Run.SelectedCharacter.Color : DungeonUi.Teal, "+");
+                // The Specimen's talents say which path they feed.
+                var path = specimen != null ? SpecimenCatalog.PathOf(power.Type) : SpecimenPath.None;
+                string kind = path == SpecimenPath.Bulk ? "BULK TALENT" : path == SpecimenPath.Edge ? "EDGE TALENT" : power.ClassWeapon.HasValue ? "CLASS TALENT" : "TALENT";
+                Color color = path == SpecimenPath.Bulk ? SpecimenCatalog.Amber : path == SpecimenPath.Edge ? SpecimenCatalog.Keen
+                    : power.ClassWeapon.HasValue ? Run.SelectedCharacter.Color : DungeonUi.Teal;
+                Card(rect, $"RANK {rank}  /  {kind}", power.Name, power.Description, color, "+");
                 if (DungeonUi.Button("upgrade" + i, new Rect(rect.x + 24, rect.yMax - 60, 268, 40), "Choose talent", DungeonUi.Teal, pendingUpgrade < 0))
                     pendingUpgrade = i;
             }
@@ -642,7 +738,11 @@ namespace Slopgame
                 var ability = offers[i];
                 Rect rect = new Rect(left + i * (width + Gap), 300, width, 340);
                 int rank = Run.Player.Abilities.Rank(ability.Type);
-                Card(rect, rank > 0 ? $"KNOWN  /  RANK {rank}" : $"NEW ABILITY  /  {ability.Cooldown:0}s COOLDOWN", ability.Name, ability.Description, ability.Color, ability.Glyph);
+                // The Specimen's path abilities only work in their own form.
+                string form = Run.Player.Weapon is SpecimenAttack ? SpecimenFormTag(ability.Type) : "";
+                string tag = form != "" ? (rank > 0 ? $"KNOWN  /  RANK {rank}  /  {form}" : $"{form} ABILITY  /  {ability.Cooldown:0}s")
+                    : rank > 0 ? $"KNOWN  /  RANK {rank}" : $"NEW ABILITY  /  {ability.Cooldown:0}s COOLDOWN";
+                Card(rect, tag, ability.Name, ability.Description, ability.Color, ability.Glyph);
                 if (DungeonUi.Button("offer" + ability.Type, new Rect(rect.x + 24, rect.yMax - 60, rect.width - 48, 40),
                     rank + 1 >= PlayerAbilities.MaxRank ? $"Raise to rank {rank + 1}  /  MAX" : rank > 0 ? $"Raise to rank {rank + 1}" : "Learn", ability.Color, pendingAbility == AbilityType.None))
                     pendingAbility = ability.Type;

@@ -67,7 +67,8 @@ namespace Slopgame
             for (int i = 0; i < steps; i++)
             {
                 Vector2 next = (Vector2)transform.position + movement / steps;
-                if (!run.Map.CanStand(next, 0.11f) || HolyBubble.Blocks(transform.position, next) || (!IsReflected && IceWall.StopsBolt(transform.position, next))) { Consume(); return; }
+                if (!run.Map.CanStand(next, 0.11f) || HolyBubble.Blocks(transform.position, next)
+                    || (!IsReflected && (IceWall.StopsBolt(transform.position, next) || RockCover.StopsBolt(transform.position, next)))) { Consume(); return; }
                 transform.position = next;
                 if (IsReflected)
                 {
@@ -97,6 +98,13 @@ namespace Slopgame
                     Consume();
                     return;
                 }
+                // The Specimen's guards soak bolts up (Force for the Behemoth); teammates see the bolt vanish.
+                if (run.Player.Weapon is SpecimenAttack specimen && specimen.TryAbsorb(next, direction))
+                {
+                    if (run.IsNetworked) run.Coop.ReportBolt(this, CoopBoltEventKind.Consumed);
+                    Consume();
+                    return;
+                }
                 var shield = run.Player.Shield;
                 if (shield != null && shield.CanReflect(next, direction))
                 {
@@ -106,7 +114,7 @@ namespace Slopgame
                     if (run.IsNetworked) run.Coop.ReportBolt(this, CoopBoltEventKind.Reflected);
                     return;
                 }
-                if (Vector2.Distance(next, run.Player.transform.position) <= 0.42f)
+                if (Vector2.Distance(next, run.Player.transform.position) <= run.Player.HitRadius)
                 {
                     // Close Call: the roll slipped through this bolt.
                     if (run.Player.IsRolling) run.Player.Powerups.OnCloseCall(run.Player);

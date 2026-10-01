@@ -8,7 +8,8 @@ namespace Slopgame
         LightningRange, LightningPower, LightningChains, RushPower, ShatterRadius, AegisDuration, VolleyCount, PiercingPower,
         WindstepDistance, FireballRadius, FrostDuration, BlinkDistance, Backstab, AssassinCrit, KnifeCount, VenomDuration,
         VeilDuration, PaladinWard, HealingPower, JudgmentPower, SanctuarySize,
-        RiftReach, AbyssalPower, EclipseRadius, SoulRendPower, ReignDuration,
+        // The Specimen's Bulk talents took over the retired Admin's slots (their numbers are their IDs).
+        BulkUp, IronForearms, BoneBreaker, Aftershock, ReturnToSender,
         Flurry, Adrenaline, ExtraFilling, CraterMaker, Bloodlust,
         NerveStrike, LongTail, Bloodline, BigPaws, HexMastery,
         LooseChange, LongToss, MintCondition, RiggedOdds, HighRoller,
@@ -17,7 +18,7 @@ namespace Slopgame
         DeadlyPrecision, SlowBurn, Permafrost, StaticField, RelicTraining, SoulShield,
         GuardDrills, Longsword, VolleyDrills, Farshot, StormRhythm, Stormcraft, ShadowDance, LongDaggers,
         DivineCadence, PatientFaith, SecondRound, HeavyGloves, TailRhythm, CruelTouch, QuickDeal, LuckyStreak,
-        HeatSink, WideBeam, NightCycle, DarkHorizon,
+        HeatSink, WideBeam, Immovable, RootedStance,
         // Universal talents from the talents & abilities expansion.
         GlassCannon, LastStand, Berserker, OpeningStrike, Executioner, Rhythm, Spellblade, Overkill, ElementalKills, Thorns,
         CloseCall, CheatDeath,
@@ -48,7 +49,10 @@ namespace Slopgame
         // Universal: elements set enemies up to be held.
         ElementalImmobilization,
         // Reaper.
-        SoulFury
+        SoulFury,
+        // The Specimen's Edge talents, then his hybrids.
+        RazorTip, LongChain, WeightedTip, ReelIn, Featherweight, BleedingEdge, LightOnHisFeet,
+        FreightTrain, RubbleWall, Hardened, Zipline, LowBlow, Shackles
     }
 
     public sealed class PowerupDefinition
@@ -104,11 +108,11 @@ namespace Slopgame
             new PowerupDefinition(PowerupType.HealingPower, "Restoration", "+1 HP restored by Healing Light", 3, WeaponType.Hammer, AbilityType.HealingLight),
             new PowerupDefinition(PowerupType.JudgmentPower, "Righteous Fury", "+2 Judgment damage", 3, WeaponType.Hammer, AbilityType.Judgment),
             new PowerupDefinition(PowerupType.SanctuarySize, "Sacred Ground", "+0.5 Sanctuary bubble radius", 3, WeaponType.Hammer, AbilityType.Sanctuary),
-            new PowerupDefinition(PowerupType.RiftReach, "Endless Night", "+1.5 shadow rift range", 3, WeaponType.Shadow),
-            new PowerupDefinition(PowerupType.AbyssalPower, "Abyssal Power", "+16 shadow rift damage before charge scaling", 3, WeaponType.Shadow),
-            new PowerupDefinition(PowerupType.EclipseRadius, "Event Horizon", "+1 Eclipse execution radius", 3, WeaponType.Shadow, AbilityType.Eclipse),
-            new PowerupDefinition(PowerupType.SoulRendPower, "Soul Devourer", "+1x fully charged damage to Soul Rend", 3, WeaponType.Shadow, AbilityType.SoulRend),
-            new PowerupDefinition(PowerupType.ReignDuration, "Eternal Reign", "+1 second of Shadow Reign", 3, WeaponType.Shadow, AbilityType.ShadowReign),
+            new PowerupDefinition(PowerupType.BulkUp, "Bulk: Bulk Up", "+2 maximum HP and heal 2", 3, WeaponType.Mutation),
+            new PowerupDefinition(PowerupType.IronForearms, "Bulk: Iron Forearms", "Arm Guard holds 1 more Force and lasts 1 second longer", 3, WeaponType.Mutation),
+            new PowerupDefinition(PowerupType.BoneBreaker, "Bulk: Bone Breaker", "Wall slams deal +1 damage", 3, WeaponType.Mutation),
+            new PowerupDefinition(PowerupType.Aftershock, "Bulk: Aftershock", "+0.5 Ground Pound radius", 3, WeaponType.Mutation),
+            new PowerupDefinition(PowerupType.ReturnToSender, "Bulk: Return to Sender", "Bolts thrown back by Repel pierce through enemies and deal +1 damage", 2, WeaponType.Mutation),
             new PowerupDefinition(PowerupType.Flurry, "Brawler: Flurry", "+1 punch per charged barrage", 3, WeaponType.Fists),
             new PowerupDefinition(PowerupType.Adrenaline, "Brawler: Adrenaline", "+1 second of Empower", 3, WeaponType.Fists),
             new PowerupDefinition(PowerupType.ExtraFilling, "Extra Filling", "+0.4 Knuckle Sandwich length and width", 3, WeaponType.Fists, AbilityType.KnuckleSandwich),
@@ -165,8 +169,8 @@ namespace Slopgame
             new PowerupDefinition(PowerupType.LuckyStreak, "Gambler: Lucky Streak", "Gamble win chance +3% per rank", 3, WeaponType.Coins),
             new PowerupDefinition(PowerupType.HeatSink, "Augment: Heat Sink", "Plasma Cannon cooldown is 10% shorter per rank", 3, WeaponType.Beam),
             new PowerupDefinition(PowerupType.WideBeam, "Augment: Wide Beam", "Plasma ray width +0.08 per rank", 3, WeaponType.Beam),
-            new PowerupDefinition(PowerupType.NightCycle, "Admin: Night Cycle", "Nightfall cooldown is 10% shorter per rank", 3, WeaponType.Shadow),
-            new PowerupDefinition(PowerupType.DarkHorizon, "Admin: Dark Horizon", "Nightfall radius +1 per rank", 3, WeaponType.Shadow),
+            new PowerupDefinition(PowerupType.Immovable, "Bulk: Immovable", "Guarding slows you 25% less", 2, WeaponType.Mutation),
+            new PowerupDefinition(PowerupType.RootedStance, "Bulk: Rooted Stance", "Enemies that touch you no longer hurt you", 1, WeaponType.Mutation),
             // Universal talents built on conditions and trade-offs rather than flat stat bumps.
             new PowerupDefinition(PowerupType.GlassCannon, "Glass Cannon", "Deal 1.5x damage, but your maximum HP is halved (later max HP gains are halved too)", 1),
             new PowerupDefinition(PowerupType.LastStand, "Last Stand", "While at 1 HP, deal double damage and move 20% faster", 1),
@@ -244,7 +248,20 @@ namespace Slopgame
             new PowerupDefinition(PowerupType.Frenzy, "Frenzy", "+25% attack and charge speed", 1),
             new PowerupDefinition(PowerupType.GraveTithe, "Reaper: Grave Tithe", "Killing an immobilized enemy (afraid, paralysed, frozen, stunned or rooted) gives you a soul", 1, WeaponType.Scythe),
             new PowerupDefinition(PowerupType.ElementalImmobilization, "Elemental Immobilization", "When an enemy is affected by an element (burning, chilled, frozen or shocked), your next hit against it stuns it for 1 second (once every 3 seconds)", 1),
-            new PowerupDefinition(PowerupType.SoulFury, "Reaper: Soul Fury", "Deal 1% / 2% / 3% more damage by rank for every soul you hold", 3, WeaponType.Scythe)
+            new PowerupDefinition(PowerupType.SoulFury, "Reaper: Soul Fury", "Deal 1% / 2% / 3% more damage by rank for every soul you hold", 3, WeaponType.Scythe),
+            new PowerupDefinition(PowerupType.RazorTip, "Edge: Razor Tip", "+10% critical hit chance", 3, WeaponType.Mutation),
+            new PowerupDefinition(PowerupType.LongChain, "Edge: Long Chain", "+0.5 lash reach", 2, WeaponType.Mutation),
+            new PowerupDefinition(PowerupType.WeightedTip, "Edge: Weighted Tip", "The sweet spot at the tip of your lash is 50% longer, and tip crits deal +1 damage", 2, WeaponType.Mutation),
+            new PowerupDefinition(PowerupType.ReelIn, "Edge: Reel In", "Hook cooldown is 1 second shorter, and hooked enemies take a hit when they land", 2, WeaponType.Mutation),
+            new PowerupDefinition(PowerupType.Featherweight, "Edge: Featherweight", "+0.4 movement speed and 10% shorter dodge cooldown", 3, WeaponType.Mutation),
+            new PowerupDefinition(PowerupType.BleedingEdge, "Edge: Bleeding Edge", "Your critical hits make enemies bleed for 3 ticks", 1, WeaponType.Mutation),
+            new PowerupDefinition(PowerupType.LightOnHisFeet, "Edge: Light on His Feet", "After a dodge roll, your next lash is always a critical hit", 1, WeaponType.Mutation),
+            new PowerupDefinition(PowerupType.FreightTrain, "Freight Train", "Bulldoze charges 50% farther, and the enemies it slams are stunned 1 second longer", 1, WeaponType.Mutation, AbilityType.Bulldoze),
+            new PowerupDefinition(PowerupType.RubbleWall, "Rubble Wall", "Boulder Toss's rock wall lasts twice as long and is twice as wide", 1, WeaponType.Mutation, AbilityType.BoulderToss),
+            new PowerupDefinition(PowerupType.Hardened, "Hardened", "Every hit Iron Skin absorbs is also stored as Force", 1, WeaponType.Mutation, AbilityType.IronSkin),
+            new PowerupDefinition(PowerupType.Zipline, "Zipline", "Swing Line is ready again at once when its kick kills", 1, WeaponType.Mutation, AbilityType.SwingLine),
+            new PowerupDefinition(PowerupType.LowBlow, "Low Blow", "Enemies tripped by Ankle Wrap take a critical hit from every blow until they get up", 1, WeaponType.Mutation, AbilityType.AnkleWrap),
+            new PowerupDefinition(PowerupType.Shackles, "Shackles", "When a bound enemy dies, your chain leaps to the nearest enemy and binds it for the time it had left", 1, WeaponType.Mutation, AbilityType.Bind)
         };
 
         private static readonly Dictionary<PowerupType, PowerupDefinition> byType = BuildLookup();

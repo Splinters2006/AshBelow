@@ -2,7 +2,8 @@ using UnityEngine;
 
 namespace Slopgame
 {
-    public enum WeaponType { Sword, Bow, Staff, Daggers, Hammer, Shadow, Fists, Tail, Coins, Beam, Scythe }
+    // The values are saved in the character assets, so new weapons are appended; the Specimen took over the retired Admin's slot.
+    public enum WeaponType { Sword, Bow, Staff, Daggers, Hammer, Mutation, Fists, Tail, Coins, Beam, Scythe }
     [CreateAssetMenu(menuName = "Slopgame/Character", fileName = "NewCharacter")]
     public sealed class CharacterDefinition : ScriptableObject
     {
