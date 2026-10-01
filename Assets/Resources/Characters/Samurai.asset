@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Samurai
   m_EditorClassIdentifier: Assembly-CSharp::Slopgame.CharacterDefinition
   displayName: Samurai
-  description: A brooding swordsman in red, white and black Edo armour. Cut with his katana, charge a flurry of rapid slashes, dash clean through whole packs, and leave everything he touches bleeding.
+  description: A brooding swordswoman in a red, white and black Edo kimono. Cut with her katana, charge a flurry of rapid slashes, dash clean through whole packs, and leave everything she touches bleeding.
   color: {r: 0.86, g: 0.2, b: 0.22, a: 1}
   startingHealth: 5
   startingDamage: 1

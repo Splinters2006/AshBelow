@@ -92,10 +92,10 @@ namespace Slopgame
                 var hero = run.Characters[i];
                 bool selected = i == session.LocalClassIndex;
                 if (DungeonUi.Button("coopClass" + i, new Rect(i % 2 * 256, i / 2 * 58, 244, 48),
-                    hero.DisplayName, selected ? hero.Color : DungeonUi.Muted))
+                    hero.DisplayName + (run.IsCharacterLocked(hero) ? " / LOCKED" : ""), selected ? hero.Color : DungeonUi.Muted))
                 {
-                    session.SetLocalClass(i);
                     run.SelectCharacter(hero);
+                    if (run.SelectedCharacter == hero) session.SetLocalClass(i);
                 }
             }
             GUI.EndScrollView();

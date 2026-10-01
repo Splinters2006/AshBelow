@@ -15,7 +15,7 @@ namespace Slopgame
         // Accent layer (fixed): K steel, Q steel highlight, k dark steel, G gold, g dark gold, B wood, b dark wood,
         // S skin, s skin shade, E eyes, H hair, I glow, F white cloth, f bowstring,
         // A floppy-ear / tail fur, R boxing glove, r glove shade, P pink tongue.
-        // The Samurai reuses R / r for his glowing eyes, torn scarf and hilt tassel, N for his helm and mask, F for his fangs.
+        // The Samurai reuses R / r for her red eyes, hair ribbons, scarf and hilt tassel, N / n for her black hair and obi, F for her collar.
         // N demon horn / tail black, n horn sheen, V dark violet hair, U hair highlight, v glowing violet eyes,
         // T glowing tail tip, C pale skin, c pale skin shade. Wings: X leather, x crease, Z bone, Y outline, y claw,
         // w glowing violet edge.
@@ -96,12 +96,12 @@ namespace Slopgame
                 "...DWMDFNFDWMDB.....", "..DLWWMDDDWWMDB.....", "..DLWWWWWWWWMFFB....", ".DLWWWWWWWWWMDDB....",
                 ".DLWWWWWWWWMMD.DB...", ".DWWMWWWMWWWMD..B...", "..DWDDWMDDWMDD..b...", "..D...DD...D........",
             } },
-            { WeaponType.Katana, new[] // Samurai: a black kabuto with tall gold horns, a black demon mask with slanted glowing red eyes and bared fangs, a torn red scarf streaming behind, red Edo armour laced in black and white, and a long katana with a red tassel held up and ready
+            { WeaponType.Katana, new[] // Samurai: a girl with long black hair in a high ponytail tied with red ribbons and a gold pin, red eyes, a torn red scarf streaming behind, a red Edo kimono with a white collar, black obi and pleated skirt, and a long katana with a red tassel held up and ready
             {
-                "....G........G......", "....GG......GG.....Q", ".....GgDDDDgG......K", "....DNGNGGNGND....Q.",
-                "...DNNNNGGNNNND...K.", "..DNLLWWWWWWWMND.Q..", "..DNDRNNNNNNRDND.K..", ".RDNDNRRNNRRNDNDQ...",
-                "RRrDDFNFNNFNFDD.K...", "R.DLWNNNNNNWMD.Q....", ".DLWWWNFFNWWWMDK....", ".DNNWWNNNNWWMDgGg...",
-                ".DFFDWWWWWWMDDNS....", "..DDLWNWWNWMD..N....", "...DNND..DNND..R....", "...DDDD..DDDD.......",
+                "........R.R.........", "......DDRGRDD......Q", ".NN..DNNNRNNND.....K", "NNnRDNnnNNNNNND...Q.",
+                "NNNDNnNNNNNNNNND..K.", ".NNDNNNNSNNSNNND.Q..", ".N.DNNSSSSSSSSND.K..", ".R.DNSSERSSERSNDQ...",
+                "RRrDNSSSSSSSSpsDK...", "R.DNNsSSSmSSsD.Q....", ".DLWNFFsSsFFWMDK....", ".DNNWWWFFWWWMDgGg...",
+                ".DSsDWNNGNNMDDNS....", "..DLWWMWWWWMWD.N....", "..DDDSsDDSsDDD.R....", "....DNNDDNND........",
             } },
             { WeaponType.Mutation, new[] // Specimen (frail): a scrawny escaped lab subject with messy dark hair, plasters on his cheeks, a hospital gown and bandaged wrists
             {

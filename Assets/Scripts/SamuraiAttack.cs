@@ -6,8 +6,8 @@ namespace Slopgame
 {
     /// <summary>
     /// The Samurai's katana. Tapping cuts a quick crescent; holding to a full charge looses a flurry of rapid, weak
-    /// slashes. Right click dashes forward and slices everything in his path. His boss artifacts are cast from here,
-    /// and most of what he does opens wounds: see <see cref="DungeonEnemy.Bleed"/>.
+    /// slashes. Right click dashes forward and slices everything in her path. Her boss artifacts are cast from here,
+    /// and most of what she does opens wounds: see <see cref="DungeonEnemy.Bleed"/>.
     /// </summary>
     public sealed class SamuraiAttack : MonoBehaviour, IPlayerWeapon
     {
@@ -24,7 +24,7 @@ namespace Slopgame
         private FlameMesh preview;
 
         public bool IsFlurrying => flurry != null;
-        // The flurry roots him like other heavy attacks: slower movement and no new charge.
+        // The flurry roots her like other heavy attacks: slower movement and no new charge.
         public bool IsHeavyAttacking => IsFlurrying;
         public float HeavyCooldownRemaining => DebugMode.Cooldown(Mathf.Max(0f, dashReadyAt - Time.time));
         public void ReduceHeavyCooldown(float seconds) => dashReadyAt = Cooldowns.Shorten(dashReadyAt, seconds);
@@ -120,7 +120,7 @@ namespace Slopgame
 
         // ---------------------------------------------------------------- dash slash (right click)
 
-        /// <summary>Dashes toward the cursor and cuts everything he passes with one clean slice.</summary>
+        /// <summary>Dashes toward the cursor and cuts everything she passes with one clean slice.</summary>
         public bool TryHeavyAttack(Vector2 aim)
         {
             if (!Player.Run.IsPlaying || Player.IsRolling || Player.IsBusy || IsFlurrying || HeavyCooldownRemaining > 0f || aim.sqrMagnitude < 0.001f) return false;
@@ -141,10 +141,11 @@ namespace Slopgame
             }
             Vector2 to = transform.position;
             Player.Protect(0.35f);
-            // The line of the dash, dust kicked up where he left, and the follow-through of the blade where he stops.
-            KatanaVfx.Slice(root, from, to, Blood, 0.34f);
+            // The swath the dash cut (as wide as it hits), dust kicked up where she left, and the follow-through of the
+            // blade round the front of where she stops.
+            KatanaVfx.Slice(root, from, to, Blood, 0.34f, DashHalfWidth * Size);
             CombatVfx.Ring(root, from, 0.7f, Steel, 0.2f);
-            KatanaVfx.Crescent(root, to - aim * 0.4f, aim, 1.3f * Size, 150f, Steel, backhand, 0.24f);
+            KatanaVfx.Crescent(root, to, aim, DashHalfWidth * Size, 180f, Steel, backhand, 0.24f);
             CoopFx.Bolt(run, from, to, Steel, true);
             HeroVfx.Sparks(root, to, Steel, 14, 5.5f, 0.3f, to - from, 100f);
             int damage = Player.Damage * 2;
@@ -184,7 +185,7 @@ namespace Slopgame
         public bool IsBloodFlowing => Time.time < bloodFlowUntil;
         public bool IsTechniqueActive => Time.time < techniqueUntil;
         public bool IsSwift => Time.time < swiftUntil;
-        /// <summary>Swift as the Wind: what his attack and charge times are multiplied by.</summary>
+        /// <summary>Swift as the Wind: what her attack and charge times are multiplied by.</summary>
         public float SwiftIntervalMultiplier => IsSwift ? 1f / (1f + SwiftAttackSpeed) : 1f;
         /// <summary>Slice or Dice has just hit, so the ability's key throws the next slash.</summary>
         public bool CanContinueCombo => comboStage > 0 && Time.time < comboUntil && Time.time >= comboNextAt && !Player.IsRolling && !Player.IsBusy;

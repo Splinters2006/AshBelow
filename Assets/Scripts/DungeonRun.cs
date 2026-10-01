@@ -53,6 +53,15 @@ namespace Slopgame
         public bool IsInMainMenu { get; private set; }
         public IReadOnlyList<CharacterDefinition> Characters => characters;
         public CharacterDefinition SelectedCharacter { get; private set; }
+        public bool SpecimenUnlocked { get; private set; }
+        public bool IsCharacterLocked(CharacterDefinition character) => character != null && character.Weapon == WeaponType.Mutation && !SpecimenUnlocked;
+
+        public bool UnlockSpecimen(string pin)
+        {
+            if (pin != "1234") return false;
+            SpecimenUnlocked = true;
+            return true;
+        }
         private CharacterDefinition[] characters;
         private MainMenu menu;
         private DungeonHud hud;
@@ -130,7 +139,9 @@ namespace Slopgame
 
         public void SelectCharacter(CharacterDefinition character)
         {
-            if (IsInMainMenu && System.Array.IndexOf(characters, character) >= 0) SelectedCharacter = character;
+            if (!IsInMainMenu || System.Array.IndexOf(characters, character) < 0) return;
+            if (IsCharacterLocked(character)) { menu.RequestUnlock(character); return; }
+            SelectedCharacter = character;
         }
 
         /// <summary>Main menu travel map: the world the next descent (solo, or a co-op party this player hosts) begins in.</summary>
@@ -193,7 +204,7 @@ namespace Slopgame
 
         private void BeginRun(int seed, int partySize, int startWorld)
         {
-            if (SelectedCharacter == null) return;
+            if (SelectedCharacter == null || IsCharacterLocked(SelectedCharacter)) return;
             IsInMainMenu = false;
             if (Player != null) { Player.gameObject.SetActive(false); Destroy(Player.gameObject); }
             Seed = seed;

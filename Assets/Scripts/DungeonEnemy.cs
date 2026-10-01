@@ -364,7 +364,7 @@ namespace Slopgame
             if (DebugMode.Enabled) damage = Mathf.Max(damage, Health);
             LastHitRegion = Facing.RegionFrom(source);
             HitReceived?.Invoke(LastHitRegion);
-            // True Poser: while the Samurai holds his pose, his blows deal nothing and are owed until he sheathes.
+            // True Poser: while the Samurai holds her pose, her blows deal nothing and are owed until she sheathes.
             if (damage > 0 && FromLocalHero && Run.Player.Mechanic is TruePoser poser && poser.IsPosing)
             {
                 poser.Store(this, damage);

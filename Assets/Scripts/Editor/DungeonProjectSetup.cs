@@ -76,6 +76,24 @@ namespace Slopgame.Editor
                         throw new Exception("Game did not start at a peaceful main menu.");
                     if (run.Characters.Count < 2 || run.SelectedCharacter.DisplayName != "Knight")
                         throw new Exception("Knight character selection missing.");
+                    CharacterDefinition specimen = null;
+                    foreach (var hero in run.Characters)
+                    {
+                        if (hero.DisplayName == "Admin") throw new Exception("Retired Admin remains in the roster.");
+                        if (hero.Weapon == WeaponType.Mutation) specimen = hero;
+                    }
+                    if (specimen == null || !run.IsCharacterLocked(specimen)) throw new Exception("Specimen should start locked.");
+                    var knight = run.SelectedCharacter;
+                    run.SelectCharacter(specimen);
+                    if (run.SelectedCharacter != knight) throw new Exception("Locked Specimen was selected without a PIN.");
+                    if (run.UnlockSpecimen("") || run.UnlockSpecimen("123") || run.UnlockSpecimen("0000") || run.UnlockSpecimen("12345") || !run.IsCharacterLocked(specimen))
+                        throw new Exception("Incorrect PIN unlocked Specimen.");
+                    if (!run.UnlockSpecimen("1234")) throw new Exception("Correct Specimen PIN was rejected.");
+                    run.SelectCharacter(specimen);
+                    if (run.SelectedCharacter != specimen) throw new Exception("Unlocked Specimen cannot be selected.");
+                    run.ShowMainMenu();
+                    if (run.IsCharacterLocked(specimen)) throw new Exception("Specimen unlock did not survive a menu reset.");
+                    run.SelectCharacter(knight);
                     run.SelectCharacter(run.SelectedCharacter);
                     run.Restart();
                     menuChecked = true;
@@ -598,7 +616,7 @@ namespace Slopgame.Editor
         }
 
         private const string DemonessDescription = "The pale, ram-horned daughter of the Demon Lord. Stab with her pointed tail, charge to strike the vitals and paralyse, then sweep her tail through immobilized foes for double damage.";
-        private const string SamuraiDescription = "A brooding swordsman in red, white and black Edo armour. Cut with his katana, charge a flurry of rapid slashes, dash clean through whole packs, and leave everything he touches bleeding.";
+        private const string SamuraiDescription = "A brooding swordswoman in a red, white and black Edo kimono. Cut with her katana, charge a flurry of rapid slashes, dash clean through whole packs, and leave everything she touches bleeding.";
         private const string ReaperDescription = "A skull-faced spectre adrift in a great cloak. Sweep a scythe in slow, wide arcs, charge it fully to harvest souls, and spend them on skulls that bite, frighten and hunt.";
         private const string GamblerDescription = "A travelling merchant hopelessly addicted to gambling. Throw coins and scoop up the gold every fallen foe drops, fling a volley of every coin you carry, and open your purse to spend or bet it all.";
         private const string AugmentDescription = "A soldier rebuilt with steel and plasma. Fire a plasma ray that pierces every enemy in a line, charge it longer and wider, and hold the arm cannon to launch a plasma orb that bursts in flame.";

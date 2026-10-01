@@ -3,8 +3,8 @@ using UnityEngine;
 namespace Slopgame
 {
     /// <summary>
-    /// The Samurai's katana work: a crescent that sweeps across a cut, a straight thrust, the clean slice his dash
-    /// leaves behind, the slow sheathe that ends his pose, and the impact frames that hit as it clicks shut.
+    /// The Samurai's katana work: a crescent that sweeps across a cut, a straight thrust, the clean slice her dash
+    /// leaves behind, the slow sheathe that ends her pose, and the impact frames that hit as it clicks shut.
     /// </summary>
     public sealed class KatanaVfx : MeshEffect
     {
@@ -47,8 +47,11 @@ namespace Slopgame
             effect.Redraw();
         }
 
-        /// <summary>One clean line from <paramref name="from"/> to <paramref name="to"/> that hangs for a beat, then parts and bleeds away.</summary>
-        public static void Slice(Transform root, Vector2 from, Vector2 to, Color color, float duration = 0.45f)
+        /// <summary>
+        /// One clean line from <paramref name="from"/> to <paramref name="to"/> that hangs for a beat, then parts and bleeds away.
+        /// With a <paramref name="halfWidth"/> it also washes the whole swath that far either side of the line (and round its ends).
+        /// </summary>
+        public static void Slice(Transform root, Vector2 from, Vector2 to, Color color, float duration = 0.45f, float halfWidth = 0f)
         {
             if ((to - from).sqrMagnitude < 0.0001f) return;
             var effect = Spawn<KatanaVfx>(root, duration, 10);
@@ -56,11 +59,12 @@ namespace Slopgame
             effect.style = Style.Slice;
             effect.origin = from;
             effect.end = to;
+            effect.width = halfWidth;
             effect.color = color;
             effect.Redraw();
         }
 
-        /// <summary>The katana slides home into its scabbard at his hip and clicks shut.</summary>
+        /// <summary>The katana slides home into its scabbard at her hip and clicks shut.</summary>
         public static void Sheathe(Transform root, Vector2 hero, Vector2 facing, Color color, float duration)
         {
             var effect = Spawn<KatanaVfx>(root, duration, 10);
@@ -103,9 +107,15 @@ namespace Slopgame
             float head = EaseOut(t / 0.32f), tail = t < 0.3f ? 0f : 0.9f * (t - 0.3f) / 0.7f * ((t - 0.3f) / 0.7f);
             float fade = t < 0.45f ? 1f : 1f - (t - 0.45f) / 0.55f;
             float start = Mathf.Atan2(aim.y, aim.x) + (reverse ? cone : -cone) * 0.5f, turn = reverse ? -cone : cone;
-            float radius = reach * (1f + 0.07f * t), thickness = Mathf.Min(0.8f, reach * 0.34f) * (0.55f + 0.45f * fade);
+            // The crescent's outer glow stops exactly at the cut's reach, so the blade never looks longer than it hits.
+            float thickness = Mathf.Min(0.8f, reach * 0.34f) * (0.55f + 0.45f * fade), radius = reach - thickness * 0.3f;
             Color blood = SamuraiAttack.Blood, dark = new Color(blood.r * 0.25f, 0f, blood.b * 0.2f);
             const int Segments = 32;
+            // A faint wash over the whole wedge the blade has crossed: the cut hits all the way in to her hands.
+            Color wash = FlameMesh.Alpha(color, 0.2f * fade), washCore = FlameMesh.Alpha(color, 0.05f * fade);
+            for (int i = 0; i < Segments / 2; i++)
+                Mesh.Triangle(origin, origin + FlameMesh.Polar(start + turn * head * i / (Segments / 2), radius),
+                    origin + FlameMesh.Polar(start + turn * head * (i + 1) / (Segments / 2), radius), washCore, wash, wash);
             for (int i = 0; i < Segments; i++)
             {
                 float u0 = Mathf.Lerp(tail, head, i / (float)Segments), u1 = Mathf.Lerp(tail, head, (i + 1) / (float)Segments);
@@ -175,8 +185,9 @@ namespace Slopgame
             Vector2 side = Vector2.Perpendicular(aim), start = origin + aim * 0.3f, tip = origin + aim * reach * extend;
             Color blood = SamuraiAttack.Blood;
             // The lane the point drives down, with the air torn into streaks either side of it.
-            Mesh.Quad(start - side * width * 0.3f, start + side * width * 0.3f, tip + side * width, tip - side * width,
-                FlameMesh.Alpha(color, 0f), FlameMesh.Alpha(color, 0f), FlameMesh.Alpha(color, 0.45f * fade), FlameMesh.Alpha(color, 0.45f * fade));
+            // It is exactly the rectangle the thrust hits: full width from her hands to the point.
+            Mesh.Quad(origin - side * width, origin + side * width, tip + side * width, tip - side * width,
+                FlameMesh.Alpha(color, 0.12f * fade), FlameMesh.Alpha(color, 0.12f * fade), FlameMesh.Alpha(color, 0.45f * fade), FlameMesh.Alpha(color, 0.45f * fade));
             for (int i = 0; i < 6; i++)
             {
                 float offset = (FlameMesh.Hash(i, 1.7f) - 0.5f) * 2f * width, from = 0.15f + 0.5f * FlameMesh.Hash(i, 8.3f);
@@ -184,18 +195,18 @@ namespace Slopgame
                     FlameMesh.Alpha(Color.white, 0f), FlameMesh.Alpha(Color.white, 0.7f * fade));
             }
             // The blade itself: a long sliver of steel, hard white down the middle and bloody at the edges.
-            Mesh.Triangle(start - side * 0.16f, tip + aim * 0.3f, start + side * 0.16f,
+            Mesh.Triangle(start - side * 0.16f, tip, start + side * 0.16f,
                 FlameMesh.Alpha(blood, 0f), FlameMesh.Alpha(blood, 0.9f * fade), FlameMesh.Alpha(blood, 0f));
-            Mesh.Triangle(start - side * 0.07f, tip + aim * 0.3f, start + side * 0.07f,
+            Mesh.Triangle(start - side * 0.07f, tip, start + side * 0.07f,
                 FlameMesh.Alpha(Color.white, 0.6f * fade), FlameMesh.Alpha(Color.white, fade), FlameMesh.Alpha(Color.white, 0.6f * fade));
-            // Rings of air punched open along the lunge, widest at the point.
+            // Rings of air punched open along the lunge, as wide as the lane.
             if (t > 0.2f)
             {
                 float burst = (t - 0.2f) / 0.8f, open = EaseOut(burst);
                 for (int i = 0; i < 3; i++)
                 {
                     Vector2 at = origin + aim * reach * (0.45f + 0.25f * i);
-                    float span = (0.25f + 0.2f * i + width) * open, alpha = (1f - burst) * (0.5f + 0.25f * i);
+                    float span = width * open, alpha = (1f - burst) * (0.5f + 0.25f * i);
                     Mesh.Bar(at - side * span, side, span * 2f, 0.05f * (1f - burst) + 0.01f, FlameMesh.Alpha(color, 0f), FlameMesh.Alpha(Color.white, alpha));
                     Mesh.Bar(at + side * span, -side, span * 2f, 0.05f * (1f - burst) + 0.01f, FlameMesh.Alpha(color, 0f), FlameMesh.Alpha(Color.white, alpha));
                 }
@@ -203,9 +214,9 @@ namespace Slopgame
             float glint = Mathf.Clamp01(1f - Mathf.Abs(t - 0.25f) / 0.25f);
             if (glint <= 0f) return;
             Color white = FlameMesh.Alpha(Color.white, glint), clear = FlameMesh.Alpha(Color.white, 0f);
-            Mesh.Bar(tip, side, 0.8f * glint, 0.06f, white, clear);
-            Mesh.Bar(tip, -side, 0.8f * glint, 0.06f, white, clear);
-            Mesh.Bar(tip, aim, 0.5f * glint, 0.06f, white, clear);
+            Mesh.Bar(tip, side, width * glint, 0.06f, white, clear);
+            Mesh.Bar(tip, -side, width * glint, 0.06f, white, clear);
+            Mesh.Bar(tip, -aim, 0.5f * glint, 0.06f, white, clear);
             Mesh.Diamond(tip, 0.18f * glint, white);
         }
 
@@ -213,6 +224,7 @@ namespace Slopgame
         {
             Vector2 along = (end - origin).normalized, side = Vector2.Perpendicular(along);
             float length = Vector2.Distance(origin, end);
+            if (width > 0f) DrawSwath(along, side, length, 1f - t);
             if (t < 0.28f)
             {
                 // The cut itself: it snaps the whole way across almost at once, fat and white over a bloody glow, then
@@ -249,15 +261,38 @@ namespace Slopgame
             }
         }
 
+        /// <summary>Everything within <see cref="width"/> of the slice's line: a lane with a rounded cap at each end and a bright rim.</summary>
+        private void DrawSwath(Vector2 along, Vector2 side, float length, float fade)
+        {
+            Color fill = FlameMesh.Alpha(color, 0.2f * fade), rim = FlameMesh.Alpha(Color.white, 0.55f * fade), clear = FlameMesh.Alpha(color, 0f);
+            Mesh.Bar(origin, along, length, width * 2f, fill, fill);
+            for (int i = -1; i <= 1; i += 2)
+                Mesh.Bar(origin + side * i * (width - 0.02f), along, length, 0.04f, rim, rim);
+            const int Segments = 12;
+            float angle = Mathf.Atan2(side.y, side.x);
+            for (int cap = 0; cap < 2; cap++)
+            {
+                // The start's cap bulges backward, the end's forward.
+                Vector2 center = cap == 0 ? origin : end;
+                float from = cap == 0 ? angle : angle - Mathf.PI;
+                for (int i = 0; i < Segments; i++)
+                {
+                    Vector2 a = FlameMesh.Polar(from + Mathf.PI * i / Segments, 1f), b = FlameMesh.Polar(from + Mathf.PI * (i + 1) / Segments, 1f);
+                    Mesh.Triangle(center, center + a * width, center + b * width, fill, fill, fill);
+                    Mesh.Quad(center + a * (width - 0.04f), center + a * width, center + b * width, center + b * (width - 0.04f), rim, rim, rim, rim);
+                }
+            }
+        }
+
         private void DrawSheathe(float t)
         {
-            // The scabbard rests at his hip, pointing down and back; the blade is drawn up and out ahead of him.
+            // The scabbard rests at her hip, pointing down and back; the blade is drawn up and out ahead of her.
             Vector2 mouth = origin + new Vector2(aim.x * 0.15f, -0.1f);
             Vector2 back = new Vector2(-aim.x * 0.8f, -0.6f).normalized, blade = -back, side = Vector2.Perpendicular(blade);
             Color scabbard = new Color(0.08f, 0.05f, 0.08f), gold = new Color(1f, 0.8f, 0.38f);
             const float Click = 0.72f;
             float fade = t > 0.85f ? 1f - (t - 0.85f) / 0.15f : 1f;
-            // The room dims around him while the blade is out, and snaps back on the click.
+            // The room dims around her while the blade is out, and snaps back on the click.
             float hush = t < Click ? EaseOut(t / Click) : Mathf.Clamp01(1f - (t - Click) / 0.08f);
             Mesh.Ring(origin, 2.1f, 2.6f, FlameMesh.Alpha(Color.black, 0f), FlameMesh.Alpha(Color.black, 0.5f * hush));
             Mesh.Ring(origin, 5.4f, 4f, FlameMesh.Alpha(Color.black, 0.5f * hush), FlameMesh.Alpha(Color.black, 0f));
@@ -324,7 +359,7 @@ namespace Slopgame
             var view = Camera.main;
             Vector2 center = view != null ? (Vector2)view.transform.position : origin;
             Mesh.Rect(center - new Vector2(60f, 40f), center + new Vector2(60f, 40f), ground);
-            // Speed lines racing in at him from the edges of the screen.
+            // Speed lines racing in at her from the edges of the screen.
             for (int i = 0; i < 22; i++)
             {
                 float angle = (i + FlameMesh.Hash(i, frame + 1.3f)) / 22f * Mathf.PI * 2f, near = 2.2f + 3.5f * FlameMesh.Hash(i, frame + 5.9f);

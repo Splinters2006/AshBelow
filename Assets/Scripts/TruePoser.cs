@@ -5,11 +5,11 @@ using UnityEngine;
 namespace Slopgame
 {
     /// <summary>
-    /// The Samurai's class mechanic, a toggle. Pressed once, he strikes a pose: everything he does deals no damage,
-    /// and each enemy is instead owed what it would have taken. Pressed again, he sheathes his katana and every cut
+    /// The Samurai's class mechanic, a toggle. Pressed once, she strikes a pose: everything she does deals no damage,
+    /// and each enemy is instead owed what it would have taken. Pressed again, she sheathes her katana and every cut
     /// lands at once, multiplied by <see cref="ReleaseMultiplier"/>. With its R upgrade (Open Veins, from the Ash shop)
     /// the sheathe also opens a bleed on each enemy, based on all the damage it dealt them. A sheathe starts a cooldown
-    /// that only holds back the next sheathe: he can strike the pose again at once, but has to hold it until it runs out.
+    /// that only holds back the next sheathe: she can strike the pose again at once, but has to hold it until it runs out.
     /// </summary>
     public sealed class TruePoser : ClassMechanic
     {
@@ -19,7 +19,7 @@ namespace Slopgame
         private Coroutine sheathing;
         public override string Name => "True Poser";
         public override Color Color => SamuraiAttack.Blood;
-        /// <summary>True while he holds the pose: his damage is stored instead of dealt.</summary>
+        /// <summary>True while she holds the pose: her damage is stored instead of dealt.</summary>
         public bool IsPosing { get; private set; }
         private float CooldownRemaining => DebugMode.Cooldown(Mathf.Max(0f, readyAt - Time.time));
         /// <summary>All the damage waiting on the sheathe, before its multiplier.</summary>
@@ -32,7 +32,7 @@ namespace Slopgame
                 return total;
             }
         }
-        /// <summary>True while he is posing and the last sheathe's cooldown still keeps the katana out.</summary>
+        /// <summary>True while she is posing and the last sheathe's cooldown still keeps the katana out.</summary>
         public bool IsSheatheLocked => IsPosing && CooldownRemaining > 0f;
         public override float Readiness => IsPosing ? 1f - Mathf.Clamp01(CooldownRemaining / Cooldown) : 1f;
         public override string Status => IsSheatheLocked ? $"{Seconds(CooldownRemaining)}  /  {Owed}" : IsPosing ? $"SHEATHE  /  {Owed}" : "READY";
@@ -66,8 +66,8 @@ namespace Slopgame
         }
 
         /// <summary>
-        /// He slides the katana home, unhurried; as it clicks shut the screen cuts to impact frames, and when they let go
-        /// every cut he made while posing opens at once.
+        /// She slides the katana home, unhurried; as it clicks shut the screen cuts to impact frames, and when they let go
+        /// every cut she made while posing opens at once.
         /// </summary>
         private IEnumerator Sheathe()
         {
@@ -76,7 +76,7 @@ namespace Slopgame
             Player.Weapon?.Hide();
             Player.Charge.Cancel();
             Player.Occupy(SheatheTime + ImpactTime);
-            // Nothing can touch him while the katana slides home.
+            // Nothing can touch her while the katana slides home.
             Player.Protect(SheatheTime + ImpactTime);
             KatanaVfx.Sheathe(root, transform.position, Player.AimDirection, SamuraiAttack.Blood, SheatheTime / 0.72f);
             // The click comes 72% of the way through the effect, exactly when the cuts land.
@@ -135,7 +135,7 @@ namespace Slopgame
             sheathing = null;
         }
 
-        /// <summary>The pose was broken off (the floor changed or he fell): what was owed is lost.</summary>
+        /// <summary>The pose was broken off (the floor changed or she fell): what was owed is lost.</summary>
         private void Drop()
         {
             IsPosing = false;

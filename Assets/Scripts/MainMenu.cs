@@ -10,6 +10,16 @@ namespace Slopgame
         public DungeonRun Run { get; set; }
         private bool selecting, shopping, coop, settings, codex;
         private Vector2 heroScroll;
+        private CharacterDefinition lockedCharacter;
+        private string specimenPin = "";
+        private bool incorrectPin;
+
+        public void RequestUnlock(CharacterDefinition character)
+        {
+            lockedCharacter = character;
+            specimenPin = "";
+            incorrectPin = false;
+        }
         // Leaving a party asks for a second click so a stray press does not drop you out of the lobby.
         private float leaveConfirmUntil;
         private Texture2D gradient, glow;
@@ -17,7 +27,7 @@ namespace Slopgame
         private readonly CoopMenu coopMenu = new CoopMenu();
         private readonly SettingsMenu settingsMenu = new SettingsMenu();
         private readonly Encyclopedia encyclopedia = new Encyclopedia();
-        public void ResetPage(bool showCoop = false) { selecting = false; shopping = false; settings = false; codex = false; coop = showCoop; leaveConfirmUntil = 0f; settingsMenu.Cancel(); }
+        public void ResetPage(bool showCoop = false) { lockedCharacter = null; specimenPin = ""; selecting = false; shopping = false; settings = false; codex = false; coop = showCoop; leaveConfirmUntil = 0f; settingsMenu.Cancel(); }
         public void ShowCoop() => ResetPage(true);
 
         private void OnDestroy()
@@ -33,6 +43,7 @@ namespace Slopgame
             try
             {
                 DrawBackdrop();
+                if (lockedCharacter != null) { DrawSpecimenLock(); return; }
                 DrawHeader();
                 // The cog in the header opens the settings over whichever page is showing; Back returns to it.
                 if (settings)
@@ -230,7 +241,7 @@ namespace Slopgame
                 var hero = Run.Characters[i];
                 Rect rect = new Rect(0, i * 46, 268, 40);
                 bool selected = hero == Run.SelectedCharacter;
-                if (DungeonUi.Button("class" + i, rect, hero.DisplayName + (selected ? "  /  SELECTED" : ""), selected ? hero.Color : DungeonUi.Muted)) Run.SelectCharacter(hero);
+                if (DungeonUi.Button("class" + i, rect, hero.DisplayName + (Run.IsCharacterLocked(hero) ? "  /  LOCKED" : selected ? "  /  SELECTED" : ""), selected ? hero.Color : DungeonUi.Muted)) Run.SelectCharacter(hero);
             }
             GUI.EndScrollView();
             var character = Run.SelectedCharacter;
@@ -255,6 +266,35 @@ namespace Slopgame
             DungeonUi.Label(new Rect(402, 535, 766, 28), $"{KeyBindings.Label(GameAction.Special)}  {DungeonUi.SpecialName(character.Weapon)}     /     {KeyBindings.Label(GameAction.AbilityQ)} + {KeyBindings.Label(GameAction.AbilityE)} unlock from boss artifacts", 16, character.Color);
             if (DungeonUi.Button("back", new Rect(70, 598, 268, 48), "Back", DungeonUi.Muted)) selecting = false;
             if (DungeonUi.Button("begin", new Rect(860, 598, 350, 48), "Begin descent", character.Color)) Run.Restart();
+        }
+
+        private void DrawSpecimenLock()
+        {
+            DungeonUi.Panel(new Rect(360, 230, 560, 300), DungeonUi.PanelColor);
+            DungeonUi.Label(new Rect(400, 254, 480, 48), "SPECIMEN / CONTAINED", 28, DungeonUi.Teal);
+            DungeonUi.Label(new Rect(400, 310, 480, 36), incorrectPin ? "Incorrect PIN. Try again." : "Enter the four-digit containment PIN.", 18, incorrectPin ? AbilityCatalog.Gold : DungeonUi.Muted);
+            specimenPin = DungeonUi.TextField("specimenPin", new Rect(400, 360, 480, 46), specimenPin, 4, 26);
+            bool submit = Event.current.type == EventType.KeyDown && (Event.current.keyCode == KeyCode.Return || Event.current.keyCode == KeyCode.KeypadEnter);
+            bool cancel = Event.current.type == EventType.KeyDown && Event.current.keyCode == KeyCode.Escape;
+            if (submit || cancel) Event.current.Use();
+            if (DungeonUi.Button("specimenCancel", new Rect(400, 444, 220, 48), "Back", DungeonUi.Muted) || cancel)
+            {
+                lockedCharacter = null;
+                specimenPin = "";
+                GUI.FocusControl(null);
+                return;
+            }
+            if (DungeonUi.Button("specimenUnlock", new Rect(640, 444, 240, 48), "Release specimen", DungeonUi.Teal) || submit)
+            {
+                if (!Run.UnlockSpecimen(specimenPin)) { incorrectPin = true; specimenPin = ""; return; }
+                Run.SelectCharacter(lockedCharacter);
+                if (Run.Coop.Session.State == NetState.Lobby)
+                    for (int i = 0; i < Run.Characters.Count; i++)
+                        if (Run.Characters[i] == lockedCharacter) Run.Coop.Session.SetLocalClass(i);
+                lockedCharacter = null;
+                specimenPin = "";
+                GUI.FocusControl(null);
+            }
         }
 
         private static void DrawStat(Rect rect, string name, float value)
