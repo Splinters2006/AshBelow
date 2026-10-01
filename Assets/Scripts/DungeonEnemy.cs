@@ -107,9 +107,12 @@ namespace Slopgame
         }
         /// <summary>Paralysed enemies cannot move, turn or attack (the Demoness's vital stabs and curses).</summary>
         public bool IsParalyzed => Time.time < paralyzedUntil;
-        /// <summary>Cursed enemies take <see cref="CurseDamageMultiplier"/> times the damage from every hit.</summary>
+        /// <summary>Cursed enemies take more damage from every hit: <see cref="CurseDamageBonus"/> under the Demon Curse ability, <see cref="LesserCurseDamageBonus"/> under a lesser curse.</summary>
         public bool IsCursed => Time.time < cursedUntil;
-        public const float CurseDamageMultiplier = 1.5f;
+        public const float CurseDamageBonus = 0.5f, LesserCurseDamageBonus = 0.25f;
+        private float curseBonus = CurseDamageBonus;
+        private bool curseShown;
+        private float curseShownAt;
         /// <summary>Hex Mastery: how much more damage a curse adds per rank of the talent it was cast with.</summary>
         public const float CurseMasteryBonus = 0.25f;
         private int curseMastery;
@@ -160,19 +163,37 @@ namespace Slopgame
             burnIndicator.transform.localPosition = new Vector2(0, 0.95f);
             burnIndicator.gameObject.SetActive(IsBurning);
             curseIndicator = DungeonVisuals.Create("Curse indicator", transform, transform.position,
-                new Vector2(0.3f, 0.3f), DemonessAttack.Violet, 9);
-            curseIndicator.transform.localPosition = new Vector2(0, -0.85f);
+                Vector2.one * CurseSkullSize, HeroBuffs.AscendColor, 10);
+            curseIndicator.sprite = DungeonVisuals.SkullSprite;
+            curseIndicator.transform.localPosition = new Vector2(0, CurseSkullHeight);
             curseIndicator.gameObject.SetActive(false);
         }
 
-        /// <summary>A small violet sigil under a cursed enemy that spins while the curse holds.</summary>
+        private const float CurseSkullSize = 0.42f, CurseSkullHeight = 1.4f, CurseSkullPop = 0.3f;
+
+        /// <summary>
+        /// A purple skull over a cursed enemy, whatever cursed it: it bursts in large as the curse takes hold, then bobs and
+        /// pulses above the enemy until the curse lifts.
+        /// </summary>
         private void UpdateCurseIndicator()
         {
             if (curseIndicator == null) return;
-            curseIndicator.gameObject.SetActive(IsCursed);
-            if (!IsCursed) return;
-            curseIndicator.transform.localRotation = Quaternion.Euler(0, 0, 45f + Time.time * 90f);
-            curseIndicator.color = FlameMesh.Alpha(DemonessAttack.Violet, 0.6f + 0.3f * Mathf.Sin(Time.time * 8f));
+            bool cursed = IsCursed;
+            curseIndicator.gameObject.SetActive(cursed);
+            if (cursed && !curseShown)
+            {
+                curseShownAt = Time.time;
+                var root = Run.ProjectileRoot;
+                HeroVfx.Sparks(root, transform.position, HeroBuffs.AscendColor, 8, 3f, 0.35f);
+                HeroVfx.Pulse(root, transform.position, 0.7f, HeroBuffs.AscendColor, 0.3f);
+            }
+            curseShown = cursed;
+            if (!cursed) return;
+            float pop = 1f - Mathf.Clamp01((Time.time - curseShownAt) / CurseSkullPop);
+            curseIndicator.transform.localScale = Vector3.one * CurseSkullSize * (1f + 1.4f * pop * pop);
+            curseIndicator.transform.localPosition = new Vector2(0, CurseSkullHeight + 0.06f * Mathf.Sin(Time.time * 4f));
+            curseIndicator.color = FlameMesh.Alpha(Color.Lerp(HeroBuffs.AscendColor, DemonessAttack.Pale, 0.6f * pop),
+                0.8f + 0.2f * Mathf.Sin(Time.time * 8f));
         }
 
         private void Update()
@@ -448,7 +469,7 @@ namespace Slopgame
         }
 
         /// <summary>Damage after the curse, rounded half up so even a 1-damage hit is worth more on a cursed enemy.</summary>
-        public int CursedDamage(int damage) => IsCursed ? Mathf.FloorToInt(damage * (CurseDamageMultiplier + curseMastery * CurseMasteryBonus) + 0.5f) : damage;
+        public int CursedDamage(int damage) => IsCursed ? Mathf.FloorToInt(damage * (1f + curseBonus + curseMastery * CurseMasteryBonus) + 0.5f) : damage;
 
         public static readonly Color FrozenTint = new Color(0.72f, 0.93f, 1f);
 
@@ -724,11 +745,14 @@ namespace Slopgame
         }
 
         /// <param name="mastery">Ranks of Hex Mastery behind the curse; a stronger curse is never weakened by a lesser one.</param>
-        public void Curse(float duration, int mastery = 0)
+        /// <param name="bonus">The share of extra damage the cursed enemy takes.</param>
+        public void Curse(float duration, int mastery = 0, float bonus = CurseDamageBonus)
         {
             if (IsInvulnerable || duration <= 0f) return;
             curseMastery = IsCursed ? Mathf.Max(curseMastery, mastery) : mastery;
-            if (Run.IsGuest) { Run.Coop.ReportDamage(this, CoopDamageKind.Curse, 0, transform.position, mastery, duration); return; }
+            curseBonus = IsCursed ? Mathf.Max(curseBonus, bonus) : bonus;
+            // The bonus crosses the wire as a whole percentage in the message's amount.
+            if (Run.IsGuest) { Run.Coop.ReportDamage(this, CoopDamageKind.Curse, Mathf.RoundToInt(bonus * 100f), transform.position, mastery, duration); return; }
             cursedUntil = Mathf.Max(cursedUntil, Time.time + duration);
         }
 

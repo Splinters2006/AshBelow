@@ -24,7 +24,7 @@ namespace Slopgame
         public bool IsEmpowered => Time.time < empoweredUntil;
         public bool IsRaging => Time.time < ragingUntil;
         public bool IsTired => !IsRaging && Time.time < tiredUntil;
-        /// <summary>Archdemon's Technique: the Demoness's attacks count as fully charged and charging winds up a tail whip.</summary>
+        /// <summary>Archdemon's Technique: the Demoness's attacks count as fully charged, charging winds up a tail whip and her tail sweep strikes twice, cursing.</summary>
         public bool IsAscended => Time.time < ascendedUntil;
         public float AscendRemaining => Mathf.Max(0f, ascendedUntil - Time.time);
         /// <summary>Super Angry: the Brawler's class mechanic.</summary>

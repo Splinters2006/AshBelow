@@ -6,7 +6,7 @@ namespace Slopgame
     /// <summary>
     /// The Demoness's pointed tail. Tapping stabs the nearest enemy in a narrow lane; a full charge strikes its vitals
     /// and paralyses it. RMB sweeps the tail through a half circle, hitting immobilized enemies (paralysed, frozen,
-    /// stunned or rooted, whoever held them) twice as hard. Her boss
+    /// stunned or rooted, whoever held them) twice as hard; under Archdemon's Technique it sweeps twice and curses. Her boss
     /// artifacts (Archdemon's Technique, HEEEELP and Demon Curse) are cast from here.
     /// </summary>
     public sealed partial class DemonessAttack : MonoBehaviour, IPlayerWeapon
@@ -19,6 +19,8 @@ namespace Slopgame
         /// <summary>Archdemon's Technique: a fully charged tail whip strikes a small cone.</summary>
         public const float WhipRadius = 2.8f, WhipCone = 70f;
         public const float AscendDuration = 8f;
+        /// <summary>Archdemon's Technique: the tail sweep strikes twice in quick succession, each sweep leaving a lesser Demon Curse.</summary>
+        public const float TwinSweepDelay = 0.16f, SweepCurseDuration = 4f;
         public const float PortalRange = 8f, PortalWindup = 0.65f, PawRadius = 1.6f, PawStun = 0.6f;
         // The pentagram has been widened twice: by 25% (2.2 → 2.75), then by 50% more; each rank's growth scaled with it.
         public const float CurseRange = 7f, CurseRadius = 2.75f * 1.5f, CurseRankGrowth = 0.3125f * 1.5f, CurseWindup = 0.35f, CurseParalysis = 3f, CurseDuration = 6f;
@@ -137,11 +139,35 @@ namespace Slopgame
             }
         }
 
-        /// <summary>RMB: the tail sweeps a half circle ahead. Immobilized enemies take double damage.</summary>
+        /// <summary>
+        /// RMB: the tail sweeps a half circle ahead. Immobilized enemies take double damage. Under Archdemon's Technique
+        /// it sweeps twice, and both sweeps curse.
+        /// </summary>
         public bool TryHeavyAttack(Vector2 aim)
         {
             if (!Player.Run.IsPlaying || Player.IsRolling || Player.IsBusy || HeavyCooldownRemaining > 0f || aim.sqrMagnitude < 0.001f) return false;
             aim.Normalize();
+            bool ascended = Player.Buffs.IsAscended;
+            Sweep(aim, ascended);
+            if (ascended) StartCoroutine(SecondSweep(aim));
+            sweepReadyAt = Time.time + SweepCooldown * Player.Powerups.SkillCooldownMultiplier;
+            Player.Charge.Cancel();
+            return true;
+        }
+
+        /// <summary>The second of Archdemon's Technique's two swift sweeps, from wherever she has moved to.</summary>
+        private IEnumerator SecondSweep(Vector2 aim)
+        {
+            var run = Player.Run;
+            var root = run.ProjectileRoot;
+            yield return new WaitForSeconds(TwinSweepDelay);
+            if (!run.IsPlaying || root != run.ProjectileRoot || Player.Health <= 0) yield break;
+            Sweep(aim, true);
+        }
+
+        /// <summary>One sweep of the tail; a <paramref name="cursing"/> one leaves a lesser Demon Curse on everything it hits.</summary>
+        private void Sweep(Vector2 aim, bool cursing)
+        {
             Vector2 origin = transform.position;
             float reach = SweepReach, cone = SweepArc;
             var root = Player.Run.ProjectileRoot;
@@ -158,10 +184,9 @@ namespace Slopgame
                     HeroVfx.Sparks(root, enemy.transform.position, Violet, 10, 4.5f, 0.35f);
                 }
                 CombatDamage.Apply(Player, enemy, WithPressurePoints(enemy, damage), DamageElement.Physical, origin, paralyzed ? 0.3f : 1f);
+                if (cursing && enemy != null && enemy.Health > 0)
+                    enemy.Curse(SweepCurseDuration, Player.Powerups.Count(PowerupType.HexMastery), DungeonEnemy.LesserCurseDamageBonus);
             }
-            sweepReadyAt = Time.time + SweepCooldown * Player.Powerups.SkillCooldownMultiplier;
-            Player.Charge.Cancel();
-            return true;
         }
 
         /// <summary>

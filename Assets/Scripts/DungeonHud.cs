@@ -61,12 +61,15 @@ namespace Slopgame
         {
             if (Run == null || Run.IsInMainMenu || Run.Player == null) return;
             Matrix4x4 previous = DungeonUi.Begin(GameSettings.HudScale);
+            Color previousColor = GUI.color;
             try
             {
                 // The settings page covers everything else, so nothing under it can be clicked.
                 if (showSettings) { DrawSettings(); return; }
                 var flash = ScreenFx.FlashColor;
                 if (flash.a > 0f) DungeonUi.Panel(new Rect(0, 0, 1280, 720), flash);
+                // The HUD over the floor is drawn at the player's opacity; the settings page and the screens below stay solid.
+                GUI.color = new Color(1f, 1f, 1f, GameSettings.HudOpacity);
                 DrawStatus();
                 if (Run.Player == null) return;
                 if (Run.IsNetworked) DrawTeam();
@@ -78,6 +81,7 @@ namespace Slopgame
                 if (!ShopOpen && showTalents && Run.IsPlaying) DrawTalents();
                 else if (!ShopOpen && Run.IsPlaying && Run.Minimap != null) Run.Minimap.Draw(new Rect(1026, 84, 224, 159));
                 if (Run.IsPlaying || DeathPending) { DrawCog(); return; }
+                GUI.color = previousColor;
                 DungeonUi.Panel(new Rect(0, 0, 1280, 720), new Color(0.01f, 0.018f, 0.035f, 0.88f * modalFade));
                 // Drawn over the dimmed floor, so the cog is there on every pick, world-cleared and game-over screen too.
                 DrawCog();
@@ -86,7 +90,7 @@ namespace Slopgame
                 else if (Run.WorldComplete) DrawWorldComplete();
                 else DrawDeath();
             }
-            finally { GUI.matrix = previous; }
+            finally { GUI.color = previousColor; GUI.matrix = previous; }
         }
 
         private void DrawCog()
@@ -112,7 +116,7 @@ namespace Slopgame
             DungeonUi.Panel(new Rect(-2000, -2000, 6000, 6000), DungeonUi.Background);
             DungeonUi.Label(new Rect(70, 52, 700, 25), pausedForSettings ? "THE DESCENT IS PAUSED" : Run.IsNetworked && Run.IsPlaying ? "THE DESCENT GOES ON AROUND YOU" : "THE DESCENT WAITS", 14, AbilityCatalog.Gold);
             DungeonUi.Label(new Rect(65, 80, 1100, 56), "SETTINGS", 40);
-            DungeonUi.Label(new Rect(70, 138, 1100, 30), "Resize the menus and HUD, toggle autofire and rebind every action. Changes save instantly.", 17, DungeonUi.Muted);
+            DungeonUi.Label(new Rect(70, 138, 1100, 30), "Resize the menus and HUD, fade the HUD, toggle autofire and rebind every action. Changes save instantly.", 17, DungeonUi.Muted);
             settingsMenu.Draw();
             if (DungeonUi.Button("hudSettingsBack", new Rect(70, 598, 268, 48), "Back", DungeonUi.Muted)) CloseSettings();
             if (DungeonUi.Button("hudSettingsReset", new Rect(860, 598, 350, 48), "Reset to defaults", DungeonUi.Teal)) settingsMenu.ResetToDefaults();

@@ -58,7 +58,8 @@ namespace Slopgame
         {
             Initialize();
             Color previous = GUI.color;
-            GUI.color = color;
+            // Keeps whatever opacity the caller is drawing under (the HUD's opacity setting).
+            GUI.color = new Color(color.r, color.g, color.b, color.a * previous.a);
             if (rect.width < 24f || rect.height < 24f) GUI.DrawTexture(rect, Texture2D.whiteTexture);
             else GUI.Box(rect, GUIContent.none, panel);
             GUI.color = previous;
@@ -133,7 +134,7 @@ namespace Slopgame
             if (Event.current.type != EventType.Repaint) return clicked;
             float size = Mathf.Min(rect.width, rect.height) - 14f;
             Color previous = GUI.color;
-            GUI.color = open ? AbilityCatalog.Gold : Text;
+            GUI.color = FlameMesh.Alpha(open ? AbilityCatalog.Gold : Text, previous.a);
             GUI.DrawTexture(new Rect(rect.center.x - size / 2f, rect.center.y - size / 2f - 1f, size, size), CogTexture);
             GUI.color = previous;
             return clicked;
