@@ -38,7 +38,7 @@ You can rebind every action under **Controls** in the main menu. Each action get
 
   Each ware costs 50% more every time you buy it in the same shop. In co-op, everyone sees the same stock. The shop's stairs lead to the guardian.
 - **Beat the guardians.** Every fifth floor is a boss arena. Each world has three guardians. They are aggressive: they close in fast, attack quickly, and get more dangerous below half health:
-  - **The Rime Warden**, a frost caster who fills the arena with icicle fans, frost novas, blizzard spirals, hailstorms and closing rings of ice.
+  - **The Rime Warden**, a frost caster who fills the arena with icicle fans, frost novas, blizzard spirals, hailstorms, closing rings of ice, lancing frost beams, sweeping walls of frost and hailstones that shatter into icicles.
   - **The Steel Duelist**, a fast, fragile swordsman who dashes, throws blade fans, teleports behind you and cuts crosses of blade light.
   - **Malphas, the Hellfire Archdemon**. Watch for **Cataclysm**: the floor turns red, then everything except one golden circle erupts in fire. A gold arrow at your feet points to the circle.
   - **Grid Overseer** (Neon Arcology, floor 20): cyan scan grids, target traces and sequential firewalls. Step between the lanes.

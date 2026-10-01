@@ -5,8 +5,10 @@ namespace Slopgame
 {
     /// <summary>
     /// The first guardian, the Rime Warden: a slow, crowned frost caster drawing, in a shuffled order, an aimed Icicle
-    /// Fan, a full Frost Nova, a rotating Blizzard Spiral, Hailfall (hailstones crash onto every hero) and Ice Cage (a
-    /// ring of icicles closes in on every hero). Once bloodied it blinks across the arena before Hailfall.
+    /// Fan, a full Frost Nova, a rotating Blizzard Spiral, Hailfall (hailstones crash onto every hero), Ice Cage (a
+    /// ring of icicles closes in on every hero), Glacial Lance (a beam of frost down the line to every hero), Whiteout
+    /// (a wall of frost sweeps the arena) and Shatterstones (hailstones that burst into icicles where they land).
+    /// Once bloodied it blinks across the arena before Hailfall.
     /// It paces itself: a clear pause follows every attack, and after every third it stands winded for a few seconds,
     /// which is the opening to strike.
     /// In the Neon Arcology it returns as the Cryo Sentinel, a chrome frost machine with the same attacks.
@@ -14,8 +16,9 @@ namespace Slopgame
     /// </summary>
     public sealed class AshWardenBoss : BossBehaviour
     {
-        private const int Patterns = 5;
-        private const int Fan = 0, Nova = 1, Spiral = 2, Hailfall = 3, Cage = 4;
+        // Patterns share NetState with WindedBit, so there is room for eight.
+        private const int Patterns = 8;
+        private const int Fan = 0, Nova = 1, Spiral = 2, Hailfall = 3, Cage = 4, Lance = 5, Whiteout = 6, Shatter = 7;
         // Cage icicles start this far out and creep in slowly enough to find the gap.
         private const float CageRadius = 5.5f, CageBoltSpeed = 3.4f;
         // Spiral bolts drift slower than aimed ones so the rotating arms can be read and walked around.
@@ -28,11 +31,13 @@ namespace Slopgame
         public const float Size = 1.8f;
         public static readonly Color Frost = new Color(0.55f, 0.85f, 1f);
         public static readonly Color Glacier = new Color(0.3f, 0.5f, 1f);
-        private float readyAt, fireAt, spiralUntil, nextSpiralShot, spiralAngle, windedUntil;
+        // A shatterstone lands after this long and bursts into slow icicles.
+        private const float ShatterTelegraph = 1.1f;
+        private float readyAt, fireAt, spiralUntil, nextSpiralShot, spiralAngle, windedUntil, shatterAt;
         private bool charging, guestWinded;
         private int pattern, attacksSinceBreath;
-        private readonly List<Vector2> cageCenters = new List<Vector2>();
-        private readonly AttackDeck<int> deck = new AttackDeck<int>(Fan, Nova, Spiral, Hailfall, Cage);
+        private readonly List<Vector2> cageCenters = new List<Vector2>(), shatterCenters = new List<Vector2>();
+        private readonly AttackDeck<int> deck = new AttackDeck<int>(Fan, Nova, Spiral, Hailfall, Cage, Lance, Whiteout, Shatter);
         private Vector2 lockedAim;
         private WardenAura aura;
 
@@ -45,6 +50,9 @@ namespace Slopgame
             Nova => "FROST NOVA - KEEP MOVING",
             Spiral => "BLIZZARD SPIRAL - CIRCLE WITH THE ARMS",
             Cage => "ICE CAGE - SLIP THROUGH THE GAP",
+            Lance => "GLACIAL LANCE - STEP OFF THE LINE",
+            Whiteout => "WHITEOUT - ROLL THROUGH THE WALL",
+            Shatter => "SHATTERSTONES - LEAVE THE MARKS, THEN DODGE THE SHARDS",
             _ => "HAILFALL - LEAVE THE MARKS"
         } : IsWinded ? "WINDED - STRIKE NOW" : IsEnraged ? "ENRAGED" : HighTech ? "CRYOGENIC CONTAINMENT UNIT" : "GUARDIAN OF THE RELIC";
         public override int BaseHealth(int floor) => 24 + floor * 3;
@@ -77,6 +85,7 @@ namespace Slopgame
         public override void HostTick(Vector2 offset)
         {
             Enemy.Facing.TurnToward(offset, Time.deltaTime * Enemy.ActionSpeedMultiplier);
+            if (shatterAt > 0f && Time.time >= shatterAt) BurstShatterstones();
             if (Spiraling) { SpiralTick(); return; }
             if (charging)
             {
@@ -133,6 +142,18 @@ namespace Slopgame
                     HeroVfx.Pulse(Run.ProjectileRoot, transform.position, 1.6f, Frost, 0.35f);
                     Finish();
                     break;
+                case Lance:
+                    CastLance();
+                    Finish();
+                    break;
+                case Whiteout:
+                    CastWhiteout();
+                    Finish();
+                    break;
+                case Shatter:
+                    CastShatterstones();
+                    Finish();
+                    break;
                 default:
                     CastHailfall();
                     Finish();
@@ -182,6 +203,57 @@ namespace Slopgame
                 var spot = new Vector2(Random.Range(arena.xMin + 1f, arena.xMax - 2f), Random.Range(arena.yMin + 1f, arena.yMax - 2f));
                 Hazard(HazardShape.Pool, spot, Vector2.up, 1.2f, 0f, telegraph + 0.2f + i * 0.15f, linger);
             }
+        }
+
+        /// <summary>A beam of frost lances down the line to every hero; bloodied, two more follow to either side.</summary>
+        private void CastLance()
+        {
+            Vector2 from = transform.position;
+            foreach (var hero in LivingHeroPositions())
+            {
+                Vector2 aim = (hero - from).sqrMagnitude > 0.01f ? (hero - from).normalized : lockedAim;
+                Hazard(HazardShape.Beam, from, aim, 18f, 1.3f, 0.9f, 0.6f);
+                if (!IsEnraged) continue;
+                Hazard(HazardShape.Beam, from, Quaternion.Euler(0, 0, 30f) * aim, 18f, 1.3f, 1.5f, 0.6f);
+                Hazard(HazardShape.Beam, from, Quaternion.Euler(0, 0, -30f) * aim, 18f, 1.3f, 1.5f, 0.6f);
+            }
+        }
+
+        /// <summary>A wall of frost sweeps outward across the arena (bloodied: two); roll through it.</summary>
+        private void CastWhiteout()
+        {
+            int walls = IsEnraged ? 2 : 1;
+            for (int i = 0; i < walls; i++)
+                Hazard(HazardShape.Ring, transform.position, Vector2.up, 16f, 0.8f, 0.9f + i * 1.1f, 2.8f);
+        }
+
+        /// <summary>Hailstones fall on every hero plus a loose spot or two, and each bursts into a ring of slow icicles as it lands.</summary>
+        private void CastShatterstones()
+        {
+            shatterCenters.Clear();
+            shatterCenters.AddRange(LivingHeroPositions());
+            var arena = DungeonMap.Arena;
+            int extra = IsEnraged ? 2 : 1;
+            for (int i = 0; i < extra; i++)
+                shatterCenters.Add(new Vector2(Random.Range(arena.xMin + 1f, arena.xMax - 2f), Random.Range(arena.yMin + 1f, arena.yMax - 2f)));
+            foreach (var center in shatterCenters) Hazard(HazardShape.Pool, center, Vector2.up, 1f, 0f, ShatterTelegraph, 0.5f);
+            // Hazards run on world time, so the burst does too.
+            shatterAt = Time.time + ShatterTelegraph;
+        }
+
+        private void BurstShatterstones()
+        {
+            shatterAt = 0f;
+            int shards = IsEnraged ? 8 : 6;
+            float turn = Random.Range(0f, 360f);
+            foreach (var center in shatterCenters)
+            {
+                for (int i = 0; i < shards; i++)
+                    Fire(center, Quaternion.Euler(0, 0, turn + i * 360f / shards) * Vector2.up, SpiralBoltSpeed);
+                HeroVfx.Pulse(Run.ProjectileRoot, center, 1.4f, Frost, 0.3f);
+                CoopFx.Pulse(Run, center, 1.4f, Frost, 0.3f);
+            }
+            shatterCenters.Clear();
         }
 
         /// <summary>

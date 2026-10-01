@@ -3,8 +3,8 @@ using UnityEngine;
 namespace Slopgame
 {
     /// <summary>
-    /// The Archdemon's ever-burning presence: scorched ground, a crown of flame, beating wings of fire and,
-    /// while he flies, a shadow on the arena floor below him.
+    /// The Archdemon's burning presence, kept sparse so his sprite and the arena's hazards stay readable: a shadow
+    /// (his flight shadow while airborne), a faint glow, burning eyes, a few embers and, in flight, wings of fire.
     /// </summary>
     public sealed class HellfireAura : MonoBehaviour
     {
@@ -33,46 +33,28 @@ namespace Slopgame
             bool enraged = boss.Boss.IsEnraged;
 
             behind.Begin();
-            // Scorched ground (or the flight shadow when airborne).
+            // His shadow (the flight shadow when airborne).
             behind.Ellipse(ground + Vector2.down * 1.15f, 1.6f - lift * 0.5f, 0.55f - lift * 0.15f,
                 FlameMesh.Alpha(Color.black, 0.45f + lift * 0.2f), FlameMesh.Alpha(Color.black, 0f));
-            if (lift < 0.5f)
+            // Wings of fire unfurl behind him only once he takes to the sky; on the ground his own wings read clean.
+            if (lift > 0f)
             {
-                behind.Ring(ground + Vector2.down * 0.2f, 1.5f + 0.08f * Mathf.Sin(time * 6f), 0.12f, FlameMesh.Alpha(FlameMesh.Orange, 0.45f * (1f - lift * 2f)), 48);
-                int groundFlames = enraged ? 14 : 9;
-                for (int i = 0; i < groundFlames; i++)
-                {
-                    float angle = i * Mathf.PI * 2f / groundFlames + time * 0.4f;
-                    Vector2 spot = ground + new Vector2(Mathf.Cos(angle) * 1.5f, Mathf.Sin(angle) * 0.6f - 0.4f);
-                    behind.Flame(spot, Vector2.up, 0.45f, 0.8f, FlameMesh.Hash(i, 2.2f), 1f - lift * 2f);
-                }
+                float flap = Mathf.Sin(time * 7f) * 0.25f;
+                float span = 2.3f + lift * 1.2f + (enraged ? 0.4f : 0f);
+                for (int side = -1; side <= 1; side += 2)
+                    for (int i = 0; i < 7; i++)
+                    {
+                        float u = (i + 1) / 7f;
+                        float angle = Mathf.Lerp(0.35f, 1.35f, u) + flap;
+                        Vector2 dir = new Vector2(Mathf.Cos(angle) * side, Mathf.Sin(angle) * 0.7f + 0.25f).normalized;
+                        Vector2 root = body + new Vector2(side * 0.35f, 0.2f);
+                        behind.Flame(root, dir, 0.55f + u * 0.25f, span * (1f - Mathf.Abs(u - 0.5f) * 0.8f), FlameMesh.Hash(i, side), 0.95f * lift);
+                    }
             }
-            // Wings of fire beat behind him; they flare wide in flight.
-            float flap = Mathf.Sin(time * (altitude > 0.2f ? 7f : 3f)) * 0.25f;
-            float span = 2.3f + lift * 1.2f + (enraged ? 0.4f : 0f);
-            for (int side = -1; side <= 1; side += 2)
-                for (int i = 0; i < 7; i++)
-                {
-                    float u = (i + 1) / 7f;
-                    float angle = Mathf.Lerp(0.35f, 1.35f, u) + flap;
-                    Vector2 dir = new Vector2(Mathf.Cos(angle) * side, Mathf.Sin(angle) * 0.7f + 0.25f).normalized;
-                    Vector2 root = body + new Vector2(side * 0.35f, 0.2f);
-                    behind.Flame(root, dir, 0.55f + u * 0.25f, span * (1f - Mathf.Abs(u - 0.5f) * 0.8f), FlameMesh.Hash(i, side), 0.95f);
-                }
-            behind.Disc(body, 1.4f + lift * 0.6f, FlameMesh.Alpha(FlameMesh.Orange, 0.3f + lift * 0.25f), FlameMesh.Alpha(FlameMesh.Crimson, 0f));
-            // A shroud of black smoke curls around him so his silhouette looms over the fire.
-            for (int i = 0; i < 10; i++)
-            {
-                float seed = FlameMesh.Hash(i, 6.6f), angle = i * Mathf.PI * 2f / 10f + time * (0.3f + seed * 0.3f);
-                Vector2 puff = body + new Vector2(Mathf.Cos(angle) * 1.2f, Mathf.Sin(angle) * 0.9f + 0.1f);
-                behind.Disc(puff, 0.55f + 0.15f * Mathf.Sin(time * 2f + i), FlameMesh.Alpha(new Color(0.06f, 0.01f, 0.02f), 0.45f), FlameMesh.Alpha(Color.black, 0f), 16);
-            }
+            behind.Disc(body, 1.4f + lift * 0.6f, FlameMesh.Alpha(FlameMesh.Orange, 0.18f + lift * 0.3f), FlameMesh.Alpha(FlameMesh.Crimson, 0f));
             behind.Commit();
 
             front.Begin();
-            // A crown of flame over the horns.
-            for (int i = -2; i <= 2; i++)
-                front.Flame(body + new Vector2(i * 0.22f, 0.85f - Mathf.Abs(i) * 0.08f), Vector2.up, 0.3f, 0.9f - Mathf.Abs(i) * 0.12f, FlameMesh.Hash(i, 8.8f), 0.9f);
             // His eyes burn; brighter and wilder once bloodied.
             float glare = (enraged ? 0.75f : 0.5f) + 0.2f * Mathf.Sin(time * (enraged ? 14f : 5f));
             for (int side = -1; side <= 1; side += 2)
@@ -82,8 +64,8 @@ namespace Slopgame
                 if (enraged)
                     front.Bar(eye, new Vector2(side * 0.4f, 1f).normalized, 0.55f, 0.07f, FlameMesh.Alpha(FlameMesh.Core, glare), FlameMesh.Alpha(FlameMesh.Orange, 0f));
             }
-            // Drifting embers shed from his body.
-            for (int i = 0; i < 16; i++)
+            // A few drifting embers shed from his body.
+            for (int i = 0; i < 6; i++)
             {
                 float seed = FlameMesh.Hash(i, 4.4f), rise = Mathf.Repeat(time * (0.6f + seed) + seed, 1f);
                 Vector2 p = body + new Vector2((seed - 0.5f) * 2.4f + Mathf.Sin(time * 2f + i) * 0.2f, -0.6f + rise * 2.6f);
