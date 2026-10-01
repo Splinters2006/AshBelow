@@ -14,7 +14,8 @@ namespace Slopgame
         public static readonly Color ShieldColor = new Color(0.4f, 0.75f, 1f);
         // Half as wide again as the taunt's own ring.
         public const float RetributionRadius = Reach * 1.6f * 1.5f;
-        private float until, readyAt, aggroUntil, nextFx;
+        private float until, readyAt, aggroUntil;
+        private ShieldTauntVfx vfx;
         private bool wasTaunting, listening;
         /// <summary>Bolts stopped and blows taken during this taunt; Retribution's multiplier.</summary>
         public int Hits { get; private set; }
@@ -42,34 +43,35 @@ namespace Slopgame
             Player.Weapon?.Hide();
             Player.Charge.Cancel();
             // He can walk with the shield up, but no attacks, abilities or dodges (see DungeonPlayer.IsHoldingShield).
-            // A furious bellow instead of a shield: a red burst and a shake.
+            // A furious bellow instead of a shield: a ward of rage around him and a shake.
             var root = Player.Run.ProjectileRoot;
-            HeroVfx.Pulse(root, transform.position, Reach * 1.2f, HeroBuffs.TauntColor, 0.35f);
+            if (vfx != null) vfx.End();
+            vfx = ShieldTauntVfx.Play(root, transform, Duration, Reach);
+            CoopFx.ShieldTaunt(Player.Run, Duration, Reach);
             HeroVfx.Sparks(root, transform.position, HeroBuffs.TauntColor, 18, 5f, 0.4f);
-            CombatVfx.Ring(root, transform.position, Reach * 1.6f, HeroBuffs.TauntColor, 0.45f);
-            CoopFx.Ring(Player.Run, transform.position, Reach * 1.6f, HeroBuffs.TauntColor, 0.45f);
-            ScreenFx.Shake(0.15f, 0.15f);
+            ScreenFx.Shake(0.2f, 0.18f);
             return true;
         }
 
         private void Update()
         {
             if (Player == null || Player.Run == null || Player.Run.ProjectileRoot == null) return;
-            if (!IsTaunting)
-            {
-                if (wasTaunting) { wasTaunting = false; Retribution(); }
-                return;
-            }
-            if (Time.time < nextFx) return;
-            // Steam of rage puffing off his head.
-            nextFx = Time.time + 0.1f;
-            var root = Player.Run.ProjectileRoot;
-            HeroVfx.Sparks(root, (Vector2)transform.position + Vector2.up * 0.45f, HeroBuffs.TauntColor, 3, 2.6f, 0.35f, Vector2.up, 80f, 1f);
-            HeroVfx.Motes(root, (Vector2)transform.position + Vector2.up * 0.6f, 0.25f, new Color(1f, 0.55f, 0.45f), 1, 0.5f);
+            if (IsTaunting || !wasTaunting) return;
+            wasTaunting = false;
+            // Also drops the ward if the taunt was cut short (he died, or the run stopped).
+            if (vfx != null) vfx.End();
+            Retribution();
         }
 
         // Every blow that lands on him counts, whether it cost HP or only a ward.
-        private void OnStruck(bool warded) { if (IsTaunting) Hits++; }
+        private void OnStruck(bool warded) { if (IsTaunting) Soak(); }
+
+        private void Soak()
+        {
+            Hits++;
+            // Retribution's stored hits circle him as sparks.
+            if (IsUpgraded && vfx != null) vfx.Charge();
+        }
 
         private void OnDestroy() { if (listening && Player != null) Player.Struck -= OnStruck; }
 
@@ -81,11 +83,9 @@ namespace Slopgame
             Vector2 at = transform.position;
             int damage = Player.Damage * Hits;
             var root = run.ProjectileRoot;
-            HeroVfx.Pulse(root, at, RetributionRadius, HeroBuffs.TauntColor, 0.4f);
+            ShieldTauntVfx.Retribution(root, at, RetributionRadius, Hits);
+            CoopFx.Retribution(run, at, RetributionRadius, Hits);
             HeroVfx.Sparks(root, at, HeroBuffs.TauntColor, 24, 6f, 0.45f);
-            CombatVfx.Ring(root, at, RetributionRadius, HeroBuffs.TauntColor, 0.4f);
-            CoopFx.Pulse(run, at, RetributionRadius, HeroBuffs.TauntColor, 0.4f);
-            CoopFx.Ring(run, at, RetributionRadius, HeroBuffs.TauntColor, 0.4f);
             ScreenFx.Shake(0.25f, 0.25f);
             foreach (var enemy in run.Enemies.ToArray())
             {
@@ -100,9 +100,9 @@ namespace Slopgame
             Vector2 offset = position - (Vector2)transform.position;
             if (!IsTaunting || offset.sqrMagnitude > Reach * Reach || Vector2.Dot(incoming, offset) >= 0f) return false;
             Player.Powerups.AddWard();
-            Hits++;
+            Soak();
             HeroVfx.Sparks(Player.Run.ProjectileRoot, position, ShieldColor, 8, 3.5f, 0.25f, -incoming, 100f);
-            HeroVfx.Pulse(transform, transform.position, 0.95f, AbilityCatalog.Ice, 0.2f);
+            if (vfx != null) vfx.Block(offset);
             return true;
         }
     }

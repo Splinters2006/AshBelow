@@ -109,6 +109,9 @@ namespace Slopgame
         public static void DemonicPower(DungeonRun run, float duration, float auraRadius) => Send(run, FxKind.DemonicPower, default, default, null, duration, auraRadius);
         /// <summary>Teammates see the Brawler's fury burning on her.</summary>
         public static void SuperAngry(DungeonRun run, float duration) => Send(run, FxKind.SuperAngry, default, default, null, duration);
+        /// <summary>Teammates see the Knight's ward of rage around him.</summary>
+        public static void ShieldTaunt(DungeonRun run, float duration, float radius) => Send(run, FxKind.ShieldTaunt, default, default, null, duration, radius);
+        public static void Retribution(DungeonRun run, Vector2 center, float radius, int hits) => Send(run, FxKind.Retribution, center, default, null, radius, 0f, hits);
         public static void Sharpen(DungeonRun run, int bonus, float duration, bool full)
             => Send(run, FxKind.Sharpen, default, default, null, duration, full ? 1f : 0f, bonus);
         public static void CoinFlip(DungeonRun run, bool won) => Send(run, FxKind.CoinFlip, default, default, null, 0f, 0f, won ? 1 : 0);
@@ -304,6 +307,11 @@ namespace Slopgame
                     var furious = FindHero(run, fx.Origin);
                     if (furious != null) SuperAngryVfx.Play(root, furious.transform, fx.F1);
                     break;
+                case FxKind.ShieldTaunt:
+                    var taunter = FindHero(run, fx.Origin);
+                    if (taunter != null) ShieldTauntVfx.Play(root, taunter.transform, fx.F1, fx.F2);
+                    break;
+                case FxKind.Retribution: ShieldTauntVfx.Retribution(root, fx.A, fx.F1, fx.N); break;
                 case FxKind.Sharpen:
                     var assassin = FindHero(run, fx.Origin);
                     if (assassin != null)
