@@ -25,8 +25,11 @@ namespace Slopgame
         private int SkeletonCost => Reaper != null ? Reaper.Cost(SoulCost) : SoulCost;
         private int IncarnationCost => Reaper != null ? Reaper.Cost(IncarnationSouls) : IncarnationSouls;
         public bool IsIncarnate => Player.Buffs != null && Player.Buffs.IsIncarnate;
-        /// <summary>True with the Avatar of Death upgrade and enough souls to become the incarnation of death (and not already it).</summary>
-        public bool CanIncarnate => IsUpgraded && !IsIncarnate && Reaper != null && Reaper.Souls >= IncarnationCost;
+        /// <summary>
+        /// True with the Avatar of Death upgrade and enough souls to become the incarnation of death (and not already it).
+        /// Debug mode needs neither: R always incarnates, and raises skeletons while the incarnation lasts.
+        /// </summary>
+        public bool CanIncarnate => !IsIncarnate && Reaper != null && (DebugMode.Enabled || (IsUpgraded && Reaper.Souls >= IncarnationCost));
         /// <summary>Skeletons still standing (those from an earlier floor crumbled with it).</summary>
         public int Standing
         {
@@ -38,7 +41,7 @@ namespace Slopgame
         }
         public override float Readiness => IsIncarnate ? Player.Buffs.IncarnateRemaining / IncarnationTime : CanIncarnate ? 1f
             : Standing >= MaxSkeletons ? 0f : Mathf.Clamp01(Souls / (float)SkeletonCost);
-        public override string Status => IsIncarnate ? Seconds(Player.Buffs.IncarnateRemaining) : CanIncarnate ? $"READY  /  {IncarnationCost} SOULS"
+        public override string Status => IsIncarnate ? Seconds(Player.Buffs.IncarnateRemaining) : CanIncarnate ? DebugMode.Enabled ? "READY" : $"READY  /  {IncarnationCost} SOULS"
             : Standing >= MaxSkeletons ? "ARMY FULL" : Souls >= SkeletonCost ? "READY" : $"{Souls} / {SkeletonCost}";
 
         public override bool TryActivate(Vector2 aim)
@@ -46,7 +49,7 @@ namespace Slopgame
             var reaper = Reaper;
             if (!CanAct || reaper == null) return false;
             if (CanIncarnate) return Incarnate(reaper);
-            if (IsIncarnate || Standing >= MaxSkeletons || !reaper.Spend(SkeletonCost)) return false;
+            if ((IsIncarnate && !DebugMode.Enabled) || Standing >= MaxSkeletons || !reaper.Spend(SkeletonCost)) return false;
             var run = Player.Run;
             // It claws its way up beside him, on whichever side has room.
             Vector2 hero = transform.position, spot = hero;
@@ -72,14 +75,14 @@ namespace Slopgame
             Player.Buffs.Incarnate(IncarnationTime);
             var run = Player.Run;
             Vector2 at = transform.position;
-            AvatarOfDeathVfx.Play(run.ProjectileRoot, transform, IncarnationTime);
+            AvatarOfDeathVfx.Play(run.ProjectileRoot, transform, IncarnationTime, true);
             CoopFx.AvatarOfDeath(run, IncarnationTime);
             HeroVfx.Pulse(run.ProjectileRoot, at, 6f, ReaperAttack.Soul, 0.7f);
             HeroVfx.Pulse(run.ProjectileRoot, at, 3f, ReaperAttack.Shade, 0.5f);
             HeroVfx.Sparks(run.ProjectileRoot, at, ReaperAttack.Bone, 30, 6f, 0.7f, null, 360f, 1.4f);
             CoopFx.Pulse(run, at, 6f, ReaperAttack.Soul, 0.7f);
-            ScreenFx.Flash(FlameMesh.Alpha(ReaperAttack.Shade, 0.45f), 0.5f);
-            ScreenFx.Shake(0.35f, 0.5f);
+            ScreenFx.Flash(FlameMesh.Alpha(ReaperAttack.Soul, 0.4f), 0.6f);
+            ScreenFx.Shake(0.5f, 0.6f);
             return true;
         }
 

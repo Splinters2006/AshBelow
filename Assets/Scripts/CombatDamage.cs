@@ -81,7 +81,34 @@ namespace Slopgame
             if (player.Powerups.Count(PowerupType.Executioner) > 0 && enemy.HealthFraction < 0.25f) multiplier *= 1.5f;
             if (player.Powerups.Count(PowerupType.SittingDuck) > 0 && enemy.IsImmobilized) multiplier *= SittingDuckMultiplier;
             if (enemy.Boss != null || enemy.IsTank) multiplier *= 1f + player.Permanent.GuardianDamage;
+            // Blood in the Water: the Samurai's attacks bite deeper into whatever is already bleeding.
+            if (enemy.IsBleeding) multiplier *= 1f + BloodInTheWaterBonus[Mathf.Clamp(player.Powerups.Count(PowerupType.BloodInTheWater), 0, BloodInTheWaterBonus.Length - 1)];
             return multiplier == 1f ? damage : Mathf.Max(1, Mathf.RoundToInt(damage * multiplier));
+        }
+
+        /// <summary>Blood in the Water's extra damage to bleeding enemies, by rank.</summary>
+        public static readonly float[] BloodInTheWaterBonus = { 0f, 0.1f, 0.15f, 0.25f };
+        /// <summary>Deep Wounds' extra cuts per bleed, by rank.</summary>
+        public static readonly int[] DeepWoundsTicks = { 0, 1, 3, 5 };
+        public const float JaggedBladeChance = 0.1f;
+
+        /// <summary>How many times a bleed this hero opens cuts: the base ten plus Deep Wounds, over the same five seconds.</summary>
+        public static int BleedTicksFor(DungeonPlayer player)
+            => DungeonEnemy.BleedTicks + (player != null ? DeepWoundsTicks[Mathf.Clamp(player.Powerups.Count(PowerupType.DeepWounds), 0, DeepWoundsTicks.Length - 1)] : 0);
+
+        /// <summary>Opens a bleed on <paramref name="enemy"/> from a <paramref name="hit"/> this hero landed.</summary>
+        public static void InflictBleed(DungeonPlayer player, DungeonEnemy enemy, int hit)
+        {
+            if (enemy == null || enemy.Health <= 0 || hit <= 0) return;
+            enemy.Bleed(hit, DungeonEnemy.BleedDuration, BleedTicksFor(player));
+        }
+
+        /// <summary>The Samurai's katana: Blood Shall Flow bleeds on every hit and Jagged Blade on one in ten. A hit can open both.</summary>
+        private static void KatanaBleeds(DungeonPlayer player, DungeonEnemy enemy, int hit)
+        {
+            if (player == null || !(player.Weapon is SamuraiAttack samurai) || enemy == null || enemy.Health <= 0) return;
+            if (samurai.IsBloodFlowing) InflictBleed(player, enemy, hit);
+            if (player.Powerups.Count(PowerupType.JaggedBlade) > 0 && Random.value < JaggedBladeChance) InflictBleed(player, enemy, hit);
         }
 
         public const float OverkillBaseRadius = 1f, OverkillRadiusPerDamage = 0.25f, OverkillMaxRadius = 3.5f;
@@ -150,6 +177,7 @@ namespace Slopgame
                 CreditBlessing(player);
                 IncarnateFear(player, enemy);
                 RuneParalysis(player, enemy);
+                KatanaBleeds(player, enemy, rolled);
                 // Elemental Surge: while the Archer's quiver surges, every infused hit sets off its element, not only crits.
                 if (infusion != DamageElement.Physical && (critical || ElementalQuiver.IsImbued(player))) ApplyEffect(player, enemy, infusion, rolled);
                 if (enemy.Health <= 0) Overkill(player, enemy, rolled - healthBefore);
@@ -204,7 +232,7 @@ namespace Slopgame
         private static void OnBackstab(DungeonPlayer player, DungeonEnemy enemy, int damage)
         {
             if (enemy == null || enemy.Health <= 0) return;
-            if (player.Powerups.Count(PowerupType.Bleed) > 0) enemy.Bleed(3, Mathf.Max(1, damage / 3));
+            if (player.Powerups.Count(PowerupType.Bleed) > 0) InflictBleed(player, enemy, damage);
             ShadowClone.OnBackstab(player, enemy, Mathf.Max(1, damage / 2));
         }
 

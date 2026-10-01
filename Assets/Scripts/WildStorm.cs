@@ -178,28 +178,56 @@ namespace Slopgame
                     CombatDamage.Apply(Player, enemy, damage, meteor ? DamageElement.Fire : DamageElement.Lightning, spot, meteor ? 0.8f : 0.3f, guaranteedEffect: true);
         }
 
-        /// <summary>A small pixel-art thundercloud.</summary>
-        private static Sprite CloudSprite => cloudSprite != null ? cloudSprite : cloudSprite = BuildSprite(1.8f, CloudPixel,
-            "....DDDD..DD....", "..DDLLLLDDLLD...", ".DLLLWWLLLWWLD..", "DLWWWWWWWWWWWLD.",
-            "DWWWMMWWWWMMWWD.", ".DMMMMMMMMMMMD..", "..DD.YD.DY.DD...", "......Y...Y.....");
+        /// <summary>
+        /// A pixel-art thundercloud: billowing heads lit from the upper left, a bruised underbelly, and the three
+        /// elements it hurls (an ember, a fork of lightning and an icicle) dripping from it.
+        /// </summary>
+        private static Sprite CloudSprite => cloudSprite != null ? cloudSprite : cloudSprite = BuildSprite(2.2f, CloudPixel,
+            "...........OOOO.........", "......OO.OOHHLLOO.......", "....OOHHOHHLLLLLWO......", "...OHHLLLLLLLLWWWWOOO...",
+            "..OHLLLLWWLLWWWWWLLLLO..", "..OLLLWWWWWWWWWWMLLWWWO.", ".OMMWWWWMWLWWWMMLWWMMMO.", ".OPMMWWMPMLWWMPMWWMMPMPO",
+            ".OPPMMMPPPMMMPPPMMMPPPPO", ".OOOPMPPOPPMPPOPPMPOOOO.", "....OPPO.OPPPO.OPPO.....", ".....OO...OOO...OO......",
+            "......r.....Y....I......", "......R....Y.y...I......", ".....R......y.....i.....");
 
-        /// <summary>Cataclysm's thunderhead: twice as wide, towering, with lightning and ember-glow dripping from its belly.</summary>
-        private static Sprite BigCloudSprite => bigCloudSprite != null ? bigCloudSprite : bigCloudSprite = BuildSprite(3.6f, CloudPixel,
-            ".......DDDDD.....DDDD.....", ".....DDLLLLLDD.DDLLLLDD...",
-            "...DDLLLWWWLLLDLLLWWLLLD..", "..DLLLWWWWWWWLLLWWWWWWLLD.",
-            ".DLLWWWWWWWWWWWWWWWWWWWWLD", "DLWWWWWWWWWWWWWWWWWWWWWWWD",
-            "DWWWMMMWWWWWMMMMWWWWMMMWWD", "DWMMMMMMMWMMMMMMMMWMMMMMWD",
-            ".DMMMMMMMMMMMMMMMMMMMMMMD.", "..DDMMMDDDMMMMMDDDMMMDDD..",
-            "....DYD.RD.DYD..DR.DYD....", ".....Y..R...YY...R..Y.....",
-            "....Y........Y......Y.....");
+        /// <summary>Cataclysm's thunderhead: far wider and towering, with more of everything falling out of its belly.</summary>
+        private static Sprite BigCloudSprite => bigCloudSprite != null ? bigCloudSprite : bigCloudSprite = BuildSprite(3.8f, CloudPixel,
+            "................OO......................", ".............OOOHHOOO...................",
+            "...........OOHHHHLLLLOOOOOOOO...........", "......OOOOOHHHHLLLLLLWHHHHLLLOO.........",
+            "....OOHHHLLHHLLLLLLWWWHHLLLLLLLO........", "...OHHHLLLLLLLLLLWWWWWLLLLLLLWWWOOO.....",
+            "...OHLLLLLLLLLLWWWWWWWLLLLLWWWWWHLLOO...", "..OLLLLLLLWWWWWWWWWWWWLLLWWWWWWLLLLLWO..",
+            "..OLLLLLWWWWWWWWWWWWMMLWWWWWWWWLLLWWWO..", ".OHLLLWWWWWWWLWWWWMLLLWWWWWWWMLLWWWWWWO.",
+            ".OLLLWWWWWWMLLWWMLLLLWWWWWWLLWWWWWWWMMO.", "OMLLWWWWWMMLWWWWLLLWWWWWWLLWWWWWWWMMLWMO",
+            "OPMWWWWMMMWWWWWWLWWWWWWWMWWWWWWWMMMMWMMO", ".OPMWWMMMWWWWWWMWWWWWWMMMWWWWMMMMMMMMMPO",
+            ".OPPMMMMMMWWWMMPWWWWMMMMMWWWMPMMMMMPMPO.", "..OPPMPMPMMMMMPPMMMMMMPMMMMMPPPMPMPOPO..",
+            "...OPPPPOPMPMPPOMPMMMPOPMPMPPOPPPPO.O...", "....OOOO.OPPPPO.OPPMPO.OPPPPO.OOOO......",
+            "..........OOOO..OOPPOO..OOOO............", "......r...........OO............R.......",
+            "......R.....Y...I..I......Y......r......", ".....R....yY....i..I.......Yy....R......",
+            ".....r......Yy......i.....y.............");
 
         /// <summary>A tumbling lump of burning rock.</summary>
         private static Sprite MeteorSprite => meteorSprite != null ? meteorSprite : meteorSprite = BuildSprite(0.8f, MeteorPixel,
             "..DDDD..", ".DOOOOD.", "DOYYYOOD", "DOYWYOOD", "DOYYYOOD", "DOOOOOOD", ".DOOOOD.", "..DDDD..");
 
-        private static Color CloudPixel(char c) => c == 'D' ? new Color(0.14f, 0.15f, 0.22f) : c == 'M' ? new Color(0.28f, 0.3f, 0.4f)
-            : c == 'W' ? CloudColor : c == 'L' ? new Color(0.5f, 0.53f, 0.66f) : c == 'Y' ? new Color(0.85f, 0.95f, 1f)
-            : c == 'R' ? new Color(1f, 0.55f, 0.25f) : Color.clear;
+        // O outline; H/L/W/M the cloud from its sunlit crowns down to its shadows; P the bruised underbelly;
+        // Y/y lightning; R/r embers; I/i ice.
+        private static Color CloudPixel(char c)
+        {
+            switch (c)
+            {
+                case 'O': return new Color(0.1f, 0.1f, 0.18f);
+                case 'H': return new Color(0.8f, 0.84f, 0.96f);
+                case 'L': return new Color(0.54f, 0.58f, 0.74f);
+                case 'W': return CloudColor;
+                case 'M': return new Color(0.22f, 0.23f, 0.36f);
+                case 'P': return new Color(0.19f, 0.13f, 0.32f);
+                case 'Y': return new Color(0.92f, 0.98f, 1f);
+                case 'y': return new Color(0.45f, 0.75f, 1f);
+                case 'R': return new Color(1f, 0.55f, 0.2f);
+                case 'r': return new Color(0.9f, 0.25f, 0.12f);
+                case 'I': return new Color(0.7f, 0.95f, 1f);
+                case 'i': return new Color(0.4f, 0.7f, 0.95f);
+                default: return Color.clear;
+            }
+        }
 
         private static Color MeteorPixel(char c) => c == 'D' ? new Color(0.45f, 0.12f, 0.08f) : c == 'O' ? MeteorColor
             : c == 'Y' ? new Color(1f, 0.85f, 0.35f) : c == 'W' ? Color.white : Color.clear;

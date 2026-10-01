@@ -58,7 +58,8 @@ namespace Slopgame
         {
             Initialize();
             Color previous = GUI.color;
-            GUI.color = color;
+            // Keeps whatever opacity the caller is drawing under (the HUD's opacity setting).
+            GUI.color = new Color(color.r, color.g, color.b, color.a * previous.a);
             if (rect.width < 24f || rect.height < 24f) GUI.DrawTexture(rect, Texture2D.whiteTexture);
             else GUI.Box(rect, GUIContent.none, panel);
             GUI.color = previous;
@@ -133,7 +134,7 @@ namespace Slopgame
             if (Event.current.type != EventType.Repaint) return clicked;
             float size = Mathf.Min(rect.width, rect.height) - 14f;
             Color previous = GUI.color;
-            GUI.color = open ? AbilityCatalog.Gold : Text;
+            GUI.color = FlameMesh.Alpha(open ? AbilityCatalog.Gold : Text, previous.a);
             GUI.DrawTexture(new Rect(rect.center.x - size / 2f, rect.center.y - size / 2f - 1f, size, size), CogTexture);
             GUI.color = previous;
             return clicked;
@@ -235,10 +236,10 @@ namespace Slopgame
 
         public static string SpecialName(WeaponType weapon) => weapon == WeaponType.Bow ? "Triple shot"
             : weapon == WeaponType.Mutation ? "Guard / hook" : weapon == WeaponType.Staff ? "Lightning" : weapon == WeaponType.Daggers ? "Shadowstep"
-            : weapon == WeaponType.Fists ? "Empower" : weapon == WeaponType.Tail ? "Tail sweep" : weapon == WeaponType.Coins ? "Coin volley" : weapon == WeaponType.Beam ? "Plasma cannon" : weapon == WeaponType.Scythe ? "Soul skull" : weapon == WeaponType.Hammer ? "Holy Sword" : "Reflect shield";
+            : weapon == WeaponType.Fists ? "Empower" : weapon == WeaponType.Tail ? "Tail sweep" : weapon == WeaponType.Coins ? "Coin volley" : weapon == WeaponType.Beam ? "Plasma cannon" : weapon == WeaponType.Scythe ? "Soul skull" : weapon == WeaponType.Katana ? "Dash slash" : weapon == WeaponType.Hammer ? "Holy Sword" : "Reflect shield";
         public static float SpecialCooldown(WeaponType weapon) => weapon == WeaponType.Bow ? 6f
             : weapon == WeaponType.Mutation ? SpecimenAttack.GuardCooldown : weapon == WeaponType.Staff ? 3f : weapon == WeaponType.Daggers ? 4f
-            : weapon == WeaponType.Fists ? BrawlerAttack.EmpowerCooldown : weapon == WeaponType.Tail ? DemonessAttack.SweepCooldown : weapon == WeaponType.Coins ? GamblerAttack.VolleyCooldown : weapon == WeaponType.Beam ? CyborgAttack.CannonCooldown : weapon == WeaponType.Scythe ? ReaperAttack.SkullCooldown : weapon == WeaponType.Hammer ? PaladinAttack.HolySwordCooldown
+            : weapon == WeaponType.Fists ? BrawlerAttack.EmpowerCooldown : weapon == WeaponType.Tail ? DemonessAttack.SweepCooldown : weapon == WeaponType.Coins ? GamblerAttack.VolleyCooldown : weapon == WeaponType.Beam ? CyborgAttack.CannonCooldown : weapon == WeaponType.Scythe ? ReaperAttack.SkullCooldown : weapon == WeaponType.Katana ? SamuraiAttack.DashCooldown : weapon == WeaponType.Hammer ? PaladinAttack.HolySwordCooldown
             : KnightShield.Cooldown;
     }
 }

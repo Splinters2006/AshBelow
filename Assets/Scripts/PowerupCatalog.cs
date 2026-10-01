@@ -50,6 +50,8 @@ namespace Slopgame
         ElementalImmobilization,
         // Reaper.
         SoulFury,
+        // Samurai.
+        DeepWounds, BloodInTheWater, JaggedBlade, FineDicing,
         // The Specimen's Edge talents, then his hybrids.
         RazorTip, LongChain, WeightedTip, ReelIn, Featherweight, BleedingEdge, LightOnHisFeet,
         FreightTrain, RubbleWall, Hardened, Zipline, LowBlow, Shackles
@@ -202,7 +204,7 @@ namespace Slopgame
             new PowerupDefinition(PowerupType.Pyromancer, "Wizard: Pyromancer", "Burning enemies take +1 from your lightning", 1, WeaponType.Staff),
             new PowerupDefinition(PowerupType.StormChargedOrb, "Storm-Charged Orb", "Hold Inferno Orb's key to charge it; at full charge its blast burns and shocks everything it hits", 1, WeaponType.Staff, AbilityType.Fireball),
             new PowerupDefinition(PowerupType.Frostblink, "Frostblink", "Arcane Blink leaves a Frost Nova where you started", 1, WeaponType.Staff, AbilityType.Blink),
-            new PowerupDefinition(PowerupType.Bleed, "Assassin: Bleed", "Backstabs make the target bleed for 3 ticks", 1, WeaponType.Daggers),
+            new PowerupDefinition(PowerupType.Bleed, "Assassin: Bleed", "Backstabs make the target bleed: 10 ticks over 5 seconds, each for 10% of the backstab", 1, WeaponType.Daggers),
             new PowerupDefinition(PowerupType.Vanish, "Assassin: Vanish", "A kill with Shadowstep hides you from enemies for 1 second", 1, WeaponType.Daggers),
             new PowerupDefinition(PowerupType.Ambush, "Assassin: Ambush", "Your first hit after being hidden deals double damage", 1, WeaponType.Daggers),
             new PowerupDefinition(PowerupType.Poisoner, "Assassin: Poisoner", "Enemies suffering damage over time (burning, bleeding, poisoned) take +1 from your stabs", 1, WeaponType.Daggers),
@@ -249,12 +251,16 @@ namespace Slopgame
             new PowerupDefinition(PowerupType.GraveTithe, "Reaper: Grave Tithe", "Killing an immobilized enemy (afraid, paralysed, frozen, stunned or rooted) gives you a soul", 1, WeaponType.Scythe),
             new PowerupDefinition(PowerupType.ElementalImmobilization, "Elemental Immobilization", "When an enemy is affected by an element (burning, chilled, frozen or shocked), your next hit against it stuns it for 1 second (once every 3 seconds)", 1),
             new PowerupDefinition(PowerupType.SoulFury, "Reaper: Soul Fury", "Deal 1% / 2% / 3% more damage by rank for every soul you hold", 3, WeaponType.Scythe),
+            new PowerupDefinition(PowerupType.DeepWounds, "Samurai: Deep Wounds", "Bleeding you inflict gains 1 / 3 / 5 extra ticks by rank over the same 5 seconds", 3, WeaponType.Katana),
+            new PowerupDefinition(PowerupType.BloodInTheWater, "Samurai: Blood in the Water", "Bleeding enemies take 10% / 15% / 25% more damage by rank from your attacks", 3, WeaponType.Katana),
+            new PowerupDefinition(PowerupType.JaggedBlade, "Samurai: Jagged Blade", "Your attacks have a 10% chance to inflict bleeding", 1, WeaponType.Katana),
+            new PowerupDefinition(PowerupType.FineDicing, "Fine Dicing", "Slice Dice Chunk deals 10% / 30% / 50% more damage by rank", 3, WeaponType.Katana, AbilityType.SliceDiceChunk),
             new PowerupDefinition(PowerupType.RazorTip, "Edge: Razor Tip", "+10% critical hit chance", 3, WeaponType.Mutation),
             new PowerupDefinition(PowerupType.LongChain, "Edge: Long Chain", "+0.5 lash reach", 2, WeaponType.Mutation),
             new PowerupDefinition(PowerupType.WeightedTip, "Edge: Weighted Tip", "The sweet spot at the tip of your lash is 50% longer, and tip crits deal +1 damage", 2, WeaponType.Mutation),
             new PowerupDefinition(PowerupType.ReelIn, "Edge: Reel In", "Hook cooldown is 1 second shorter, and hooked enemies take a hit when they land", 2, WeaponType.Mutation),
             new PowerupDefinition(PowerupType.Featherweight, "Edge: Featherweight", "+0.4 movement speed and 10% shorter dodge cooldown", 3, WeaponType.Mutation),
-            new PowerupDefinition(PowerupType.BleedingEdge, "Edge: Bleeding Edge", "Your critical hits make enemies bleed for 3 ticks", 1, WeaponType.Mutation),
+            new PowerupDefinition(PowerupType.BleedingEdge, "Edge: Bleeding Edge", "Your critical hits make the target bleed: 10 ticks over 5 seconds, each for 10% of the hit", 1, WeaponType.Mutation),
             new PowerupDefinition(PowerupType.LightOnHisFeet, "Edge: Light on His Feet", "After a dodge roll, your next lash is always a critical hit", 1, WeaponType.Mutation),
             new PowerupDefinition(PowerupType.FreightTrain, "Freight Train", "Bulldoze charges 50% farther, and the enemies it slams are stunned 1 second longer", 1, WeaponType.Mutation, AbilityType.Bulldoze),
             new PowerupDefinition(PowerupType.RubbleWall, "Rubble Wall", "Boulder Toss's rock wall lasts twice as long and is twice as wide", 1, WeaponType.Mutation, AbilityType.BoulderToss),

@@ -366,12 +366,14 @@ namespace Slopgame
                 else if (message.Kind == CoopDamageKind.Paralyze) enemy.Paralyze(message.Duration, message.Ticks > 0);
                 else if (message.Kind == CoopDamageKind.ClearParalysis) enemy.ConsumeParalysis();
                 else if (message.Kind == CoopDamageKind.ClearHolds) enemy.ConsumeHolds();
-                else if (message.Kind == CoopDamageKind.Curse) enemy.Curse(message.Duration, message.Ticks);
+                else if (message.Kind == CoopDamageKind.Curse) enemy.Curse(message.Duration, message.Ticks, message.Amount > 0 ? message.Amount / 100f : DungeonEnemy.CurseDamageBonus);
                 else if (message.Kind == CoopDamageKind.Freeze) enemy.Freeze(message.Duration);
                 else if (message.Kind == CoopDamageKind.Fear) enemy.Fear(message.Source, message.Duration);
                 else if (message.Kind == CoopDamageKind.Stun) enemy.Stun(message.Duration);
                 else if (message.Kind == CoopDamageKind.Root) enemy.Root(message.Duration);
-                else if (message.Kind == CoopDamageKind.Bleed) enemy.Bleed(message.Ticks, message.Amount);
+                else if (message.Kind == CoopDamageKind.Bleed) enemy.Bleed(message.Amount, message.Duration, message.Ticks);
+                else if (message.Kind == CoopDamageKind.ClearBleed) enemy.ConsumeBleed();
+                else if (message.Kind == CoopDamageKind.RefreshBleed) enemy.RefreshBleed(message.Duration);
                 else if (message.Kind == CoopDamageKind.Poison) enemy.Poison(message.Ticks, message.Amount);
                 else if (message.Kind == CoopDamageKind.Mark) enemy.Mark(message.Duration);
                 else if (message.Kind == CoopDamageKind.DeathMark) enemy.DeathMark(message.Duration);

@@ -27,8 +27,8 @@ namespace Slopgame
         private string notice;
         private bool hideMaxed;
         private readonly List<PermanentUpgradeDefinition> shown = new List<PermanentUpgradeDefinition>();
-        private static readonly string[] Tabs = { "All heroes", "Knight", "Archer", "Wizard", "Assassin", "Paladin", "Brawler", "Demoness", "Gambler", "Augment", "Reaper", "Specimen" };
-        private static readonly WeaponType?[] Weapons = { null, WeaponType.Sword, WeaponType.Bow, WeaponType.Staff, WeaponType.Daggers, WeaponType.Hammer, WeaponType.Fists, WeaponType.Tail, WeaponType.Coins, WeaponType.Beam, WeaponType.Scythe, WeaponType.Mutation };
+        private static readonly string[] Tabs = { "All heroes", "Knight", "Archer", "Wizard", "Assassin", "Paladin", "Brawler", "Demoness", "Gambler", "Augment", "Reaper", "Samurai", "Specimen" };
+        private static readonly WeaponType?[] Weapons = { null, WeaponType.Sword, WeaponType.Bow, WeaponType.Staff, WeaponType.Daggers, WeaponType.Hammer, WeaponType.Fists, WeaponType.Tail, WeaponType.Coins, WeaponType.Beam, WeaponType.Scythe, WeaponType.Katana, WeaponType.Mutation };
 
         // Layout, in the 1280x720 menu space.
         private static readonly Rect ListRect = new Rect(70, 318, 1140, 270);
@@ -37,7 +37,8 @@ namespace Slopgame
         private static bool IsMaxed(PermanentProgress progress, PermanentUpgradeDefinition item) => progress.Rank(item.Id) >= item.MaxRank;
 
         private static bool CanAfford(PermanentProgress progress, PermanentUpgradeDefinition item)
-            => !progress.IsReadOnly && progress.IsAvailable(item) && !IsMaxed(progress, item) && progress.Ash >= item.Cost(progress.Rank(item.Id));
+            => !IsMaxed(progress, item) && (DebugMode.Enabled
+                || (!progress.IsReadOnly && progress.IsAvailable(item) && progress.Ash >= item.Cost(progress.Rank(item.Id))));
 
         /// <summary>Buyable first, then locked, then maxed; catalog order within each group.</summary>
         private static int SortGroup(PermanentProgress progress, PermanentUpgradeDefinition item)
@@ -95,8 +96,8 @@ namespace Slopgame
             for (int i = 0; i < Tabs.Length; i++)
             {
                 var rect = new Rect(70 + i * step, 240, step - 12, 40);
-                // Twelve tabs share the row, so the labels are a size smaller to fit.
-                if (DungeonUi.Button("shopTab" + i, rect, Tabs[i], tab == i ? AbilityCatalog.Gold : DungeonUi.Muted, true, Tabs.Length > 11 ? 15 : 18))
+                // With a dozen or more heroes sharing the row, the labels are smaller to fit.
+                if (DungeonUi.Button("shopTab" + i, rect, Tabs[i], tab == i ? AbilityCatalog.Gold : DungeonUi.Muted, true, Tabs.Length > 11 ? 14 : 18))
                 { tab = i; scroll = Vector2.zero; notice = null; }
                 foreach (var item in PermanentUpgradeCatalog.All)
                 {
@@ -140,9 +141,9 @@ namespace Slopgame
                 DungeonUi.Label(new Rect(side.x, side.y + 38, side.width, 50), LockedText(progress, item), 12, DungeonUi.Muted, TextAnchor.MiddleRight);
                 return;
             }
-            string label = maxed ? (item.MaxRank == 1 ? "Owned" : "Maxed") : $"Buy  /  {cost} Ash";
-            if (DungeonUi.Button("buy_" + item.Id, buy, label, AbilityCatalog.Gold, !maxed && !progress.IsReadOnly && progress.Ash >= cost))
-                notice = run.TryBuyUpgrade(item.Id) ? item.Name + " purchased. Applies on your next descent." : progress.LastError ?? "Purchase unavailable.";
+            string label = maxed ? (item.MaxRank == 1 ? "Owned" : "Maxed") : DebugMode.Enabled ? "Buy  /  free (debug)" : $"Buy  /  {cost} Ash";
+            if (DungeonUi.Button("buy_" + item.Id, buy, label, AbilityCatalog.Gold, CanAfford(progress, item)))
+                notice = run.TryBuyUpgrade(item.Id) ? item.Name + (DebugMode.Enabled ? " unlocked for this debug session. Not saved." : " purchased. Applies on your next descent.") : progress.LastError ?? "Purchase unavailable.";
         }
     }
 }

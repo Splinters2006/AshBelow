@@ -5,7 +5,8 @@ namespace Slopgame
     /// <summary>
     /// Session-only debug admin mode (toggle with F1 or from the main menu).
     /// While enabled: the player cannot lose HP, every hit kills, dodge/class/relic cooldowns are skipped,
-    /// and movement speed is doubled. It never touches the save file.
+    /// movement speed is doubled, and every Ash shop upgrade can be bought for free regardless of its requirements
+    /// (those purchases last for the session and only count while the mode is on). It never touches the save file.
     /// </summary>
     public static class DebugMode
     {

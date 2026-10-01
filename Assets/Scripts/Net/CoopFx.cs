@@ -105,6 +105,10 @@ namespace Slopgame
             => Send(run, FxKind.DemonPaw, center, default, null, radius, windup);
         public static void DemonHead(DungeonRun run, Vector2 center, float radius) => Send(run, FxKind.DemonHead, center, default, null, radius);
         public static void AvatarOfDeath(DungeonRun run, float duration) => Send(run, FxKind.AvatarOfDeath, default, default, null, duration);
+        /// <summary>Teammates see Demonic Power's rune circles on her (and Dread Presence's ring, when <paramref name="auraRadius"/> is above zero).</summary>
+        public static void DemonicPower(DungeonRun run, float duration, float auraRadius) => Send(run, FxKind.DemonicPower, default, default, null, duration, auraRadius);
+        /// <summary>Teammates see the Brawler's fury burning on her.</summary>
+        public static void SuperAngry(DungeonRun run, float duration) => Send(run, FxKind.SuperAngry, default, default, null, duration);
         public static void Sharpen(DungeonRun run, int bonus, float duration, bool full)
             => Send(run, FxKind.Sharpen, default, default, null, duration, full ? 1f : 0f, bonus);
         public static void CoinFlip(DungeonRun run, bool won) => Send(run, FxKind.CoinFlip, default, default, null, 0f, 0f, won ? 1 : 0);
@@ -291,6 +295,14 @@ namespace Slopgame
                 case FxKind.AvatarOfDeath:
                     var reaper = FindHero(run, fx.Origin);
                     if (reaper != null) AvatarOfDeathVfx.Play(root, reaper.transform, fx.F1);
+                    break;
+                case FxKind.DemonicPower:
+                    var demoness = FindHero(run, fx.Origin);
+                    if (demoness != null) DemonicPowerVfx.Play(root, demoness.transform, fx.F1, fx.F2);
+                    break;
+                case FxKind.SuperAngry:
+                    var furious = FindHero(run, fx.Origin);
+                    if (furious != null) SuperAngryVfx.Play(root, furious.transform, fx.F1);
                     break;
                 case FxKind.Sharpen:
                     var assassin = FindHero(run, fx.Origin);

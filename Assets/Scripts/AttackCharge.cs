@@ -15,11 +15,14 @@ namespace Slopgame
             : Player.ClassWeapon == WeaponType.Tail ? DemonessAttack.ChargeDuration
             : Player.ClassWeapon == WeaponType.Beam ? CyborgAttack.ChargeDuration
             : Player.ClassWeapon == WeaponType.Scythe ? ReaperAttack.ChargeDuration
+            : Player.ClassWeapon == WeaponType.Katana ? SamuraiAttack.ChargeDuration
             : Player.ClassWeapon == WeaponType.Mutation ? SpecimenAttack.ChargeTimeFor(Player)
             : Player.ClassWeapon == WeaponType.Sword ? KnightChargeDuration : 1.2f)
             * Player.Powerups.AttackIntervalMultiplier * Player.Buffs.ChargeDurationMultiplier
             // Seeing Red: the upgraded Super Angry charges barrages faster still.
-            * (Player.Mechanic is SuperAngry angry ? angry.ChargeDurationMultiplier : 1f);
+            * (Player.Mechanic is SuperAngry angry ? angry.ChargeDurationMultiplier : 1f)
+            // Swift as the Wind: the Samurai's flurry winds up faster too.
+            * (Player.Weapon is SamuraiAttack samurai ? samurai.SwiftIntervalMultiplier : 1f);
         public const float KnightChargeDuration = 0.75f, WizardChargeMultiplier = 4f;
         // Retaliation: after a parry the Knight's next slash is fully charged the moment he starts it.
         // Razor's Edge: so is every stab while the Assassin's upgraded Sharpened Dagger is up.

@@ -129,6 +129,10 @@ namespace Slopgame
                 var holder = Player.GetComponent<PaladinRelics>();
                 if (holder != null && holder.IsSanctuaryActive) { holder.EndSanctuary(); return true; }
             }
+            // Slice Dice Chunk: once a slash has hit, the same key throws the next one while the cooldown already runs.
+            if (slot >= 0 && slot < SlotCount && equipped[slot] == AbilityType.SliceDiceChunk && Player.Run.IsPlaying
+                && Player.Weapon is SamuraiAttack combo && combo.CanContinueCombo)
+                return aim.sqrMagnitude >= 0.001f && combo.ContinueCombo(aim, Rank(AbilityType.SliceDiceChunk));
             if (slot < 0 || slot >= SlotCount || !Player.Run.IsPlaying || Player.IsRolling || Player.IsBusy
                 || Time.time < castReadyAt || CooldownRemaining(slot) > 0f || aim.sqrMagnitude < 0.001f) return false;
             var definition = AbilityCatalog.Get(equipped[slot]);
@@ -307,6 +311,15 @@ namespace Slopgame
                 case AbilityType.ReapersTechnique:
                     var reaper = Player.GetComponent<ReaperAttack>();
                     if (reaper == null || !reaper.CastArtifact(definition.Type, aim, rank, cursorDistance)) return false;
+                    break;
+                case AbilityType.SliceDiceChunk:
+                case AbilityType.Bloodscent:
+                case AbilityType.BloodShallFlow:
+                case AbilityType.MaestrosTechnique:
+                case AbilityType.SwiftAsTheWind:
+                case AbilityType.Bloodpop:
+                    var samurai = Player.GetComponent<SamuraiAttack>();
+                    if (samurai == null || !samurai.CastArtifact(definition.Type, aim, rank)) return false;
                     break;
                 case AbilityType.MicroMissiles:
                 case AbilityType.RocketBoost:

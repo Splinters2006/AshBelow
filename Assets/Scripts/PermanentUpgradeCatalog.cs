@@ -86,6 +86,8 @@ namespace Slopgame
             AbilityUnlock(AbilityType.ReapersTechnique, 180),
             AbilityUnlock(AbilityType.GiantSwing, 180),
             AbilityUnlock(AbilityType.RoundUp, 180),
+            AbilityUnlock(AbilityType.SwiftAsTheWind, 160),
+            AbilityUnlock(AbilityType.Bloodpop, 200),
             Mechanic(WeaponType.Sword, "Shield Taunt", "R: turn red with rage for 2.25s. You can walk; you block bolts from every side (+1 ward each) and draw the enemies' attention"),
             Mechanic(WeaponType.Bow, "Elemental Quiver", "R: cycle fire, freeze and shock arrows. Critical hits set off the arrow's element"),
             Mechanic(WeaponType.Staff, "Wild Storm", "R: after 10 elemental effects, summon a storm that hurls fire, lightning and ice, every strike sure to burn, shock or freeze"),
@@ -97,6 +99,7 @@ namespace Slopgame
             Mechanic(WeaponType.Beam, "Overclock", "R: after your plasma ray strikes 25 enemies, overclock for 8s: fully charged rays at double speed and a vented, faster cannon"),
             Mechanic(WeaponType.Mutation, "Breaking Point", "R: once you have taken or soaked 10 hits (frail or Behemoth) or landed 10 crits (Edge), break loose: the Behemoth Rampages at double size, the Edge goes into Overdrive, and while frail you Snap into the form you lean toward for 10s"),
             Mechanic(WeaponType.Scythe, "Army of the Dead", "R: spend 3 souls to raise a skeleton that fights for you. Frail and weak, but its health and damage grow with yours, and its blows strike fear for 1 second"),
+            Mechanic(WeaponType.Katana, "True Poser", "R: strike a pose. While you hold it, everything you do deals 0 damage. Press R again to sheathe your katana: every enemy takes all the damage it was owed at once, times 1.25. You are invulnerable while sheathing. After a sheathe you can pose again at once, but cannot sheathe again for 10 seconds"),
             // R upgrades: one per class mechanic, sold once the Neon Arcology is cleared and the mechanic itself is owned.
             MechanicUpgrade(WeaponType.Sword, "Retribution", "When Shield Taunt ends, every nearby enemy takes your damage multiplied by the hits you blocked or took while it lasted"),
             MechanicUpgrade(WeaponType.Bow, "Elemental Surge", "Hold R to surge for 6 seconds: every arrow sets off its element, crit or not. Tapping R still cycles elements. 30 second cooldown"),
@@ -108,7 +111,8 @@ namespace Slopgame
             MechanicUpgrade(WeaponType.Beam, "Missile Rack", "While overclocked, every plasma ray you fire also launches a homing mini missile"),
             MechanicUpgrade(WeaponType.Tail, "Dread Presence", "During Demonic Power, every enemy that comes within 5 units of you is paralysed for 2 seconds"),
             MechanicUpgrade(WeaponType.Mutation, "Apex Mutation", "Rampage ends in a roar that draws every enemy to you and stuns everything nearby for 2 seconds, and every kill during Overdrive adds 0.5 seconds to it"),
-            MechanicUpgrade(WeaponType.Scythe, "Avatar of Death", "With 99 souls, R spends 99 instead of raising a skeleton: for 5 seconds you are the incarnation of death, dealing double damage and striking 1 second of fear with every hit")
+            MechanicUpgrade(WeaponType.Scythe, "Avatar of Death", "With 99 souls, R spends 99 instead of raising a skeleton: for 5 seconds you are the incarnation of death, dealing double damage and striking 1 second of fear with every hit"),
+            MechanicUpgrade(WeaponType.Katana, "Open Veins", "Sheathing also makes every enemy it cuts bleed, based on all the damage the sheathe dealt it")
         });
 
         private static PermanentUpgradeDefinition[] AddPassives(PermanentUpgradeDefinition[] existing)

@@ -94,22 +94,32 @@ namespace Slopgame
                 float show = Mathf.Clamp01(progress * RuneCount * 1.5f - i);
                 if (show <= 0f) break;
                 float a = spin + i * Mathf.PI * 2f / RuneCount;
-                Vector2 up = FlameMesh.Polar(a, 1f), along = -Vector2.Perpendicular(up);
+                Vector2 up = FlameMesh.Polar(a, 1f);
                 Vector2 at = center + up * band;
                 float glow = show * alpha * (0.7f + 0.3f * Mathf.Sin(age * 9f + i * 2.3f));
-                float[] rune = Runes[(int)(FlameMesh.Hash(i, 7.3f) * Runes.Length) % Runes.Length];
-                for (int k = 0; k + 3 < rune.Length; k += 4)
-                {
-                    Vector2 from = at + (along * rune[k] * 0.75f + up * rune[k + 1]) * height;
-                    Vector2 to = at + (along * rune[k + 2] * 0.75f + up * rune[k + 3]) * height;
-                    Vector2 direction = (to - from).normalized;
-                    float length = Vector2.Distance(from, to);
-                    mesh.Bar(from, direction, length, width * 3f, FlameMesh.Alpha(violet, 0.45f * glow), FlameMesh.Alpha(violet, 0.45f * glow));
-                    mesh.Bar(from, direction, length, width, FlameMesh.Alpha(pale, glow), FlameMesh.Alpha(pale, glow));
-                }
+                Rune(mesh, i, at, up, height, width, FlameMesh.Alpha(violet, 0.45f * glow), FlameMesh.Alpha(pale, glow));
                 // A tick on the outer ring between each rune.
                 Vector2 tick = FlameMesh.Polar(a + Mathf.PI / RuneCount, 1f);
                 mesh.Bar(center + tick * r * 1.16f, tick, r * 0.08f, 0.04f, FlameMesh.Alpha(pale, 0.8f * glow), FlameMesh.Alpha(violet, 0f));
+            }
+        }
+
+        /// <summary>
+        /// One demonic rune (picked by <paramref name="index"/>) stroked at <paramref name="at"/>, <paramref name="height"/> tall with its top towards
+        /// <paramref name="up"/>: a wide <paramref name="glow"/> under a thin <paramref name="core"/>.
+        /// </summary>
+        public static void Rune(FlameMesh mesh, int index, Vector2 at, Vector2 up, float height, float width, Color glow, Color core)
+        {
+            Vector2 along = -Vector2.Perpendicular(up);
+            float[] rune = Runes[(int)(FlameMesh.Hash(index, 7.3f) * Runes.Length) % Runes.Length];
+            for (int k = 0; k + 3 < rune.Length; k += 4)
+            {
+                Vector2 from = at + (along * rune[k] * 0.75f + up * rune[k + 1]) * height;
+                Vector2 to = at + (along * rune[k + 2] * 0.75f + up * rune[k + 3]) * height;
+                Vector2 direction = (to - from).normalized;
+                float length = Vector2.Distance(from, to);
+                mesh.Bar(from, direction, length, width * 3f, glow, glow);
+                mesh.Bar(from, direction, length, width, core, core);
             }
         }
 

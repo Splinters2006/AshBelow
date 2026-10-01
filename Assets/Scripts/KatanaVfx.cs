@@ -1,0 +1,354 @@
+using UnityEngine;
+
+namespace Slopgame
+{
+    /// <summary>
+    /// The Samurai's katana work: a crescent that sweeps across a cut, a straight thrust, the clean slice his dash
+    /// leaves behind, the slow sheathe that ends his pose, and the impact frames that hit as it clicks shut.
+    /// </summary>
+    public sealed class KatanaVfx : MeshEffect
+    {
+        private enum Style { Crescent, Thrust, Slice, Sheathe, Impact }
+        private Style style;
+        private Vector2 origin, aim, end;
+        private float reach, cone, width;
+        private bool reverse;
+        private Color color;
+        private Vector2[] cuts;
+
+        /// <summary>A crescent of steel sweeping across the cone; <paramref name="reverse"/> swings it back the other way.</summary>
+        public static void Crescent(Transform root, Vector2 origin, Vector2 aim, float reach, float coneAngle, Color color, bool reverse = false, float duration = 0.2f)
+        {
+            if (aim.sqrMagnitude < 0.0001f) return;
+            var effect = Spawn<KatanaVfx>(root, duration);
+            if (effect == null) return;
+            effect.style = Style.Crescent;
+            effect.origin = origin;
+            effect.aim = aim.normalized;
+            effect.reach = Mathf.Max(0.4f, reach);
+            effect.cone = Mathf.Clamp(coneAngle, 10f, 360f) * Mathf.Deg2Rad;
+            effect.reverse = reverse;
+            effect.color = color;
+            effect.Redraw();
+        }
+
+        /// <summary>A straight lunge with the point.</summary>
+        public static void Thrust(Transform root, Vector2 origin, Vector2 aim, float reach, float halfWidth, Color color)
+        {
+            if (aim.sqrMagnitude < 0.0001f) return;
+            var effect = Spawn<KatanaVfx>(root, 0.22f);
+            if (effect == null) return;
+            effect.style = Style.Thrust;
+            effect.origin = origin;
+            effect.aim = aim.normalized;
+            effect.reach = Mathf.Max(0.5f, reach);
+            effect.width = halfWidth;
+            effect.color = color;
+            effect.Redraw();
+        }
+
+        /// <summary>One clean line from <paramref name="from"/> to <paramref name="to"/> that hangs for a beat, then parts and bleeds away.</summary>
+        public static void Slice(Transform root, Vector2 from, Vector2 to, Color color, float duration = 0.45f)
+        {
+            if ((to - from).sqrMagnitude < 0.0001f) return;
+            var effect = Spawn<KatanaVfx>(root, duration, 10);
+            if (effect == null) return;
+            effect.style = Style.Slice;
+            effect.origin = from;
+            effect.end = to;
+            effect.color = color;
+            effect.Redraw();
+        }
+
+        /// <summary>The katana slides home into its scabbard at his hip and clicks shut.</summary>
+        public static void Sheathe(Transform root, Vector2 hero, Vector2 facing, Color color, float duration)
+        {
+            var effect = Spawn<KatanaVfx>(root, duration, 10);
+            if (effect == null) return;
+            effect.style = Style.Sheathe;
+            effect.origin = hero;
+            effect.aim = facing.x < 0f ? Vector2.left : Vector2.right;
+            effect.color = color;
+            effect.Redraw();
+        }
+
+        /// <summary>
+        /// Impact frames: for a few frames the whole screen snaps to black, then white, then blood, with every cut in
+        /// <paramref name="cuts"/> (pairs of points, one line each) drawn clean across it in the opposite colour.
+        /// </summary>
+        public static void Impact(Transform root, Vector2 hero, Vector2[] cuts, Color color, float duration)
+        {
+            var effect = Spawn<KatanaVfx>(root, duration, 30);
+            if (effect == null) return;
+            effect.style = Style.Impact;
+            effect.origin = hero;
+            effect.cuts = cuts;
+            effect.color = color;
+            effect.Redraw();
+        }
+
+        protected override void Draw(float t)
+        {
+            if (style == Style.Crescent) DrawCrescent(t);
+            else if (style == Style.Thrust) DrawThrust(t);
+            else if (style == Style.Slice) DrawSlice(t);
+            else if (style == Style.Impact) DrawImpact(t);
+            else DrawSheathe(t);
+        }
+
+        private void DrawCrescent(float t)
+        {
+            // The edge whips across the cone in the first third; the crescent it leaves hangs, drifts outward and is
+            // eaten away from the tail. Whatever the steel's colour, its underside runs with blood.
+            float head = EaseOut(t / 0.32f), tail = t < 0.3f ? 0f : 0.9f * (t - 0.3f) / 0.7f * ((t - 0.3f) / 0.7f);
+            float fade = t < 0.45f ? 1f : 1f - (t - 0.45f) / 0.55f;
+            float start = Mathf.Atan2(aim.y, aim.x) + (reverse ? cone : -cone) * 0.5f, turn = reverse ? -cone : cone;
+            float radius = reach * (1f + 0.07f * t), thickness = Mathf.Min(0.8f, reach * 0.34f) * (0.55f + 0.45f * fade);
+            Color blood = SamuraiAttack.Blood, dark = new Color(blood.r * 0.25f, 0f, blood.b * 0.2f);
+            const int Segments = 32;
+            for (int i = 0; i < Segments; i++)
+            {
+                float u0 = Mathf.Lerp(tail, head, i / (float)Segments), u1 = Mathf.Lerp(tail, head, (i + 1) / (float)Segments);
+                float v0 = i / (float)Segments, v1 = (i + 1) / (float)Segments;
+                float a0 = start + turn * u0, a1 = start + turn * u1;
+                // A long thin tail swelling to a heavy belly, then cut off sharp just behind the edge.
+                float w0 = CrescentWidth(v0) * thickness, w1 = CrescentWidth(v1) * thickness;
+                float b0 = fade * Mathf.Lerp(0.35f, 1f, v0), b1 = fade * Mathf.Lerp(0.35f, 1f, v1);
+                Vector2 d0 = FlameMesh.Polar(a0, 1f), d1 = FlameMesh.Polar(a1, 1f);
+                // From the inside out: a dark bloody shadow, the coloured body, a hard white edge, and a thin glow beyond it.
+                Band(d0, d1, radius - w0 * 1.35f, radius - w1 * 1.35f, radius - w0 * 0.6f, radius - w1 * 0.6f,
+                    FlameMesh.Alpha(dark, 0f), FlameMesh.Alpha(blood, 0.75f * b0), FlameMesh.Alpha(blood, 0.75f * b1));
+                Band(d0, d1, radius - w0 * 0.6f, radius - w1 * 0.6f, radius - w0 * 0.22f, radius - w1 * 0.22f,
+                    FlameMesh.Alpha(blood, 0.75f * b0), FlameMesh.Alpha(color, b0), FlameMesh.Alpha(color, b1), FlameMesh.Alpha(blood, 0.75f * b1));
+                Band(d0, d1, radius - w0 * 0.22f, radius - w1 * 0.22f, radius, radius,
+                    FlameMesh.Alpha(Color.white, b0), FlameMesh.Alpha(Color.white, b0), FlameMesh.Alpha(Color.white, b1), FlameMesh.Alpha(Color.white, b1));
+                Band(d0, d1, radius, radius, radius + w0 * 0.3f, radius + w1 * 0.3f,
+                    FlameMesh.Alpha(color, 0.6f * b0), FlameMesh.Alpha(color, 0f), FlameMesh.Alpha(color, 0f), FlameMesh.Alpha(color, 0.6f * b1));
+                // Speed lines: hair-thin arcs inside the cut, where the flat of the blade passed.
+                for (int line = 0; line < 3; line++)
+                {
+                    float r = radius * (0.5f + 0.15f * line), w = 0.035f * Mathf.Sin(v0 * Mathf.PI);
+                    Band(d0, d1, r - w, r - w, r + w, r + w, FlameMesh.Alpha(color, 0.5f * b0), FlameMesh.Alpha(color, 0.5f * b1));
+                }
+            }
+            // The point of the blade flares while it is still moving.
+            float glint = Mathf.Clamp01(1f - t / 0.4f);
+            if (glint > 0f)
+            {
+                Vector2 dir = FlameMesh.Polar(start + turn * head, 1f), tip = origin + dir * radius, tangent = Vector2.Perpendicular(dir);
+                Color white = FlameMesh.Alpha(Color.white, glint), clear = FlameMesh.Alpha(Color.white, 0f);
+                Mesh.Bar(tip, tangent, 0.7f * glint, 0.06f, white, clear);
+                Mesh.Bar(tip, -tangent, 0.7f * glint, 0.06f, white, clear);
+                Mesh.Bar(tip, dir, 0.45f * glint, 0.06f, white, clear);
+                Mesh.Bar(tip, -dir, 0.45f * glint, 0.06f, white, clear);
+                Mesh.Diamond(tip, 0.16f * glint, white);
+            }
+            // Blood flicked off the edge, thrown outward and along the swing.
+            for (int i = 0; i < 9; i++)
+            {
+                float u = 0.1f + 0.85f * FlameMesh.Hash(i, origin.x + aim.y * 7.3f), born = u * 0.3f;
+                if (t < born) continue;
+                float life = (t - born) / (1f - born), angle = start + turn * u;
+                Vector2 dir = FlameMesh.Polar(angle, 1f), tangent = Vector2.Perpendicular(dir) * Mathf.Sign(turn);
+                float speed = 0.5f + 0.9f * FlameMesh.Hash(i, 4.4f);
+                Vector2 at = origin + dir * (radius + speed * EaseOut(life) * 0.9f) + tangent * speed * life * 0.7f;
+                Mesh.Bar(at, -(dir + tangent * 0.7f).normalized, 0.28f * (1f - life), 0.05f, FlameMesh.Alpha(i % 3 == 0 ? Color.white : blood, 1f - life), FlameMesh.Alpha(blood, 0f));
+            }
+        }
+
+        /// <summary>How thick the crescent is along its length: 0 at the tail, fattest three-quarters of the way up, a sharp point at the edge.</summary>
+        private static float CrescentWidth(float v) => Mathf.Pow(Mathf.Clamp01(v), 1.6f) * Mathf.Clamp01((1f - v) / 0.14f);
+
+        /// <summary>One slice of an arc band between two directions from the origin, from an inner to an outer radius.</summary>
+        private void Band(Vector2 d0, Vector2 d1, float inner0, float inner1, float outer0, float outer1, Color innerStart, Color outerStart, Color outerEnd, Color innerEnd)
+            => Mesh.Quad(origin + d0 * inner0, origin + d0 * outer0, origin + d1 * outer1, origin + d1 * inner1, innerStart, outerStart, outerEnd, innerEnd);
+
+        private void Band(Vector2 d0, Vector2 d1, float inner0, float inner1, float outer0, float outer1, Color inner, Color outerStart, Color outerEnd)
+            => Band(d0, d1, inner0, inner1, outer0, outer1, inner, outerStart, outerEnd, inner);
+
+        private void Band(Vector2 d0, Vector2 d1, float inner0, float inner1, float outer0, float outer1, Color start, Color end)
+            => Band(d0, d1, inner0, inner1, outer0, outer1, start, start, end, end);
+
+        private void DrawThrust(float t)
+        {
+            float extend = t < 0.25f ? EaseOut(t / 0.25f) : 1f, fade = t < 0.3f ? 1f : 1f - (t - 0.3f) / 0.7f;
+            Vector2 side = Vector2.Perpendicular(aim), start = origin + aim * 0.3f, tip = origin + aim * reach * extend;
+            Color blood = SamuraiAttack.Blood;
+            // The lane the point drives down, with the air torn into streaks either side of it.
+            Mesh.Quad(start - side * width * 0.3f, start + side * width * 0.3f, tip + side * width, tip - side * width,
+                FlameMesh.Alpha(color, 0f), FlameMesh.Alpha(color, 0f), FlameMesh.Alpha(color, 0.45f * fade), FlameMesh.Alpha(color, 0.45f * fade));
+            for (int i = 0; i < 6; i++)
+            {
+                float offset = (FlameMesh.Hash(i, 1.7f) - 0.5f) * 2f * width, from = 0.15f + 0.5f * FlameMesh.Hash(i, 8.3f);
+                Mesh.Bar(origin + aim * reach * extend * from + side * offset, aim, reach * extend * (1f - from) * 0.8f, 0.03f,
+                    FlameMesh.Alpha(Color.white, 0f), FlameMesh.Alpha(Color.white, 0.7f * fade));
+            }
+            // The blade itself: a long sliver of steel, hard white down the middle and bloody at the edges.
+            Mesh.Triangle(start - side * 0.16f, tip + aim * 0.3f, start + side * 0.16f,
+                FlameMesh.Alpha(blood, 0f), FlameMesh.Alpha(blood, 0.9f * fade), FlameMesh.Alpha(blood, 0f));
+            Mesh.Triangle(start - side * 0.07f, tip + aim * 0.3f, start + side * 0.07f,
+                FlameMesh.Alpha(Color.white, 0.6f * fade), FlameMesh.Alpha(Color.white, fade), FlameMesh.Alpha(Color.white, 0.6f * fade));
+            // Rings of air punched open along the lunge, widest at the point.
+            if (t > 0.2f)
+            {
+                float burst = (t - 0.2f) / 0.8f, open = EaseOut(burst);
+                for (int i = 0; i < 3; i++)
+                {
+                    Vector2 at = origin + aim * reach * (0.45f + 0.25f * i);
+                    float span = (0.25f + 0.2f * i + width) * open, alpha = (1f - burst) * (0.5f + 0.25f * i);
+                    Mesh.Bar(at - side * span, side, span * 2f, 0.05f * (1f - burst) + 0.01f, FlameMesh.Alpha(color, 0f), FlameMesh.Alpha(Color.white, alpha));
+                    Mesh.Bar(at + side * span, -side, span * 2f, 0.05f * (1f - burst) + 0.01f, FlameMesh.Alpha(color, 0f), FlameMesh.Alpha(Color.white, alpha));
+                }
+            }
+            float glint = Mathf.Clamp01(1f - Mathf.Abs(t - 0.25f) / 0.25f);
+            if (glint <= 0f) return;
+            Color white = FlameMesh.Alpha(Color.white, glint), clear = FlameMesh.Alpha(Color.white, 0f);
+            Mesh.Bar(tip, side, 0.8f * glint, 0.06f, white, clear);
+            Mesh.Bar(tip, -side, 0.8f * glint, 0.06f, white, clear);
+            Mesh.Bar(tip, aim, 0.5f * glint, 0.06f, white, clear);
+            Mesh.Diamond(tip, 0.18f * glint, white);
+        }
+
+        private void DrawSlice(float t)
+        {
+            Vector2 along = (end - origin).normalized, side = Vector2.Perpendicular(along);
+            float length = Vector2.Distance(origin, end);
+            if (t < 0.28f)
+            {
+                // The cut itself: it snaps the whole way across almost at once, fat and white over a bloody glow, then
+                // tightens to a hair before it parts.
+                float u = t / 0.28f, snap = EaseOut(u / 0.3f), half = Mathf.Lerp(0.13f, 0.04f, u);
+                Vector2 head = origin + along * length * snap, middle = origin + along * length * snap * 0.5f;
+                Mesh.Triangle(origin - along * 0.4f, middle + side * half * 4f, middle - side * half * 4f, FlameMesh.Alpha(color, 0f), FlameMesh.Alpha(color, 0.8f), FlameMesh.Alpha(color, 0.8f));
+                Mesh.Triangle(head + along * 0.4f, middle - side * half * 4f, middle + side * half * 4f, FlameMesh.Alpha(color, 0f), FlameMesh.Alpha(color, 0.8f), FlameMesh.Alpha(color, 0.8f));
+                Mesh.Triangle(origin - along * 0.3f, middle + side * half, middle - side * half, Color.white, Color.white, Color.white);
+                Mesh.Triangle(head + along * 0.5f, middle - side * half, middle + side * half, Color.white, Color.white, Color.white);
+                // A flare where the blade stops.
+                float flare = 1f - u;
+                Color white = FlameMesh.Alpha(Color.white, flare), clear = FlameMesh.Alpha(Color.white, 0f);
+                Mesh.Bar(head, side, 0.9f * flare, 0.07f, white, clear);
+                Mesh.Bar(head, -side, 0.9f * flare, 0.07f, white, clear);
+                Mesh.Bar(head, along, 0.6f * flare, 0.07f, white, clear);
+                Mesh.Diamond(head, 0.2f * flare, white);
+                return;
+            }
+            // Then the two halves slide apart and the line bleeds out.
+            float part = (t - 0.28f) / 0.72f, fade = 1f - part, open = EaseOut(part);
+            Mesh.Bar(origin, along, length, 0.45f * open, FlameMesh.Alpha(color, 0.45f * fade), FlameMesh.Alpha(color, 0.15f * fade));
+            for (int i = -1; i <= 1; i += 2)
+            {
+                Vector2 shift = side * i * 0.18f * open + along * i * 0.35f * open;
+                Mesh.Bar(origin + shift, along, length, 0.07f * fade + 0.01f, FlameMesh.Alpha(Color.white, fade), FlameMesh.Alpha(color, fade));
+            }
+            // Blood spits out of the opening, square to the cut.
+            for (int i = 0; i < 8; i++)
+            {
+                float where = FlameMesh.Hash(i, length), reachOut = (0.3f + 0.7f * FlameMesh.Hash(i, 6.1f)) * open;
+                Vector2 dir = side * (i % 2 == 0 ? 1f : -1f);
+                Mesh.Bar(origin + along * length * where + dir * reachOut, -dir, 0.3f * fade, 0.045f, FlameMesh.Alpha(color, fade), FlameMesh.Alpha(color, 0f));
+            }
+        }
+
+        private void DrawSheathe(float t)
+        {
+            // The scabbard rests at his hip, pointing down and back; the blade is drawn up and out ahead of him.
+            Vector2 mouth = origin + new Vector2(aim.x * 0.15f, -0.1f);
+            Vector2 back = new Vector2(-aim.x * 0.8f, -0.6f).normalized, blade = -back, side = Vector2.Perpendicular(blade);
+            Color scabbard = new Color(0.08f, 0.05f, 0.08f), gold = new Color(1f, 0.8f, 0.38f);
+            const float Click = 0.72f;
+            float fade = t > 0.85f ? 1f - (t - 0.85f) / 0.15f : 1f;
+            // The room dims around him while the blade is out, and snaps back on the click.
+            float hush = t < Click ? EaseOut(t / Click) : Mathf.Clamp01(1f - (t - Click) / 0.08f);
+            Mesh.Ring(origin, 2.1f, 2.6f, FlameMesh.Alpha(Color.black, 0f), FlameMesh.Alpha(Color.black, 0.5f * hush));
+            Mesh.Ring(origin, 5.4f, 4f, FlameMesh.Alpha(Color.black, 0.5f * hush), FlameMesh.Alpha(Color.black, 0f));
+            // Blood is dragged in toward the scabbard, faster and faster.
+            if (t < Click)
+            {
+                float pull = t / Click;
+                for (int i = 0; i < 16; i++)
+                {
+                    float phase = Mathf.Repeat(pull * (1.5f + 2f * pull) + FlameMesh.Hash(i, 9.1f), 1f);
+                    Vector2 dir = FlameMesh.Polar(FlameMesh.Hash(i, 3.7f) * Mathf.PI * 2f, 1f);
+                    float far = Mathf.Lerp(2.8f, 0.3f, phase * phase);
+                    Mesh.Bar(mouth + dir * (far + 0.25f + 0.5f * pull), -dir, 0.25f + 0.5f * pull, 0.04f,
+                        FlameMesh.Alpha(color, 0f), FlameMesh.Alpha(i % 4 == 0 ? Color.white : color, (0.35f + 0.65f * pull) * (1f - phase)));
+                }
+            }
+            Mesh.Bar(mouth, back, 1.15f, 0.13f, FlameMesh.Alpha(scabbard, fade), FlameMesh.Alpha(scabbard, fade));
+            Mesh.Bar(mouth + side * 0.035f, back, 1.05f, 0.025f, FlameMesh.Alpha(Color.white, 0.3f * fade), FlameMesh.Alpha(Color.white, 0f));
+            Mesh.Bar(mouth + back * 1.05f, back, 0.12f, 0.15f, FlameMesh.Alpha(gold, fade), FlameMesh.Alpha(gold, fade));
+            Mesh.Bar(mouth, back, 0.16f, 0.17f, FlameMesh.Alpha(color, fade), FlameMesh.Alpha(color, fade));
+            // Slow at first, then it snaps home. The hilt rides the end of the blade and stays out once it is in.
+            float home = Mathf.Clamp01(t / 0.7f), left = 1f - home * home * home;
+            Vector2 guard = mouth + blade * 1.3f * left;
+            if (left > 0.01f)
+            {
+                // The edge burns red against the dark.
+                Mesh.Quad(mouth - side * 0.13f, mouth + side * 0.13f, guard + side * 0.1f, guard - side * 0.1f,
+                    FlameMesh.Alpha(color, 0.15f), FlameMesh.Alpha(color, 0.15f), FlameMesh.Alpha(color, 0.6f), FlameMesh.Alpha(color, 0.6f));
+                Mesh.Quad(mouth - side * 0.04f, mouth + side * 0.04f, guard + side * 0.035f, guard - side * 0.035f, Color.white, Color.white, Color.white, Color.white);
+                // Light runs down the edge as it goes in.
+                Vector2 glintAt = mouth + blade * 1.3f * left * (1f - Mathf.Repeat(t * 4f, 1f));
+                Mesh.Diamond(glintAt, 0.11f, FlameMesh.Alpha(Color.white, 0.95f));
+            }
+            Mesh.Bar(guard, blade, 0.36f, 0.075f, FlameMesh.Alpha(scabbard, fade), FlameMesh.Alpha(scabbard, fade));
+            Mesh.Bar(guard + blade * 0.1f, blade, 0.06f, 0.085f, FlameMesh.Alpha(color, fade), FlameMesh.Alpha(color, fade));
+            Mesh.Bar(guard + blade * 0.23f, blade, 0.06f, 0.085f, FlameMesh.Alpha(color, fade), FlameMesh.Alpha(color, fade));
+            Mesh.Bar(guard - side * 0.13f, side, 0.26f, 0.055f, FlameMesh.Alpha(gold, fade), FlameMesh.Alpha(gold, fade));
+            // The click: an eight-pointed star at the scabbard's mouth as the guard meets it, with a long flat glare through it.
+            float click = Mathf.Clamp01(1f - Mathf.Abs(t - Click) / 0.18f);
+            if (click > 0f)
+            {
+                Color white = FlameMesh.Alpha(Color.white, click), clear = FlameMesh.Alpha(Color.white, 0f);
+                Mesh.Bar(mouth, Vector2.left, 3.4f * click, 0.07f, white, clear);
+                Mesh.Bar(mouth, Vector2.right, 3.4f * click, 0.07f, white, clear);
+                Mesh.Bar(mouth, Vector2.up, 1.1f * click, 0.07f, white, clear);
+                Mesh.Bar(mouth, Vector2.down, 1.1f * click, 0.07f, white, clear);
+                for (int i = 0; i < 4; i++)
+                    Mesh.Bar(mouth, FlameMesh.Polar(Mathf.PI * (0.25f + 0.5f * i), 1f), 0.6f * click, 0.05f, FlameMesh.Alpha(color, click), FlameMesh.Alpha(color, 0f));
+                Mesh.Disc(mouth, 0.4f * click, FlameMesh.Alpha(Color.white, 0.9f * click), FlameMesh.Alpha(color, 0f), 16);
+            }
+            // Then the shock of it rolls outward.
+            if (t <= Click) return;
+            float after = (t - Click) / (1f - Click), spread = EaseOut(after);
+            Mesh.Ring(mouth, 0.3f + 2.6f * spread, 0.16f * (1f - after), FlameMesh.Alpha(color, 1f - after));
+            Mesh.Ring(mouth, 0.2f + 1.5f * spread, 0.07f * (1f - after), FlameMesh.Alpha(Color.white, 1f - after));
+        }
+
+        private void DrawImpact(float t)
+        {
+            // Three hard frames, no blending between them: white on black, black on white, then white on blood as it lets go.
+            int frame = t < 0.4f ? 0 : t < 0.7f ? 1 : 2;
+            Color ground = frame == 0 ? Color.black : frame == 1 ? Color.white : FlameMesh.Alpha(color, 0.75f * (1f - (t - 0.7f) / 0.3f));
+            Color ink = frame == 1 ? Color.black : Color.white;
+            var view = Camera.main;
+            Vector2 center = view != null ? (Vector2)view.transform.position : origin;
+            Mesh.Rect(center - new Vector2(60f, 40f), center + new Vector2(60f, 40f), ground);
+            // Speed lines racing in at him from the edges of the screen.
+            for (int i = 0; i < 22; i++)
+            {
+                float angle = (i + FlameMesh.Hash(i, frame + 1.3f)) / 22f * Mathf.PI * 2f, near = 2.2f + 3.5f * FlameMesh.Hash(i, frame + 5.9f);
+                Vector2 dir = FlameMesh.Polar(angle, 1f), across = Vector2.Perpendicular(dir) * (0.25f + 0.5f * FlameMesh.Hash(i, 2.2f));
+                Mesh.Triangle(origin + dir * near, origin + dir * 45f + across * 4f, origin + dir * 45f - across * 4f, ink, ink, ink);
+            }
+            // Every cut, ruled clean across the whole screen.
+            float half = frame == 0 ? 0.16f : frame == 1 ? 0.11f : 0.06f;
+            for (int i = 0; cuts != null && i + 1 < cuts.Length; i += 2)
+            {
+                Vector2 along = (cuts[i + 1] - cuts[i]).normalized, side = Vector2.Perpendicular(along), middle = (cuts[i] + cuts[i + 1]) * 0.5f;
+                if (frame == 0)
+                {
+                    Mesh.Triangle(middle - along * 30f, middle + side * half * 3f, middle - side * half * 3f, color, color, color);
+                    Mesh.Triangle(middle + along * 30f, middle - side * half * 3f, middle + side * half * 3f, color, color, color);
+                }
+                Mesh.Triangle(middle - along * 30f, middle + side * half, middle - side * half, ink, ink, ink);
+                Mesh.Triangle(middle + along * 30f, middle - side * half, middle + side * half, ink, ink, ink);
+            }
+            // And the glint where the guard met the scabbard.
+            float star = frame == 0 ? 1f : frame == 1 ? 0.7f : 0.4f;
+            Mesh.Bar(origin + Vector2.left * 1.6f * star, Vector2.right, 3.2f * star, 0.09f, ink, ink);
+            Mesh.Bar(origin + Vector2.down * 1.6f * star, Vector2.up, 3.2f * star, 0.09f, ink, ink);
+            Mesh.Diamond(origin, 0.35f * star, ink);
+        }
+    }
+}

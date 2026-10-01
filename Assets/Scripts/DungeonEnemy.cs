@@ -50,7 +50,7 @@ namespace Slopgame
         public bool IsRooted => Time.time < rootedUntil;
         /// <summary>Held or rooted: what talents mean by an immobilized enemy (paralysed, frozen, stunned or rooted).</summary>
         public bool IsImmobilized => IsHeld || IsRooted;
-        public bool IsBleeding => bleedTicks > 0 || netBleeding;
+        public bool IsBleeding => wounds.Count > 0 || netBleeding;
         public bool IsPoisoned => poisonTicks > 0 || netPoisoned;
         /// <summary>Suffering any damage over time: burning, bleeding or poisoned.</summary>
         public bool HasDamageOverTime => IsBurning || IsBleeding || IsPoisoned;
@@ -61,8 +61,8 @@ namespace Slopgame
         public bool IsUnhurt => Health >= PeakHealth;
         public static readonly Color StunnedTint = new Color(1f, 0.95f, 0.55f), RootedTint = new Color(0.7f, 0.6f, 0.4f);
         public static readonly Color BleedColor = new Color(0.85f, 0.08f, 0.12f), PoisonColor = new Color(0.45f, 0.95f, 0.3f);
-        private float stunnedUntil, stunImmuneUntil, rootedUntil, nextBleed, nextPoison;
-        private int bleedTicks, bleedDamage, poisonTicks, poisonDamage, peakHealth;
+        private float stunnedUntil, stunImmuneUntil, rootedUntil, nextPoison;
+        private int poisonTicks, poisonDamage, peakHealth;
         private bool netBleeding, netPoisoned;
         /// <summary>
         /// Death Mark: every hit taken is remembered. If the enemy dies while marked, all of it bursts out onto every
@@ -107,9 +107,12 @@ namespace Slopgame
         }
         /// <summary>Paralysed enemies cannot move, turn or attack (the Demoness's vital stabs and curses).</summary>
         public bool IsParalyzed => Time.time < paralyzedUntil;
-        /// <summary>Cursed enemies take <see cref="CurseDamageMultiplier"/> times the damage from every hit.</summary>
+        /// <summary>Cursed enemies take more damage from every hit: <see cref="CurseDamageBonus"/> under the Demon Curse ability, <see cref="LesserCurseDamageBonus"/> under a lesser curse.</summary>
         public bool IsCursed => Time.time < cursedUntil;
-        public const float CurseDamageMultiplier = 1.5f;
+        public const float CurseDamageBonus = 0.5f, LesserCurseDamageBonus = 0.25f;
+        private float curseBonus = CurseDamageBonus;
+        private bool curseShown;
+        private float curseShownAt;
         /// <summary>Hex Mastery: how much more damage a curse adds per rank of the talent it was cast with.</summary>
         public const float CurseMasteryBonus = 0.25f;
         private int curseMastery;
@@ -160,19 +163,37 @@ namespace Slopgame
             burnIndicator.transform.localPosition = new Vector2(0, 0.95f);
             burnIndicator.gameObject.SetActive(IsBurning);
             curseIndicator = DungeonVisuals.Create("Curse indicator", transform, transform.position,
-                new Vector2(0.3f, 0.3f), DemonessAttack.Violet, 9);
-            curseIndicator.transform.localPosition = new Vector2(0, -0.85f);
+                Vector2.one * CurseSkullSize, HeroBuffs.AscendColor, 10);
+            curseIndicator.sprite = DungeonVisuals.SkullSprite;
+            curseIndicator.transform.localPosition = new Vector2(0, CurseSkullHeight);
             curseIndicator.gameObject.SetActive(false);
         }
 
-        /// <summary>A small violet sigil under a cursed enemy that spins while the curse holds.</summary>
+        private const float CurseSkullSize = 0.42f, CurseSkullHeight = 1.4f, CurseSkullPop = 0.3f;
+
+        /// <summary>
+        /// A purple skull over a cursed enemy, whatever cursed it: it bursts in large as the curse takes hold, then bobs and
+        /// pulses above the enemy until the curse lifts.
+        /// </summary>
         private void UpdateCurseIndicator()
         {
             if (curseIndicator == null) return;
-            curseIndicator.gameObject.SetActive(IsCursed);
-            if (!IsCursed) return;
-            curseIndicator.transform.localRotation = Quaternion.Euler(0, 0, 45f + Time.time * 90f);
-            curseIndicator.color = FlameMesh.Alpha(DemonessAttack.Violet, 0.6f + 0.3f * Mathf.Sin(Time.time * 8f));
+            bool cursed = IsCursed;
+            curseIndicator.gameObject.SetActive(cursed);
+            if (cursed && !curseShown)
+            {
+                curseShownAt = Time.time;
+                var root = Run.ProjectileRoot;
+                HeroVfx.Sparks(root, transform.position, HeroBuffs.AscendColor, 8, 3f, 0.35f);
+                HeroVfx.Pulse(root, transform.position, 0.7f, HeroBuffs.AscendColor, 0.3f);
+            }
+            curseShown = cursed;
+            if (!cursed) return;
+            float pop = 1f - Mathf.Clamp01((Time.time - curseShownAt) / CurseSkullPop);
+            curseIndicator.transform.localScale = Vector3.one * CurseSkullSize * (1f + 1.4f * pop * pop);
+            curseIndicator.transform.localPosition = new Vector2(0, CurseSkullHeight + 0.06f * Mathf.Sin(Time.time * 4f));
+            curseIndicator.color = FlameMesh.Alpha(Color.Lerp(HeroBuffs.AscendColor, DemonessAttack.Pale, 0.6f * pop),
+                0.8f + 0.2f * Mathf.Sin(Time.time * 8f));
         }
 
         private void Update()
@@ -192,12 +213,11 @@ namespace Slopgame
             }
             SettleDeathMark();
             if (Health <= 0) return;
-            if (bleedTicks > 0 && Time.time >= nextBleed)
+            int bled = TickWounds();
+            if (bled > 0)
             {
-                bleedTicks--;
-                nextBleed = Time.time + 1f;
                 HeroVfx.Sparks(Run.ProjectileRoot, transform.position, BleedColor, 5, 2f, 0.3f, Vector2.down, 90f, 0.8f);
-                Hit(bleedDamage, transform.position, 0f);
+                Hit(bled, transform.position, 0f);
                 if (Health <= 0) return;
             }
             if (poisonTicks > 0 && Time.time >= nextPoison)
@@ -266,6 +286,8 @@ namespace Slopgame
         {
             ActionTime += Time.deltaTime * ActionSpeedMultiplier * Tempo;
             UpdateCurseIndicator();
+            // The host deals the bleeding; here the wounds only count down, so this hero knows what is left of them.
+            TickWounds();
             if (hasSnapshot)
                 transform.position = Vector2.Distance(transform.position, netPosition) > 2.5f ? netPosition
                     : Vector2.Lerp(transform.position, netPosition, 1f - Mathf.Exp(-14f * Time.deltaTime));
@@ -342,6 +364,13 @@ namespace Slopgame
             if (DebugMode.Enabled) damage = Mathf.Max(damage, Health);
             LastHitRegion = Facing.RegionFrom(source);
             HitReceived?.Invoke(LastHitRegion);
+            // True Poser: while the Samurai holds his pose, his blows deal nothing and are owed until he sheathes.
+            if (damage > 0 && FromLocalHero && Run.Player.Mechanic is TruePoser poser && poser.IsPosing)
+            {
+                poser.Store(this, damage);
+                hitUntil = Time.time + 0.15f;
+                return;
+            }
             if (Run.IsGuest)
             {
                 // Show the hit now; the host applies it (and any curse) and confirms any kill.
@@ -409,6 +438,8 @@ namespace Slopgame
             if (localKill) ScrapPickup.TryDrop(Run, this);
             // The Reaper takes the souls of the soul-bound, and fear he has sown spreads from the fallen.
             if (Run.Player != null && Run.Player.Weapon is ReaperAttack reaper) reaper.OnEnemyDied(this, localKill);
+            // Crimson Bloom (the Samurai's passive): whoever dies bleeding bursts with the blood it had left to lose.
+            if (Run.Player != null && Run.Player.Weapon is SamuraiAttack samurai) samurai.OnEnemyDied(this);
             // The Specimen's chains pass a binding on (Shackles), and kills stretch an upgraded Overdrive.
             if (Run.Player != null && Run.Player.Weapon is SpecimenAttack specimen) specimen.OnEnemyDied(this, localKill);
             // Every fallen enemy leaves crystals for the shop before the next boss. In co-op they are shared: every machine
@@ -440,7 +471,7 @@ namespace Slopgame
         }
 
         /// <summary>Damage after the curse, rounded half up so even a 1-damage hit is worth more on a cursed enemy.</summary>
-        public int CursedDamage(int damage) => IsCursed ? Mathf.FloorToInt(damage * (CurseDamageMultiplier + curseMastery * CurseMasteryBonus) + 0.5f) : damage;
+        public int CursedDamage(int damage) => IsCursed ? Mathf.FloorToInt(damage * (1f + curseBonus + curseMastery * CurseMasteryBonus) + 0.5f) : damage;
 
         public static readonly Color FrozenTint = new Color(0.72f, 0.93f, 1f);
 
@@ -624,14 +655,85 @@ namespace Slopgame
             return true;
         }
 
-        /// <summary>Bleeding: <paramref name="damage"/> a second for <paramref name="ticks"/> seconds; a fresh wound tops up rather than stacks.</summary>
-        public void Bleed(int ticks, int damage)
+        /// <summary>A bleed runs for this long, cutting this many times, each for this share of the hit that opened it.</summary>
+        public const float BleedDuration = 5f, BleedTickShare = 0.1f;
+        public const int BleedTicks = 10;
+
+        /// <summary>One bleed: every tick deals <see cref="PerTick"/>, and the fractions add up in <see cref="bleedCarry"/>.</summary>
+        private sealed class Wound
         {
-            if (IsInvulnerable || ticks <= 0) return;
-            if (Run.IsGuest) { Run.Coop.ReportDamage(this, CoopDamageKind.Bleed, damage, transform.position, ticks, 0f); return; }
-            if (bleedTicks == 0) nextBleed = Time.time + 1f;
-            bleedDamage = Mathf.Max(bleedTicks > 0 ? bleedDamage : 0, damage);
-            bleedTicks = Mathf.Max(bleedTicks, ticks);
+            public float PerTick, Interval, NextAt;
+            public int Ticks, TicksLeft;
+        }
+        private readonly System.Collections.Generic.List<Wound> wounds = new System.Collections.Generic.List<Wound>();
+        private float bleedCarry;
+
+        /// <summary>The damage every open wound still has to deal.</summary>
+        public float BleedRemaining
+        {
+            get
+            {
+                float total = bleedCarry;
+                foreach (var wound in wounds) total += wound.PerTick * wound.TicksLeft;
+                return wounds.Count > 0 ? total : 0f;
+            }
+        }
+
+        /// <summary>
+        /// Bleeding: <paramref name="ticks"/> cuts over <paramref name="duration"/> seconds, each for a tenth of the
+        /// <paramref name="hit"/> that opened the wound. Wounds stack: every bleed runs on its own, and one hit can open several.
+        /// </summary>
+        public void Bleed(int hit, float duration = BleedDuration, int ticks = BleedTicks)
+        {
+            if (IsInvulnerable || hit <= 0 || ticks <= 0 || duration <= 0f || Health <= 0) return;
+            if (Run.IsGuest) Run.Coop.ReportDamage(this, CoopDamageKind.Bleed, hit, transform.position, ticks, duration);
+            float interval = duration / ticks;
+            wounds.Add(new Wound { PerTick = hit * BleedTickShare, Interval = interval, NextAt = Time.time + interval, Ticks = ticks, TicksLeft = ticks });
+        }
+
+        /// <summary>Runs every wound's clock and returns the whole damage that came due (fractions wait for the next tick).</summary>
+        private int TickWounds()
+        {
+            if (wounds.Count == 0) return 0;
+            for (int i = wounds.Count - 1; i >= 0; i--)
+            {
+                var wound = wounds[i];
+                while (wound.TicksLeft > 0 && Time.time >= wound.NextAt)
+                {
+                    wound.TicksLeft--;
+                    wound.NextAt += wound.Interval;
+                    bleedCarry += wound.PerTick;
+                }
+                if (wound.TicksLeft <= 0) wounds.RemoveAt(i);
+            }
+            int due = Mathf.FloorToInt(bleedCarry + 0.0001f);
+            // The last wound to close pays out what is left of the fractions, rounded.
+            if (wounds.Count == 0) { due = Mathf.RoundToInt(bleedCarry); bleedCarry = 0f; }
+            else bleedCarry -= due;
+            return due;
+        }
+
+        /// <summary>Bloodpop: closes every wound now and says how much damage they still had to deal.</summary>
+        public float ConsumeBleed()
+        {
+            float remaining = BleedRemaining;
+            wounds.Clear();
+            bleedCarry = 0f;
+            if (Run.IsGuest) Run.Coop.ReportDamage(this, CoopDamageKind.ClearBleed, 0, transform.position, 0, 0f);
+            return remaining;
+        }
+
+        /// <summary>Bloodscent: every wound starts over, with <paramref name="scale"/> times the cuts (and so the time) it opened with.</summary>
+        public void RefreshBleed(float scale)
+        {
+            if (scale <= 0f || Health <= 0) return;
+            // A guest only knows its own wounds; the host restarts everyone's.
+            if (Run.IsGuest) Run.Coop.ReportDamage(this, CoopDamageKind.RefreshBleed, 0, transform.position, 0, scale);
+            foreach (var wound in wounds)
+            {
+                wound.TicksLeft = Mathf.Max(wound.TicksLeft, Mathf.RoundToInt(wound.Ticks * scale));
+                wound.NextAt = Time.time + wound.Interval;
+            }
         }
 
         /// <summary>Poisoned: <paramref name="damage"/> a second for <paramref name="ticks"/> seconds; a fresh dose tops up rather than stacks.</summary>
@@ -645,11 +747,14 @@ namespace Slopgame
         }
 
         /// <param name="mastery">Ranks of Hex Mastery behind the curse; a stronger curse is never weakened by a lesser one.</param>
-        public void Curse(float duration, int mastery = 0)
+        /// <param name="bonus">The share of extra damage the cursed enemy takes.</param>
+        public void Curse(float duration, int mastery = 0, float bonus = CurseDamageBonus)
         {
             if (IsInvulnerable || duration <= 0f) return;
             curseMastery = IsCursed ? Mathf.Max(curseMastery, mastery) : mastery;
-            if (Run.IsGuest) { Run.Coop.ReportDamage(this, CoopDamageKind.Curse, 0, transform.position, mastery, duration); return; }
+            curseBonus = IsCursed ? Mathf.Max(curseBonus, bonus) : bonus;
+            // The bonus crosses the wire as a whole percentage in the message's amount.
+            if (Run.IsGuest) { Run.Coop.ReportDamage(this, CoopDamageKind.Curse, Mathf.RoundToInt(bonus * 100f), transform.position, mastery, duration); return; }
             cursedUntil = Mathf.Max(cursedUntil, Time.time + duration);
         }
 
