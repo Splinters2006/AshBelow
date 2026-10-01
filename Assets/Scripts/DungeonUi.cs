@@ -198,10 +198,10 @@ namespace Slopgame
 
         public static string SpecialName(WeaponType weapon) => weapon == WeaponType.Bow ? "Triple shot"
             : weapon == WeaponType.Shadow ? "Nightfall" : weapon == WeaponType.Staff ? "Lightning" : weapon == WeaponType.Daggers ? "Shadowstep"
-            : weapon == WeaponType.Fists ? "Empower" : weapon == WeaponType.Tail ? "Tail sweep" : weapon == WeaponType.Coins ? "Coin volley" : weapon == WeaponType.Beam ? "Plasma cannon" : weapon == WeaponType.Hammer ? "Holy Sword" : "Reflect shield";
+            : weapon == WeaponType.Fists ? "Empower" : weapon == WeaponType.Tail ? "Tail sweep" : weapon == WeaponType.Coins ? "Coin volley" : weapon == WeaponType.Beam ? "Plasma cannon" : weapon == WeaponType.Scythe ? "Soul skull" : weapon == WeaponType.Hammer ? "Holy Sword" : "Reflect shield";
         public static float SpecialCooldown(WeaponType weapon) => weapon == WeaponType.Bow ? 6f
             : weapon == WeaponType.Shadow ? AdminAttack.NightfallCooldown : weapon == WeaponType.Staff ? 3f : weapon == WeaponType.Daggers ? 4f
-            : weapon == WeaponType.Fists ? BrawlerAttack.EmpowerCooldown : weapon == WeaponType.Tail ? DemonessAttack.SweepCooldown : weapon == WeaponType.Coins ? GamblerAttack.VolleyCooldown : weapon == WeaponType.Beam ? CyborgAttack.CannonCooldown : weapon == WeaponType.Hammer ? PaladinAttack.HolySwordCooldown
+            : weapon == WeaponType.Fists ? BrawlerAttack.EmpowerCooldown : weapon == WeaponType.Tail ? DemonessAttack.SweepCooldown : weapon == WeaponType.Coins ? GamblerAttack.VolleyCooldown : weapon == WeaponType.Beam ? CyborgAttack.CannonCooldown : weapon == WeaponType.Scythe ? ReaperAttack.SkullCooldown : weapon == WeaponType.Hammer ? PaladinAttack.HolySwordCooldown
             : KnightShield.Cooldown;
     }
 }

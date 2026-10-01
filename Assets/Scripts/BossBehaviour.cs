@@ -26,6 +26,10 @@ namespace Slopgame
         public virtual float HitRadius => 0.85f;
         public virtual bool DealsContactDamage => true;
         public virtual float ContactReach => 1.05f;
+        /// <summary>How much bigger every guardian stands than its style's own scale.</summary>
+        public const float GuardianSize = 1.3f;
+        /// <summary>Scales the guardian's body, and with it how far it can be hit and how far its touch reaches.</summary>
+        public virtual float SizeMultiplier => GuardianSize;
         /// <summary>Where the boss stands on the arena floor (differs from its transform while airborne).</summary>
         public virtual Vector2 GroundPosition => transform.position;
 
@@ -33,6 +37,7 @@ namespace Slopgame
         {
             Boss = boss;
             OnSetup();
+            transform.localScale *= SizeMultiplier;
         }
 
         protected abstract void OnSetup();
@@ -44,7 +49,7 @@ namespace Slopgame
 
         /// <summary>Spawns an aimed enemy bolt (announced to co-op guests by the bolt itself).</summary>
         protected void Fire(Vector2 from, Vector2 direction, float speed = EnemyProjectile.DefaultSpeed, BoltKind? kind = null)
-            => EnemyProjectile.Spawn(Run, Run.ProjectileRoot, from + direction.normalized * 0.5f, direction, true, speed, kind ?? Bolts);
+            => EnemyProjectile.Spawn(Run, Run.ProjectileRoot, from + direction.normalized * 0.5f, direction, true, speed, kind ?? Bolts, DungeonBoss.HitDamage);
 
         /// <summary>The guardian's theme: what its bolts and hazards look like (the Archdemon's hellfire by default).</summary>
         protected virtual BoltKind Bolts => BoltKind.Ember;
@@ -59,11 +64,11 @@ namespace Slopgame
                 if (hero != null && hero.IsAlive) yield return hero.transform.position;
         }
 
-        protected void Hazard(HazardShape shape, Vector2 center, Vector2 direction, float radius, float width, float telegraph, float duration, bool lethal = false)
+        protected void Hazard(HazardShape shape, Vector2 center, Vector2 direction, float radius, float width, float telegraph, float duration, bool lethal = false, HazardStyle? style = null)
             => HellfireZone.Spawn(Run, new HazardSpec
             {
-                Shape = shape, Style = Hazards, Center = center, Direction = direction, Radius = radius, Width = width, Telegraph = telegraph, Duration = duration,
-                Lethal = lethal
+                Shape = shape, Style = style ?? Hazards, Center = center, Direction = direction, Radius = radius, Width = width, Telegraph = telegraph, Duration = duration,
+                Lethal = lethal, Damage = DungeonBoss.HitDamage
             });
 
         protected Color Flashing(Color normal, Color flash, bool active)

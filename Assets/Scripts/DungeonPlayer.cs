@@ -162,6 +162,12 @@ namespace Slopgame
                 cannon.Player = this;
                 Weapon = cannon;
             }
+            else if (weaponType == WeaponType.Scythe)
+            {
+                var scythe = gameObject.AddComponent<ReaperAttack>();
+                scythe.Player = this;
+                Weapon = scythe;
+            }
             else if (weaponType == WeaponType.Staff)
             {
                 var staff = gameObject.AddComponent<WizardAttack>();
@@ -192,7 +198,7 @@ namespace Slopgame
                 : IsPoisoned ? Color.Lerp(Buffs.Tint(characterColor), PoisonGreen, 0.55f) : Buffs.Tint(characterColor);
             UpdatePoison();
             UpdateIgnite();
-            SetVeiledLook(IsVeiled);
+            SetVeiledLook(IsVeiled || IsIntangible);
             if (IsVeiled && !wasVeiled && Powerups.Count(PowerupType.Ambush) > 0) Powerups.AmbushReady = true;
             wasVeiled = IsVeiled;
             if (!Run.IsPlaying || Health <= 0 || IsBusy) { MoveInput = Vector2.zero; Charge.Tick(PlayerInput.Attack, false); return; }
@@ -375,22 +381,25 @@ namespace Slopgame
             ScreenFx.Flash(new Color(1f, 0.95f, 0.7f, 0.45f), 0.5f);
         }
 
-        /// <summary>Standing in burning ground: one damage per second, however many fires overlap.</summary>
-        public void Burn()
+        /// <summary>Standing in burning ground: one tick of damage per second, however many fires overlap.</summary>
+        public void Burn(int damage = 1)
         {
-            if (Time.time >= nextBurnAt && Hit()) nextBurnAt = Time.time + BurnInterval;
+            if (Time.time >= nextBurnAt && Hit(damage)) nextBurnAt = Time.time + BurnInterval;
         }
 
-        /// <summary>Takes one hit (or spends a ward). False when nothing landed: invulnerable, dead, or debug mode.</summary>
-        public bool Hit() => Strike(false);
+        /// <summary>
+        /// Takes one hit of <paramref name="damage"/> (or spends a ward, which turns the whole blow aside). False when
+        /// nothing landed: invulnerable, dead, or debug mode.
+        /// </summary>
+        public bool Hit(int damage = 1) => Strike(false, damage);
 
         /// <summary>
         /// A killing blow: every hit point at once. Only what would turn aside any other blow still answers it: a roll's
         /// invulnerability, a ward, and the rescues that defy death.
         /// </summary>
-        public bool Slay() => Strike(true);
+        public bool Slay() => Strike(true, 1);
 
-        private bool Strike(bool lethal)
+        private bool Strike(bool lethal, int damage)
         {
             if (Run.IsPlaying && IsInvulnerable && Health > 0) Deflected?.Invoke();
             if (!Run.IsPlaying || IsInvulnerable || Health <= 0) return false;
@@ -408,9 +417,9 @@ namespace Slopgame
             if (!warded)
             {
                 // Cheat Death (once per world), then the Ash shop's Backup Drive (once per descent), turn a killing blow into 1 HP.
-                if ((lethal || Health == 1) && Time.time < interventionUntil) Rescue();
-                else if ((lethal || Health == 1) && TryDefyDeath()) Health = 1;
-                else Health -= lethal ? Health : 1;
+                if ((lethal || Health <= damage) && Time.time < interventionUntil) Rescue();
+                else if ((lethal || Health <= damage) && TryDefyDeath()) Health = 1;
+                else Health -= lethal ? Health : Mathf.Min(Health, Mathf.Max(1, damage));
                 Mechanic?.OnDamaged();
             }
             Powerups.OnStruck(this);
@@ -527,6 +536,11 @@ namespace Slopgame
         }
         public void Protect(float duration) { invulnerableUntil = Mathf.Max(invulnerableUntil, Time.time + duration); }
         public void Veil(float duration) { veiledUntil = Mathf.Max(veiledUntil, Time.time + duration); }
+
+        /// <summary>Shade Walk: the Reaper's body is intangible, so enemies' touch passes through him (bolts and hazards still land).</summary>
+        public bool IsIntangible => Time.time < intangibleUntil && Health > 0;
+        private float intangibleUntil;
+        public void ShadeWalk(float duration) { intangibleUntil = Mathf.Max(intangibleUntil, Time.time + duration); }
 
         private bool veiledLook;
 

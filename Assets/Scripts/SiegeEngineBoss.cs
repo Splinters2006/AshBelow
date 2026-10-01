@@ -23,6 +23,8 @@ namespace Slopgame
         protected override Color BodyTint => new Color(0.55f, 0.52f, 0.5f);
         protected override HazardStyle Hazards => HazardStyle.Artillery;
         protected override float Scale => 2.2f;
+        /// <summary>Bastion towers over every other guardian.</summary>
+        public override float SizeMultiplier => 1.8f;
         protected override string[] AttackTells => tells;
         private static readonly string[] tells =
         {
@@ -113,7 +115,7 @@ namespace Slopgame
             HellfireZone.Spawn(Run, new HazardSpec
             {
                 Shape = HazardShape.Beam, Style = HazardStyle.Quake, Center = from, Direction = vertical ? Vector2.up : Vector2.right,
-                Radius = length, Width = band, Telegraph = QuakeWarning, Duration = hold
+                Radius = length, Width = band, Telegraph = QuakeWarning, Duration = hold, Damage = DungeonBoss.HitDamage
             });
         }
 
@@ -211,7 +213,7 @@ namespace Slopgame
                 }
             // The perimeter's shield dome shimmers over the safe ground.
             if (state == 6 && StateAge < PerimeterTelegraph + PerimeterDuration)
-                mesh.Ring(center, PerimeterRadius, 0.06f, FlameMesh.Alpha(Color.white, 0.35f + 0.2f * Mathf.Sin(Time.time * 10f)), 48);
+                mesh.Ring(center, PerimeterRadius / SizeMultiplier, 0.06f, FlameMesh.Alpha(Color.white, 0.35f + 0.2f * Mathf.Sin(Time.time * 10f)), 48);
         }
     }
 }

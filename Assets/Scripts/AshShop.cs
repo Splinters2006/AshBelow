@@ -24,8 +24,8 @@ namespace Slopgame
         private string notice;
         private bool hideMaxed;
         private readonly List<PermanentUpgradeDefinition> shown = new List<PermanentUpgradeDefinition>();
-        private static readonly string[] Tabs = { "All heroes", "Knight", "Archer", "Wizard", "Assassin", "Paladin", "Brawler", "Demoness", "Gambler", "Augment" };
-        private static readonly WeaponType?[] Weapons = { null, WeaponType.Sword, WeaponType.Bow, WeaponType.Staff, WeaponType.Daggers, WeaponType.Hammer, WeaponType.Fists, WeaponType.Tail, WeaponType.Coins, WeaponType.Beam };
+        private static readonly string[] Tabs = { "All heroes", "Knight", "Archer", "Wizard", "Assassin", "Paladin", "Brawler", "Demoness", "Gambler", "Augment", "Reaper" };
+        private static readonly WeaponType?[] Weapons = { null, WeaponType.Sword, WeaponType.Bow, WeaponType.Staff, WeaponType.Daggers, WeaponType.Hammer, WeaponType.Fists, WeaponType.Tail, WeaponType.Coins, WeaponType.Beam, WeaponType.Scythe };
 
         // Layout, in the 1280x720 menu space.
         private static readonly Rect ListRect = new Rect(70, 318, 1140, 270);

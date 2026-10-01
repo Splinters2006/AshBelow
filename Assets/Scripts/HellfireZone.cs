@@ -35,7 +35,9 @@ namespace Slopgame
         /// <summary>The Infernal Court guardians' hellfire, which also sets the hero alight (a lingering burn a roll puts out).</summary>
         Brimstone,
         /// <summary>The Siege Engine's earthquakes: the ground splits into glowing fissures and heaves up broken rock.</summary>
-        Quake
+        Quake,
+        /// <summary>The Grid Overseer's sector lockdown: floor tiles seize up in alarm red behind a cage of light. Beams only, along an axis.</summary>
+        Lockdown
     }
 
     /// <summary>Everything needed to rebuild a hazard on another machine.</summary>
@@ -51,6 +53,8 @@ namespace Slopgame
         public float Telegraph, Duration;
         /// <summary>True for a killing strike: whoever is caught in it loses every hit point at once.</summary>
         public bool Lethal;
+        /// <summary>Hit points each strike (or second of burning ground) costs the hero; 0 counts as 1.</summary>
+        public int Damage;
     }
 
     /// <summary>
@@ -79,6 +83,8 @@ namespace Slopgame
         private static readonly Palette QuakePalette = new Palette(new Color(1f, 0.95f, 0.75f), new Color(1f, 0.75f, 0.3f),
             new Color(1f, 0.5f, 0.12f), new Color(0.45f, 0.2f, 0.1f), new Color(0.1f, 0.07f, 0.06f));
         private static readonly Color QuakeRock = new Color(0.36f, 0.3f, 0.25f), QuakeDust = new Color(0.72f, 0.62f, 0.48f);
+        private static readonly Palette LockdownPalette = new Palette(Color.white, new Color(1f, 0.7f, 0.65f),
+            new Color(1f, 0.2f, 0.28f), new Color(0.5f, 0.06f, 0.12f), new Color(0.16f, 0.02f, 0.05f));
         private static readonly Palette VenomPalette = new Palette(new Color(0.95f, 1f, 0.85f), new Color(0.75f, 1f, 0.35f),
             new Color(0.4f, 0.85f, 0.2f), new Color(0.18f, 0.45f, 0.1f), new Color(0.06f, 0.15f, 0.04f));
 
@@ -104,7 +110,7 @@ namespace Slopgame
         private bool IsGround => spec.Shape == HazardShape.Inferno || spec.Shape == HazardShape.Pool;
         private float ActiveTime => age - spec.Telegraph;
         /// <summary>How long a spent hazard takes to fade out; lasers snap off, everything else smoulders a moment.</summary>
-        private float FadeTime => spec.Shape == HazardShape.Beam && spec.Style != HazardStyle.Quake ? 0.08f : 0.35f;
+        private float FadeTime => spec.Shape == HazardShape.Beam && spec.Style != HazardStyle.Quake && spec.Style != HazardStyle.Lockdown ? 0.08f : 0.35f;
         private float RingRadius => Mathf.Lerp(0.6f, spec.Radius, Mathf.Clamp01(ActiveTime / Mathf.Max(0.01f, spec.Duration)));
 
         public static HellfireZone Spawn(DungeonRun run, HazardSpec spec, bool announce = true)
@@ -117,7 +123,7 @@ namespace Slopgame
             zone.spec = spec;
             zone.colors = spec.Style == HazardStyle.Frost ? FrostPalette : spec.Style == HazardStyle.Steel ? SteelPalette
                 : spec.Style == HazardStyle.Plasma ? PlasmaPalette : spec.Style == HazardStyle.Venom ? VenomPalette : spec.Style == HazardStyle.Spikes ? SpikePalette
-                : spec.Style == HazardStyle.Quake ? QuakePalette : HellfirePalette;
+                : spec.Style == HazardStyle.Quake ? QuakePalette : spec.Style == HazardStyle.Lockdown ? LockdownPalette : HellfirePalette;
             if (spec.Style == HazardStyle.Circuit || spec.Style == HazardStyle.Artillery || spec.Style == HazardStyle.Void)
             {
                 Color tint = spec.Style == HazardStyle.Circuit ? WorldCatalog.Neon
@@ -164,8 +170,8 @@ namespace Slopgame
                 int before = hero.Health;
                 // Burning ground ticks once a second; pillars and fire walls strike like any other blow.
                 if (spec.Lethal) hero.Slay();
-                else if (IsGround) hero.Burn();
-                else hero.Hit();
+                else if (IsGround) hero.Burn(Mathf.Max(1, spec.Damage));
+                else hero.Hit(Mathf.Max(1, spec.Damage));
                 if (spec.Style == HazardStyle.Venom && hero.Health > 0 && hero.Health != before) hero.Poison();
                 if (spec.Style == HazardStyle.Brimstone && hero.Health > 0 && hero.Health != before) hero.Ignite(BrimstoneTicks);
                 if (hero.Health != before || hero.IsInvulnerable)
@@ -235,6 +241,13 @@ namespace Slopgame
                     CombatVfx.Ring(root, spec.Center, spec.Radius * 1.2f, colors.Core, 0.3f);
                     break;
                 case HazardShape.Beam:
+                    // A lockdown slams shut across whole sectors at once.
+                    if (spec.Style == HazardStyle.Lockdown)
+                    {
+                        ScreenFx.Shake(0.4f, 0.45f);
+                        ScreenFx.Flash(FlameMesh.Alpha(colors.Main, 0.3f), 0.35f);
+                        break;
+                    }
                     ScreenFx.Shake(0.2f, 0.3f);
                     HeroVfx.Sparks(root, spec.Center + spec.Direction * spec.Radius * 0.5f, colors.Main, 16, 5f, 0.45f,
                         Vector2.Perpendicular(spec.Direction), 60f, 1.3f);
@@ -551,6 +564,7 @@ namespace Slopgame
         private void DrawBeam(bool warning, float warn, float fade)
         {
             if (spec.Style == HazardStyle.Quake) { DrawQuake(warning, warn, fade); return; }
+            if (spec.Style == HazardStyle.Lockdown) { DrawLockdown(warning, warn, fade); return; }
             Vector2 dir = spec.Direction, side = Vector2.Perpendicular(dir);
             float length = spec.Radius, width = spec.Width, time = Time.time;
             if (warning)
@@ -667,6 +681,130 @@ namespace Slopgame
             flames.Bar(from, along, length, width * 1.5f, FlameMesh.Alpha(colors.Dark, 0.95f * fade), FlameMesh.Alpha(colors.Dark, 0.8f * fade));
             flames.Bar(from, along, length, width * 0.75f, FlameMesh.Alpha(colors.Main, heat), FlameMesh.Alpha(colors.Deep, heat));
             flames.Bar(from, along, length, width * 0.28f, FlameMesh.Alpha(colors.Core, heat), FlameMesh.Alpha(colors.Bright, 0.7f * heat));
+        }
+
+        /// <summary>
+        /// A locked sector: through the warning its floor tiles seize up one by one in alarm red under a sweeping scan
+        /// line, while emitter nodes blink around its edge; when it strikes the nodes throw up a cage of light, every
+        /// tile is barred and arcs crackle across the floor.
+        /// </summary>
+        private void DrawLockdown(bool warning, float warn, float fade)
+        {
+            // The locked area is the beam's box, cut off at the arena walls.
+            var arena = DungeonMap.Arena;
+            Vector2 half = Vector2.Perpendicular(spec.Direction) * spec.Width * 0.5f;
+            Vector2 a = spec.Center - half, b = spec.Center + spec.Direction * spec.Radius + half;
+            Vector2 min = Vector2.Max(Vector2.Min(a, b), new Vector2(arena.xMin - 0.5f, arena.yMin - 0.5f));
+            Vector2 max = Vector2.Min(Vector2.Max(a, b), new Vector2(arena.xMax - 0.5f, arena.yMax - 0.5f));
+            if (max.x - min.x < 0.1f || max.y - min.y < 0.1f) return;
+            float time = Time.time, alarm = 0.5f + 0.5f * Mathf.Sin(time * Mathf.Lerp(5f, 18f, warn));
+            // 0 as the lock strikes, 1 once the white flash has burnt off.
+            float strike = warning ? 0f : Mathf.Clamp01(ActiveTime / 0.15f);
+
+            flames.Rect(min, max, FlameMesh.Alpha(colors.Deep, (warning ? 0.2f + 0.25f * warn * alarm : 0.55f) * fade));
+            for (int x = Mathf.RoundToInt(min.x); x <= Mathf.RoundToInt(max.x); x++)
+                for (int y = Mathf.RoundToInt(min.y); y <= Mathf.RoundToInt(max.y); y++)
+                {
+                    Vector2 lo = Vector2.Max(min, new Vector2(x - 0.44f, y - 0.44f)), hi = Vector2.Min(max, new Vector2(x + 0.44f, y + 0.44f));
+                    if (hi.x - lo.x < 0.05f || hi.y - lo.y < 0.05f) continue;
+                    float seed = FlameMesh.Hash(x, y);
+                    Vector2 middle = (lo + hi) * 0.5f;
+                    bool marked = FlameMesh.Hash(x + 7.3f, y + 2.9f) > 0.7f;
+                    if (warning)
+                    {
+                        // Each tile seizes at its own moment, snapping white before it settles into red.
+                        float since = warn - seed * 0.8f;
+                        if (since < 0f) continue;
+                        float snap = 1f - Mathf.Clamp01(since / 0.06f);
+                        flames.Rect(lo, hi, FlameMesh.Alpha(Color.Lerp(colors.Main, colors.Core, snap), 0.2f + 0.12f * alarm + 0.5f * snap));
+                        if (marked) flames.Diamond(middle, 0.1f, FlameMesh.Alpha(colors.Bright, 0.5f + 0.5f * alarm));
+                        continue;
+                    }
+                    float wave = 0.5f + 0.5f * Mathf.Sin(time * 9f - (x + y) * 0.9f);
+                    flames.Rect(lo, hi, FlameMesh.Alpha(Color.Lerp(colors.Core, colors.Main, strike), (0.4f + 0.25f * wave) * fade));
+                    if (!marked) continue;
+                    // Some tiles are crossed out.
+                    float reach = Mathf.Min(hi.x - lo.x, hi.y - lo.y) * 0.32f;
+                    Color cross = FlameMesh.Alpha(colors.Bright, 0.9f * fade);
+                    foreach (Vector2 diagonal in LockdownCross)
+                        flames.Bar(middle - diagonal * reach, diagonal, reach * 2f, 0.07f, cross, cross);
+                }
+
+            if (warning)
+            {
+                // A scan line sweeps down the sector, trailing light.
+                float scanY = Mathf.Lerp(max.y, min.y, Mathf.Repeat(time * 0.9f, 1f));
+                flames.Bar(new Vector2((min.x + max.x) * 0.5f, scanY), Vector2.up, Mathf.Min(1.6f, max.y - scanY), max.x - min.x,
+                    FlameMesh.Alpha(colors.Bright, 0.3f), FlameMesh.Alpha(colors.Bright, 0f));
+                flames.Bar(new Vector2(min.x, scanY), Vector2.right, max.x - min.x, 0.07f, FlameMesh.Alpha(colors.Core, 0.9f), FlameMesh.Alpha(colors.Core, 0.9f));
+            }
+            else
+            {
+                flames.Rect(min, max, FlameMesh.Alpha(colors.Core, 0.5f * (1f - strike)));
+                // Arcs jump across the locked floor, re-striking every few frames.
+                float frame = Mathf.Floor(time * 14f);
+                int arcs = Mathf.CeilToInt((max.x - min.x) * (max.y - min.y) / 25f);
+                for (int i = 0; i < arcs; i++)
+                {
+                    Vector2 from = min + new Vector2(FlameMesh.Hash(i, frame * 0.37f) * (max.x - min.x), FlameMesh.Hash(i + 11, frame * 0.53f) * (max.y - min.y));
+                    Vector2 jump = FlameMesh.Polar(FlameMesh.Hash(i + 23, frame * 0.71f) * Mathf.PI * 2f, 1.2f + 1.4f * FlameMesh.Hash(i + 5, frame * 0.19f));
+                    Vector2 to = Vector2.Min(max, Vector2.Max(min, from + jump));
+                    Vector2 kink = (from + to) * 0.5f + Vector2.Perpendicular(jump).normalized * (FlameMesh.Hash(i + 31, frame * 0.43f) - 0.5f) * 0.9f;
+                    LockdownArc(from, kink, fade);
+                    LockdownArc(kink, to, fade);
+                }
+            }
+
+            // Where the arena's centre lines cross the area, they split it into its sectors.
+            Vector2 centre = arena.center - Vector2.one * 0.5f;
+            Color divider = FlameMesh.Alpha(colors.Main, (warning ? 0.25f + 0.3f * warn : 0.7f) * fade);
+            if (centre.x > min.x + 0.5f && centre.x < max.x - 0.5f) flames.Bar(new Vector2(centre.x, min.y), Vector2.up, max.y - min.y, 0.06f, divider, divider);
+            if (centre.y > min.y + 0.5f && centre.y < max.y - 0.5f) flames.Bar(new Vector2(min.x, centre.y), Vector2.right, max.x - min.x, 0.06f, divider, divider);
+
+            LockdownFence(min, new Vector2(max.x, min.y), warning, warn, alarm, strike, fade);
+            LockdownFence(new Vector2(max.x, min.y), max, warning, warn, alarm, strike, fade);
+            LockdownFence(max, new Vector2(min.x, max.y), warning, warn, alarm, strike, fade);
+            LockdownFence(new Vector2(min.x, max.y), min, warning, warn, alarm, strike, fade);
+        }
+
+        private static readonly Vector2[] LockdownCross = { new Vector2(1f, 1f).normalized, new Vector2(1f, -1f).normalized };
+
+        private void LockdownArc(Vector2 from, Vector2 to, float fade)
+        {
+            float length = Vector2.Distance(from, to);
+            if (length < 0.05f) return;
+            flames.Bar(from, (to - from) / length, length, 0.09f, FlameMesh.Alpha(colors.Core, fade), FlameMesh.Alpha(colors.Bright, 0.7f * fade));
+        }
+
+        /// <summary>
+        /// One side of a locked sector: dashes march along it and emitter nodes blink in sequence through the warning,
+        /// then stand as pylons of light with a solid barrier between them once it locks.
+        /// </summary>
+        private void LockdownFence(Vector2 from, Vector2 to, bool warning, float warn, float alarm, float strike, float fade)
+        {
+            float length = Vector2.Distance(from, to), time = Time.time;
+            Vector2 along = (to - from) / length;
+            Color line = FlameMesh.Alpha(warning ? colors.Main : colors.Bright, (warning ? 0.45f + 0.55f * alarm : 1f) * fade);
+            flames.Bar(from, along, length, warning ? 0.07f : 0.16f, line, line);
+            if (warning)
+            {
+                Color dash = FlameMesh.Alpha(colors.Bright, 0.5f + 0.5f * warn);
+                for (float d = Mathf.Repeat(time * 2f, 1f) - 1f; d < length; d += 1f)
+                {
+                    float start = Mathf.Max(0f, d), end = Mathf.Min(length, d + 0.5f);
+                    if (end > start) flames.Bar(from + along * start, along, end - start, 0.17f, dash, dash);
+                }
+            }
+            int nodes = Mathf.Max(1, Mathf.RoundToInt(length / 1.5f));
+            for (int i = 0; i < nodes; i++)
+            {
+                Vector2 node = from + along * (length * i / nodes);
+                float blink = 0.5f + 0.5f * Mathf.Sin(time * 8f - i * 0.9f);
+                // The pylons creep up as the warning runs out and shoot to full height when it locks.
+                float height = warning ? 0.4f * warn : 0.4f + 0.9f * strike;
+                flames.Bar(node, Vector2.up, height, 0.13f, FlameMesh.Alpha(colors.Core, (warning ? 0.4f + 0.6f * blink : 1f) * fade), FlameMesh.Alpha(colors.Main, 0f));
+                flames.Diamond(node, warning ? 0.1f + 0.05f * blink : 0.16f, FlameMesh.Alpha(colors.Core, (warning ? 0.5f + 0.5f * blink : 1f) * fade));
+            }
         }
 
         private void DrawRing(bool warning, float warn, float fade)

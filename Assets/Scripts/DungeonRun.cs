@@ -562,12 +562,14 @@ namespace Slopgame
                 waveClearedAt = Time.time;
                 foreach (var crystal in level.GetComponentsInChildren<Crystal>()) crystal.PullToHero();
                 foreach (var coin in level.GetComponentsInChildren<GoldCoin>()) coin.PullToHero();
+                foreach (var soul in level.GetComponentsInChildren<SoulWisp>()) soul.PullToHero();
                 return false;
             }
             float waited = Time.time - waveClearedAt;
             if (waited < WaveBreather || (IsNetworked && !Coop.IsHost)) return false;
             bool dropsOut = level.GetComponentsInChildren<Crystal>().Length > 0
-                || (Player.Weapon is GamblerAttack && level.GetComponentsInChildren<GoldCoin>().Length > 0);
+                || (Player.Weapon is GamblerAttack && level.GetComponentsInChildren<GoldCoin>().Length > 0)
+                || (Player.Weapon is ReaperAttack && level.GetComponentsInChildren<SoulWisp>().Length > 0);
             if (dropsOut && Player.Health > 0 && waited < WaveDropWait) return false;
             waveClearedAt = float.MaxValue;
             if (IsNetworked) Coop.RequestInteract(CoopChoice.Upgrade);
@@ -581,6 +583,8 @@ namespace Slopgame
             foreach (var crystal in level.GetComponentsInChildren<Crystal>()) crystal.CollectNow();
             if (Player.Weapon is GamblerAttack)
                 foreach (var coin in level.GetComponentsInChildren<GoldCoin>()) coin.CollectNow();
+            if (Player.Weapon is ReaperAttack)
+                foreach (var soul in level.GetComponentsInChildren<SoulWisp>()) soul.CollectNow();
         }
 
         /// <summary>Minion kinds a guardian can summon: the world's basic enemy, caster or brute, or its specialist number n as <see cref="MinionSpecialist"/> + n.</summary>

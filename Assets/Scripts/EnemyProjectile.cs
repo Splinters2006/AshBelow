@@ -23,12 +23,14 @@ namespace Slopgame
         public bool IsSpent => spent;
         /// <summary>An ember bolt, a thrown steel blade, an icicle or a plasma shot.</summary>
         public BoltKind Kind { get; private set; }
+        /// <summary>Hit points it costs the hero it strikes: 1, or a guardian's <see cref="DungeonBoss.HitDamage"/>.</summary>
+        public int Damage { get; private set; } = 1;
 
         public static EnemyProjectile Spawn(DungeonRun run, Transform parent, Vector2 position, Vector2 direction) => Spawn(run, parent, position, direction, true);
 
         /// <summary>Every machine flies its own copy; a copy only ever strikes that machine's hero.</summary>
         public static EnemyProjectile Spawn(DungeonRun run, Transform parent, Vector2 position, Vector2 direction, bool announce,
-            float speed = DefaultSpeed, BoltKind kind = BoltKind.Ember)
+            float speed = DefaultSpeed, BoltKind kind = BoltKind.Ember, int damage = 1)
         {
             var sprite = kind == BoltKind.Blade ? DungeonVisuals.CreateThrownBlade(parent, position)
                 : kind == BoltKind.Frost ? DungeonVisuals.CreateFrostBolt(parent, position)
@@ -40,6 +42,7 @@ namespace Slopgame
             projectile.direction = direction.normalized;
             projectile.speed = speed;
             projectile.Kind = kind;
+            projectile.Damage = Mathf.Max(1, damage);
             projectile.transform.rotation = Quaternion.Euler(0, 0, Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg);
             if (kind == BoltKind.Blade) CombatVfx.Trail(projectile.gameObject, new Color(0.45f, 0.95f, 1f, 0.6f), 0.07f, 0.12f);
             else if (kind == BoltKind.Frost) CombatVfx.Trail(projectile.gameObject, new Color(0.7f, 0.92f, 1f, 0.55f), 0.08f, 0.14f);
@@ -100,7 +103,7 @@ namespace Slopgame
                 {
                     // Close Call: the roll slipped through this bolt.
                     if (run.Player.IsRolling) run.Player.Powerups.OnCloseCall(run.Player);
-                    if (run.Player.Hit())
+                    if (run.Player.Hit(Damage))
                     {
                         if (Kind == BoltKind.Venom) run.Player.Poison();
                         // Hex fire clings: a lingering burn until it gutters out or the hero rolls.

@@ -191,7 +191,7 @@ namespace Slopgame
             var portrait = character.Weapon == WeaponType.Shadow ? DungeonVisuals.ShadowHeroSprite : HeroSprites.Body(character.Weapon);
             if (portrait == null)
             {
-                string glyph = character.Weapon == WeaponType.Shadow ? "///" : character.Weapon == WeaponType.Staff ? "*" : character.Weapon == WeaponType.Bow ? ">" : character.Weapon == WeaponType.Daggers ? "//" : character.Weapon == WeaponType.Fists ? "[]" : character.Weapon == WeaponType.Tail ? "~>" : character.Weapon == WeaponType.Coins ? "$" : character.Weapon == WeaponType.Beam ? "=>" : "+";
+                string glyph = character.Weapon == WeaponType.Shadow ? "///" : character.Weapon == WeaponType.Staff ? "*" : character.Weapon == WeaponType.Bow ? ">" : character.Weapon == WeaponType.Daggers ? "//" : character.Weapon == WeaponType.Fists ? "[]" : character.Weapon == WeaponType.Tail ? "~>" : character.Weapon == WeaponType.Coins ? "$" : character.Weapon == WeaponType.Beam ? "=>" : character.Weapon == WeaponType.Scythe ? "?" : "+";
                 DungeonUi.Label(frame, glyph, Mathf.RoundToInt(frame.height * 0.55f), character.Color, TextAnchor.MiddleCenter);
                 return;
             }

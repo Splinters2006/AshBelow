@@ -87,6 +87,13 @@ namespace Slopgame
                 "..DkKKSSSSSSSSsD....", "..DkKKSSSmSSSssD....", "...DDkKsSSSSssD.....", "...DDLWDOkDWMDDkKKQD",
                 "..DLWWWjJjWWMkKKKKJj", ".DLWWWWWjWWWMkOOkkDD", ".DMDDOOOOOODDD......", "...DMWDDDWWMD.......",
             } },
+            { WeaponType.Scythe, new[] // Reaper: a bare skull in a deep hood, a great cloak that hides the body and trails off in tatters where legs would be, and a tall scythe
+            {
+                "...........kKKKKQQ..", "......DDDD.kKk..KQQ.", ".....DLWWMDB.....KQ.", "....DLWWWWMDB.....Q.",
+                "...DLWDDDDWMDB......", "...DWDFFFFDWDB......", "...DWDNFFNDWMDB.....", "...DWDFFFFDWMDB.....",
+                "...DWMDFNFDWMDB.....", "..DLWWMDDDWWMDB.....", "..DLWWWWWWWWMFFB....", ".DLWWWWWWWWWMDDB....",
+                ".DLWWWWWWWWMMD.DB...", ".DWWMWWWMWWWMD..B...", "..DWDDWMDDWMDD..b...", "..D...DD...D........",
+            } },
         };
         // Drawn about 1.45 units tall before the hero's 0.65 scale, matching the old hero footprint.
         private const float WorldSize = 1.45f;
@@ -122,6 +129,14 @@ namespace Slopgame
         /// <summary>The Demoness's detail layer with her wings left out, worn while the separate wing layers beat.</summary>
         public static Sprite WinglessAccent => winglessAccent != null ? winglessAccent
             : winglessAccent = Build("Tail hero details (wingless)", Grids[WeaponType.Tail], true, (x, c) => WingPixels.IndexOf(c) < 0, Vector2.one * 0.5f);
+
+        // The Reaper's scythe pixels: steel blade and wooden shaft.
+        private const string ScythePixels = "KQkBb";
+        private static Sprite scythelessAccent;
+
+        /// <summary>The Reaper's detail layer with his scythe left out, worn while the scythe itself swings through a cut.</summary>
+        public static Sprite ScythelessAccent => scythelessAccent != null ? scythelessAccent
+            : scythelessAccent = Build("Scythe hero details (empty-handed)", Grids[WeaponType.Scythe], true, (x, c) => ScythePixels.IndexOf(c) < 0, Vector2.one * 0.5f);
 
         /// <summary>
         /// One of the Demoness's wings (side -1 left, +1 right) exactly as drawn on her sprite, pivoted at the shoulder

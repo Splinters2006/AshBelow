@@ -268,6 +268,15 @@ namespace Slopgame
                     var gambler = Player.GetComponent<GamblerAttack>();
                     if (gambler == null || !gambler.CastArtifact(definition.Type, rank)) return false;
                     break;
+                case AbilityType.ShadeWalk:
+                case AbilityType.FearIncarnate:
+                case AbilityType.Feast:
+                case AbilityType.Sow:
+                case AbilityType.Reap:
+                case AbilityType.ReapersTechnique:
+                    var reaper = Player.GetComponent<ReaperAttack>();
+                    if (reaper == null || !reaper.CastArtifact(definition.Type, aim, rank, cursorDistance)) return false;
+                    break;
                 case AbilityType.MicroMissiles:
                 case AbilityType.RocketBoost:
                 case AbilityType.SentryTurret:

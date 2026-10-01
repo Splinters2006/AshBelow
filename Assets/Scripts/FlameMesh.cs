@@ -323,7 +323,8 @@ namespace Slopgame
             Vector2 across = Vector2.Perpendicular(up);
             for (int i = 0; i * step < height; i++)
             {
-                float u = (i + 0.5f) * step / Mathf.Max(step, height);
+                // A short flame's last row can overshoot its tip; unclamped, the taper below turns NaN and the whole mesh vanishes.
+                float u = Mathf.Min(1f, (i + 0.5f) * step / Mathf.Max(step, height));
                 float thick = Mathf.Max(Pixel, width * (u < 0.22f ? 0.78f + u : Mathf.Pow(1f - (u - 0.22f) / 0.78f, 0.8f)));
                 Vector2 mid = root + up * (i + 0.5f) * step + sway * u * u + across * Mathf.Sin(ripple - u * 4.5f) * width * 0.16f * u;
                 Cell(mid, up, thick, step, color);

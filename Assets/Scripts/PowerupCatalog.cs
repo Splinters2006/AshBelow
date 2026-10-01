@@ -42,7 +42,9 @@ namespace Slopgame
         // Universal talents built around immobilized enemies (paralysed, frozen, stunned or rooted).
         SittingDuck, IronGrip, SearingHold, StaticHold, NumbingHold, Domino,
         // Universal: a big one-off attack speed boost. Always append new talents here; their numbers are their IDs.
-        Frenzy
+        Frenzy,
+        // Reaper.
+        GraveTithe
     }
 
     public sealed class PowerupDefinition
@@ -235,7 +237,8 @@ namespace Slopgame
             new PowerupDefinition(PowerupType.StaticHold, "Static Hold", "Immobilizing an enemy shocks every enemy near it", 1),
             new PowerupDefinition(PowerupType.NumbingHold, "Numbing Hold", "Immobilizing an enemy chills it, so it stays slowed for 2 seconds after it breaks free", 1),
             new PowerupDefinition(PowerupType.Domino, "Domino", "When an immobilized enemy dies, enemies within 1.5 units are stunned for 0.75 seconds", 1),
-            new PowerupDefinition(PowerupType.Frenzy, "Frenzy", "+25% attack and charge speed", 1)
+            new PowerupDefinition(PowerupType.Frenzy, "Frenzy", "+25% attack and charge speed", 1),
+            new PowerupDefinition(PowerupType.GraveTithe, "Reaper: Grave Tithe", "Killing an immobilized enemy (afraid, paralysed, frozen, stunned or rooted) gives you a soul", 1, WeaponType.Scythe)
         };
 
         private static readonly Dictionary<PowerupType, PowerupDefinition> byType = BuildLookup();

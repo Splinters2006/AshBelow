@@ -20,6 +20,8 @@ namespace Slopgame
         public int PurseFloor { get; }
         /// <summary>Added to the Gambler's odds of winning a gamble.</summary>
         public float GambleLuck { get; }
+        /// <summary>Grave Goods: souls the Reaper begins a descent with.</summary>
+        public int StartingSouls { get; }
         /// <summary>Capacitor Bank: scales the Augment's plasma cannon cooldown.</summary>
         public float CannonCooldownMultiplier { get; } = 1f;
         /// <summary>The class mechanic on R, bought in the Ash shop.</summary>
@@ -79,6 +81,9 @@ namespace Slopgame
                 case WeaponType.Coins:
                     PurseFloor = progress.Rank("gambler_pockets");
                     GambleLuck = progress.Rank("gambler_luck") * 0.04f; break;
+                case WeaponType.Scythe:
+                    Health += progress.Rank("reaper_health");
+                    StartingSouls = progress.Rank("reaper_souls") * 2; break;
                 case WeaponType.Beam:
                     Health += progress.Rank("augment_health");
                     CannonCooldownMultiplier = 1f - progress.Rank("augment_capacitor") * 0.1f; break;

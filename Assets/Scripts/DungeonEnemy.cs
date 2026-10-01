@@ -309,9 +309,9 @@ namespace Slopgame
         /// <summary>Contact damage against the local hero (each machine judges its own hero).</summary>
         public void TryContactHit(float reach)
         {
-            if (!Run.IsPlaying || Health <= 0 || IsHeld || ActionTime < contactReadyAt || Run.Player.IsInvulnerable || Run.Player.Health <= 0
+            if (!Run.IsPlaying || Health <= 0 || IsHeld || ActionTime < contactReadyAt || Run.Player.IsInvulnerable || Run.Player.IsIntangible || Run.Player.Health <= 0
                 || Vector2.Distance(transform.position, Run.Player.transform.position) >= reach) return;
-            Run.Player.Hit();
+            Run.Player.Hit(Boss != null ? DungeonBoss.HitDamage : 1);
             contactReadyAt = ActionTime + 1f;
         }
 
@@ -390,6 +390,8 @@ namespace Slopgame
             if (Variant != null) Variant.OnDeath(this);
             // The Gambler collects a gold coin from every fallen enemy (each machine drops coins for its own hero).
             if (Run.Player != null && Run.Player.Weapon is GamblerAttack) GoldCoin.Drop(Run, transform.position);
+            // The Reaper takes the souls of the soul-bound, and fear he has sown spreads from the fallen.
+            if (Run.Player != null && Run.Player.Weapon is ReaperAttack reaper) reaper.OnEnemyDied(this, localKill);
             // Every fallen enemy leaves crystals for the shop before the next boss (each machine drops its own).
             if (Run.Player != null)
             {
@@ -476,12 +478,34 @@ namespace Slopgame
                 bool fresh = !IsImmobilized;
                 duration = HoldTime(duration);
                 Run.Coop.ReportDamage(this, CoopDamageKind.Fear, 0, from, 0, duration);
+                fearedUntil = Mathf.Max(fearedUntil, Time.time + duration * (Boss != null ? BossCrowdControlDuration : 1f));
                 Held(fresh, duration);
                 return true;
             }
             Vector2 away = (Vector2)transform.position - from;
             if (away.sqrMagnitude > 0.0001f) Facing.Face(away.normalized);
-            return Paralyze(duration);
+            if (!Paralyze(duration)) return false;
+            fearedUntil = paralyzedUntil;
+            return true;
+        }
+
+        /// <summary>Afraid: paralysed by <see cref="Fear"/> rather than by any other hold (the Reaper's Reap and Sow look for this).</summary>
+        public bool IsFeared => Time.time < fearedUntil;
+        /// <summary>Seconds of fear still to run.</summary>
+        public float FearRemaining => Mathf.Max(0f, fearedUntil - Time.time);
+        private float fearedUntil;
+        /// <summary>Fear Incarnate: this enemy gives up a soul when it dies.</summary>
+        public bool SoulBound { get; set; }
+        /// <summary>Sow: if above zero and the enemy dies afraid, fear of this many seconds spreads to the enemies around it.</summary>
+        public float SownFear { get; set; }
+
+        /// <summary>Reap: ends the fear (and the paralysis it holds the enemy with) now and says how long it still had to run.</summary>
+        public float ConsumeFear()
+        {
+            float remaining = Mathf.Max(0f, fearedUntil - Time.time);
+            fearedUntil = 0f;
+            ConsumeParalysis();
+            return remaining;
         }
 
         public const float TerrorSlow = 0.6f, TerrorTime = 2f, DreadRadius = 3f, DreadSlow = 0.75f;

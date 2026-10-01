@@ -592,11 +592,13 @@ namespace Slopgame.Editor
             EnsureHero("Demoness", WeaponType.Tail, 5, 5.2f, new Color(0.6f, 0.36f, 0.9f), DemonessDescription);
             EnsureHero("Gambler", WeaponType.Coins, 5, 5.1f, new Color(0.35f, 0.72f, 0.45f), GamblerDescription);
             EnsureHero("Augment", WeaponType.Beam, 5, 5f, new Color(0.55f, 0.68f, 0.9f), AugmentDescription);
+            EnsureHero("Reaper", WeaponType.Scythe, 5, 4.8f, new Color(0.5f, 0.56f, 0.7f), ReaperDescription);
             AssetDatabase.SaveAssets();
-            Debug.Log("CHARACTER_ASSETS_OK: Ten classes ready.");
+            Debug.Log("CHARACTER_ASSETS_OK: Eleven classes ready.");
         }
 
         private const string DemonessDescription = "The pale, ram-horned daughter of the Demon Lord. Stab with her pointed tail, charge to strike the vitals and paralyse, then sweep her tail through paralysed foes for double damage.";
+        private const string ReaperDescription = "A skull-faced spectre adrift in a great cloak. Sweep a scythe in slow, wide arcs, charge it fully to harvest souls, and spend them on skulls that bite, frighten and hunt.";
         private const string GamblerDescription = "A travelling merchant hopelessly addicted to gambling. Throw coins and scoop up the gold every fallen foe drops, fling a volley of every coin you carry, and open your purse to spend or bet it all.";
         private const string AugmentDescription = "A soldier rebuilt with steel and plasma. Fire a plasma ray that pierces every enemy in a line, charge it longer and wider, and hold the arm cannon to launch a plasma orb that bursts in flame.";
         private const string BrawlerDescription = "A scrappy puppygirl pit-fighter in big red gloves. Jab fast, charge a hammering barrage of punches, and Empower to hit harder, faster and wider.";

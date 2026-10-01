@@ -178,6 +178,9 @@ namespace Slopgame
             if (aura == null) return;
             aura.Begin();
             Vector2 center = transform.position;
+            // The aura is drawn at the style's own size; it grows with the body, about the guardian's centre.
+            auraObject.transform.localScale = Vector3.one * SizeMultiplier;
+            auraObject.transform.localPosition = center * (1f - SizeMultiplier);
             DrawAura(aura, center, IsCharging ? 1f : 0.5f);
             if (state == Summoning) DrawSummonCircle(aura, center);
             aura.Commit();
@@ -199,8 +202,8 @@ namespace Slopgame
         }
 
         /// <summary>A straight hazard line from <paramref name="start"/>.</summary>
-        protected void Line(Vector2 start, Vector2 direction, float length, float width, float telegraph, float duration = 0.4f)
-            => Hazard(HazardShape.Beam, start, direction, length, width, telegraph, duration);
+        protected void Line(Vector2 start, Vector2 direction, float length, float width, float telegraph, float duration = 0.4f, HazardStyle? style = null)
+            => Hazard(HazardShape.Beam, start, direction, length, width, telegraph, duration, false, style);
 
         /// <summary>A hazard patch (a crater that lingers after the strike).</summary>
         protected void Scorch(Vector2 center, float radius, float telegraph, float duration)
@@ -346,19 +349,20 @@ namespace Slopgame
 
         /// <summary>
         /// Locks three quarters of the arena, leaving one quadrant open: the half that doesn't hold it, and the other
-        /// quarter of the half that does. Returns the open quadrant's centre.
+        /// quarter of the half that does. Returns the open quadrant's centre. The locked ground takes the guardian's
+        /// own hazard look unless a <paramref name="style"/> is given.
         /// </summary>
-        protected Vector2 LockAllButQuadrant(bool right, bool top, float telegraph, float duration)
+        protected Vector2 LockAllButQuadrant(bool right, bool top, float telegraph, float duration, HazardStyle? style = null)
         {
             var arena = DungeonMap.Arena;
             float left = arena.xMin - 0.5f, bottom = arena.yMin - 0.5f, midX = arena.center.x - 0.5f, midY = arena.center.y - 0.5f;
             float halfWidth = arena.width * 0.5f, height = arena.height + 2f;
             // The locked half (full height), drawn as one wide lane along x.
             float lockedX = right ? left - 1f : midX;
-            Line(new Vector2(lockedX, midY), Vector2.right, halfWidth + 1f, height, telegraph, duration);
+            Line(new Vector2(lockedX, midY), Vector2.right, halfWidth + 1f, height, telegraph, duration, style);
             // The locked quarter inside the open half.
             float quarterX = right ? midX : left - 1f, quarterY = top ? bottom + arena.height * 0.25f - 0.5f : midY + arena.height * 0.25f + 0.5f;
-            Line(new Vector2(quarterX, quarterY), Vector2.right, halfWidth + 1f, arena.height * 0.5f + 1f, telegraph, duration);
+            Line(new Vector2(quarterX, quarterY), Vector2.right, halfWidth + 1f, arena.height * 0.5f + 1f, telegraph, duration, style);
             return new Vector2(right ? midX + halfWidth * 0.5f : left + halfWidth * 0.5f, top ? midY + arena.height * 0.25f : bottom + arena.height * 0.25f);
         }
 

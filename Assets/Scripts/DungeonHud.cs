@@ -82,7 +82,8 @@ namespace Slopgame
             var player = Run.Player;
             var gambler = player.Weapon as GamblerAttack;
             // The Gambler's coins get their own row, so the panel (and everything under it) grows to fit.
-            float coinRow = gambler != null ? 26f : 0f;
+            var reaper = player.Weapon as ReaperAttack;
+            float coinRow = gambler != null || reaper != null ? 26f : 0f;
             DungeonUi.Panel(new Rect(24, 24, 292, 100 + coinRow), DungeonUi.PanelColor);
             DungeonUi.Label(new Rect(42, 37, 250, 28), Run.SelectedCharacter.DisplayName.ToUpperInvariant(), 22, Run.SelectedCharacter.Color);
             DungeonUi.Label(new Rect(176, 41, 122, 22), $"{player.Crystals.Crystals} CRYSTALS", 14, CrystalPouch.CrystalColor, TextAnchor.UpperRight);
@@ -92,6 +93,16 @@ namespace Slopgame
             {
                 GUI.DrawTexture(new Rect(42, 101, 18, 18), DungeonVisuals.CoinSprite.texture);
                 DungeonUi.Label(new Rect(66, 99, 232, 24), $"{gambler.Coins:N0} {(gambler.Coins == 1 ? "COIN" : "COINS")}", 16, GamblerAttack.Gold);
+            }
+            if (reaper != null)
+            {
+                GUI.DrawTexture(new Rect(42, 101, 18, 18), SoulWisp.Sprite.texture);
+                // Souls just spent flash red beside the count, which blinks red with them.
+                float spent = 1f - Mathf.Clamp01((Time.time - reaper.LastSpentAt) / ReaperAttack.SpentNoticeTime);
+                bool blink = spent > 0f && Mathf.Repeat(Time.time * 8f, 1f) < 0.5f && spent > 0.6f;
+                DungeonUi.Label(new Rect(66, 99, 232, 24), $"{reaper.Souls} {(reaper.Souls == 1 ? "SOUL" : "SOULS")}", 16, blink ? DungeonPlayer.HurtColor : ReaperAttack.Soul);
+                if (spent > 0f)
+                    DungeonUi.Label(new Rect(176, 97, 122, 26), $"-{reaper.LastSpent} {(reaper.LastSpent == 1 ? "SOUL" : "SOULS")}", 18, FlameMesh.Alpha(DungeonPlayer.HurtColor, Mathf.Clamp01(spent * 2f)), TextAnchor.UpperRight);
             }
             DungeonUi.Label(new Rect(24, 135 + coinRow, 300, 26), $"ASH  {Run.Progress.Ash}   /   +{Run.RunAshEarned} this run", 16, AbilityCatalog.Gold);
             if (!string.IsNullOrEmpty(Run.Progress.LastError))
@@ -185,6 +196,8 @@ namespace Slopgame
                     ? player.Charge.Amount >= 1f ? "RELEASE TO STAB VITALS" : $"AIMING FOR VITALS  {player.Charge.Amount:P0}"
                     : player.ClassWeapon == WeaponType.Beam
                     ? player.Charge.Amount >= 1f ? "RELEASE TO FIRE A FULL RAY" : $"FOCUSING RAY  {player.Charge.Amount:P0}"
+                    : player.ClassWeapon == WeaponType.Scythe
+                    ? player.Charge.Amount >= 1f ? "RELEASE TO HARVEST SOULS" : $"RAISING THE SCYTHE  {player.Charge.Amount:P0}"
                     : player.Charge.Amount >= 1f ? "FULL CHARGE  /  RELEASE" : $"CHARGING  {player.Charge.Amount:P0}", 14, AbilityCatalog.Gold, TextAnchor.MiddleCenter);
                 DungeonUi.Bar(new Rect(500, 568, 280, 5), player.Charge.Amount, AbilityCatalog.Gold);
             }
@@ -195,6 +208,13 @@ namespace Slopgame
                     14, CyborgAttack.Plasma, TextAnchor.MiddleCenter);
                 DungeonUi.Bar(new Rect(500, 568, 280, 5), cannonCharge, CyborgAttack.Plasma);
             }
+            if (player.Weapon is ReaperAttack skulls && skulls.IsSkullCharging)
+            {
+                int tier = ReaperAttack.SkullTier(skulls.SkullCharge, DebugMode.Enabled ? 3 : skulls.Souls);
+                DungeonUi.Label(new Rect(440, 535, 400, 24), tier >= 3 ? "RELEASE: 3 FEAR SKULLS  /  3 SOULS" : tier == 2 ? "RELEASE: FEAR SKULL  /  2 SOULS" : "RELEASE: SKULL  /  1 SOUL",
+                    14, ReaperAttack.Soul, TextAnchor.MiddleCenter);
+                DungeonUi.Bar(new Rect(500, 568, 280, 5), skulls.SkullCharge, ReaperAttack.Soul);
+            }
             string attack = KeyBindings.Label(GameAction.Attack), interact = KeyBindings.Label(GameAction.Interact);
             DungeonUi.Label(new Rect(250, 690, 780, 22), player.ClassWeapon == WeaponType.Hammer
                 ? $"{attack}  weak swipe     HOLD / RELEASE {attack}  bless allies     {interact}  interact"
@@ -204,6 +224,8 @@ namespace Slopgame
                 ? $"{attack}  throw a coin     HOLD / RELEASE {attack}  charged throw     {KeyBindings.Label(GameAction.Special)}  coin volley     {(player.Mechanic != null ? KeyBindings.Label(GameAction.Mechanic) + "  purse     " : "")}{interact}  interact"
                 : player.ClassWeapon == WeaponType.Tail
                 ? $"{attack}  tail stab     HOLD / RELEASE {attack}  paralysing vital stab     {KeyBindings.Label(GameAction.Special)}  tail sweep     {interact}  interact"
+                : player.ClassWeapon == WeaponType.Scythe
+                ? $"{attack}  scythe sweep     HOLD / RELEASE {attack}  harvest souls     HOLD / RELEASE {KeyBindings.Label(GameAction.Special)}  soul skulls     {(player.Mechanic != null ? KeyBindings.Label(GameAction.Mechanic) + "  raise skeleton     " : "")}{interact}  interact"
                 : player.ClassWeapon == WeaponType.Beam
                 ? $"{attack}  plasma ray     HOLD / RELEASE {attack}  charged ray     HOLD / RELEASE {KeyBindings.Label(GameAction.Special)}  plasma cannon     {interact}  interact"
                 : $"{KeyBindings.MovementLabel()}  move     HOLD / RELEASE {attack}  charge attack     {interact}  interact", 13, DungeonUi.Muted, TextAnchor.UpperCenter);

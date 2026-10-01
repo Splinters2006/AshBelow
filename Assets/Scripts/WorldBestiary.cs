@@ -13,7 +13,7 @@ namespace Slopgame
 
         public static System.Type[] Roster(int worldIndex) => worldIndex switch
         {
-            0 => new[] { typeof(EmberFanatic), typeof(SootLobber), typeof(MagmaStomper) },
+            0 => new[] { typeof(EmberFanatic), typeof(SootLobber), typeof(MagmaStomper), typeof(CinderDasher) },
             1 => new[] { typeof(NeonLancer), typeof(SniperDrone), typeof(MineCrawler) },
             2 => new[] { typeof(BrimstoneCultist), typeof(BlinkImp) },
             3 => new[] { typeof(BlinkMagus), typeof(OrbitingEye) },

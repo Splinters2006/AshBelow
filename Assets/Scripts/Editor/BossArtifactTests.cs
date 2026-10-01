@@ -87,7 +87,7 @@ namespace Slopgame.Editor
             {
                 if (stage == 0)
                 {
-                    Require(run.Characters.Count == 10, "Ten class assets must load.");
+                    Require(run.Characters.Count == 11, "Eleven class assets must load.");
                     StartClass(run, WeaponType.Staff);
                     stage = 1;
                     return;

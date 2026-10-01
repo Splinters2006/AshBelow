@@ -20,9 +20,9 @@ namespace Slopgame
         public bool IsEnraged => Enemy.Health <= MaxHealth / 2;
         public bool IsCharging => Behaviour.IsCharging;
         public bool IsInvulnerable => Behaviour.IsInvulnerable;
-        public float HitRadius => Behaviour.HitRadius;
+        public float HitRadius => Behaviour.HitRadius * Behaviour.SizeMultiplier;
         public bool DealsContactDamage => Behaviour.DealsContactDamage;
-        public float ContactReach => Behaviour.ContactReach;
+        public float ContactReach => Behaviour.ContactReach * Behaviour.SizeMultiplier;
         /// <summary>Four bits of attack state mirrored to co-op guests.</summary>
         public byte NetState => (byte)(Behaviour.NetState & 0x0F);
         private SpriteRenderer body;
@@ -37,6 +37,8 @@ namespace Slopgame
         /// cooldowns and recoveries all come round sooner. Hazard warnings still last their full time.
         /// </summary>
         public const float AttackPace = 1.3f;
+        /// <summary>What every guardian blow costs the hero: its touch, its bolts and its hazards (everything else deals 1).</summary>
+        public const int HitDamage = 2;
         /// <summary>Guardians also close in this much faster than their style's base speed.</summary>
         public const float ChaseSpeedBoost = 1.15f;
 

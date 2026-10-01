@@ -10,7 +10,9 @@ namespace Slopgame
         Eclipse, SoulRend, ShadowReign, KnuckleSandwich, WildLeap, PrimalRage, ArchdemonTechnique, DemonPaw, DemonCurse,
         Windfall, AllIn, Jackpot, MicroMissiles, RocketBoost, SentryTurret,
         // The talents & abilities expansion.
-        ShieldThrow, Whirlwind, WarBanner, NetShot, RicochetArrow, BearTrap, IceWall, BallLightning, LightningStorm, SmokeBomb, DeathMark, ShadowClone, HolyLance, Consecration, DivineIntervention, ThunderClap, HaymakerDash, Suplex, WingDash, SoulSiphon, NightmareSnap, CardToss, DiceBomb, Insurance, EmpPulse, GrappleArm, OrbitalLaser
+        ShieldThrow, Whirlwind, WarBanner, NetShot, RicochetArrow, BearTrap, IceWall, BallLightning, LightningStorm, SmokeBomb, DeathMark, ShadowClone, HolyLance, Consecration, DivineIntervention, ThunderClap, HaymakerDash, Suplex, WingDash, SoulSiphon, NightmareSnap, CardToss, DiceBomb, Insurance, EmpPulse, GrappleArm, OrbitalLaser,
+        // The Reaper.
+        ShadeWalk, FearIncarnate, Feast, Sow, Reap, ReapersTechnique
     }
 
     public sealed class AbilityDefinition
@@ -98,7 +100,13 @@ namespace Slopgame
             new AbilityDefinition(AbilityType.EmpPulse, WeaponType.Beam, "EMP Pulse", "Stun every enemy within 4 units for 1.5 seconds and destroy the enemy bolts around you. Ranks stun longer.", "((", 12f, WorldCatalog.Neon),
             new AbilityDefinition(AbilityType.GrappleArm, WeaponType.Beam, "Grapple Arm", "Fire a hook that snags the first enemy in line and hauls it to you. Guardians are too heavy to pull. Ranks add damage.", "J", 7f, new Color(0.7f, 0.75f, 0.85f)),
             new AbilityDefinition(AbilityType.OrbitalLaser, WeaponType.Beam, "Orbital Laser", "A laser from the sky follows your cursor for 3 seconds, burning everything it touches. Ranks lengthen it.", "|v|", 18f, CyborgAttack.Plasma, true),
-            new AbilityDefinition(AbilityType.WarBanner, WeaponType.Sword, "War Banner", "Plant a banner for 6 seconds. You and allies inside its wide circle deal +1 damage, and everyone inside gains 2 wards when it's planted. Ranks extend it.", "F", 18f, new Color(0.9f, 0.2f, 0.25f), true)
+            new AbilityDefinition(AbilityType.WarBanner, WeaponType.Sword, "War Banner", "Plant a banner for 6 seconds. You and allies inside its wide circle deal +1 damage, and everyone inside gains 2 wards when it's planted. Ranks extend it.", "F", 18f, new Color(0.9f, 0.2f, 0.25f), true),
+            new AbilityDefinition(AbilityType.ShadeWalk, WeaponType.Scythe, "Shade Walk", "Your body turns to shade for 3 seconds: you walk straight through enemies and their touch cannot hurt you. Ranks add a second.", "~", 12f, ReaperAttack.Shade),
+            new AbilityDefinition(AbilityType.FearIncarnate, WeaponType.Scythe, "Fear Incarnate", "Every enemy is struck with fear for 1.5 seconds, frozen with its back to you, and gives up a soul when it dies. Ranks lengthen the fear.", "!!", 18f, ReaperAttack.Soul),
+            new AbilityDefinition(AbilityType.Feast, WeaponType.Scythe, "Feast!", "Eat 1, 3 or 5 souls to heal 1, 2 or 3 HP: always the most you can afford, but never more than the wound needs. Ranks leave you untouchable for a second each.", "+", 10f, HealVfx.Mint),
+            new AbilityDefinition(AbilityType.Sow, WeaponType.Scythe, "Sow", "Sow fear into the enemy nearest your cursor for 2 seconds. If it dies while afraid, the fear spreads to every enemy within 3 units. Ranks lengthen the fear.", "v", 8f, ReaperAttack.Soul),
+            new AbilityDefinition(AbilityType.Reap, WeaponType.Scythe, "Reap", "Reap the fear out of every frightened enemy: each full second of fear it had left gives you a soul and deals damage. Only fear is reaped, no other hold. Ranks add damage.", "^", 9f, ReaperAttack.Bone),
+            new AbilityDefinition(AbilityType.ReapersTechnique, WeaponType.Scythe, "Reaper's Technique", "For 10 seconds your quick cuts become a string of three scythe arts that hit harder: a wide cut, a doubled back-cut and a full spin. Charging to harvest is unchanged. Ranks add 2 seconds.", "S", 16f, ReaperAttack.Soul, true)
         };
 
         /// <summary>What guardians can offer this hero: their class's abilities, less any not yet bought in the Ash shop.</summary>

@@ -1,1 +1,13 @@
-
+new character: reaper
+wields a scythe, big cloak covering body, head is a skull, no legs
+slow base attacks, big cone aoe
+fully charge to harvest souls, souls are a reaper specific mechanic
+souls should have a bigger pickup radius than coins/crystalsd
+right click can be charged, on tap, consumes one soul to send out a skull that damages an enemy, on half charge, the skull now fears an enemy, making them immobilized for 1sec and turn their back to you, consumes 2 souls, on full charge consume 3 souls and shoot 3 skulls instead, these skulls home
+artifact 1: shade walk, make your body intangible and become able to move through enemies without taking contact damage
+artifact 2: fear incarnate, make all enemies feared for 1.5 seconds and make them drop a soul when they die
+artifact 3: feast!, consume 1/3/5 souls to heal 1/2/3 health if only 2 missing health it should not try to use more than 3 souls, otehrwise always consume the max amount
+artifact 4: sow, sow fear into an enemy for 2 seconds, if it dies while it is feared it spreads the fear to any enemy within 3 units
+artifact 5: reap, consume fear on enemies (only fear not other immobilize), making them give you a soul for each full second, rounded down, of fear remaining and also dealing damage based on the same thing
+artifact 6: reaper's technique, enhance your scythe arts to gain a different attack string(new animations) with 3 attacks that deal more damage, charging still stays the same
+class mechanic: army of the dead: use souls to summon a skeletorn buddy, each skeleton costs 3 souls, they fight for you, have low health and low damage but gain effect from all your talents, for example max health, or more damage etc

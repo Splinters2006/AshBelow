@@ -63,6 +63,8 @@ namespace Slopgame
             new PermanentUpgradeDefinition("gambler_luck", "Lady Luck", "+4% odds on All In per rank", 3, 50, 40, WeaponType.Coins),
             new PermanentUpgradeDefinition("augment_capacitor", "Capacitor Bank", "10% shorter plasma cannon cooldown per rank", 3, 45, 35, WeaponType.Beam),
             new PermanentUpgradeDefinition("augment_health", "Titanium Frame", "+1 Augment maximum HP per rank", 3, 35, 25, WeaponType.Beam),
+            new PermanentUpgradeDefinition("reaper_souls", "Grave Goods", "The Reaper starts each descent with +2 souls per rank", 3, 45, 35, WeaponType.Scythe),
+            new PermanentUpgradeDefinition("reaper_health", "Deathless", "+1 Reaper maximum HP per rank", 3, 35, 25, WeaponType.Scythe),
             AbilityUnlock(AbilityType.WarBanner, 150),
             AbilityUnlock(AbilityType.BearTrap, 150),
             AbilityUnlock(AbilityType.LightningStorm, 180),
@@ -73,6 +75,7 @@ namespace Slopgame
             AbilityUnlock(AbilityType.NightmareSnap, 180),
             AbilityUnlock(AbilityType.Insurance, 160),
             AbilityUnlock(AbilityType.OrbitalLaser, 200),
+            AbilityUnlock(AbilityType.ReapersTechnique, 180),
             Mechanic(WeaponType.Sword, "Shield Taunt", "R: turn red with rage for 2.25s. You can walk; you block bolts from every side (+1 ward each) and draw the enemies' attention"),
             Mechanic(WeaponType.Bow, "Elemental Quiver", "R: cycle fire, freeze and shock arrows. Critical hits set off the arrow's element"),
             Mechanic(WeaponType.Staff, "Wild Storm", "R: after 10 elemental effects, summon a storm that hurls fire, lightning and ice, every strike sure to burn, shock or freeze"),
@@ -81,7 +84,8 @@ namespace Slopgame
             Mechanic(WeaponType.Fists, "Super Angry", "R: after taking 5 damage, erupt with huge speed, reach, charge speed and damage"),
             Mechanic(WeaponType.Tail, "Demonic Power", "R: after 7 paralyses, terrify everything nearby: they turn their backs and freeze in place"),
             Mechanic(WeaponType.Coins, "The Purse", "R: open your purse, a shop paid for in coins: healing, wards or loaded dice"),
-            Mechanic(WeaponType.Beam, "Overclock", "R: after your plasma ray strikes 25 enemies, overclock for 8s: fully charged rays at double speed and a vented, faster cannon")
+            Mechanic(WeaponType.Beam, "Overclock", "R: after your plasma ray strikes 25 enemies, overclock for 8s: fully charged rays at double speed and a vented, faster cannon"),
+            Mechanic(WeaponType.Scythe, "Army of the Dead", "R: spend 3 souls to raise a skeleton that fights for you. Frail and weak, but its health and damage grow with yours")
         };
 
         public const string EmberHeartId = "ember_heart", BackupDriveId = "backup_drive", TargetingChipId = "targeting_chip",

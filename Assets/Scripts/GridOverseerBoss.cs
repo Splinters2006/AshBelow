@@ -70,7 +70,7 @@ namespace Slopgame
                     // Three sectors lock; the Overseer jumps into the open one and pulses once the lock strikes. The warning
                     // is cut by less than half: the party still has to cross the arena on foot.
                     var (right, top) = QuadrantAwayFromParty();
-                    openSector = LockAllButQuadrant(right, top, LockTelegraph, LockDuration);
+                    openSector = LockAllButQuadrant(right, top, LockTelegraph, LockDuration, HazardStyle.Lockdown);
                     return LockTelegraph + LockDuration + 0.3f;
                 }
                 default:

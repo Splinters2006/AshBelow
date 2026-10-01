@@ -81,7 +81,7 @@ namespace Slopgame.Editor
         private static void TestRift(DungeonRun run, AdminAttack admin)
         {
             var player = run.Player;
-            Require(run.Characters.Count == 10 && player.ClassWeapon == WeaponType.Shadow && ReferenceEquals(player.Weapon, admin),
+            Require(run.Characters.Count == 11 && player.ClassWeapon == WeaponType.Shadow && ReferenceEquals(player.Weapon, admin),
                 "The sixth class did not initialize the Admin weapon.");
             Require(player.MaxHealth == 12 && player.BaseDamage == 32 && Mathf.Abs(player.Speed - 6.4f) < 0.001f,
                 "Admin starting stats are incorrect.");
