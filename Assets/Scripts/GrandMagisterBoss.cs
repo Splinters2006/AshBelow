@@ -5,12 +5,15 @@ namespace Slopgame
     /// <summary>
     /// The Arcane Spire's final guardian: the Grand Magister, master of the spire. He calls arcane meteors down on the
     /// party, sweeps a prismatic beam around the arena and fires rings of bolts from himself and two mirror images; up
-    /// close he whips up a maelstrom at his feet and blinks to heroes to bring his staff down where they stand.
+    /// close he whips up a great maelstrom around himself and blinks to heroes to bring his staff down where they stand.
+    /// His last word is Annihilation: the whole arena is unmade except one sanctum, and anyone caught outside it dies.
     /// He summons blink magi, orbiting eyes and apprentices.
     /// </summary>
     public sealed class GrandMagisterBoss : ArcaneBossBehaviour
     {
-        public const float MaelstromRadius = 3.3f, SmashRadius = 1.7f, MirrorOffset = 3f, BeamLength = 12f;
+        public const float MaelstromRadius = 5.2f, SmashRadius = 1.7f, MirrorOffset = 3f, BeamLength = 12f;
+        /// <summary>Annihilation: how far the sanctum lies from the party, how long they have to reach it, and how long the arena kills.</summary>
+        public const float AnnihilationReach = 6f, AnnihilationTelegraph = 3f, AnnihilationDuration = 0.9f;
         /// <summary>The guardian's name (the encyclopedia reads it outside a fight).</summary>
         public const string FixedTitle = "AURELION, THE GRAND MAGISTER";
         public override string Title => FixedTitle;
@@ -25,7 +28,8 @@ namespace Slopgame
         private static readonly string[] tells =
         {
             "ARCANE METEORS - LEAVE THE CIRCLES", "PRISMATIC SWEEP - STAY BEHIND THE BEAM", "ARCANE MAELSTROM - GET AWAY FROM HIM",
-            "STAFF OF AGES - HE STRIKES WHERE YOU STAND", "MIRROR BARRAGE - WEAVE THROUGH THE RINGS"
+            "STAFF OF AGES - HE STRIKES WHERE YOU STAND", "MIRROR BARRAGE - WEAVE THROUGH THE RINGS",
+            "ANNIHILATION - REACH THE SANCTUM OR DIE"
         };
         protected override byte[] Minions => minions;
         private static readonly byte[] minions = { DungeonRun.MinionSpecialist, DungeonRun.MinionSpecialist + 1, DungeonRun.MinionCaster };
@@ -63,7 +67,12 @@ namespace Slopgame
                     BurstAfter(0.9f, center, MaelstromRadius);
                     return IsEnraged ? 2.6f : 1.8f;
                 case 3: return 0.3f + Smashes * 1f + 0.6f;
-                default: return 0.4f + 4 * 0.5f + 0.2f;
+                case 4: return 0.4f + 4 * 0.5f + 0.2f;
+                default:
+                    // Everything outside the sanctum is unmade in one killing flash.
+                    ScreenFx.Shake(0.3f, 0.6f);
+                    LockdownAwayFromParty(AnnihilationReach, IsEnraged ? 2.2f : 2.6f, AnnihilationTelegraph, AnnihilationDuration, true);
+                    return AnnihilationTelegraph + AnnihilationDuration + 0.5f;
             }
         }
 
@@ -79,7 +88,7 @@ namespace Slopgame
                     break;
                 case 3:
                     // Bolts spray out of the maelstrom, and enraged it whips up a second time.
-                    if (step == 0 && time >= 1.1f) { step = 1; BoltRing(center, 16, 6f); }
+                    if (step == 0 && time >= 1.1f) { step = 1; BoltRing(center, 20, 6f); }
                     if (step == 1 && IsEnraged && time >= 1.3f)
                     {
                         step = 2;

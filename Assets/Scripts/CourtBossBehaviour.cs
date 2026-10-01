@@ -114,12 +114,14 @@ namespace Slopgame
                 until = attackStart + Attack(attack, toHero.sqrMagnitude > 0.01f ? toHero.normalized : Vector2.down);
             }
             else if (state == Summoning) { FinishSummon(); state = 0; until = Enemy.ActionTime + 0.5f; }
-            else if (state == Spent) { state = 0; until = Enemy.ActionTime + (IsEnraged ? 0.4f : 0.7f); }
+            else if (state == Spent) { state = 0; until = Enemy.ActionTime + ApproachPause; }
             else { state = Spent; until = Enemy.ActionTime + SpentTime; }
         }
 
         /// <summary>How long the guardian stands spent after an attack.</summary>
         protected virtual float SpentTime => 1.2f;
+        /// <summary>How long it closes in again after being spent, before the next attack.</summary>
+        protected virtual float ApproachPause => IsEnraged ? 0.4f : 0.7f;
 
         private int LivingMinions()
         {
@@ -270,11 +272,10 @@ namespace Slopgame
         protected bool Lunging => lungeAt >= 0f;
 
         /// <summary>A telegraphed melee sweep: a fan of short lines from <paramref name="origin"/>, and a slash when they strike.</summary>
-        protected void Cleave(Vector2 origin, Vector2 aim, float reach, float cone, float telegraph)
+        protected void Cleave(Vector2 origin, Vector2 aim, float reach, float cone, float telegraph, int lines = 5, float width = 1.1f)
         {
-            const int lines = 5;
             for (int i = 0; i < lines; i++)
-                Line(origin, Quaternion.Euler(0, 0, -cone * 0.5f + cone * i / (lines - 1)) * aim, reach, 1.1f, telegraph, 0.25f);
+                Line(origin, Quaternion.Euler(0, 0, -cone * 0.5f + cone * i / (lines - 1)) * aim, reach, width, telegraph, 0.25f);
             SlashAfter(telegraph, origin, aim, reach, cone);
         }
 
@@ -320,15 +321,26 @@ namespace Slopgame
         /// <summary>
         /// Locks the whole arena except one safe circle a run away from the party: the party must get to it before the
         /// telegraph ends. The circle lies <paramref name="reach"/> from the party, roughly away from the arena's middle.
+        /// A <paramref name="lethal"/> lockdown kills whoever is caught outside it.
         /// </summary>
-        protected Vector2 LockdownAwayFromParty(float reach, float safeRadius, float telegraph, float duration)
+        protected Vector2 LockdownAwayFromParty(float reach, float safeRadius, float telegraph, float duration, bool lethal = false)
         {
             Vector2 party = PartyCenter();
             Vector2 away = party - DungeonMap.Arena.center;
             Vector2 direction = Quaternion.Euler(0, 0, Random.Range(-60f, 60f)) * (away.sqrMagnitude > 1f ? -away.normalized : Random.insideUnitCircle.normalized);
             Vector2 safe = DungeonMap.ClampToArena(party + direction * reach, 3f);
-            Hazard(HazardShape.Inferno, safe, Vector2.up, safeRadius, 0f, telegraph, duration);
+            Hazard(HazardShape.Inferno, safe, Vector2.up, safeRadius, 0f, telegraph, duration, lethal);
             return safe;
+        }
+
+        /// <summary>A random quadrant, preferring one the party isn't standing in.</summary>
+        protected (bool right, bool top) QuadrantAwayFromParty()
+        {
+            Vector2 party = PartyCenter(), middle = DungeonMap.Arena.center;
+            bool right = party.x < middle.x, top = party.y < middle.y;
+            // Usually the diagonally opposite quadrant; sometimes an adjacent one so it can't be pre-empted.
+            if (Random.value < 0.4f) { if (Random.value < 0.5f) right = !right; else top = !top; }
+            return (right, top);
         }
 
         /// <summary>

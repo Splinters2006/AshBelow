@@ -33,7 +33,9 @@ namespace Slopgame
         /// <summary>The Ash Below's spike traps: holes rattle in a steel plate, then spikes stab up.</summary>
         Spikes,
         /// <summary>The Infernal Court guardians' hellfire, which also sets the hero alight (a lingering burn a roll puts out).</summary>
-        Brimstone
+        Brimstone,
+        /// <summary>The Siege Engine's earthquakes: the ground splits into glowing fissures and heaves up broken rock.</summary>
+        Quake
     }
 
     /// <summary>Everything needed to rebuild a hazard on another machine.</summary>
@@ -47,6 +49,8 @@ namespace Slopgame
         /// <summary>Beam or ring thickness.</summary>
         public float Width;
         public float Telegraph, Duration;
+        /// <summary>True for a killing strike: whoever is caught in it loses every hit point at once.</summary>
+        public bool Lethal;
     }
 
     /// <summary>
@@ -72,6 +76,9 @@ namespace Slopgame
             new Color(1f, 0.25f, 0.8f), new Color(0.5f, 0.1f, 0.6f), new Color(0.15f, 0.03f, 0.22f));
         private static readonly Palette SpikePalette = new Palette(Color.white, new Color(0.85f, 0.88f, 0.92f),
             new Color(0.6f, 0.63f, 0.68f), new Color(0.3f, 0.32f, 0.36f), new Color(0.1f, 0.1f, 0.12f));
+        private static readonly Palette QuakePalette = new Palette(new Color(1f, 0.95f, 0.75f), new Color(1f, 0.75f, 0.3f),
+            new Color(1f, 0.5f, 0.12f), new Color(0.45f, 0.2f, 0.1f), new Color(0.1f, 0.07f, 0.06f));
+        private static readonly Color QuakeRock = new Color(0.36f, 0.3f, 0.25f), QuakeDust = new Color(0.72f, 0.62f, 0.48f);
         private static readonly Palette VenomPalette = new Palette(new Color(0.95f, 1f, 0.85f), new Color(0.75f, 1f, 0.35f),
             new Color(0.4f, 0.85f, 0.2f), new Color(0.18f, 0.45f, 0.1f), new Color(0.06f, 0.15f, 0.04f));
 
@@ -107,7 +114,8 @@ namespace Slopgame
             spec.Direction = spec.Direction.sqrMagnitude > 0.0001f ? spec.Direction.normalized : Vector2.right;
             zone.spec = spec;
             zone.colors = spec.Style == HazardStyle.Frost ? FrostPalette : spec.Style == HazardStyle.Steel ? SteelPalette
-                : spec.Style == HazardStyle.Plasma ? PlasmaPalette : spec.Style == HazardStyle.Venom ? VenomPalette : spec.Style == HazardStyle.Spikes ? SpikePalette : HellfirePalette;
+                : spec.Style == HazardStyle.Plasma ? PlasmaPalette : spec.Style == HazardStyle.Venom ? VenomPalette : spec.Style == HazardStyle.Spikes ? SpikePalette
+                : spec.Style == HazardStyle.Quake ? QuakePalette : HellfirePalette;
             if (spec.Style == HazardStyle.Circuit || spec.Style == HazardStyle.Artillery || spec.Style == HazardStyle.Void)
             {
                 Color tint = spec.Style == HazardStyle.Circuit ? WorldCatalog.Neon
@@ -151,7 +159,8 @@ namespace Slopgame
             {
                 int before = hero.Health;
                 // Burning ground ticks once a second; pillars and fire walls strike like any other blow.
-                if (IsGround) hero.Burn();
+                if (spec.Lethal) hero.Slay();
+                else if (IsGround) hero.Burn();
                 else hero.Hit();
                 if (spec.Style == HazardStyle.Venom && hero.Health > 0 && hero.Health != before) hero.Poison();
                 if (spec.Style == HazardStyle.Brimstone && hero.Health > 0 && hero.Health != before) hero.Ignite(BrimstoneTicks);
@@ -225,6 +234,14 @@ namespace Slopgame
                     ScreenFx.Shake(0.2f, 0.3f);
                     HeroVfx.Sparks(root, spec.Center + spec.Direction * spec.Radius * 0.5f, colors.Main, 16, 5f, 0.45f,
                         Vector2.Perpendicular(spec.Direction), 60f, 1.3f);
+                    // A quake throws dust and embers up along the whole length of the fissure.
+                    if (spec.Style == HazardStyle.Quake)
+                        for (float d = 2f; d < spec.Radius; d += 4f)
+                        {
+                            Vector2 spot = spec.Center + spec.Direction * d;
+                            HeroVfx.Sparks(root, spot, QuakeDust, 10, 4f, 0.7f, Vector2.up, 100f, 1.6f);
+                            HeroVfx.Sparks(root, spot, colors.Bright, 6, 6f, 0.5f, Vector2.up, 70f, 1.2f);
+                        }
                     break;
                 case HazardShape.Ring:
                     ScreenFx.Shake(0.22f, 0.4f);
@@ -262,6 +279,10 @@ namespace Slopgame
         {
             Color bright = FlameMesh.Alpha(colors.Main, fade * (warning ? 0.65f : 1f));
             Color fill = FlameMesh.Alpha(colors.Main, fade * (warning ? 0.12f : 0.35f));
+            // A killing strike reads at a glance: the doomed ground strobes white-hot, brighter as the warning runs out.
+            if (spec.Lethal)
+                fill = FlameMesh.Alpha(Color.Lerp(colors.Main, Color.white, 0.5f + 0.5f * Mathf.Sin(Time.time * Mathf.Lerp(6f, 22f, progress))),
+                    fade * (warning ? 0.2f + 0.3f * progress : 0.85f));
             if (spec.Shape == HazardShape.Beam)
             {
                 Vector2 side = Vector2.Perpendicular(spec.Direction) * spec.Width * 0.5f;
@@ -482,6 +503,7 @@ namespace Slopgame
 
         private void DrawBeam(bool warning, float warn, float fade)
         {
+            if (spec.Style == HazardStyle.Quake) { DrawQuake(warning, warn, fade); return; }
             Vector2 dir = spec.Direction, side = Vector2.Perpendicular(dir);
             float length = spec.Radius, width = spec.Width, time = Time.time;
             if (warning)
@@ -503,6 +525,101 @@ namespace Slopgame
                 // Blade light glints along the cut; fire and ice rise off it.
                 Tongue(root, spec.Style == HazardStyle.Steel ? side * (seed < 0.5f ? -1f : 1f) : Vector2.up, 0.6f, 1.2f + seed, seed, fade);
             }
+        }
+
+        /// <summary>
+        /// Cracked ground: through the warning a jagged fissure creeps down the band and branches toward its edges while
+        /// pebbles jump; when it strikes the cracks tear open over molten rock, slabs heave up along both edges and
+        /// embers and dust pour out of the seams.
+        /// </summary>
+        private void DrawQuake(bool warning, float warn, float fade)
+        {
+            Vector2 dir = spec.Direction, side = Vector2.Perpendicular(dir);
+            float length = spec.Radius, half = spec.Width * 0.5f, time = Time.time;
+            float seed = spec.Center.x * 0.37f + spec.Center.y * 0.61f;
+            // How far the cracks have spread, how wide they gape and how hot they glow.
+            float spread = warning ? warn : 1f, burst = warning ? 0f : Mathf.Clamp01(ActiveTime / 0.18f);
+            float gape = warning ? 0.05f + 0.09f * warn : 0.2f + 0.16f * burst;
+            float heat = (warning ? 0.25f + 0.45f * warn * (0.6f + 0.4f * Mathf.Sin(time * Mathf.Lerp(6f, 20f, warn)))
+                : 0.8f + 0.2f * Mathf.Sin(time * 11f)) * fade;
+            // The ground darkens and sinks, lit from below once it splits.
+            flames.Bar(spec.Center, dir, length, spec.Width, FlameMesh.Alpha(colors.Dark, (warning ? 0.2f + 0.3f * warn : 0.62f) * fade),
+                FlameMesh.Alpha(colors.Dark, (warning ? 0.2f + 0.3f * warn : 0.62f) * fade));
+            if (!warning)
+                flames.Bar(spec.Center, dir, length, spec.Width * 0.7f, FlameMesh.Alpha(colors.Deep, 0.4f * heat), FlameMesh.Alpha(colors.Deep, 0.4f * heat));
+            // Both edges stay sharply marked, so it is always clear where the safe ground starts.
+            Color edge = FlameMesh.Alpha(colors.Main, (warning ? 0.45f + 0.5f * warn : 0.9f) * fade);
+            flames.Bar(spec.Center + side * half, dir, length, 0.07f, edge, edge);
+            flames.Bar(spec.Center - side * half, dir, length, 0.07f, edge, edge);
+
+            // The main fissure zigzags down the middle, and a crack branches off each kink toward one edge or the other.
+            int kinks = Mathf.Max(2, Mathf.CeilToInt(length / 1.3f));
+            Vector2 previous = spec.Center + side * (FlameMesh.Hash(0, seed) - 0.5f) * half * 0.8f;
+            for (int i = 1; i <= kinks; i++)
+            {
+                float a = FlameMesh.Hash(i, seed), b = FlameMesh.Hash(i, seed + 4.7f);
+                Vector2 point = spec.Center + dir * (length * i / kinks) + side * (a - 0.5f) * half * 0.8f;
+                Fissure(previous, point, gape, heat, fade);
+                float sign = i % 2 == 0 ? 1f : -1f;
+                Vector2 toEdge = side * sign * (half - sign * (a - 0.5f) * half * 0.8f) + dir * (b - 0.5f) * 1.6f;
+                Vector2 elbow = point + toEdge * 0.5f * spread + side * (b - 0.5f) * 0.3f;
+                Fissure(point, elbow, gape * 0.7f, heat * 0.9f, fade);
+                Fissure(elbow, point + toEdge * spread, gape * 0.4f, heat * 0.7f, fade);
+                // Every other kink splits the opposite way too, with a short hairline crack.
+                if (b > 0.45f) Fissure(point, point - toEdge * (0.25f + 0.3f * b) * spread, gape * 0.35f, heat * 0.6f, fade);
+                previous = point;
+            }
+
+            // Slabs of rock along both edges: they tremble late in the warning and punch up when the band splits.
+            float heave = warning ? Mathf.InverseLerp(0.6f, 1f, warn) * 0.25f : 0.35f + 0.65f * Mathf.Sin(Mathf.Clamp01(ActiveTime / 0.3f) * Mathf.PI * 0.5f);
+            int slabs = Mathf.CeilToInt(length / 0.9f);
+            for (int edgeSide = -1; edgeSide <= 1; edgeSide += 2)
+                for (int i = 0; i < slabs; i++)
+                {
+                    float s = FlameMesh.Hash(i * 3 + edgeSide, seed + 9.1f);
+                    if (s < 0.25f) continue;
+                    float tremble = warning ? Mathf.Sin(time * 50f + i * 1.7f) * 0.03f * warn : 0f;
+                    Vector2 foot = spec.Center + dir * ((i + s * 0.6f) * length / slabs) + side * edgeSide * (half - 0.15f - s * 0.25f) + Vector2.right * tremble;
+                    float h = heave * (0.3f + s * 0.5f), w = 0.14f + s * 0.16f;
+                    if (h < 0.02f) continue;
+                    Color top = FlameMesh.Alpha(Color.Lerp(QuakeRock, QuakeDust, 0.55f), fade), bottom = FlameMesh.Alpha(QuakeRock, fade);
+                    flames.Triangle(foot + Vector2.left * w, foot + new Vector2((s - 0.5f) * 0.2f, h), foot + Vector2.right * w, bottom, top, bottom);
+                    // The side facing the fissure catches its glow.
+                    flames.Triangle(foot, foot + new Vector2((s - 0.5f) * 0.2f, h), foot + Vector2.right * w * -edgeSide,
+                        FlameMesh.Alpha(colors.Main, 0.35f * heat), FlameMesh.Alpha(colors.Bright, 0.5f * heat), FlameMesh.Alpha(colors.Main, 0f));
+                }
+
+            // Pebbles hop across the cracking ground; once it is open, embers and dust rise out of it instead.
+            int motes = Mathf.CeilToInt(length * spec.Width * 0.22f);
+            for (int i = 0; i < motes; i++)
+            {
+                float u = FlameMesh.Hash(i, seed + 1.3f), v = FlameMesh.Hash(i, seed + 6.9f);
+                Vector2 spot = spec.Center + dir * u * length + side * (v - 0.5f) * spec.Width * 0.9f;
+                if (warning)
+                {
+                    float hop = Mathf.Abs(Mathf.Sin(time * (9f + u * 6f) + i)) * 0.22f * warn;
+                    flames.Diamond(spot + Vector2.up * hop, 0.05f + v * 0.04f, FlameMesh.Alpha(QuakeDust, (0.3f + 0.6f * warn) * fade));
+                    continue;
+                }
+                float rise = Mathf.Repeat(time * (0.5f + u * 0.7f) + v, 1f);
+                Vector2 drift = Vector2.up * rise * 1.5f + Vector2.right * Mathf.Sin(time * 2f + i) * 0.15f;
+                if (i % 3 == 0)
+                    flames.Disc(spot + drift * 0.6f, 0.2f + rise * 0.35f, FlameMesh.Alpha(QuakeDust, 0.28f * (1f - rise) * fade), FlameMesh.Alpha(QuakeDust, 0f), 12);
+                else
+                    flames.Diamond(spot + drift, 0.09f * (1f - rise * 0.6f), FlameMesh.Alpha(Color.Lerp(colors.Core, colors.Main, rise), (1f - rise) * fade));
+            }
+        }
+
+        /// <summary>One stretch of crack: a dark gap in the rock with molten light in its depths.</summary>
+        private void Fissure(Vector2 from, Vector2 to, float width, float heat, float fade)
+        {
+            float length = Vector2.Distance(from, to);
+            if (length < 0.02f) return;
+            Vector2 along = (to - from) / length;
+            flames.Bar(from, along, length, width * 2.6f, FlameMesh.Alpha(colors.Main, 0.22f * heat), FlameMesh.Alpha(colors.Main, 0.1f * heat));
+            flames.Bar(from, along, length, width * 1.5f, FlameMesh.Alpha(colors.Dark, 0.95f * fade), FlameMesh.Alpha(colors.Dark, 0.8f * fade));
+            flames.Bar(from, along, length, width * 0.75f, FlameMesh.Alpha(colors.Main, heat), FlameMesh.Alpha(colors.Deep, heat));
+            flames.Bar(from, along, length, width * 0.28f, FlameMesh.Alpha(colors.Core, heat), FlameMesh.Alpha(colors.Bright, 0.7f * heat));
         }
 
         private void DrawRing(bool warning, float warn, float fade)

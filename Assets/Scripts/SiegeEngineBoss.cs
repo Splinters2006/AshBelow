@@ -108,7 +108,11 @@ namespace Slopgame
             var arena = DungeonMap.Arena;
             float middle = start + (index + 0.5f) * band;
             Vector2 from = vertical ? new Vector2(middle, arena.yMin - 0.5f) : new Vector2(arena.xMin - 0.5f, middle);
-            Hazard(HazardShape.Beam, from, vertical ? Vector2.up : Vector2.right, length, band, QuakeWarning, hold);
+            HellfireZone.Spawn(Run, new HazardSpec
+            {
+                Shape = HazardShape.Beam, Style = HazardStyle.Quake, Center = from, Direction = vertical ? Vector2.up : Vector2.right,
+                Radius = length, Width = band, Telegraph = QuakeWarning, Duration = hold
+            });
         }
 
         protected override float Attack(int index, Vector2 aim)

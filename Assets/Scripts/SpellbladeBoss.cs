@@ -9,7 +9,10 @@ namespace Slopgame
     /// </summary>
     public sealed class SpellbladeBoss : ArcaneBossBehaviour
     {
-        public const float CleaveReach = 3.2f, CleaveCone = 110f, ThrustLength = 7f, WhirlRadius = 2.8f;
+        public const float CleaveReach = 4.6f, CleaveCone = 130f, ThrustLength = 11f, ThrustWidth = 1.6f, WhirlRadius = 4.2f, RainRadius = 1.8f;
+        /// <summary>The cleave's fan of blade lines: enough of them, wide enough, to leave no gaps at its longer reach.</summary>
+        private const int CleaveLines = 7;
+        private const float CleaveLineWidth = 1.5f;
         /// <summary>The guardian's name (the encyclopedia reads it outside a fight).</summary>
         public const string FixedTitle = "SELWYN, THE SPELLBLADE";
         public override string Title => FixedTitle;
@@ -47,7 +50,7 @@ namespace Slopgame
                 case 1: return 0.3f + Thrusts * 1f + 0.4f;
                 case 2: return 0.4f + Volleys * 0.5f + 0.3f;
                 case 3:
-                    for (int i = 0; i < 4; i++) Scorch(RandomArenaSpot(), 1.1f, 0.9f + i * 0.15f, 0.35f);
+                    for (int i = 0; i < 4; i++) Scorch(RandomArenaSpot(), RainRadius, 0.9f + i * 0.15f, 0.35f);
                     return 0.3f + Rains * 0.45f + 0.9f;
                 default:
                     Scorch(center, WhirlRadius, 0.8f, 0.35f);
@@ -66,7 +69,7 @@ namespace Slopgame
                     // Lunge, cleave, and lunge again at whoever is nearest.
                     if (!TickLunge(time)) return;
                     Vector2 landed = transform.position;
-                    Cleave(landed, AimAt(Run.NearestHero(landed)), CleaveReach, CleaveCone, 0.45f);
+                    Cleave(landed, AimAt(Run.NearestHero(landed)), CleaveReach, CleaveCone, 0.45f, CleaveLines, CleaveLineWidth);
                     if (++step < Swings) PlanLunge(StrikeSpot(Run.NearestHero(landed), 1.4f), time + 0.6f, 0.22f);
                     break;
                 case 2:
@@ -77,22 +80,22 @@ namespace Slopgame
                     Vector2 side = Vector2.Perpendicular(AimAt(target)) * (Random.value < 0.5f ? -1f : 1f);
                     BlinkTo(DungeonMap.ClampToArena(target + side * 3f, 1.2f));
                     Vector2 from = transform.position, thrust = AimAt(target);
-                    Line(from, thrust, ThrustLength, 0.9f, 0.55f, 0.25f);
-                    SlashAfter(0.55f, from + thrust * 1.2f, thrust, 3f, 40f);
+                    Line(from, thrust, ThrustLength, ThrustWidth, 0.55f, 0.25f);
+                    SlashAfter(0.55f, from + thrust * 1.2f, thrust, 5f, 40f);
                     break;
                 case 3:
                     if (step >= Volleys || time < 0.4f + step * 0.5f) return;
-                    FanAt(center, AimAt(Run.NearestHero(center)), 7, 12f, 7.5f);
+                    FanAt(center, AimAt(Run.NearestHero(center)), 11, 11f, 7.5f);
                     step++;
                     break;
                 case 4:
                     // Swords fall where each hero stands, a beat behind them.
                     if (step >= Rains || time < 0.3f + step * 0.45f) return;
                     step++;
-                    foreach (Vector2 hero in LivingHeroPositions()) Scorch(hero + Random.insideUnitCircle * 0.6f, 1.1f, 0.8f, 0.35f);
+                    foreach (Vector2 hero in LivingHeroPositions()) Scorch(hero + Random.insideUnitCircle * 0.6f, RainRadius, 0.8f, 0.35f);
                     break;
                 case 5:
-                    if (step == 0 && time >= 0.8f) { step = 1; BoltRing(center, 12, 6f); }
+                    if (step == 0 && time >= 0.8f) { step = 1; BoltRing(center, 16, 6f); }
                     if (step == 1 && TickLunge(time))
                     {
                         step = 2;

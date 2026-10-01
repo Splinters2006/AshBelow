@@ -4,11 +4,14 @@ namespace Slopgame
 {
     /// <summary>
     /// The Infernal Court's second guardian: a colossal hellhound that charges across the arena leaving burning
-    /// ground behind it, sweeps a fan of molten breath, and erupts in shockwaves and falling brimstone. It calls its pack.
+    /// ground behind it, sweeps a fan of molten breath, and erupts in shockwaves and falling brimstone. It also floods
+    /// three quarters of the arena with magma, and opens a caldera that burns everything but a ring of ground around
+    /// itself, too close to its own blast for comfort. It calls its pack.
     /// </summary>
     public sealed class BrimstoneHoundBoss : InfernalBossBehaviour
     {
         public const float ChargeWindup = 0.9f, ChargeTime = 0.35f;
+        public const float FloodTelegraph = 2.6f, FloodDuration = 2.2f, CalderaRadius = 6.5f, CalderaBlast = 3.2f, CalderaTelegraph = 2.4f, CalderaDuration = 2.4f;
         /// <summary>The guardian's name (the encyclopedia reads it outside a fight).</summary>
         public const string FixedTitle = "GORGOTH, THE BRIMSTONE HOUND";
         public override string Title => FixedTitle;
@@ -19,7 +22,11 @@ namespace Slopgame
         protected override float Scale => 2.2f;
         public override float HitRadius => 1f;
         protected override string[] AttackTells => tells;
-        private static readonly string[] tells = { "BRIMSTONE CHARGE - SIDESTEP THE LINE", "MOLTEN BREATH - GET BEHIND HIM", "ERUPTION - ROLL THE SHOCKWAVES" };
+        private static readonly string[] tells =
+        {
+            "BRIMSTONE CHARGE - SIDESTEP THE LINE", "MOLTEN BREATH - GET BEHIND HIM", "ERUPTION - ROLL THE SHOCKWAVES",
+            "MAGMA FLOOD - RUN TO THE DRY GROUND", "CALDERA - CLOSE IN, BUT NOT TOO CLOSE"
+        };
         protected override byte[] Minions => minions;
         private static readonly byte[] minions = { DungeonRun.MinionBrute, DungeonRun.MinionBasic };
         private Vector2 chargeFrom, chargeTo;
@@ -45,6 +52,28 @@ namespace Slopgame
                 for (int i = 0; i < count; i++)
                     Line(mouth, Quaternion.Euler(0, 0, -40f + 80f * i / (count - 1)) * aim, 9f, 0.9f, 0.7f + i * 0.12f, 0.35f);
                 return 2.2f;
+            }
+            if (index == 3)
+            {
+                // Magma floods three quarters of the arena; brimstone still falls on the dry quarter, so nobody rests there.
+                ScreenFx.Shake(0.25f, 0.5f);
+                var (right, top) = QuadrantAwayFromParty();
+                Vector2 dry = LockAllButQuadrant(right, top, FloodTelegraph, FloodDuration);
+                for (int i = 0; i < (IsEnraged ? 3 : 2); i++)
+                    Scorch(dry + Random.insideUnitCircle * 3.5f, 1.1f, FloodTelegraph + 0.5f + i * 0.5f, 1.2f);
+                return FloodTelegraph + FloodDuration + 0.3f;
+            }
+            if (index == 4)
+            {
+                // The caldera burns everything beyond a circle around the hound, and the ground at its feet blows too:
+                // the only safe footing is the band between the two.
+                ScreenFx.Shake(0.25f, 0.5f);
+                Hazard(HazardShape.Inferno, center, Vector2.up, CalderaRadius, 0f, CalderaTelegraph, CalderaDuration);
+                Scorch(center, CalderaBlast, CalderaTelegraph + 0.4f, 0.6f);
+                BurstAfter(CalderaTelegraph + 0.4f, center, CalderaBlast);
+                // Enraged, a shockwave rolls out through the band as well.
+                if (IsEnraged) Hazard(HazardShape.Ring, center, aim, CalderaRadius + 1f, 0.8f, CalderaTelegraph + 1.3f, 1f);
+                return CalderaTelegraph + CalderaDuration + 0.3f;
             }
             ScreenFx.Shake(0.25f, 0.4f);
             Hazard(HazardShape.Ring, center, aim, 9f, 0.8f, 0.6f, 1.2f);

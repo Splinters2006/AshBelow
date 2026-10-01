@@ -382,7 +382,15 @@ namespace Slopgame
         }
 
         /// <summary>Takes one hit (or spends a ward). False when nothing landed: invulnerable, dead, or debug mode.</summary>
-        public bool Hit()
+        public bool Hit() => Strike(false);
+
+        /// <summary>
+        /// A killing blow: every hit point at once. Only what would turn aside any other blow still answers it: a roll's
+        /// invulnerability, a ward, and the rescues that defy death.
+        /// </summary>
+        public bool Slay() => Strike(true);
+
+        private bool Strike(bool lethal)
         {
             if (Run.IsPlaying && IsInvulnerable && Health > 0) Deflected?.Invoke();
             if (!Run.IsPlaying || IsInvulnerable || Health <= 0) return false;
@@ -400,9 +408,9 @@ namespace Slopgame
             if (!warded)
             {
                 // Cheat Death (once per world), then the Ash shop's Backup Drive (once per descent), turn a killing blow into 1 HP.
-                if (Health == 1 && Time.time < interventionUntil) Rescue();
-                else if (Health == 1 && TryDefyDeath()) { }
-                else Health--;
+                if ((lethal || Health == 1) && Time.time < interventionUntil) Rescue();
+                else if ((lethal || Health == 1) && TryDefyDeath()) Health = 1;
+                else Health -= lethal ? Health : 1;
                 Mechanic?.OnDamaged();
             }
             Powerups.OnStruck(this);

@@ -25,15 +25,5 @@ namespace Slopgame
         /// <summary>A beam centred on <paramref name="center"/>.</summary>
         protected void Beam(Vector2 center, Vector2 direction, float length, float delay, float width = 0.8f)
             => Hazard(HazardShape.Beam, center - direction * length * 0.5f, direction, length, width, delay, 0.45f);
-
-        /// <summary>A random quadrant, preferring one the party isn't standing in.</summary>
-        protected (bool right, bool top) QuadrantAwayFromParty()
-        {
-            Vector2 party = PartyCenter(), middle = DungeonMap.Arena.center;
-            bool right = party.x < middle.x, top = party.y < middle.y;
-            // Usually the diagonally opposite quadrant; sometimes an adjacent one so it can't be pre-empted.
-            if (Random.value < 0.4f) { if (Random.value < 0.5f) right = !right; else top = !top; }
-            return (right, top);
-        }
     }
 }

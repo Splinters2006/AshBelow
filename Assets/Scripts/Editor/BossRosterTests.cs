@@ -161,7 +161,8 @@ namespace Slopgame.Editor
                         Require(sawNeonHazard, "Arcology guardian created no hazards.");
                         if (neonIndex == 2) Require(sawNeonBolt, "Core did not fire its spiral/satellite bolts.");
                         var behaviour = run.Boss.Behaviour;
-                        if (neonIndex >= 3) Require(sawNeonBolt, "Court guardian fired no bolts.");
+                        // The hound fights with fire and its pack alone: neither it nor its brutes and imps shoot.
+                        if (neonIndex >= 3 && !(behaviour is BrimstoneHoundBoss)) Require(sawNeonBolt, "Court guardian fired no bolts.");
                         for (byte value = 0; value <= (court != null ? CourtBossBehaviour.Summoning : 4); value++)
                         {
                             if (court != null && value > attacks && value < CourtBossBehaviour.Spent) continue;

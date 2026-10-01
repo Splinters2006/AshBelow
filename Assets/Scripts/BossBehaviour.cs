@@ -59,10 +59,11 @@ namespace Slopgame
                 if (hero != null && hero.IsAlive) yield return hero.transform.position;
         }
 
-        protected void Hazard(HazardShape shape, Vector2 center, Vector2 direction, float radius, float width, float telegraph, float duration)
+        protected void Hazard(HazardShape shape, Vector2 center, Vector2 direction, float radius, float width, float telegraph, float duration, bool lethal = false)
             => HellfireZone.Spawn(Run, new HazardSpec
             {
-                Shape = shape, Style = Hazards, Center = center, Direction = direction, Radius = radius, Width = width, Telegraph = telegraph, Duration = duration
+                Shape = shape, Style = Hazards, Center = center, Direction = direction, Radius = radius, Width = width, Telegraph = telegraph, Duration = duration,
+                Lethal = lethal
             });
 
         protected Color Flashing(Color normal, Color flash, bool active)
