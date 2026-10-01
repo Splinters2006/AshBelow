@@ -102,7 +102,7 @@ namespace Slopgame
             // Wave worlds count waves (1-15) rather than floors.
             string where = Run.World.IsWaveWorld ? $"LEVEL {Run.LevelNumber:00}" : $"FLOOR {Run.Floor:00}";
             string guardian = Run.World.IsWaveWorld ? $"LEVEL {Run.LevelNumber + 1:00}" : $"FLOOR {Run.Floor + 1:00}";
-            if (Run.IsWaveFloor) where += $"  /  WAVE {Run.CurrentWave}/{Run.WavesThisLevel}";
+            if (Run.IsWaveFloor && !Run.WavesPending) where += $"  /  WAVE {Run.CurrentWave}/{Run.WavesThisLevel}";
             DungeonUi.Label(new Rect(405, 28, 470, 25), Run.InShop ? $"CRYSTAL SHOP  /  GUARDIAN OF {guardian} AHEAD" : Run.IsBossFloor ? $"{where}  /  BOSS ARENA"
                 : $"{where}  /  {Run.Enemies.Count} ENEMIES", 17, Run.InShop ? CrystalPouch.CrystalColor : AbilityCatalog.Gold, TextAnchor.MiddleCenter);
             if (Run.IsPlaying && Time.time < Run.WorldBannerUntil)

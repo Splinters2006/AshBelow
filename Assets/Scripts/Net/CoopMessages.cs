@@ -13,7 +13,7 @@ namespace Slopgame
             RestartVote = "ab.restartvote", RestartVotes = "ab.restartvotes", Minion = "ab.minion";
     }
 
-    public enum CoopChoice : byte { Upgrade, Artifact }
+    public enum CoopChoice : byte { Upgrade, Artifact, Waves }
     public enum CoopDamageKind : byte { Hit, Burn, Chill, Paralyze, Curse, Freeze, Fear, Stun, Root, Bleed, Poison, Mark, DeathMark, ClearParalysis }
     public enum CoopBoltEventKind : byte { Reflected, Consumed }
     /// <summary>

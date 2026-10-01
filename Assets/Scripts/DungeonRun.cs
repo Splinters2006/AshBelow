@@ -30,6 +30,7 @@ namespace Slopgame
         public string Objective => InShop ? ShopObjective
             : Artifact != null ? "Claim the glowing artifact  /  " + KeyBindings.Label(GameAction.Interact)
             : IsBossFloor && Enemies.Count > 0 ? "Defeat the arena guardian"
+            : WavesPending ? "Touch the monolith to call the waves  /  " + KeyBindings.Label(GameAction.Interact)
             : IsWaveFloor ? (Enemies.Count == 0 ? "Level cleared" : waveReserves.Count > 0 ? $"Survive the waves  /  {waveReserves.Count} more to come" : "Survive the final wave")
             : Enemies.Count == 0 ? "Find the gold stairs  /  " + KeyBindings.Label(GameAction.Interact) : "Clear the floor to unlock the stairs";
         private string ShopObjective => Shop != null && Shop.IsNear(Player) ? "Trade crystals with the merchant  /  " + KeyBindings.Label(GameAction.Interact)
@@ -275,6 +276,8 @@ namespace Slopgame
             waveReserves.Clear();
             WavesThisLevel = 0;
             WaveBannerUntil = 0f;
+            wavesStarted = false;
+            monolith = null;
             level = new GameObject(InShop ? "Crystal shop" : "Floor " + Floor).transform;
             level.SetParent(transform);
             view.backgroundColor = World.Background;
@@ -313,6 +316,7 @@ namespace Slopgame
             {
                 DungeonVisuals.DecorateArena(level, World);
                 SpawnWave(variants);
+                monolith = WaveMonolith.Create(level, MonolithPoint(), World.Accent);
             }
             for (int room = 1; !IsBossFloor && !InShop && !IsWaveFloor && room < Map.Centers.Count; room++)
             {
@@ -429,6 +433,32 @@ namespace Slopgame
         private int waveReleaseAt;
         /// <summary>The level's later waves, built with the level and held out of play until their turn.</summary>
         private readonly List<List<DungeonEnemy>> waveReserves = new List<List<DungeonEnemy>>();
+        private bool wavesStarted;
+        private WaveMonolith monolith;
+        /// <summary>True on a wave level until a hero touches the monolith: every wave still waits out of play.</summary>
+        public bool WavesPending => IsWaveFloor && !wavesStarted;
+        public WaveMonolith Monolith => monolith;
+
+        /// <summary>The monolith was touched: the first wave arrives around the heroes (in co-op the host tells every machine).</summary>
+        public void StartWaves()
+        {
+            if (!WavesPending) return;
+            wavesStarted = true;
+            if (monolith != null) monolith.Activate();
+            ReleaseNextWave();
+        }
+
+        /// <summary>The monolith stands just beside where the heroes arrive.</summary>
+        private Vector2 MonolithPoint()
+        {
+            Vector2 start = Map.Centers[0];
+            foreach (var offset in MonolithOffsets)
+                if (Map.CanStand(start + offset, 0.45f)) return start + offset;
+            return start;
+        }
+
+        private static readonly Vector2[] MonolithOffsets =
+            { new Vector2(0f, 2.5f), new Vector2(2.5f, 0f), new Vector2(-2.5f, 0f), new Vector2(0f, -2.5f) };
 
         /// <summary>Waves per level: 3, and 4 from the world's level 8.</summary>
         public static int WavesForLevel(int level) => level >= 8 ? 4 : 3;
@@ -446,8 +476,8 @@ namespace Slopgame
         public static float WavePartyMultiplier(int partySize) => partySize <= 1 ? 1f : partySize == 2 ? 1.6f : partySize == 3 ? 2.1f : 2.5f;
 
         /// <summary>
-        /// Builds the level's waves around the arena, away from the heroes. The first fights at once; the later ones are
-        /// built now too (seeded, so every co-op machine numbers the same enemies) and wait out of play for their turn.
+        /// Builds the level's waves around the arena, away from the heroes. All of them are built now (seeded, so every
+        /// co-op machine numbers the same enemies) and wait out of play: the first for the monolith, the rest for their turn.
         /// </summary>
         private void SpawnWave(System.Random variants)
         {
@@ -459,14 +489,14 @@ namespace Slopgame
             waveReleaseAt = WaveReleaseThreshold(count);
             for (int wave = 0; wave < WavesThisLevel; wave++)
             {
-                var reserve = wave == 0 ? null : new List<DungeonEnemy>();
+                var reserve = new List<DungeonEnemy>();
                 // Every fourth a caster (1, 5, 9, ...), every sixth a brute (3, 9 is a caster, 15, ...), and one specialist.
                 for (int i = 0; i < count; i++)
                 {
                     var enemy = SpawnEnemy(WaveSpawnPoint(spots, start), i % 4 == 1, i % 6 == 3, wave == 0 && i == 2, variants, health, reserve);
-                    if (reserve != null) enemy.gameObject.SetActive(false);
+                    enemy.gameObject.SetActive(false);
                 }
-                if (reserve != null) waveReserves.Add(reserve);
+                waveReserves.Add(reserve);
             }
         }
 
@@ -477,7 +507,7 @@ namespace Slopgame
         /// </summary>
         private void ReleaseNextWave()
         {
-            if (waveReserves.Count == 0 || Enemies.Count > waveReleaseAt) return;
+            if (!wavesStarted || waveReserves.Count == 0 || Enemies.Count > waveReleaseAt) return;
             var wave = waveReserves[0];
             waveReserves.RemoveAt(0);
             var spots = new System.Random(Seed + Floor * 7717 + CurrentWave * 131);
@@ -523,7 +553,7 @@ namespace Slopgame
         /// </summary>
         private bool UpdateWave()
         {
-            if (!IsWaveFloor || Enemies.Count > 0 || Artifact != null) return false;
+            if (!IsWaveFloor || WavesPending || Enemies.Count > 0 || Artifact != null) return false;
             if (waveClearedAt < 0f)
             {
                 waveClearedAt = Time.time;
@@ -618,8 +648,14 @@ namespace Slopgame
                 Shop.Toggle();
                 return;
             }
-            stairs.SetUnlocked(Enemies.Count == 0 && Artifact == null);
-            if (Artifact == null && Enemies.Count == 0 && canInteract && Vector2.Distance(Player.transform.position, exit) < 1.2f)
+            if (WavesPending && canInteract && monolith != null && monolith.IsNear(Player))
+            {
+                if (IsNetworked) Coop.RequestInteract(CoopChoice.Waves);
+                else StartWaves();
+                return;
+            }
+            stairs.SetUnlocked(Enemies.Count == 0 && Artifact == null && !WavesPending);
+            if (Artifact == null && Enemies.Count == 0 && !WavesPending && canInteract && Vector2.Distance(Player.transform.position, exit) < 1.2f)
             {
                 if (IsNetworked) Coop.RequestInteract(CoopChoice.Upgrade);
                 else BeginUpgradeChoice();
@@ -837,7 +873,7 @@ namespace Slopgame
         }
         public void BeginUpgradeChoice()
         {
-            if (!IsPlaying || Enemies.Count != 0 || Artifact != null) return;
+            if (!IsPlaying || Enemies.Count != 0 || Artifact != null || WavesPending) return;
             // The third guardian's stairs end the world: a cleared screen offers the next world or the menu.
             if (IsBossFloor && WorldCatalog.CompletesWorld(Floor)) { ShowWorldComplete(); return; }
             if (IsBossFloor || InShop) { NextFloor(); return; }

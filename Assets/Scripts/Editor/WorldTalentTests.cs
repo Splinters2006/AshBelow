@@ -487,7 +487,17 @@ namespace Slopgame.Editor
             for (int party = 1; party < 4; party++)
                 Require(DungeonRun.WaveEnemyCount(5, party + 1) > DungeonRun.WaveEnemyCount(5, party), "A bigger party did not face a bigger wave");
             int size = DungeonRun.WaveEnemyCount(1, run.PartySize);
-            Require(run.Enemies.Count == size && run.Boss == null, "Wrong first wave size");
+            Require(run.WavesPending && run.Monolith != null && run.Enemies.Count == 0 && run.WaveReserveCount == size * DungeonRun.WavesForLevel(1),
+                "The waves did not wait for the monolith");
+            run.StartWaves();
+            // Hold the first wave still, so no enemy walks off its spawn before the checks below.
+            foreach (var enemy in run.Enemies)
+            {
+                enemy.enabled = false;
+                var shooter = enemy.GetComponent<EnemyShooter>();
+                if (shooter != null) shooter.enabled = false;
+            }
+            Require(!run.WavesPending && run.Enemies.Count == size && run.Boss == null, "Wrong first wave size");
             Require(run.WavesThisLevel == DungeonRun.WavesForLevel(1) && run.WavesThisLevel >= 3 && run.CurrentWave == 1
                 && run.WaveReserveCount == size * (run.WavesThisLevel - 1), "The level's later waves are not waiting in reserve");
             Vector2 start = run.Map.Centers[0];

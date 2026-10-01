@@ -103,6 +103,8 @@ namespace Slopgame
         /// <summary>The Cataclysm sea of fire and meteor craters are burning ground; beams and rings are strikes.</summary>
         private bool IsGround => spec.Shape == HazardShape.Inferno || spec.Shape == HazardShape.Pool;
         private float ActiveTime => age - spec.Telegraph;
+        /// <summary>How long a spent hazard takes to fade out; lasers snap off, everything else smoulders a moment.</summary>
+        private float FadeTime => spec.Shape == HazardShape.Beam && spec.Style != HazardStyle.Quake ? 0.08f : 0.35f;
         private float RingRadius => Mathf.Lerp(0.6f, spec.Radius, Mathf.Clamp01(ActiveTime / Mathf.Max(0.01f, spec.Duration)));
 
         public static HellfireZone Spawn(DungeonRun run, HazardSpec spec, bool announce = true)
@@ -153,7 +155,7 @@ namespace Slopgame
             if (!run.IsPlaying) { Draw(); return; }
             age += Time.deltaTime;
             if (!erupted && age >= spec.Telegraph) Erupt();
-            if (age >= spec.Telegraph + spec.Duration + 0.35f) { Destroy(gameObject); return; }
+            if (age >= spec.Telegraph + spec.Duration + FadeTime) { Destroy(gameObject); return; }
             var hero = run.Player;
             if (IsBurning && hero != null && hero.Health > 0 && !hero.IsInvulnerable && Contains(hero.transform.position))
             {
@@ -257,7 +259,7 @@ namespace Slopgame
             flames.Begin();
             bool warning = age < spec.Telegraph;
             float warn = spec.Telegraph > 0f ? Mathf.Clamp01(age / spec.Telegraph) : 1f;
-            float fadeOut = Mathf.Clamp01((spec.Telegraph + spec.Duration + 0.35f - age) / 0.35f);
+            float fadeOut = Mathf.Clamp01((spec.Telegraph + spec.Duration + FadeTime - age) / FadeTime);
             if (spec.Style == HazardStyle.Circuit || spec.Style == HazardStyle.Artillery || spec.Style == HazardStyle.Void)
             {
                 DrawDigital(warning, warn, fadeOut);

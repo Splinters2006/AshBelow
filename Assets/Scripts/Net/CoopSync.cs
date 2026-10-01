@@ -564,6 +564,20 @@ namespace Slopgame
         {
             if (!Run.IsPlaying || openChoice.HasValue || Run.Enemies.Count != 0) return;
             if (choice == CoopChoice.Artifact && Run.Artifact == null) return;
+            // The monolith opens no pick: the host just tells every machine to release the first wave.
+            if (choice == CoopChoice.Waves)
+            {
+                if (!Run.WavesPending) return;
+                using (var writer = NetSession.Writer(16))
+                {
+                    writer.WriteValueSafe(Run.Floor);
+                    writer.WriteValueSafe(choice);
+                    Session.Send(CoopMessages.Choice, writer);
+                }
+                Run.StartWaves();
+                return;
+            }
+            if (Run.WavesPending) return;
             if (choice == CoopChoice.Upgrade && Run.Artifact != null) return;
             if (choice == CoopChoice.Upgrade && Run.IsBossFloor)
             {
@@ -606,6 +620,7 @@ namespace Slopgame
 
         private void OpenChoiceLocal(CoopChoice choice)
         {
+            if (choice == CoopChoice.Waves) { Run.StartWaves(); return; }
             WaitingForTeam = false;
             if (choice == CoopChoice.Upgrade) Run.BeginUpgradeChoice();
             else Run.BeginArtifactChoice();
