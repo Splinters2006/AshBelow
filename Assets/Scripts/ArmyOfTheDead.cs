@@ -21,9 +21,12 @@ namespace Slopgame
         public override Color Color => ReaperAttack.Soul;
         private ReaperAttack Reaper => Player.Weapon as ReaperAttack;
         private int Souls => DebugMode.Enabled ? SoulCost : Reaper != null ? Reaper.Souls : 0;
+        /// <summary>What a skeleton and the incarnation cost him (one soul less with Death's Bargain, his passive).</summary>
+        private int SkeletonCost => Reaper != null ? Reaper.Cost(SoulCost) : SoulCost;
+        private int IncarnationCost => Reaper != null ? Reaper.Cost(IncarnationSouls) : IncarnationSouls;
         public bool IsIncarnate => Player.Buffs != null && Player.Buffs.IsIncarnate;
         /// <summary>True with the Avatar of Death upgrade and enough souls to become the incarnation of death (and not already it).</summary>
-        public bool CanIncarnate => IsUpgraded && !IsIncarnate && Reaper != null && Reaper.Souls >= IncarnationSouls;
+        public bool CanIncarnate => IsUpgraded && !IsIncarnate && Reaper != null && Reaper.Souls >= IncarnationCost;
         /// <summary>Skeletons still standing (those from an earlier floor crumbled with it).</summary>
         public int Standing
         {
@@ -34,16 +37,16 @@ namespace Slopgame
             }
         }
         public override float Readiness => IsIncarnate ? Player.Buffs.IncarnateRemaining / IncarnationTime : CanIncarnate ? 1f
-            : Standing >= MaxSkeletons ? 0f : Mathf.Clamp01(Souls / (float)SoulCost);
-        public override string Status => IsIncarnate ? Seconds(Player.Buffs.IncarnateRemaining) : CanIncarnate ? $"READY  /  {IncarnationSouls} SOULS"
-            : Standing >= MaxSkeletons ? "ARMY FULL" : Souls >= SoulCost ? "READY" : $"{Souls} / {SoulCost}";
+            : Standing >= MaxSkeletons ? 0f : Mathf.Clamp01(Souls / (float)SkeletonCost);
+        public override string Status => IsIncarnate ? Seconds(Player.Buffs.IncarnateRemaining) : CanIncarnate ? $"READY  /  {IncarnationCost} SOULS"
+            : Standing >= MaxSkeletons ? "ARMY FULL" : Souls >= SkeletonCost ? "READY" : $"{Souls} / {SkeletonCost}";
 
         public override bool TryActivate(Vector2 aim)
         {
             var reaper = Reaper;
             if (!CanAct || reaper == null) return false;
             if (CanIncarnate) return Incarnate(reaper);
-            if (IsIncarnate || Standing >= MaxSkeletons || !reaper.Spend(SoulCost)) return false;
+            if (IsIncarnate || Standing >= MaxSkeletons || !reaper.Spend(SkeletonCost)) return false;
             var run = Player.Run;
             // It claws its way up beside him, on whichever side has room.
             Vector2 hero = transform.position, spot = hero;
@@ -65,7 +68,7 @@ namespace Slopgame
         /// <summary>Ninety-nine souls burn away at once and death itself walks the floor.</summary>
         private bool Incarnate(ReaperAttack reaper)
         {
-            if (!reaper.Spend(IncarnationSouls)) return false;
+            if (!reaper.Spend(IncarnationCost)) return false;
             Player.Buffs.Incarnate(IncarnationTime);
             var run = Player.Run;
             Vector2 at = transform.position;

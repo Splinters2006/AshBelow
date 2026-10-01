@@ -60,6 +60,11 @@ namespace Slopgame
         public float IncarnateRemaining => Mathf.Max(0f, incarnateUntil - Time.time);
         private float incarnateUntil;
         public void Incarnate(float duration) => incarnateUntil = Mathf.Max(incarnateUntil, Time.time + duration);
+        /// <summary>A demonic rune (the Demoness's passive): every hit she lands paralyses.</summary>
+        public bool IsRuneEmpowered => Time.time < runeUntil;
+        public float RuneRemaining => Mathf.Max(0f, runeUntil - Time.time);
+        private float runeUntil;
+        public void Rune(float duration) => runeUntil = Mathf.Max(runeUntil, Time.time + duration);
         /// <summary>Snake Eyes: a lost All In doubles the Gambler's damage for a while.</summary>
         public bool IsGreedy => Time.time < greedUntil;
         private float greedUntil;
@@ -92,7 +97,7 @@ namespace Slopgame
             jackpotDamageUntil = Mathf.Max(jackpotDamageUntil, Time.time + duration);
         }
 
-        public void Clear() { empoweredUntil = ragingUntil = tiredUntil = ascendedUntil = furiousUntil = jackpotSpeedUntil = jackpotDamageUntil = 0f; }
+        public void Clear() { empoweredUntil = ragingUntil = tiredUntil = ascendedUntil = furiousUntil = jackpotSpeedUntil = jackpotDamageUntil = runeUntil = 0f; }
 
         /// <summary>The hero's body colour with a hint of the strongest active buff.</summary>
         public Color Tint(Color baseColor) => IsIncarnate ? Color.Lerp(baseColor, IncarnateColor, 0.55f + 0.3f * (0.5f + 0.5f * Mathf.Sin(Time.time * 14f)))

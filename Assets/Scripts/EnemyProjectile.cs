@@ -76,7 +76,14 @@ namespace Slopgame
                         var enemy = run.Enemies[j];
                         if (Vector2.Distance(next, enemy.transform.position) > enemy.HitRadius) continue;
                         // A teammate's reflection is only a picture here; their machine deals the damage.
-                        if (!ghost) CombatDamage.Apply(run.Player, enemy, reflectedDamage, DamageElement.Physical, next - direction);
+                        if (!ghost)
+                        {
+                            bool guardian = enemy.Boss != null && !enemy.IsInvulnerable;
+                            CombatDamage.Apply(run.Player, enemy, reflectedDamage, DamageElement.Physical, next - direction);
+                            // Turnabout (the Knight's passive): a reflected bolt that kills or strikes a guardian wards him.
+                            if (run.Player.Permanent.HasPassive(WeaponType.Sword) && (guardian || enemy == null || enemy.Health <= 0))
+                                for (int ward = 0; ward < KnightShield.TurnaboutWards; ward++) run.Player.Powerups.AddWard();
+                        }
                         Consume();
                         return;
                     }

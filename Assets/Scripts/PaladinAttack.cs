@@ -11,6 +11,9 @@ namespace Slopgame
         public const float BlessingRadius = 4f;
         public const float BlessingDuration = 8f;
         public const int BlessingDamage = 2;
+        /// <summary>Overflowing Faith (his passive): an overcharged blessing's damage and reach.</summary>
+        public const int OverchargedBlessingDamage = 3;
+        public const float OverchargedBlessingRadius = 6f;
         /// <summary>Right click: holy swords fall from the sky onto every enemy within this radius.</summary>
         public const float HolySwordRadius = 3f, HolySwordCooldown = 12f;
         public const int HolySwordTargets = 8, HolySwordDamageMultiplier = 2;
@@ -42,7 +45,7 @@ namespace Slopgame
                 () => Player.Run != null && Player.Run.IsPlaying && Player.Health > 0 && Player.Powerups.Count(PowerupType.Zeal) > 0);
             // Teammates see the same ring through RemoteHero.
             BlessingChargeRing.Attach(transform, () => Player.Run.IsPlaying && Player.Health > 0 && Player.Charge.IsCharging
-                && !Player.IsRolling && !IsHeavyAttacking, () => Player.Charge.Amount);
+                && !Player.IsRolling && !IsHeavyAttacking, () => Player.Charge.Amount, () => Player.Charge.Overcharge);
         }
 
         public bool TryAttack(Vector2 aim, float charge = 0f)
@@ -59,21 +62,23 @@ namespace Slopgame
                 return swipe.TrySwipe(aim, Mathf.Max(1, Player.BaseDamage / 2) + Player.Blessing.BonusDamage, SwingReach, SwingCone);
             }
             // Zeal: ten stacks double the blessing.
-            int blessing = Player.Powerups.ConsumeZeal() ? BlessingDamage * 2 : BlessingDamage;
+            bool overcharged = Player.Charge.ReleasedOvercharged;
+            float radius = overcharged ? OverchargedBlessingRadius : BlessingRadius;
+            int blessing = (overcharged ? OverchargedBlessingDamage : BlessingDamage) * (Player.Powerups.ConsumeZeal() ? 2 : 1);
             foreach (var ally in FindObjectsByType<DungeonPlayer>())
             {
                 if (ally.Run != Player.Run || ally.Health <= 0
-                    || Vector2.Distance(transform.position, ally.transform.position) > BlessingRadius) continue;
+                    || Vector2.Distance(transform.position, ally.transform.position) > radius) continue;
                 ally.Blessing.Apply(blessing, BlessingDuration + Player.Permanent.BlessingDuration + Player.Powerups.Count(PowerupType.PatientFaith), Player);
                 CombatVfx.Ring(Player.Run.ProjectileRoot, ally.transform.position, 0.6f, AbilityCatalog.Gold);
                 HeroVfx.Motes(Player.Run.ProjectileRoot, ally.transform.position, 0.6f, AbilityCatalog.Gold, 14, 1f);
             }
-            Player.Run.Coop?.SupportAllies(transform.position, BlessingRadius, SupportKind.Bless, blessing,
+            Player.Run.Coop?.SupportAllies(transform.position, radius, SupportKind.Bless, blessing,
                 BlessingDuration + Player.Permanent.BlessingDuration + Player.Powerups.Count(PowerupType.PatientFaith));
-            CombatVfx.Ring(Player.Run.ProjectileRoot, transform.position, BlessingRadius, AbilityCatalog.Gold, 0.6f);
-            HeroVfx.Pulse(Player.Run.ProjectileRoot, transform.position, BlessingRadius, AbilityCatalog.Gold, 0.55f);
-            CoopFx.Ring(Player.Run, transform.position, BlessingRadius, AbilityCatalog.Gold, 0.6f);
-            CoopFx.Pulse(Player.Run, transform.position, BlessingRadius, AbilityCatalog.Gold, 0.55f);
+            CombatVfx.Ring(Player.Run.ProjectileRoot, transform.position, radius, AbilityCatalog.Gold, 0.6f);
+            HeroVfx.Pulse(Player.Run.ProjectileRoot, transform.position, radius, AbilityCatalog.Gold, 0.55f);
+            CoopFx.Ring(Player.Run, transform.position, radius, AbilityCatalog.Gold, 0.6f);
+            CoopFx.Pulse(Player.Run, transform.position, radius, AbilityCatalog.Gold, 0.55f);
             readyAt = Time.time + 0.6f * Player.Powerups.AttackIntervalMultiplier;
             return true;
         }

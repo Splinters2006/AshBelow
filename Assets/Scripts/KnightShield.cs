@@ -7,6 +7,8 @@ namespace Slopgame
         /// <summary>A tight parry window: the shield only reflects for a quarter of a second.</summary>
         public const float Duration = 0.25f;
         public const float Cooldown = 1.8f;
+        /// <summary>Turnabout (his passive): wards gained when a reflected bolt kills an enemy or strikes a guardian.</summary>
+        public const int TurnaboutWards = 2;
         public DungeonPlayer Player { get; set; }
         private float blockingUntil, readyAt;
         public bool IsBlocking => Player.Run.IsPlaying && !Player.IsRolling && Time.time < blockingUntil;

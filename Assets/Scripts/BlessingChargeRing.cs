@@ -13,10 +13,10 @@ namespace Slopgame
         private const int Segments = 72;
         private FlameMesh mesh;
         private Func<bool> isCharging;
-        private Func<float> amount;
-        private float strength, shown;
+        private Func<float> amount, overcharge;
+        private float strength, shown, over;
 
-        public static BlessingChargeRing Attach(Transform hero, Func<bool> isCharging, Func<float> amount)
+        public static BlessingChargeRing Attach(Transform hero, Func<bool> isCharging, Func<float> amount, Func<float> overcharge = null)
         {
             var holder = new GameObject("Blessing charge ring");
             holder.transform.SetParent(hero, false);
@@ -25,6 +25,7 @@ namespace Slopgame
             var ring = holder.AddComponent<BlessingChargeRing>();
             ring.isCharging = isCharging;
             ring.amount = amount;
+            ring.overcharge = overcharge;
             ring.mesh = new FlameMesh(holder, 5);
             return ring;
         }
@@ -37,6 +38,7 @@ namespace Slopgame
             strength = Mathf.MoveTowards(strength, charging ? 1f : 0f, Time.deltaTime * (charging ? 10f : 6f));
             // Keep the last reading while fading out so the arc does not snap back to empty.
             if (charging) shown = Mathf.Clamp01(amount != null ? amount() : 0f);
+            if (charging) over = Mathf.Clamp01(overcharge != null ? overcharge() : 0f);
             mesh.Begin();
             if (strength > 0f) Draw(shown, strength);
             mesh.Commit();
@@ -44,7 +46,8 @@ namespace Slopgame
 
         private void Draw(float charge, float alpha)
         {
-            float radius = PaladinAttack.BlessingRadius, time = Time.time;
+            // Overflowing Faith: the ring swells as the blessing overcharges.
+            float radius = Mathf.Lerp(PaladinAttack.BlessingRadius, PaladinAttack.OverchargedBlessingRadius, over), time = Time.time;
             bool ready = charge >= 1f;
             float pulse = 0.5f + 0.5f * Mathf.Sin(time * (ready ? 12f : 4f));
             Color gold = AbilityCatalog.Gold;

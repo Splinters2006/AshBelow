@@ -7,7 +7,7 @@ namespace Slopgame
     /// paid for in coins. Every coin spent here is one fewer in his volley. The game keeps running while it is open.
     /// The free coin he gets when he runs dry belongs to his weapon (GamblerAttack), not to this.
     /// With its R upgrade (The Safe, from the Ash shop) the purse holds a safe: coins go in ten at a time, every
-    /// guardian that falls multiplies what is inside by 1.1, and each withdrawal takes out exactly half of it.
+    /// guardian that falls multiplies what is inside by 1.1 (1.25 with his passive, Compound Interest), and each withdrawal takes out exactly half of it.
     /// </summary>
     public sealed class GamblerPurse : ClassMechanic
     {
@@ -30,7 +30,9 @@ namespace Slopgame
         };
 
         public const int SafeDeposit = 10;
-        public const float SafeInterest = 1.1f;
+        public const float SafeInterest = 1.1f, PassiveSafeInterest = 1.25f;
+        /// <summary>What a fallen guardian multiplies the safe by: more with Compound Interest (his passive).</summary>
+        public float Interest => Player.Permanent != null && Player.Permanent.HasPassive(WeaponType.Coins) ? PassiveSafeInterest : SafeInterest;
         private int diceFloor = -1, dice;
         public bool HasSafe => IsUpgraded;
         /// <summary>Coins locked in the safe for this descent.</summary>
@@ -63,7 +65,7 @@ namespace Slopgame
         {
             if (!HasSafe || Safe <= 0) return;
             int before = Safe;
-            Safe = (int)Mathf.Min(GamblerAttack.MaxCoins, Mathf.Round(Safe * SafeInterest));
+            Safe = (int)Mathf.Min(GamblerAttack.MaxCoins, Mathf.Round(Safe * Interest));
             LastResult = $"Interest: +{Safe - before:N0} in the safe.";
             HeroVfx.Motes(Player.Run.ProjectileRoot, transform.position, 0.7f, GamblerAttack.Gold, 14, 0.9f);
         }

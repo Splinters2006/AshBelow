@@ -181,21 +181,21 @@ namespace Slopgame
                 case AbilityType.OrbitalLaser:
                     OrbitalLaser.Call(Player, (Vector2)transform.position + aim * Mathf.Min(cursorDistance, 6f), OrbitalLaser.Duration + (rank - 1) * 0.75f, Player.Damage + rank - 1); break;
                 case AbilityType.NetShot:
-                    NetShot(aim, 2f + (rank - 1) * 0.5f, Player.Damage + rank - 1); break;
+                    NetShot(aim, 2f + (rank - 1) * 0.5f, BowAttack.SteadyHandAbilityDamage(Player, Player.Damage + rank - 1)); break;
                 case AbilityType.RicochetArrow:
-                    RicochetArrow.Fire(Player, aim, Player.Damage * 2 + rank - 1, Player.Damage); break;
+                    RicochetArrow.Fire(Player, aim, BowAttack.SteadyHandAbilityDamage(Player, Player.Damage * 2 + rank - 1), Player.Damage); break;
                 case AbilityType.BearTrap:
                     BearTrap.Set(Player, FindGroundLanding(Player.Run.Map, transform.position, aim, Mathf.Min(BearTrap.Range, cursorDistance)),
                         Player.Damage * 3 + rank - 1, 2f + (rank - 1) * 0.5f); break;
                 case AbilityType.Volley:
                     // Arrows fall from the sky, so the volley can be called down on the far side of a wall.
                     ArrowRain.Cast(Player, FindOpenLanding(Player.Run.Map, transform.position, aim, Mathf.Min(ArrowRain.Range, cursorDistance)),
-                        ArrowRain.BaseArrows + powers.Count(PowerupType.VolleyCount) * ArrowRain.ArrowsPerRank, Player.Damage + rank - 1); break;
+                        ArrowRain.BaseArrows + powers.Count(PowerupType.VolleyCount) * ArrowRain.ArrowsPerRank, BowAttack.SteadyHandAbilityDamage(Player, Player.Damage + rank - 1)); break;
                 case AbilityType.PiercingShot:
-                    PiercingArrow.Fire(Player, aim, damage + 1 + powers.Count(PowerupType.PiercingPower) * 2); break;
+                    PiercingArrow.Fire(Player, aim, BowAttack.SteadyHandAbilityDamage(Player, damage + 1 + powers.Count(PowerupType.PiercingPower) * 2)); break;
                 case AbilityType.Windstep:
                     Dash(aim, Mathf.Min(3.5f + powers.Count(PowerupType.WindstepDistance) * 0.5f, cursorDistance), 0, true);
-                    Fan(aim, 3, BowAttack.SpreadAngle, Player.Damage + rank - 1, BowAttack.HeavyRange); break;
+                    Fan(aim, 3, BowAttack.SpreadAngle, BowAttack.SteadyHandAbilityDamage(Player, Player.Damage + rank - 1), BowAttack.HeavyRange); break;
                 case AbilityType.Fireball:
                     var orb = SpellProjectile.Spawn(Player, aim, damage, DamageElement.Fire, definition.Color, 7f,
                         1.7f + powers.Count(PowerupType.FireballRadius) * 0.4f);
@@ -569,7 +569,7 @@ namespace Slopgame
                     {
                         hit.Add(enemy);
                         CombatDamage.Apply(Player, enemy, damage, DamageElement.Ice, center);
-                        if (enemy.Health > 0) enemy.Freeze(freeze);
+                        if (enemy.Health > 0) enemy.Freeze(freeze * CombatDamage.FreezeScale(Player));
                     }
                 if (progress >= 1f)
                 {

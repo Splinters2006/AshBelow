@@ -17,6 +17,17 @@ namespace Slopgame
             return roll < chance ? player.Powerups.CriticalDamage(backstab) : backstab;
         }
 
+        /// <summary>Killer Instinct (the Assassin's passive): what a basic attack's backstab is multiplied by, and every other backstab.</summary>
+        public const float BasicBackstabMultiplier = 2f, OtherBackstabMultiplier = 1.15f;
+
+        /// <summary>Killer Instinct, applied on top of the backstab's own bonus: double for a left-click stab, 15% more (rounded up) otherwise.</summary>
+        public static int KillerInstinct(DungeonPlayer player, int backstab)
+        {
+            if (player == null || player.Permanent == null || !player.Permanent.HasPassive(WeaponType.Daggers)) return backstab;
+            bool basic = player.Charge != null && player.Charge.IsStriking && !ShadowClone.IsStriking;
+            return Mathf.CeilToInt(backstab * (basic ? BasicBackstabMultiplier : OtherBackstabMultiplier) - 0.0001f);
+        }
+
         public static void ApplyShadowstep(DungeonPlayer player, DungeonEnemy enemy)
         {
             if (enemy == null || enemy.Health <= 0) return;
@@ -25,7 +36,7 @@ namespace Slopgame
             Vector2 source = (Vector2)enemy.transform.position - enemy.Facing.Direction;
             HitVfx(player, enemy.transform.position, source, new Color(0.8f, 0.5f, 1f), true);
             RearHitMarker.Show(player.Run, enemy);
-            int damage = AssassinBonus(player, enemy, ShadowstepDamageForRoll(player, Random.value));
+            int damage = KillerInstinct(player, AssassinBonus(player, enemy, ShadowstepDamageForRoll(player, Random.value)));
             bool seize = SeizesTouched(player, enemy);
             enemy.Hit(damage, source);
             if (seize) enemy.Stun(ElementalImmobilizationStun);
@@ -120,7 +131,7 @@ namespace Slopgame
             if (element == DamageElement.Physical)
             {
                 if (player.ClassWeapon == WeaponType.Daggers && behind)
-                    damage = damage * 2 + player.Powerups.Count(PowerupType.Backstab);
+                    damage = KillerInstinct(player, damage * 2 + player.Powerups.Count(PowerupType.Backstab));
                 damage = AssassinBonus(player, enemy, damage) + BrawlBonus(player);
                 int rolled = opening ? player.Powerups.CriticalDamage(damage) : player.Powerups.RollDamage(damage);
                 bool critical = rolled > damage;
@@ -135,6 +146,7 @@ namespace Slopgame
                 }
                 CreditBlessing(player);
                 IncarnateFear(player, enemy);
+                RuneParalysis(player, enemy);
                 // Elemental Surge: while the Archer's quiver surges, every infused hit sets off its element, not only crits.
                 if (infusion != DamageElement.Physical && (critical || ElementalQuiver.IsImbued(player))) ApplyEffect(player, enemy, infusion, rolled);
                 if (enemy.Health <= 0) Overkill(player, enemy, rolled - healthBefore);
@@ -148,6 +160,7 @@ namespace Slopgame
             if (seize) enemy.Stun(ElementalImmobilizationStun);
             CreditBlessing(player);
             IncarnateFear(player, enemy);
+            RuneParalysis(player, enemy);
             if (enemy.Health <= 0) Overkill(player, enemy, damage - healthBefore);
             if (player.Powerups.Count(PowerupType.ElementalClash) > 0 && HasEffect(element))
             {
@@ -205,8 +218,8 @@ namespace Slopgame
             foreach (var enemy in run.Enemies.ToArray())
             {
                 if (enemy == null || enemy == origin || enemy.Health <= 0 || Vector2.Distance(center, enemy.transform.position) > ClashRadius + enemy.HitRadius) continue;
-                if (first == DamageElement.Fire) enemy.Burn(BurnTicks + player.Powerups.Count(PowerupType.SlowBurn), BurnTickDamage(hit));
-                else enemy.Freeze(FreezeDuration + player.Powerups.Count(PowerupType.Permafrost) * 0.3f);
+                if (first == DamageElement.Fire) enemy.Burn(BurnTicksFor(player), BurnTickDamage(hit));
+                else enemy.Freeze(FreezeDurationFor(player));
             }
         }
 
@@ -215,6 +228,13 @@ namespace Slopgame
         {
             if (player != null && player.Buffs != null && player.Buffs.IsIncarnate && enemy != null && enemy.Health > 0)
                 enemy.Fear(player.transform.position, ArmyOfTheDead.IncarnationFear);
+        }
+
+        /// <summary>A demonic rune: every hit the Demoness lands paralyses whatever survives it.</summary>
+        private static void RuneParalysis(DungeonPlayer player, DungeonEnemy enemy)
+        {
+            if (player != null && player.Buffs != null && player.Buffs.IsRuneEmpowered && enemy != null && enemy.Health > 0
+                && player.Weapon is DemonessAttack tail) tail.RuneParalyze(enemy);
         }
 
         /// <summary>Hits dealt while blessed charge the Paladin who gave the blessing; the Paladin's own hits build Zeal.</summary>
@@ -230,6 +250,18 @@ namespace Slopgame
         public const float FreezeDuration = 1.5f;
         public const float ShockRadius = 2f, ShockShare = 0.25f;
         public static readonly Color ShockColor = new Color(0.75f, 0.9f, 1f);
+        /// <summary>Elemental Mastery (the Wizard's passive): what his shock radius, burn ticks and freeze time start from.</summary>
+        public const float MasteryMultiplier = 1.5f;
+        private static bool HasMastery(DungeonPlayer player) => player != null && player.Permanent != null && player.Permanent.HasPassive(WeaponType.Staff);
+        /// <summary>Scales a freeze the hero inflicts (Elemental Mastery).</summary>
+        public static float FreezeScale(DungeonPlayer player) => HasMastery(player) ? MasteryMultiplier : 1f;
+        /// <summary>How many times the hero's burn ticks: the base (half as many again with Elemental Mastery, rounded up) plus Slow Burn.</summary>
+        public static int BurnTicksFor(DungeonPlayer player)
+            => (HasMastery(player) ? Mathf.CeilToInt(BurnTicks * MasteryMultiplier) : BurnTicks) + player.Powerups.Count(PowerupType.SlowBurn);
+        public static float FreezeDurationFor(DungeonPlayer player)
+            => FreezeDuration * FreezeScale(player) + player.Powerups.Count(PowerupType.Permafrost) * 0.3f;
+        public static float ShockRadiusFor(DungeonPlayer player)
+            => ShockRadius * (HasMastery(player) ? MasteryMultiplier : 1f) + player.Powerups.Count(PowerupType.StaticField) * 0.4f;
         /// <summary>Each of a burn's three ticks deals half of the hit that lit it.</summary>
         public static int BurnTickDamage(int hit) => Mathf.Max(1, hit / 2);
         /// <summary>A shock arcs a quarter of the triggering hit into every enemy nearby.</summary>
@@ -248,8 +280,8 @@ namespace Slopgame
             bool kindle = element != DamageElement.Fire && player.Powerups.Count(PowerupType.Kindling) > 0;
             if (element == DamageElement.Lightning) Shock(player, enemy.transform.position, enemy, hit);
             if (enemy.Health <= 0) return;
-            if (element == DamageElement.Fire || kindle) enemy.Burn(BurnTicks + player.Powerups.Count(PowerupType.SlowBurn), BurnTickDamage(hit));
-            if (element == DamageElement.Ice) enemy.Freeze(FreezeDuration + player.Powerups.Count(PowerupType.Permafrost) * 0.3f);
+            if (element == DamageElement.Fire || kindle) enemy.Burn(BurnTicksFor(player), BurnTickDamage(hit));
+            if (element == DamageElement.Ice) enemy.Freeze(FreezeDurationFor(player));
         }
 
         /// <summary>Lightning bolts leap from <paramref name="center"/> to every other enemy in range. The shock does not chain further.</summary>
@@ -257,7 +289,7 @@ namespace Slopgame
         {
             var run = player.Run;
             int damage = ShockDamage(hit);
-            float radius = ShockRadius + player.Powerups.Count(PowerupType.StaticField) * 0.4f;
+            float radius = ShockRadiusFor(player);
             HeroVfx.Pulse(run.ProjectileRoot, center, radius, ShockColor, 0.2f);
             CoopFx.Pulse(run, center, radius, ShockColor, 0.2f);
             foreach (var enemy in run.Enemies.ToArray())

@@ -23,6 +23,21 @@ namespace Slopgame
         private bool cannonCharging;
         private SpriteRenderer chargeGlow;
 
+        /// <summary>Salvage (his passive): scrap gathered and not yet spent on repairs.</summary>
+        public int Scrap { get; private set; }
+        public void CollectScrap() { Scrap++; SpendScrap(); }
+
+        /// <summary>Every three pieces repair 1 HP; at full health they are kept until he is hurt.</summary>
+        private void SpendScrap()
+        {
+            while (Scrap >= ScrapPickup.PerHeal && Player.Health > 0 && Player.Health < Player.MaxHealth)
+            {
+                Scrap -= ScrapPickup.PerHeal;
+                Player.Heal(ScrapPickup.HealAmount);
+                HeroVfx.Motes(Player.Run.ProjectileRoot, transform.position, 0.7f, Plasma, 10, 0.8f);
+            }
+        }
+
         public bool IsCannonCharging => cannonCharging;
         /// <summary>How far the cannon has charged, 0-1 (0 when it is not charging).</summary>
         public float CannonCharge => cannonCharging ? Mathf.Clamp01((Time.time - cannonStartedAt) / CannonChargeTime) : 0f;
@@ -82,6 +97,7 @@ namespace Slopgame
 
         private void Update()
         {
+            if (Scrap >= ScrapPickup.PerHeal) SpendScrap();
             if (Player == null) return;
             var run = Player.Run;
             if (IsOverclocked && run.IsPlaying && Time.time >= nextHum && !cannonCharging)

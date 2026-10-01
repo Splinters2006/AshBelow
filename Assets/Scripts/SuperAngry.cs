@@ -5,12 +5,16 @@ namespace Slopgame
     /// <summary>
     /// The Brawler's class mechanic: every point of damage she takes stokes her temper. After 5 she can go Super
     /// Angry, with huge boosts to speed, reach, area, charge speed and damage (see <see cref="HeroBuffs.Fury"/>).
-    /// With its R upgrade (Mastered Technique, from the Ash shop) she keeps a barrage going through her rolls while furious.
+    /// With its R upgrade (Seeing Red, from the Ash shop) her barrages charge 75% faster still while furious.
     /// </summary>
     public sealed class SuperAngry : ChargedMechanic
     {
         public const int DamageNeeded = 5;
         public const float Duration = 8f;
+        /// <summary>Seeing Red: how much faster a barrage charges while furious.</summary>
+        public const float UpgradedChargeSpeed = 1.75f;
+        /// <summary>Scales the Brawler's charge time, on top of fury's own boost.</summary>
+        public float ChargeDurationMultiplier => IsUpgraded && Player.Buffs.IsFurious ? 1f / UpgradedChargeSpeed : 1f;
         public override string Name => "Super Angry";
         public override Color Color => HeroBuffs.FuryColor;
         public override int Required => DamageNeeded;

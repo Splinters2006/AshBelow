@@ -277,7 +277,7 @@ namespace Slopgame
             rollReady = Time.time + Mathf.Max(0.2f, RollCooldown * Powerups.DodgeCooldownMultiplier * Buffs.DodgeCooldownMultiplier
                 - Buffs.DodgeCooldownReduction);
             // The Brawler keeps a held punch charging through the roll; every other class loses it.
-            // Mastered Technique: while Super Angry she does not even stop a running barrage.
+            // Mastered Technique (her passive): she does not even stop a running barrage.
             if (Weapon is BrawlerAttack brawler) { if (!brawler.KeepsBarrageWhileRolling) brawler.StopBarrage(); }
             else
             {

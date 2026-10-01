@@ -97,7 +97,7 @@ namespace Slopgame
             MechanicUpgrade(WeaponType.Staff, "Cataclysm", "Wild Storm grows wilder: a far bigger thundercloud that also rains meteors and lightning strikes from the sky onto nearby enemies, on top of its fireballs, zaps and ice bolts"),
             MechanicUpgrade(WeaponType.Daggers, "Razor's Edge", "Sharpened Dagger lasts 10s instead of 7.5s, and while it is up every stab is fully charged instantly"),
             MechanicUpgrade(WeaponType.Hammer, "Seraphim", "Heavenly Host helps 2 allies instead of 1. If only one needs it, you gain a +5 damage blessing for 30 seconds instead"),
-            MechanicUpgrade(WeaponType.Fists, "Mastered Technique", "While Super Angry, rolling no longer cuts your barrage short: you keep punching straight through the dodge"),
+            MechanicUpgrade(WeaponType.Fists, "Seeing Red", "While Super Angry, your barrages charge 75% faster"),
             MechanicUpgrade(WeaponType.Coins, "The Safe", "Your purse holds a safe: deposit 10 coins per click, every guardian you defeat multiplies its contents by 1.1, and each withdrawal takes out exactly 50% of it"),
             MechanicUpgrade(WeaponType.Beam, "Missile Rack", "While overclocked, every plasma ray you fire also launches a homing mini missile"),
             MechanicUpgrade(WeaponType.Tail, "Dread Presence", "During Demonic Power, every enemy that comes within 5 units of you is paralysed for 2 seconds"),

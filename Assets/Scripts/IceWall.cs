@@ -190,7 +190,7 @@ namespace Slopgame
                 CoopFx.IceBreak(run, block.Center);
                 foreach (var enemy in run.Enemies.ToArray())
                     if (enemy != null && enemy.Health > 0 && Vector2.Distance(enemy.transform.position, block.Center) <= ShatterReach + enemy.HitRadius)
-                        enemy.Freeze(ShatterFreeze);
+                        enemy.Freeze(ShatterFreeze * CombatDamage.FreezeScale(run.Player));
             }
             if (blocks.TrueForAll(b => b.Broken)) Destroy(gameObject, 0.05f);
         }

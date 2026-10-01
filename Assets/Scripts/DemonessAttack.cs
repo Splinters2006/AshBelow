@@ -172,6 +172,9 @@ namespace Slopgame
             if (enemy.Health <= 0 || enemy.Paralyze(duration + ParalysisBonus, Player.Powerups.Count(PowerupType.LingeringTerror) > 0)) Player.Mechanic?.OnImmobilized();
         }
 
+        /// <summary>A hit landed under a demonic rune: it paralyses like a vital stab.</summary>
+        public void RuneParalyze(DungeonEnemy enemy) => ParalyzeCounted(enemy, VitalParalysis);
+
         /// <summary>Her tail and paw hits: Pressure Points on an immobilized enemy, and Torment's growing tally on a paralysed one.</summary>
         private int WithPressurePoints(DungeonEnemy enemy, int damage) => (enemy.IsImmobilized ? damage + ParalyzedBonusDamage : damage) + TormentBonus(enemy);
 

@@ -40,11 +40,18 @@ namespace Slopgame
             Souls += amount + extra;
         }
 
-        /// <summary>Spends souls if he holds enough (debug mode pays for everything).</summary>
+        /// <summary>Death's Bargain (his passive): everything that costs souls costs this many less.</summary>
+        public int SoulDiscount => Player != null && Player.Permanent != null && Player.Permanent.HasPassive(WeaponType.Scythe) ? 1 : 0;
+        /// <summary>What a soul price really costs him.</summary>
+        public int Cost(int souls) => Mathf.Max(0, souls - SoulDiscount);
+        /// <summary>The souls he can pay prices with: what he holds plus his discount.</summary>
+        public int Purse => Souls + SoulDiscount;
+
+        /// <summary>Spends souls if he holds enough (debug mode pays for everything); a price discounted to nothing is free.</summary>
         public bool Spend(int amount)
         {
-            if (DebugMode.Enabled) return true;
-            if (amount <= 0 || Souls < amount) return false;
+            if (DebugMode.Enabled || amount == 0) return true;
+            if (amount < 0 || Souls < amount) return false;
             Souls -= amount;
             LastSpent = Time.time < LastSpentAt + SpentNoticeTime ? LastSpent + amount : amount;
             LastSpentAt = Time.time;
@@ -118,7 +125,7 @@ namespace Slopgame
         public bool TryHeavyAttack(Vector2 aim)
         {
             if (!Player.Run.IsPlaying || Player.IsRolling || Player.IsBusy || skullCharging || HeavyCooldownRemaining > 0f || aim.sqrMagnitude < 0.001f) return false;
-            if (Souls < 1 && !DebugMode.Enabled)
+            if (Purse < 1 && !DebugMode.Enabled)
             {
                 // Nothing to throw: a puff of grey dust.
                 HeroVfx.Sparks(Player.Run.ProjectileRoot, transform.position, new Color(0.5f, 0.5f, 0.5f), 5, 1.8f, 0.25f, aim, 60f, 0.7f);
@@ -144,7 +151,7 @@ namespace Slopgame
             if (!run.IsPlaying || Player.Health <= 0 || Player.IsRolling) { skullCharging = false; return; }
             float charge = SkullCharge;
             // A ping as the skull reaches each stronger throw he can afford.
-            int reached = SkullTier(charge, DebugMode.Enabled ? 3 : Souls);
+            int reached = SkullTier(charge, DebugMode.Enabled ? 3 : Purse);
             if (reached > skullPinged)
             {
                 if (skullPinged > 0) HeroVfx.Pulse(run.ProjectileRoot, Hand(Player.AimDirection), 0.35f + 0.15f * reached, Soul, 0.25f);
@@ -158,8 +165,8 @@ namespace Slopgame
         private void ThrowSkulls(Vector2 aim, float charge)
         {
             skullCharging = false;
-            int tier = SkullTier(charge, DebugMode.Enabled ? 3 : Souls);
-            if (tier <= 0 || !Spend(tier)) return;
+            int tier = SkullTier(charge, DebugMode.Enabled ? 3 : Purse);
+            if (tier <= 0 || !Spend(Cost(tier))) return;
             var run = Player.Run;
             Vector2 origin = Hand(aim);
             int damage = Player.Damage * 2;
@@ -248,11 +255,11 @@ namespace Slopgame
         /// <summary>Eats 1, 3 or 5 souls to heal 1, 2 or 3 HP. Ranks above the first leave him untouchable for a second each.</summary>
         public bool Feast(int rank)
         {
-            int tier = FeastTier(DebugMode.Enabled ? FeastSouls[FeastSouls.Length - 1] : Souls, Player.MaxHealth - Player.Health);
-            if (tier < 0 || !Spend(FeastSouls[tier])) return false;
+            int tier = FeastTier(DebugMode.Enabled ? FeastSouls[FeastSouls.Length - 1] : Purse, Player.MaxHealth - Player.Health);
+            if (tier < 0 || !Spend(Cost(FeastSouls[tier]))) return false;
             Player.Heal(FeastHealing[tier]);
             if (rank > 1) Player.Protect(rank - 1);
-            FeastVfx.Play(Player.Run.ProjectileRoot, transform, FeastSouls[tier], FeastHealing[tier]);
+            FeastVfx.Play(Player.Run.ProjectileRoot, transform, Mathf.Max(1, Cost(FeastSouls[tier])), FeastHealing[tier]);
             CoopFx.Heal(Player.Run, transform.position, 0.6f);
             ScreenFx.Flash(FlameMesh.Alpha(HealVfx.Mint, 0.16f), 0.3f);
             return true;
@@ -407,7 +414,7 @@ namespace Slopgame
                 {
                     // One aim line per skull the throw would loose, and a skull-light gathering in his hand.
                     float charge = SkullCharge;
-                    int tier = SkullTier(charge, DebugMode.Enabled ? 3 : Souls);
+                    int tier = SkullTier(charge, DebugMode.Enabled ? 3 : Purse);
                     Vector2 hand = Hand(aim);
                     for (int i = tier >= 3 ? -1 : 0; i <= (tier >= 3 ? 1 : 0); i++)
                         preview.Bar(hand, Quaternion.Euler(0, 0, i * SkullSpread) * aim, 1.2f + 1.2f * charge, 0.05f, FlameMesh.Alpha(Soul, 0.6f), FlameMesh.Alpha(Soul, 0f));

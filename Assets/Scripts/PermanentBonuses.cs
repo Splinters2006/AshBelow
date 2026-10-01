@@ -30,6 +30,11 @@ namespace Slopgame
         public bool MechanicUnlocked { get; }
         /// <summary>The mechanic's R upgrade, bought in the Ash shop (the Reaper's Avatar of Death).</summary>
         public bool MechanicUpgraded { get; }
+        /// <summary>The class passive (see <see cref="ClassPassiveCatalog"/>), active once its world is cleared.</summary>
+        public bool PassiveUnlocked { get; }
+        private readonly WeaponType weapon;
+        /// <summary>True when this hero is the given class and its passive is unlocked.</summary>
+        public bool HasPassive(WeaponType passive) => PassiveUnlocked && weapon == passive;
         /// <summary>Scales all damage (the Ash shop's Infernal Pact).</summary>
         public float DamageMultiplier { get; } = 1f;
         /// <summary>Scales maximum HP (the Ash shop's Infernal Pact).</summary>
@@ -41,9 +46,11 @@ namespace Slopgame
 
         public PermanentBonuses(PermanentProgress progress, WeaponType weapon)
         {
+            this.weapon = weapon;
             if (progress == null) return;
             MechanicUnlocked = progress.Rank(PermanentUpgradeCatalog.MechanicId(weapon)) > 0;
             MechanicUpgraded = MechanicUnlocked && progress.Rank(PermanentUpgradeCatalog.MechanicUpgradeId(weapon)) > 0;
+            PassiveUnlocked = ClassPassiveCatalog.IsUnlocked(progress, weapon);
             Health = progress.Rank("health");
             Damage = progress.Rank("damage");
             Speed = progress.Rank("speed") * 0.2f;

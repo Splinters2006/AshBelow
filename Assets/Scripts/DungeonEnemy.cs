@@ -403,6 +403,10 @@ namespace Slopgame
             if (Variant != null) Variant.OnDeath(this);
             // The Gambler collects a gold coin from every fallen enemy (each machine drops coins for its own hero).
             if (Run.Player != null && Run.Player.Weapon is GamblerAttack) GoldCoin.Drop(Run, transform.position);
+            // Demonic Runes (the Demoness's passive): the immobilized may leave a rune behind.
+            DemonicRune.TryDrop(Run, this);
+            // Salvage (the Augment's passive): his own kills may drop scrap.
+            if (localKill) ScrapPickup.TryDrop(Run, this);
             // The Reaper takes the souls of the soul-bound, and fear he has sown spreads from the fallen.
             if (Run.Player != null && Run.Player.Weapon is ReaperAttack reaper) reaper.OnEnemyDied(this, localKill);
             // Every fallen enemy leaves crystals for the shop before the next boss. In co-op they are shared: every machine

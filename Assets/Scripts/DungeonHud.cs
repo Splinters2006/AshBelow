@@ -136,6 +136,11 @@ namespace Slopgame
                 GUI.DrawTexture(new Rect(42, 101, 18, 18), DungeonVisuals.CoinSprite.texture);
                 DungeonUi.Label(new Rect(66, 99, 232, 24), $"{gambler.Coins:N0} {(gambler.Coins == 1 ? "COIN" : "COINS")}", 16, GamblerAttack.Gold);
             }
+            if (player.Weapon is CyborgAttack augment && player.Permanent.HasPassive(WeaponType.Beam))
+            {
+                GUI.DrawTexture(new Rect(42, 101, 18, 18), ScrapPickup.ScrapSprite.texture);
+                DungeonUi.Label(new Rect(66, 99, 232, 24), $"{augment.Scrap} / {ScrapPickup.PerHeal} SCRAP", 16, ScrapPickup.Metal);
+            }
             if (reaper != null)
             {
                 GUI.DrawTexture(new Rect(42, 101, 18, 18), SoulWisp.Sprite.texture);
@@ -223,7 +228,7 @@ namespace Slopgame
             string buff = BuffStatus(player.Buffs);
             if (buff != null)
                 DungeonUi.Label(new Rect(440, 475, 400, 24), buff, 14, player.Buffs.IsIncarnate ? HeroBuffs.IncarnateColor : player.Buffs.IsFurious ? HeroBuffs.FuryColor
-                    : player.Buffs.IsAscended ? HeroBuffs.AscendColor : player.Buffs.IsRaging ? HeroBuffs.RageColor
+                    : player.Buffs.IsAscended || player.Buffs.IsRuneEmpowered ? HeroBuffs.AscendColor : player.Buffs.IsRaging ? HeroBuffs.RageColor
                     : player.Buffs.IsTired ? HeroBuffs.TiredColor : HeroBuffs.EmpowerColor, TextAnchor.MiddleCenter);
             string boons = BoonStatus(player.Crystals);
             if (boons != null) DungeonUi.Label(new Rect(390, 445, 500, 24), boons, 14, CrystalPouch.CrystalColor, TextAnchor.MiddleCenter);
@@ -253,8 +258,10 @@ namespace Slopgame
             }
             if (player.Weapon is ReaperAttack skulls && skulls.IsSkullCharging)
             {
-                int tier = ReaperAttack.SkullTier(skulls.SkullCharge, DebugMode.Enabled ? 3 : skulls.Souls);
-                DungeonUi.Label(new Rect(440, 535, 400, 24), tier >= 3 ? "RELEASE: 3 FEAR SKULLS  /  3 SOULS" : tier == 2 ? "RELEASE: FEAR SKULL  /  2 SOULS" : "RELEASE: SKULL  /  1 SOUL",
+                int tier = ReaperAttack.SkullTier(skulls.SkullCharge, DebugMode.Enabled ? 3 : skulls.Purse);
+                int price = skulls.Cost(tier);
+                string souls = price == 0 ? "FREE" : price == 1 ? "1 SOUL" : $"{price} SOULS";
+                DungeonUi.Label(new Rect(440, 535, 400, 24), (tier >= 3 ? "RELEASE: 3 FEAR SKULLS  /  " : tier == 2 ? "RELEASE: FEAR SKULL  /  " : "RELEASE: SKULL  /  ") + souls,
                     14, ReaperAttack.Soul, TextAnchor.MiddleCenter);
                 DungeonUi.Bar(new Rect(500, 568, 280, 5), skulls.SkullCharge, ReaperAttack.Soul);
             }
@@ -299,6 +306,7 @@ namespace Slopgame
             if (buffs.IsEmpowered) parts.Add($"EMPOWERED  {buffs.EmpowerRemaining:0.0}s");
             if (buffs.IsAscended) parts.Add($"ARCHDEMON'S TECHNIQUE  {buffs.AscendRemaining:0.0}s");
             if (buffs.IsFurious) parts.Add($"SUPER ANGRY  {buffs.FuryRemaining:0.0}s");
+            if (buffs.IsRuneEmpowered) parts.Add($"DEMONIC RUNE  {buffs.RuneRemaining:0.0}s");
             if (buffs.IsIncarnate) parts.Add($"AVATAR OF DEATH  x2 DAMAGE  {buffs.IncarnateRemaining:0.0}s");
             if (buffs.JackpotDamage > 0) parts.Add($"JACKPOT  +{buffs.JackpotDamage} DAMAGE  {buffs.JackpotDamageRemaining:0.0}s");
             if (buffs.JackpotSpeed > 1f) parts.Add($"JACKPOT  x{buffs.JackpotSpeed:0.0} SPEED  {buffs.JackpotSpeedRemaining:0.0}s");
@@ -364,7 +372,7 @@ namespace Slopgame
             {
                 // The safe: ten coins in per click, exactly half out per click, and interest from every guardian.
                 float top = rect.y + 52 + GamblerPurse.Offers.Length * 58, half = (rect.width - 40) / 2f;
-                DungeonUi.Label(new Rect(rect.x + 22, top, rect.width - 44, 18), $"THE SAFE  /  {purse.Safe:N0} COINS  /  x{GamblerPurse.SafeInterest:0.0} PER GUARDIAN", 12, GamblerAttack.Gold);
+                DungeonUi.Label(new Rect(rect.x + 22, top, rect.width - 44, 18), $"THE SAFE  /  {purse.Safe:N0} COINS  /  x{purse.Interest:0.0#} PER GUARDIAN", 12, GamblerAttack.Gold);
                 if (DungeonUi.Button("safeDeposit", new Rect(rect.x + 16, top + 22, half, 32), $"Deposit {GamblerPurse.SafeDeposit}c", GamblerAttack.Gold, purse.CanDeposit)) purse.Deposit();
                 if (DungeonUi.Button("safeWithdraw", new Rect(rect.x + 24 + half, top + 22, half, 32), $"Withdraw 50%  /  {purse.SafeWithdrawal:N0}c", GamblerAttack.Gold, purse.CanWithdraw)) purse.Withdraw();
             }
