@@ -76,6 +76,8 @@ namespace Slopgame
             Player.Weapon?.Hide();
             Player.Charge.Cancel();
             Player.Occupy(SheatheTime + ImpactTime);
+            // Nothing can touch him while the katana slides home.
+            Player.Protect(SheatheTime + ImpactTime);
             KatanaVfx.Sheathe(root, transform.position, Player.AimDirection, SamuraiAttack.Blood, SheatheTime / 0.72f);
             // The click comes 72% of the way through the effect, exactly when the cuts land.
             for (float t = 0f; t < SheatheTime; t += Time.deltaTime)
