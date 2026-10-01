@@ -857,7 +857,7 @@ namespace Slopgame
         /// <summary>One of his hits was a critical hit: Bleeding Edge opens a wound, and the Edge's crits feed Breaking Point.</summary>
         public void OnCritical(DungeonEnemy enemy, int damage)
         {
-            if (Rank(PowerupType.BleedingEdge) > 0 && enemy != null && enemy.Health > 0) enemy.Bleed(3, Mathf.Max(1, damage / 3));
+            if (Rank(PowerupType.BleedingEdge) > 0 && enemy != null && enemy.Health > 0) CombatDamage.InflictBleed(Player, enemy, damage);
             if (Form == SpecimenForm.Edge) FeedMechanic(1);
         }
 
