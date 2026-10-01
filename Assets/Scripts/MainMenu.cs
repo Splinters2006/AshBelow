@@ -10,6 +10,8 @@ namespace Slopgame
         public DungeonRun Run { get; set; }
         private bool selecting, shopping, coop, settings, codex;
         private Vector2 heroScroll;
+        // The ability last hovered in the selected hero's preview row.
+        private AbilityDefinition previewed;
         private CharacterDefinition lockedCharacter;
         private string specimenPin = "";
         private bool incorrectPin;
@@ -262,11 +264,53 @@ namespace Slopgame
             DrawStat(new Rect(538, 360, 120, 36), "HP", character.StartingHealth + permanent.Health);
             DrawStat(new Rect(666, 360, 120, 36), "DAMAGE", character.StartingDamage + permanent.Damage);
             DrawStat(new Rect(794, 360, 120, 36), "SPEED", character.MoveSpeed + permanent.Speed);
-            DungeonUi.Label(new Rect(402, 434, 766, 80), character.Description, 20);
-            DungeonUi.Label(new Rect(402, 535, 766, 28), $"{KeyBindings.Label(GameAction.Special)}  {DungeonUi.SpecialName(character.Weapon)}     /     {KeyBindings.Label(GameAction.AbilityQ)} + {KeyBindings.Label(GameAction.AbilityE)} unlock from boss artifacts", 16, character.Color);
+            DungeonUi.Label(new Rect(402, 412, 766, 44), character.Description, 17);
+            DrawAbilityPreview(character);
             if (DungeonUi.Button("back", new Rect(70, 598, 268, 48), "Back", DungeonUi.Muted)) selecting = false;
             if (DungeonUi.Button("begin", new Rect(860, 598, 350, 48), "Begin descent", character.Color)) Run.Restart();
         }
+
+        /// <summary>
+        /// The hero's relic abilities as a row of chips: hovering one shows what it does, and clicking one that is
+        /// still locked opens the Ash shop on its unlock.
+        /// </summary>
+        private void DrawAbilityPreview(CharacterDefinition character)
+        {
+            DungeonUi.Label(new Rect(402, 458, 470, 16), $"ABILITIES   /   guardian artifacts fill {KeyBindings.Label(GameAction.AbilityQ)} and {KeyBindings.Label(GameAction.AbilityE)}", 12, DungeonUi.Muted);
+            DungeonUi.Label(new Rect(872, 456, 296, 18), $"{KeyBindings.Label(GameAction.Special)}  {DungeonUi.SpecialName(character.Weapon)}", 14, character.Color, TextAnchor.UpperRight);
+            if (previewed != null && previewed.ClassWeapon != character.Weapon) previewed = null;
+            bool anyLocked = false;
+            float x = 402;
+            foreach (var ability in AbilityCatalog.All)
+            {
+                if (ability.ClassWeapon != character.Weapon) continue;
+                bool locked = IsLocked(ability);
+                anyLocked |= locked;
+                var chip = new Rect(x, 478, 70, 36);
+                x += 77;
+                if (chip.Contains(Event.current.mousePosition)) previewed = ability;
+                if (DungeonUi.Button("preview_" + ability.Type, chip, "", locked ? DungeonUi.Muted : ability.Color) && locked)
+                {
+                    shop.ShowAbility(ability);
+                    shopping = true;
+                }
+                DungeonUi.Label(locked ? new Rect(chip.x, chip.y, chip.width, 22) : chip, ability.Glyph, locked ? 14 : 18, locked ? DungeonUi.Muted : ability.Color, TextAnchor.MiddleCenter);
+                if (locked) DungeonUi.Label(new Rect(chip.x, chip.y + 19, chip.width, 12), "LOCKED", 9, AbilityCatalog.Gold, TextAnchor.MiddleCenter);
+                if (previewed == ability) DungeonUi.Panel(new Rect(chip.x, chip.y, chip.width, 2), locked ? AbilityCatalog.Gold : ability.Color);
+            }
+            if (previewed == null)
+            {
+                DungeonUi.Label(new Rect(402, 520, 766, 20), anyLocked ? "Hover an ability to preview it. Click a locked one to find it in the Ash shop." : "Hover an ability to preview it.", 14, DungeonUi.Muted);
+                return;
+            }
+            bool previewLocked = IsLocked(previewed);
+            int cost = PermanentUpgradeCatalog.Get(previewed.UnlockId)?.Cost(0) ?? 0;
+            DungeonUi.Label(new Rect(402, 518, 766, 20), previewLocked ? $"{previewed.Name}   /   LOCKED   /   click to unlock in the Ash shop ({cost} Ash)" : $"{previewed.Name}   /   {previewed.Cooldown:0.#}s cooldown",
+                15, previewLocked ? AbilityCatalog.Gold : previewed.Color);
+            DungeonUi.Label(new Rect(402, 538, 766, 40), previewed.Description, 12, DungeonUi.Muted);
+        }
+
+        private bool IsLocked(AbilityDefinition ability) => ability.ShopUnlock && Run.Progress.Rank(ability.UnlockId) <= 0;
 
         private void DrawSpecimenLock()
         {

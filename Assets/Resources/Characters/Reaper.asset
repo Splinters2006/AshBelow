@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Reaper
   m_EditorClassIdentifier: Assembly-CSharp::Slopgame.CharacterDefinition
   displayName: Reaper
-  description: A skull-faced spectre adrift in a great cloak. Sweep a scythe in slow, wide arcs, charge it fully to harvest souls, and spend them on skulls that bite, frighten and hunt.
+  description: A skull-faced spectre adrift in a great cloak. It came down to collect what the ash owes, and it is patient about the interest.
   color: {r: 0.5, g: 0.56, b: 0.7, a: 1}
   startingHealth: 5
   startingDamage: 1

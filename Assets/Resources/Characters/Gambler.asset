@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Gambler
   m_EditorClassIdentifier: Assembly-CSharp::Slopgame.CharacterDefinition
   displayName: Gambler
-  description: A travelling merchant hopelessly addicted to gambling. Throw coins and scoop up the gold every fallen foe drops, fling a volley of every coin you carry, and open your purse to spend or bet it all.
+  description: A travelling merchant hopelessly addicted to gambling. Every fallen foe is a payout, every floor a fresh table, and the house has not caught him yet.
   color: {r: 0.35, g: 0.72, b: 0.45, a: 1}
   startingHealth: 5
   startingDamage: 1

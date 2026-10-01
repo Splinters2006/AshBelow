@@ -26,6 +26,9 @@ namespace Slopgame
         private Vector2 scroll;
         private string notice;
         private bool hideMaxed;
+        // The upgrade the menu sent the player here for: its card is highlighted and scrolled into view.
+        private string focusId;
+        private bool scrollToFocus;
         private readonly List<PermanentUpgradeDefinition> shown = new List<PermanentUpgradeDefinition>();
         private static readonly string[] Tabs = { "All heroes", "Knight", "Archer", "Wizard", "Assassin", "Paladin", "Brawler", "Demoness", "Gambler", "Augment", "Reaper", "Samurai", "Specimen" };
         private static readonly WeaponType?[] Weapons = { null, WeaponType.Sword, WeaponType.Bow, WeaponType.Staff, WeaponType.Daggers, WeaponType.Hammer, WeaponType.Fists, WeaponType.Tail, WeaponType.Coins, WeaponType.Beam, WeaponType.Scythe, WeaponType.Katana, WeaponType.Mutation };
@@ -43,6 +46,16 @@ namespace Slopgame
         /// <summary>Buyable first, then locked, then maxed; catalog order within each group.</summary>
         private static int SortGroup(PermanentProgress progress, PermanentUpgradeDefinition item)
             => IsMaxed(progress, item) ? 2 : progress.IsAvailable(item) ? 0 : 1;
+
+        /// <summary>Opens the shop on a locked ability's hero tab with its unlock card in view.</summary>
+        public void ShowAbility(AbilityDefinition ability)
+        {
+            tab = Mathf.Max(0, System.Array.IndexOf(Weapons, ability.ClassWeapon));
+            scroll = Vector2.zero;
+            focusId = ability.UnlockId;
+            scrollToFocus = true;
+            notice = $"{ability.Name} is locked. Buy it here and guardians can offer it.";
+        }
 
         public void Draw(DungeonRun run)
         {
@@ -75,6 +88,12 @@ namespace Slopgame
 
             int rows = (order.Count + 1) / 2;
             float contentHeight = Mathf.Max(ListRect.height, rows * RowStep - (RowStep - CardHeight));
+            if (scrollToFocus)
+            {
+                scrollToFocus = false;
+                int focused = order.FindIndex(index => shown[index].Id == focusId);
+                if (focused >= 0) scroll.y = Mathf.Min(focused / 2 * RowStep, contentHeight - ListRect.height);
+            }
             scroll.x = 0f;
             scroll = GUI.BeginScrollView(ListRect, scroll, new Rect(0, 0, ListRect.width - 30, contentHeight));
             for (int i = 0; i < order.Count; i++)
@@ -98,7 +117,7 @@ namespace Slopgame
                 var rect = new Rect(70 + i * step, 240, step - 12, 40);
                 // With a dozen or more heroes sharing the row, the labels are smaller to fit.
                 if (DungeonUi.Button("shopTab" + i, rect, Tabs[i], tab == i ? AbilityCatalog.Gold : DungeonUi.Muted, true, Tabs.Length > 11 ? 14 : 18))
-                { tab = i; scroll = Vector2.zero; notice = null; }
+                { tab = i; scroll = Vector2.zero; notice = null; focusId = null; }
                 foreach (var item in PermanentUpgradeCatalog.All)
                 {
                     if (item.ClassWeapon != Weapons[i] || !CanAfford(progress, item)) continue;
@@ -120,6 +139,7 @@ namespace Slopgame
             bool pact = item.Id == PermanentUpgradeCatalog.InfernalPactId && rank > 0;
             DungeonUi.Panel(card, DungeonUi.PanelColor);
             DungeonUi.Panel(new Rect(card.x, card.y, 4, card.height), maxed ? DungeonUi.Muted * 0.6f : available ? AbilityCatalog.Gold : DungeonUi.Muted * 0.35f);
+            if (item.Id == focusId && !maxed) DungeonUi.Panel(new Rect(card.x, card.yMax - 3, card.width, 3), DungeonUi.Teal);
             float textWidth = card.width - 200f;
             DungeonUi.Label(new Rect(card.x + 18, card.y + 10, textWidth, 26), item.Name, 20, available ? AbilityCatalog.Gold : DungeonUi.Muted);
             DungeonUi.Label(new Rect(card.x + 18, card.y + 40, textWidth, 48), item.Description, 14, DungeonUi.Muted);

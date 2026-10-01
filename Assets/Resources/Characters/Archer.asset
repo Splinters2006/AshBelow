@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Archer
   m_EditorClassIdentifier: Assembly-CSharp::Slopgame.CharacterDefinition
   displayName: Archer
-  description: A nimble archer who fights up close. Charge arrows for up to triple damage and a little extra range, or loose a tight three-arrow spread.
+  description: A hunter who never trusted distance, and likes to hear the quarry breathe before the string sings.
   color: {r: 0.65, g: 0.85, b: 0.35, a: 1}
   startingHealth: 5
   startingDamage: 1

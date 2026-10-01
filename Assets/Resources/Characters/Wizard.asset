@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Wizard
   m_EditorClassIdentifier: Assembly-CSharp::Slopgame.CharacterDefinition
   displayName: Wizard
-  description: A fire-and-storm caster. Charge fireballs that burst on impact, and cast lightning that can chain from foe to foe.
+  description: A scholar expelled for asking what fire and storm would say to each other. The ash below is the last library that will take them.
   color: {r: 0.65, g: 0.45, b: 1, a: 1}
   startingHealth: 4
   startingDamage: 2

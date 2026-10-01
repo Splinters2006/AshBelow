@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Augment
   m_EditorClassIdentifier: Assembly-CSharp::Slopgame.CharacterDefinition
   displayName: Augment
-  description: A soldier rebuilt with steel and plasma. Fire a plasma ray that pierces every enemy in a line, charge it longer and wider, and hold the arm cannon to launch a plasma orb that bursts in flame.
+  description: A soldier rebuilt with steel and plasma by people who never asked first. The warranty expired long ago. The grudge did not.
   color: {r: 0.55, g: 0.68, b: 0.9, a: 1}
   startingHealth: 5
   startingDamage: 1

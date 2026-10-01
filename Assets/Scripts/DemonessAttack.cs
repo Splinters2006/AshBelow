@@ -19,7 +19,7 @@ namespace Slopgame
         /// <summary>Archdemon's Technique: a fully charged tail whip strikes a small cone.</summary>
         public const float WhipRadius = 2.8f, WhipCone = 70f;
         public const float AscendDuration = 8f;
-        /// <summary>Archdemon's Technique: the tail sweep strikes twice in quick succession, each sweep leaving a lesser Demon Curse.</summary>
+        /// <summary>Archdemon's Technique: the tail sweep strikes twice in quick succession, each sweep paralysing and leaving a lesser Demon Curse.</summary>
         public const float TwinSweepDelay = 0.16f, SweepCurseDuration = 4f;
         public const float PortalRange = 8f, PortalWindup = 0.65f, PawRadius = 1.6f, PawStun = 0.6f;
         // The pentagram has been widened twice: by 25% (2.2 → 2.75), then by 50% more; each rank's growth scaled with it.
@@ -141,7 +141,7 @@ namespace Slopgame
 
         /// <summary>
         /// RMB: the tail sweeps a half circle ahead. Immobilized enemies take double damage. Under Archdemon's Technique
-        /// it sweeps twice, and both sweeps curse.
+        /// it sweeps twice, and both sweeps paralyse and curse.
         /// </summary>
         public bool TryHeavyAttack(Vector2 aim)
         {
@@ -165,7 +165,7 @@ namespace Slopgame
             Sweep(aim, true);
         }
 
-        /// <summary>One sweep of the tail; a <paramref name="cursing"/> one leaves a lesser Demon Curse on everything it hits.</summary>
+        /// <summary>One sweep of the tail; a <paramref name="cursing"/> one paralyses everything it hits and leaves a lesser Demon Curse on it.</summary>
         private void Sweep(Vector2 aim, bool cursing)
         {
             Vector2 origin = transform.position;
@@ -184,7 +184,9 @@ namespace Slopgame
                     HeroVfx.Sparks(root, enemy.transform.position, Violet, 10, 4.5f, 0.35f);
                 }
                 CombatDamage.Apply(Player, enemy, WithPressurePoints(enemy, damage), DamageElement.Physical, origin, paralyzed ? 0.3f : 1f);
-                if (cursing && enemy != null && enemy.Health > 0)
+                if (!cursing || enemy == null) continue;
+                ParalyzeCounted(enemy, VitalParalysis);
+                if (enemy.Health > 0)
                     enemy.Curse(SweepCurseDuration, Player.Powerups.Count(PowerupType.HexMastery), DungeonEnemy.LesserCurseDamageBonus);
             }
         }

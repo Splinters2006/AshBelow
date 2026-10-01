@@ -14,7 +14,7 @@ namespace Slopgame
         // Body layer (tinted): L highlight, W base, M shade, D outline.
         // Accent layer (fixed): K steel, Q steel highlight, k dark steel, G gold, g dark gold, B wood, b dark wood,
         // S skin, s skin shade, E eyes, H hair, I glow, F white cloth, f bowstring,
-        // A floppy-ear / tail fur, R boxing glove, r glove shade, P pink tongue.
+        // A puppy-ear / tail fur, R boxing glove, r glove shade, P pink tongue.
         // The Samurai reuses R / r for her red eyes, hair ribbons, scarf and hilt tassel, N / n for her black hair and obi, F for her collar.
         // N demon horn / tail black, n horn sheen, V dark violet hair, U hair highlight, v glowing violet eyes,
         // T glowing tail tip, C pale skin, c pale skin shade. Wings: X leather, x crease, Z bone, Y outline, y claw,
@@ -61,11 +61,11 @@ namespace Slopgame
                 "....DSSSSSSSSpsD.B..", "....DaSSSmmSSsaD.B..", "...DGDaSSSSSSaDGDB..", "..DGGDDFWWWWFDDGgBs.",
                 "..DLWFDFWGGWFMDGDs..", "..DFGFDWWgGWWMDD....", "...DFDDLWWWWWMD.....", "....DDDKKDDKKDD.....",
             } },
-            { WeaponType.Fists, new[] // Brawler: a puppygirl pit-fighter with auburn hair, big droopy dog ears, green eyes, a button nose and a :3 mouth with her tongue out, a tagged collar, a wagging tail and big gloves
+            { WeaponType.Fists, new[] // Brawler: a puppygirl pit-fighter with auburn hair, perky stood-up puppy ears, big dark puppy eyes, a button nose and a :3 mouth with her tongue out, a tagged collar, a wagging tail and big gloves
             {
-                "....................", "......DDDDDDDD......", "..DDDoohhooooooDDD..", ".DAAtDohooooooDtAAD.",
-                "DAtAADooooooooDAAtAD", "DAAAuDoSSSSSSoDuAAAD", "DAAAuDSSElSSElDuAAAD", "DAAAuDSpSSSESpDuAAAD",
-                ".DAAuDsSSSmSmSDuAAD.", ".DD.DDDsSSSPsDDD.DD.", "DtD..DDrrrGrrDD.DRRr", "DAtDDLWWWWWFFDDRRRRr",
+                "...DD..........DD...", "..DAtD.DDDDDD.DtAD..", "..DAuADoohhooDAuAD..", "..DAuuAohooooAuuAD..",
+                "...DDooooooooooDD...", "....DooSEESSEESD....", "....DoSSElSSElSD....", "....DoSpSSSESSpD....",
+                "....DDsSSSmSmSDD....", "....DDDsSSSPsDDD....", "DtD..DDrrrGrrDD.DRRr", "DAtDDLWWWWWFFDDRRRRr",
                 "DAAADWWWWWWMMDRRRRRr", ".DDDDDDgGgDDD.DrrrD.", "....DSSDDSsD........", "...DDkkD.DkkDD......",
             } },
             { WeaponType.Tail, new[] // Demoness: a pale girl with curled black ram horns, long dark violet hair, glowing eyes, a spade-tipped tail and bat wings drawn like Wing Dash's (clawed wrist, finger bones, scalloped violet-lit edge)

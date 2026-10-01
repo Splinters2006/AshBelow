@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Specimen
   m_EditorClassIdentifier: Assembly-CSharp::Slopgame.CharacterDefinition
   displayName: Specimen
-  description: An escaped lab subject who starts every descent frail. Feed him Bulk talents and he swells into the Behemoth, a stone-skinned wall who soaks enemy bolts and hurls them back; feed him Edge talents and he becomes a quick, crit-hungry fighter with a chain whip.
+  description: An escaped lab subject who starts every descent frail. Whether he grows into a wall of stone or a razor on a chain depends on what you feed him.
   color: {r: 0.62, g: 0.74, b: 0.7, a: 1}
   startingHealth: 3
   startingDamage: 1
