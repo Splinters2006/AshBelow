@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Slopgame
@@ -31,7 +32,7 @@ namespace Slopgame
 
     public static class PermanentUpgradeCatalog
     {
-        public static readonly PermanentUpgradeDefinition[] All =
+        public static readonly PermanentUpgradeDefinition[] All = AddPassives(new PermanentUpgradeDefinition[]
         {
             new PermanentUpgradeDefinition("health", "Lasting Vitality", "+1 maximum HP for every hero per rank", 5, 30, 20),
             new PermanentUpgradeDefinition("damage", "Tempered Arms", "+1 base damage for every hero per rank", 3, 100, 100),
@@ -102,7 +103,16 @@ namespace Slopgame
             MechanicUpgrade(WeaponType.Beam, "Missile Rack", "While overclocked, every plasma ray you fire also launches a homing mini missile"),
             MechanicUpgrade(WeaponType.Tail, "Dread Presence", "During Demonic Power, every enemy that comes within 5 units of you is paralysed for 2 seconds"),
             MechanicUpgrade(WeaponType.Scythe, "Avatar of Death", "With 99 souls, R spends 99 instead of raising a skeleton: for 5 seconds you are the incarnation of death, dealing double damage and striking 1 second of fear with every hit")
-        };
+        });
+
+        private static PermanentUpgradeDefinition[] AddPassives(PermanentUpgradeDefinition[] existing)
+        {
+            var upgrades = new List<PermanentUpgradeDefinition>(existing);
+            foreach (var passive in ClassPassiveCatalog.All)
+                upgrades.Add(new PermanentUpgradeDefinition(passive.Id, passive.Name, passive.Description, 1,
+                    ClassPassiveCatalog.PassiveCost, 0, passive.Weapon, requiredWorld: passive.RequiredWorld));
+            return upgrades.ToArray();
+        }
 
         public const string EmberHeartId = "ember_heart", BackupDriveId = "backup_drive", TargetingChipId = "targeting_chip",
             InfernalPactId = "infernal_pact", SoulTitheId = "soul_tithe", ScholarsRerollId = "scholars_reroll",

@@ -30,7 +30,7 @@ namespace Slopgame
         public bool MechanicUnlocked { get; }
         /// <summary>The mechanic's R upgrade, bought in the Ash shop (the Reaper's Avatar of Death).</summary>
         public bool MechanicUpgraded { get; }
-        /// <summary>The class passive (see <see cref="ClassPassiveCatalog"/>), active once its world is cleared.</summary>
+        /// <summary>The class passive (see <see cref="ClassPassiveCatalog"/>), active once purchased in the Ash shop.</summary>
         public bool PassiveUnlocked { get; }
         private readonly WeaponType weapon;
         /// <summary>True when this hero is the given class and its passive is unlocked.</summary>

@@ -704,6 +704,7 @@ namespace Slopgame
             if (enemy.Boss != null)
             {
                 Progress.RecordGuardian(++guardiansThisRun, Player != null ? Player.ClassWeapon : (WeaponType?)null);
+                if (WorldCatalog.CompletesWorld(Floor)) Progress.RecordWorldCleared(World.Index);
                 Progress.Discover(Encyclopedia.GuardianId(enemy.Boss.Title));
                 if (Player != null) Player.Mechanic?.OnGuardianDefeated();
             }

@@ -38,6 +38,54 @@ namespace Slopgame.Editor
             if (type == LogType.Error || type == LogType.Assert || type == LogType.Exception) failed = true;
         }
         private static void Require(bool condition, string message) { if (!condition) throw new Exception(message); }
+
+        public static void RunPassivePurchases()
+        {
+            string root = Path.Combine(Path.GetTempPath(), "passive-save-test-" + Guid.NewGuid().ToString("N"));
+            try
+            {
+                foreach (var passive in ClassPassiveCatalog.All)
+                {
+                    string directory = Path.Combine(root, passive.Id);
+                    var save = new PermanentProgress(directory);
+                    var upgrade = PermanentUpgradeCatalog.Get(passive.Id);
+                    Require(upgrade != null && upgrade.Cost(0) == 5000 && upgrade.MaxRank == 1,
+                        "Passive must cost 5000 Ash and be bought only once: " + passive.Id);
+                    save.AwardAsh(5000);
+                    save.RecordWorldCleared(1);
+                    save.RecordGuardian(8, passive.Weapon);
+                    Require(!save.TryPurchase(passive.Id) && save.Ash == 5000 && !ClassPassiveCatalog.IsUnlocked(save, passive.Weapon),
+                        "Passive was available before World 3 was cleared.");
+                    save.RecordWorldCleared(2);
+                    save = new PermanentProgress(directory);
+                    var beforePurchase = new PermanentBonuses(save, passive.Weapon);
+                    Require(save.IsAvailable(upgrade) && !beforePurchase.PassiveUnlocked,
+                        "World clear granted a free passive, including after reload.");
+                    Require(save.TryPurchase(passive.Id) && save.Ash == 0, "Passive purchase did not charge exactly 5000 Ash.");
+                    Require(!save.TryPurchase(passive.Id) && save.Ash == 0, "Passive could be purchased twice.");
+                    Require(!beforePurchase.PassiveUnlocked, "Purchase changed an existing descent's snapshot.");
+                    save = new PermanentProgress(directory);
+                    var bonuses = new PermanentBonuses(save, passive.Weapon);
+                    Require(bonuses.HasPassive(passive.Weapon) && save.Rank(passive.Id) == 1 && save.Ash == 0,
+                        "Purchased passive did not survive reload or activate for its hero.");
+                    foreach (var other in ClassPassiveCatalog.All)
+                        if (other.Weapon != passive.Weapon)
+                            Require(!new PermanentBonuses(save, other.Weapon).PassiveUnlocked && !bonuses.HasPassive(other.Weapon),
+                                "A passive purchase unlocked another hero's passive.");
+
+                    var poor = new PermanentProgress(Path.Combine(directory, "poor"));
+                    poor.RecordWorldCleared(2);
+                    poor.AwardAsh(4999);
+                    Require(!poor.TryPurchase(passive.Id) && poor.Ash == 4999 && !ClassPassiveCatalog.IsUnlocked(poor, passive.Weapon),
+                        "An unaffordable passive was granted or consumed Ash.");
+                }
+                Debug.Log("PASSIVE_PURCHASES_OK: all heroes, world gate, price, per-hero ownership, reload, single purchase, and descent snapshots");
+                EditorApplication.Exit(0);
+            }
+            catch (Exception error) { Debug.LogException(error); EditorApplication.Exit(1); }
+            finally { if (Directory.Exists(root)) Directory.Delete(root, true); }
+        }
+
         private static void TestStorage()
         {
             string root = Path.Combine(Path.GetTempPath(), "ash-save-test-" + Guid.NewGuid().ToString("N"));

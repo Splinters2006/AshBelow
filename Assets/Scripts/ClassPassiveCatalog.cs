@@ -1,14 +1,15 @@
 namespace Slopgame
 {
     /// <summary>
-    /// A hero's passive: always on, never bought. It unlocks for good once its world has been cleared (by any hero).
+    /// A hero's passive: always active once purchased after its world has been cleared (by any hero).
     /// </summary>
     public sealed class ClassPassiveDefinition
     {
         public WeaponType Weapon { get; }
+        public string Id => "passive_" + Weapon.ToString().ToLowerInvariant();
         public string Name { get; }
         public string Description { get; }
-        /// <summary>The world that must be cleared once before the passive is active.</summary>
+        /// <summary>The world that must be cleared once before the passive can be purchased.</summary>
         public int RequiredWorld { get; }
         public ClassPassiveDefinition(WeaponType weapon, string name, string description, int requiredWorld = ClassPassiveCatalog.PassiveWorld)
         {
@@ -18,8 +19,9 @@ namespace Slopgame
 
     public static class ClassPassiveCatalog
     {
-        /// <summary>Passives unlock when the Infernal Court's third guardian falls.</summary>
+        /// <summary>Passives become available to buy when the Infernal Court's third guardian falls.</summary>
         public const int PassiveWorld = 2;
+        public const int PassiveCost = 5000;
 
         public static readonly ClassPassiveDefinition[] All =
         {
@@ -45,7 +47,7 @@ namespace Slopgame
         public static bool IsUnlocked(PermanentProgress progress, WeaponType weapon)
         {
             var passive = Get(weapon);
-            return passive != null && progress != null && progress.HasClearedWorld(passive.RequiredWorld);
+            return passive != null && progress != null && progress.HasClearedWorld(passive.RequiredWorld) && progress.Rank(passive.Id) > 0;
         }
     }
 }

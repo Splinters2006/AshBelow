@@ -72,18 +72,14 @@ namespace Slopgame
             if (maxed > 0 && DungeonUi.Button("shopHideMaxed", new Rect(990, 284, 220, 30), hideMaxed ? "Show maxed" : "Hide maxed", DungeonUi.Teal))
             { hideMaxed = !hideMaxed; scroll = Vector2.zero; }
 
-            // The hero's passive leads their tab: it is never bought, only unlocked.
-            var passive = Weapons[tab].HasValue ? ClassPassiveCatalog.Get(Weapons[tab].Value) : null;
-            int lead = passive != null ? 1 : 0;
-            int rows = (order.Count + lead + 1) / 2;
+            int rows = (order.Count + 1) / 2;
             float contentHeight = Mathf.Max(ListRect.height, rows * RowStep - (RowStep - CardHeight));
             scroll.x = 0f;
             scroll = GUI.BeginScrollView(ListRect, scroll, new Rect(0, 0, ListRect.width - 30, contentHeight));
-            if (passive != null) DrawPassive(progress, passive, new Rect(0, 0, CardWidth, CardHeight));
             for (int i = 0; i < order.Count; i++)
-                DrawCard(run, shown[order[i]], new Rect((i + lead) % 2 * (CardWidth + ColumnGap), (i + lead) / 2 * RowStep, CardWidth, CardHeight));
+                DrawCard(run, shown[order[i]], new Rect(i % 2 * (CardWidth + ColumnGap), i / 2 * RowStep, CardWidth, CardHeight));
             if (order.Count == 0)
-                DungeonUi.Label(new Rect(0, lead * RowStep + 20, ListRect.width - 30, 30), "Everything here is maxed.", 18, DungeonUi.Muted, TextAnchor.MiddleCenter);
+                DungeonUi.Label(new Rect(0, 20, ListRect.width - 30, 30), "Everything here is maxed.", 18, DungeonUi.Muted, TextAnchor.MiddleCenter);
             GUI.EndScrollView();
             if (contentHeight > ListRect.height + 1f && scroll.y < contentHeight - ListRect.height - 2f)
                 DungeonUi.Label(new Rect(ListRect.x, ListRect.yMax - 2, ListRect.width - 30, 14), "scroll for more  ▾", 11, DungeonUi.Muted, TextAnchor.UpperRight);
@@ -110,20 +106,6 @@ namespace Slopgame
             }
         }
 
-        private static void DrawPassive(PermanentProgress progress, ClassPassiveDefinition passive, Rect card)
-        {
-            bool unlocked = progress.HasClearedWorld(passive.RequiredWorld);
-            DungeonUi.Panel(card, DungeonUi.PanelColor);
-            DungeonUi.Panel(new Rect(card.x, card.y, 4, card.height), unlocked ? AbilityCatalog.Gold : DungeonUi.Muted * 0.35f);
-            float textWidth = card.width - 200f;
-            DungeonUi.Label(new Rect(card.x + 18, card.y + 10, textWidth, 26), passive.Name, 20, unlocked ? AbilityCatalog.Gold : DungeonUi.Muted);
-            DungeonUi.Label(new Rect(card.x + 18, card.y + 40, textWidth, 48), passive.Description, 14, DungeonUi.Muted);
-            var side = new Rect(card.xMax - 176, card.y, 160, card.height);
-            DungeonUi.Label(new Rect(side.x, side.y + 12, side.width, 20), "PASSIVE", 13, AbilityCatalog.Gold, TextAnchor.MiddleRight);
-            DungeonUi.Label(new Rect(side.x, side.y + 38, side.width, 50),
-                unlocked ? "Always active" : $"Clear {WorldCatalog.All[passive.RequiredWorld].Name} or any later world to unlock", 12, DungeonUi.Muted, TextAnchor.MiddleRight);
-        }
-
         private void DrawCard(DungeonRun run, PermanentUpgradeDefinition item, Rect card)
         {
             var progress = run.Progress;
@@ -131,6 +113,7 @@ namespace Slopgame
             bool maxed = rank >= item.MaxRank;
             bool available = progress.IsAvailable(item);
             bool mechanic = item.RequiredGuardians > 0;
+            bool passive = item.ClassWeapon.HasValue && ClassPassiveCatalog.Get(item.ClassWeapon.Value)?.Id == item.Id;
             int cost = item.Cost(rank);
             bool pact = item.Id == PermanentUpgradeCatalog.InfernalPactId && rank > 0;
             DungeonUi.Panel(card, DungeonUi.PanelColor);
@@ -148,8 +131,8 @@ namespace Slopgame
                     progress.Switch(item.Id, !on);
             }
             else
-                DungeonUi.Label(new Rect(side.x, side.y + 12, side.width, 20), item.IsMechanicUpgrade ? "R UPGRADE" : mechanic ? "CLASS MECHANIC" : $"RANK {rank} / {item.MaxRank}", 13,
-                    mechanic || item.IsMechanicUpgrade ? AbilityCatalog.Gold : DungeonUi.Muted, TextAnchor.MiddleRight);
+                DungeonUi.Label(new Rect(side.x, side.y + 12, side.width, 20), passive ? "PASSIVE" : item.IsMechanicUpgrade ? "R UPGRADE" : mechanic ? "CLASS MECHANIC" : $"RANK {rank} / {item.MaxRank}", 13,
+                    passive || mechanic || item.IsMechanicUpgrade ? AbilityCatalog.Gold : DungeonUi.Muted, TextAnchor.MiddleRight);
             var buy = new Rect(side.x, side.y + 46, side.width, 36);
             if (!available)
             {
