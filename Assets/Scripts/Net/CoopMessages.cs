@@ -21,7 +21,7 @@ namespace Slopgame
     }
 
     public enum CoopChoice : byte { Upgrade, Artifact, Waves }
-    public enum CoopDamageKind : byte { Hit, Burn, Chill, Paralyze, Curse, Freeze, Fear, Stun, Root, Bleed, Poison, Mark, DeathMark, ClearParalysis, ClearHolds }
+    public enum CoopDamageKind : byte { Hit, Burn, Chill, Paralyze, Curse, Freeze, Fear, Stun, Root, Bleed, Poison, Mark, DeathMark, ClearParalysis, ClearHolds, ClearBleed, RefreshBleed }
     public enum CoopBoltEventKind : byte { Reflected, Consumed }
     /// <summary>
     /// Heal, Protect and Bless help a teammate. BlessingCredit tells a Paladin how much bonus damage their blessing

@@ -48,7 +48,9 @@ namespace Slopgame
         // Universal: elements set enemies up to be held.
         ElementalImmobilization,
         // Reaper.
-        SoulFury
+        SoulFury,
+        // Samurai.
+        DeepWounds, BloodInTheWater, JaggedBlade, FineDicing
     }
 
     public sealed class PowerupDefinition
@@ -198,7 +200,7 @@ namespace Slopgame
             new PowerupDefinition(PowerupType.Pyromancer, "Wizard: Pyromancer", "Burning enemies take +1 from your lightning", 1, WeaponType.Staff),
             new PowerupDefinition(PowerupType.StormChargedOrb, "Storm-Charged Orb", "Hold Inferno Orb's key to charge it; at full charge its blast burns and shocks everything it hits", 1, WeaponType.Staff, AbilityType.Fireball),
             new PowerupDefinition(PowerupType.Frostblink, "Frostblink", "Arcane Blink leaves a Frost Nova where you started", 1, WeaponType.Staff, AbilityType.Blink),
-            new PowerupDefinition(PowerupType.Bleed, "Assassin: Bleed", "Backstabs make the target bleed for 3 ticks", 1, WeaponType.Daggers),
+            new PowerupDefinition(PowerupType.Bleed, "Assassin: Bleed", "Backstabs make the target bleed: 10 ticks over 5 seconds, each for 10% of the backstab", 1, WeaponType.Daggers),
             new PowerupDefinition(PowerupType.Vanish, "Assassin: Vanish", "A kill with Shadowstep hides you from enemies for 1 second", 1, WeaponType.Daggers),
             new PowerupDefinition(PowerupType.Ambush, "Assassin: Ambush", "Your first hit after being hidden deals double damage", 1, WeaponType.Daggers),
             new PowerupDefinition(PowerupType.Poisoner, "Assassin: Poisoner", "Enemies suffering damage over time (burning, bleeding, poisoned) take +1 from your stabs", 1, WeaponType.Daggers),
@@ -244,7 +246,11 @@ namespace Slopgame
             new PowerupDefinition(PowerupType.Frenzy, "Frenzy", "+25% attack and charge speed", 1),
             new PowerupDefinition(PowerupType.GraveTithe, "Reaper: Grave Tithe", "Killing an immobilized enemy (afraid, paralysed, frozen, stunned or rooted) gives you a soul", 1, WeaponType.Scythe),
             new PowerupDefinition(PowerupType.ElementalImmobilization, "Elemental Immobilization", "When an enemy is affected by an element (burning, chilled, frozen or shocked), your next hit against it stuns it for 1 second (once every 3 seconds)", 1),
-            new PowerupDefinition(PowerupType.SoulFury, "Reaper: Soul Fury", "Deal 1% / 2% / 3% more damage by rank for every soul you hold", 3, WeaponType.Scythe)
+            new PowerupDefinition(PowerupType.SoulFury, "Reaper: Soul Fury", "Deal 1% / 2% / 3% more damage by rank for every soul you hold", 3, WeaponType.Scythe),
+            new PowerupDefinition(PowerupType.DeepWounds, "Samurai: Deep Wounds", "Bleeding you inflict gains 1 / 3 / 5 extra ticks by rank over the same 5 seconds", 3, WeaponType.Katana),
+            new PowerupDefinition(PowerupType.BloodInTheWater, "Samurai: Blood in the Water", "Bleeding enemies take 10% / 15% / 25% more damage by rank from your attacks", 3, WeaponType.Katana),
+            new PowerupDefinition(PowerupType.JaggedBlade, "Samurai: Jagged Blade", "Your attacks have a 10% chance to inflict bleeding", 1, WeaponType.Katana),
+            new PowerupDefinition(PowerupType.FineDicing, "Fine Dicing", "Slice Dice Chunk deals 10% / 30% / 50% more damage by rank", 3, WeaponType.Katana, AbilityType.SliceDiceChunk)
         };
 
         private static readonly Dictionary<PowerupType, PowerupDefinition> byType = BuildLookup();

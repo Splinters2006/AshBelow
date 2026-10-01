@@ -12,7 +12,9 @@ namespace Slopgame
         // The talents & abilities expansion.
         ShieldThrow, Whirlwind, WarBanner, NetShot, RicochetArrow, BearTrap, IceWall, BallLightning, LightningStorm, SmokeBomb, DeathMark, ShadowClone, HolyLance, Consecration, DivineIntervention, ThunderClap, HaymakerDash, Suplex, WingDash, SoulSiphon, NightmareSnap, CardToss, DiceBomb, Insurance, EmpPulse, GrappleArm, OrbitalLaser,
         // The Reaper.
-        ShadeWalk, FearIncarnate, Feast, Sow, Reap, ReapersTechnique
+        ShadeWalk, FearIncarnate, Feast, Sow, Reap, ReapersTechnique,
+        // The Samurai.
+        SliceDiceChunk, Bloodscent, BloodShallFlow, MaestrosTechnique, SwiftAsTheWind, Bloodpop
     }
 
     public sealed class AbilityDefinition
@@ -106,7 +108,13 @@ namespace Slopgame
             new AbilityDefinition(AbilityType.Feast, WeaponType.Scythe, "Feast!", "Eat 1, 3 or 5 souls to heal 1, 2 or 3 HP: always the most you can afford, but never more than the wound needs. Ranks leave you untouchable for a second each.", "+", 10f, HealVfx.Mint),
             new AbilityDefinition(AbilityType.Sow, WeaponType.Scythe, "Sow", "Sow fear into the enemy nearest your cursor for 2 seconds. Deals no damage. If it dies while afraid, the fear spreads to every enemy within 3 units. Ranks lengthen the fear.", "v", 8f, ReaperAttack.Soul),
             new AbilityDefinition(AbilityType.Reap, WeaponType.Scythe, "Reap", "Reap the fear out of every frightened enemy: each full second of fear it had left gives you a soul and deals damage. Only fear is reaped, no other hold. Ranks add damage.", "^", 9f, ReaperAttack.Bone),
-            new AbilityDefinition(AbilityType.ReapersTechnique, WeaponType.Scythe, "Reaper's Technique", "For 10 seconds your quick cuts become a string of three scythe arts that hit harder: a wide cut, a doubled back-cut and a full spin. Charging to harvest is unchanged. Ranks add 2 seconds.", "S", 16f, ReaperAttack.Soul, true)
+            new AbilityDefinition(AbilityType.ReapersTechnique, WeaponType.Scythe, "Reaper's Technique", "For 10 seconds your quick cuts become a string of three scythe arts that hit harder: a wide cut, a doubled back-cut and a full spin. Charging to harvest is unchanged. Ranks add 2 seconds.", "S", 16f, ReaperAttack.Soul, true),
+            new AbilityDefinition(AbilityType.SliceDiceChunk, WeaponType.Katana, "Slice Dice Chunk", "Slice: a quick slash. If it hits, press again to Dice: a bigger slash. If that hits too, press again to Chunk: a huge slash that inflicts bleeding. Ranks add damage.", "///", 9f, SamuraiAttack.Blood),
+            new AbilityDefinition(AbilityType.Bloodscent, WeaponType.Katana, "Bloodscent", "Every bleeding enemy's wounds start over: their ticks and duration are reset. Rank 2 resets them to 1.25x, rank 3 to 1.5x.", "%", 12f, SamuraiAttack.Blood),
+            new AbilityDefinition(AbilityType.BloodShallFlow, WeaponType.Katana, "Blood Shall Flow", "For 5 seconds every hit with your katana inflicts bleeding. Lasts 7.5 seconds at rank 2 and 10 at rank 3.", "''", 16f, SamuraiAttack.Blood),
+            new AbilityDefinition(AbilityType.MaestrosTechnique, WeaponType.Katana, "Maestro's Technique", "For 10 seconds your katana swipes become a three-hit combo: sweep, sweep, thrust. The thrust deals 1.5x damage and inflicts bleeding. Ranks add 2 seconds.", "S", 16f, SamuraiAttack.Steel),
+            new AbilityDefinition(AbilityType.SwiftAsTheWind, WeaponType.Katana, "Swift as the Wind", "Attack 50% faster for 5 seconds. Lasts 10 seconds at rank 2 and 15 at rank 3.", ">>", 20f, new Color(0.8f, 0.95f, 0.9f), true),
+            new AbilityDefinition(AbilityType.Bloodpop, WeaponType.Katana, "Bloodpop", "Every bleeding enemy's blood pops: all the bleed damage it had left is dealt at once. Rank 2 deals 1.15x of it, rank 3 1.25x.", "*", 14f, SamuraiAttack.Blood, true)
         };
 
         /// <summary>What guardians can offer this hero: their class's abilities, less any not yet bought in the Ash shop.</summary>

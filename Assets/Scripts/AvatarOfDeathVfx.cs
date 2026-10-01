@@ -4,22 +4,26 @@ namespace Slopgame
 {
     /// <summary>
     /// Avatar of Death: for as long as the Reaper is the incarnation of death, the ground under him goes dark inside a
-    /// turning soul-fire sigil, a hooded skull with burning eyes looms over his shoulders, spectral scythe blades
-    /// circle him (passing behind and in front), and souls stream up off the floor. It opens with a shockwave and a
-    /// pillar of light, and flickers as the last second runs out. Purely visual.
+    /// turning soul-fire sigil (a hexagram inside a spiked crown, the floor cracked open around it), a hooded skull
+    /// with burning eyes looms over his shoulders on wings of bone with a great scythe at its back, spectral scythe
+    /// blades circle him (passing behind and in front), and souls stream up off the floor. It opens on impact frames
+    /// (for the Reaper's own player), a shockwave and a pillar of light, beats like a heart while it lasts, flickers
+    /// as the last second runs out and collapses in on him when it ends. Purely visual.
     /// </summary>
     public sealed class AvatarOfDeathVfx : MonoBehaviour
     {
-        private const float FadeOut = 0.4f, SigilRadius = 1.5f, OrbitWidth = 1.25f, OrbitDepth = 0.6f, SkullHeight = 1.6f;
-        private const int Blades = 3, Wisps = 16, Ticks = 12;
+        private const float FadeOut = 0.4f, ImpactTime = 0.2f, SigilRadius = 1.5f, OrbitWidth = 1.25f, OrbitDepth = 0.6f, SkullHeight = 1.6f;
+        private const int Blades = 3, Wisps = 16, Ticks = 12, Cracks = 9, Feathers = 5;
         private const float Tau = Mathf.PI * 2f;
         private static readonly Color Dark = new Color(0.02f, 0.05f, 0.05f);
         // Behind the hero (ground, cloak, skull, far blades) and in front of him (near blades, souls, the opening flash).
-        private FlameMesh back, front;
+        // The impact frames cover the whole screen, above everything in the world.
+        private FlameMesh back, front, overlay;
         private Transform hero;
         private float age, duration;
 
-        public static AvatarOfDeathVfx Play(Transform root, Transform hero, float duration)
+        /// <param name="impact">Open on full-screen impact frames (only for the player who is the Reaper).</param>
+        public static AvatarOfDeathVfx Play(Transform root, Transform hero, float duration, bool impact = false)
         {
             if (root == null || hero == null) return null;
             var effect = new GameObject("Avatar of Death").AddComponent<AvatarOfDeathVfx>();
@@ -30,6 +34,12 @@ namespace Slopgame
             var near = new GameObject("Avatar of Death (front)");
             near.transform.SetParent(effect.transform, false);
             effect.front = new FlameMesh(near, 9);
+            if (impact)
+            {
+                var screen = new GameObject("Avatar of Death (impact frames)");
+                screen.transform.SetParent(effect.transform, false);
+                effect.overlay = new FlameMesh(screen, 30);
+            }
             return effect;
         }
 
@@ -47,6 +57,7 @@ namespace Slopgame
             back.Begin();
             front.Begin();
             DrawGround(center, appear, fade, soul, bone, shade);
+            DrawWings(center + Vector2.up * SkullHeight, appear, fade, soul, bone, shade);
             DrawSpecter(center + Vector2.up * (SkullHeight + 0.07f * Mathf.Sin(age * 2.2f)), appear, fade, soul, bone, shade);
             for (int i = 0; i < Blades; i++)
             {
@@ -58,8 +69,13 @@ namespace Slopgame
             }
             DrawSouls(center, fade, soul);
             if (age < 0.55f) DrawOpening(center, age / 0.55f, soul, bone);
+            if (age > duration) DrawEnding(center, (age - duration) / FadeOut, soul, bone);
             back.Commit();
             front.Commit();
+            if (overlay == null) return;
+            overlay.Begin();
+            if (age < ImpactTime) DrawImpact(center, age / ImpactTime, soul);
+            overlay.Commit();
         }
 
         /// <summary>A pool of darkness and the sigil turning on it: two rings, a wheel of ticks and a counter-turning circle of sparks.</summary>
@@ -78,6 +94,67 @@ namespace Slopgame
             }
             for (int i = 0; i < 6; i++)
                 back.Diamond(center + FlameMesh.Polar(-age * 1.3f + i * Tau / 6f, SigilRadius * appear), 0.07f + 0.03f * pulse, FlameMesh.Alpha(bone, fade));
+            // A hexagram turning the other way inside it.
+            float inner = SigilRadius * 0.74f * appear;
+            for (int i = 0; i < 6; i++)
+            {
+                Vector2 from = center + FlameMesh.Polar(-age * 0.5f + i * Tau / 6f, inner), to = center + FlameMesh.Polar(-age * 0.5f + (i + 2) * Tau / 6f, inner);
+                back.Bar(from, (to - from).normalized, Vector2.Distance(from, to), 0.035f, FlameMesh.Alpha(soul, 0.55f * fade), FlameMesh.Alpha(bone, 0.55f * fade));
+            }
+            // A crown of spikes on the outer ring, and a column of soul-light standing on every third one.
+            for (int i = 0; i < Ticks; i++)
+            {
+                float a = age * 0.8f + (i + 0.5f) * Tau / Ticks;
+                Vector2 outward = FlameMesh.Polar(a, 1f), across = Vector2.Perpendicular(outward) * 0.09f, foot = center + outward * SigilRadius * appear;
+                back.Triangle(foot - across, foot + outward * (0.3f + 0.12f * pulse), foot + across,
+                    FlameMesh.Alpha(soul, 0.8f * fade), FlameMesh.Alpha(soul, 0f), FlameMesh.Alpha(soul, 0.8f * fade));
+                if (i % 3 == 0)
+                    back.Bar(foot, Vector2.up, 1.5f + 0.5f * Mathf.Sin(age * 5f + i), 0.1f, FlameMesh.Alpha(soul, 0.5f * fade), FlameMesh.Alpha(soul, 0f));
+            }
+            // The floor splits open around him, soul-fire showing through the cracks.
+            float grow = 1f - (1f - Mathf.Clamp01(age / 0.4f)) * (1f - Mathf.Clamp01(age / 0.4f));
+            for (int i = 0; i < Cracks; i++)
+            {
+                float a = (i + FlameMesh.Hash(i, 5.3f) * 0.6f) * Tau / Cracks, length = (1.9f + 1.3f * FlameMesh.Hash(i, 8.8f)) * grow;
+                Vector2 at = center + FlameMesh.Polar(a, 0.45f);
+                for (int step = 0; step < 5; step++)
+                {
+                    float bend = a + (FlameMesh.Hash(i, step + 0.7f) - 0.5f) * 1.3f, taper = 1f - step / 5f;
+                    Vector2 dir = FlameMesh.Polar(bend, 1f);
+                    back.Bar(at, dir, length / 5f, 0.09f * taper + 0.015f, FlameMesh.Alpha(soul, (0.45f + 0.4f * pulse) * taper * fade), FlameMesh.Alpha(soul, (0.45f + 0.4f * pulse) * (taper - 0.2f) * fade));
+                    at += dir * length / 5f;
+                }
+            }
+            // And it beats like a heart: a ring rolls out from the sigil every second.
+            float beat = Mathf.Repeat(age, 1f);
+            back.Ring(center, SigilRadius + 2.4f * beat, 0.1f * (1f - beat) + 0.01f, FlameMesh.Alpha(soul, 0.7f * (1f - beat) * fade), 64);
+        }
+
+        /// <summary>Wings of bare bone spread from the specter's shoulders, a tattered membrane between the fingers, and the great scythe slung behind it.</summary>
+        private void DrawWings(Vector2 at, float appear, float fade, Color soul, Color bone, Color shade)
+        {
+            float alpha = fade * appear, flap = Mathf.Sin(age * 2.1f) * 0.14f;
+            // The scythe: a long dark shaft from hip to above the hood, its blade hooking over the skull.
+            Vector2 butt = at + new Vector2(-1.25f, -1.7f), top = at + new Vector2(1.05f, 1.45f + 0.05f * Mathf.Sin(age * 1.7f)), shaft = (top - butt).normalized;
+            back.Bar(butt, shaft, Vector2.Distance(butt, top) * appear, 0.13f, FlameMesh.Alpha(soul, 0.25f * alpha), FlameMesh.Alpha(soul, 0.5f * alpha));
+            back.Bar(butt, shaft, Vector2.Distance(butt, top) * appear, 0.07f, FlameMesh.Alpha(Dark, 0.9f * alpha), FlameMesh.Alpha(Dark, 0.9f * alpha));
+            Blade(back, top + new Vector2(-0.95f, -0.45f), 1.9f, 1.05f, 0.9f * alpha, soul, bone);
+            for (int side = -1; side <= 1; side += 2)
+            {
+                Vector2 shoulder = at + new Vector2(side * 0.45f, -0.35f), last = shoulder;
+                for (int i = 0; i < Feathers; i++)
+                {
+                    // Fanned from nearly straight up to drooping outward; the top finger is the longest.
+                    float angle = Mathf.Lerp(1.25f, -0.55f, i / (Feathers - 1f)) + flap * (1f - i * 0.15f), length = (2.3f - 0.3f * i) * appear;
+                    Vector2 dir = new Vector2(side * Mathf.Cos(angle), Mathf.Sin(angle)), tip = shoulder + dir * length;
+                    if (i > 0)
+                        back.Triangle(shoulder, last, tip, FlameMesh.Alpha(Dark, 0.6f * alpha), FlameMesh.Alpha(shade, 0.3f * alpha), FlameMesh.Alpha(shade, 0.3f * alpha));
+                    back.Bar(shoulder, dir, length, 0.13f, FlameMesh.Alpha(bone, 0.7f * alpha), FlameMesh.Alpha(soul, 0f));
+                    back.Bar(shoulder, dir, length * 0.9f, 0.035f, FlameMesh.Alpha(Color.white, 0.85f * alpha), FlameMesh.Alpha(soul, 0f));
+                    back.Diamond(tip, 0.06f, FlameMesh.Alpha(soul, 0.8f * alpha));
+                    last = tip;
+                }
+            }
         }
 
         /// <summary>Death looking over his shoulder: a dark hood and ragged cloak, a pale skull and two eyes of soul-fire.</summary>
@@ -155,12 +232,81 @@ namespace Slopgame
             front.Ring(center, 0.3f + 3.2f * t, 0.14f * rest + 0.02f, FlameMesh.Alpha(bone, 0.8f * rest), 56);
             front.Bar(center + Vector2.down * 0.4f, Vector2.up, 7f, 1.4f * rest * rest, FlameMesh.Alpha(Color.white, 0.85f * rest), FlameMesh.Alpha(soul, 0f));
             front.Bar(center + Vector2.down * 0.4f, Vector2.up, 7f, 2.4f * rest, FlameMesh.Alpha(soul, 0.35f * rest), FlameMesh.Alpha(soul, 0f));
+            // Shards of bone thrown out ahead of the shockwave.
+            for (int i = 0; i < 18; i++)
+            {
+                Vector2 dir = FlameMesh.Polar((i + FlameMesh.Hash(i, 2.1f)) * Tau / 18f, 1f);
+                float speed = 3.5f + 3f * FlameMesh.Hash(i, 6.6f);
+                front.Bar(center + dir * (0.6f + speed * t), -dir, 0.9f * rest, 0.07f, FlameMesh.Alpha(i % 3 == 0 ? Color.white : bone, rest), FlameMesh.Alpha(soul, 0f));
+            }
+        }
+
+        /// <summary>The moment it lets go: everything that poured out of him is drawn back in and snuffed.</summary>
+        private void DrawEnding(Vector2 center, float t, Color soul, Color bone)
+        {
+            float rest = 1f - Mathf.Clamp01(t);
+            front.Ring(center, 0.2f + 3.2f * rest, 0.22f * rest + 0.02f, FlameMesh.Alpha(bone, rest), FlameMesh.Alpha(soul, 0f), 56);
+            front.Ring(center, 0.1f + 1.8f * rest * rest, 0.1f * rest + 0.02f, FlameMesh.Alpha(soul, rest), 48);
+            front.Bar(center + Vector2.down * 0.4f, Vector2.up, 5f, 0.9f * rest, FlameMesh.Alpha(Color.white, 0.7f * rest), FlameMesh.Alpha(soul, 0f));
+        }
+
+        /// <summary>
+        /// Impact frames: three hard frames with no blending between them. A giant skull stares out of a black screen
+        /// with burning eyes, the same in black on white, then white on soul-fire as it lets go; speed lines race in
+        /// from the edges of the screen throughout.
+        /// </summary>
+        private void DrawImpact(Vector2 center, float t, Color soul)
+        {
+            int frame = t < 0.4f ? 0 : t < 0.7f ? 1 : 2;
+            Color ground = frame == 0 ? Color.black : frame == 1 ? Color.white : FlameMesh.Alpha(soul, 0.7f * (1f - (t - 0.7f) / 0.3f));
+            Color ink = frame == 1 ? Color.black : Color.white, hole = frame == 1 ? Color.white : frame == 0 ? Color.black : (Color)ReaperAttack.Shade;
+            Color eye = frame == 0 ? soul : hole;
+            var view = Camera.main;
+            Vector2 middle = view != null ? (Vector2)view.transform.position : center;
+            overlay.Rect(middle - new Vector2(60f, 40f), middle + new Vector2(60f, 40f), ground);
+            Vector2 skull = center + Vector2.up * 1.1f;
+            for (int i = 0; i < 26; i++)
+            {
+                float angle = (i + FlameMesh.Hash(i, frame + 1.3f)) / 26f * Tau, near = 4.2f + 3f * FlameMesh.Hash(i, frame + 5.9f);
+                Vector2 dir = FlameMesh.Polar(angle, 1f), across = Vector2.Perpendicular(dir) * (1f + 2.2f * FlameMesh.Hash(i, 2.2f));
+                overlay.Triangle(skull + dir * near, skull + dir * 45f + across, skull + dir * 45f - across, ink, ink, ink);
+            }
+            // The scythe's blade sweeps behind the skull, edge to edge.
+            float size = frame == 0 ? 1f : frame == 1 ? 1.12f : 1.2f;
+            const int Segments = 20;
+            for (int i = 0; i < Segments; i++)
+            {
+                float u0 = i / (float)Segments, u1 = (i + 1) / (float)Segments, a0 = 0.35f + u0 * 2.9f, a1 = 0.35f + u1 * 2.9f;
+                float w0 = 1.3f * Mathf.Pow(u0, 1.4f) * Mathf.Clamp01((1f - u0) / 0.1f), w1 = 1.3f * Mathf.Pow(u1, 1.4f) * Mathf.Clamp01((1f - u1) / 0.1f);
+                overlay.Quad(skull + FlameMesh.Polar(a0, (4.4f - w0) * size), skull + FlameMesh.Polar(a0, 4.4f * size), skull + FlameMesh.Polar(a1, 4.4f * size), skull + FlameMesh.Polar(a1, (4.4f - w1) * size),
+                    ink, ink, ink, ink);
+            }
+            // The skull: cranium, cheekbones and jaw, with hollow sockets, nose and teeth.
+            overlay.Ellipse(skull + new Vector2(0f, 0.35f) * size, 2.1f * size, 2f * size, ink, ink, 36);
+            overlay.Ellipse(skull + new Vector2(0f, -1.3f) * size, 1.3f * size, 1.15f * size, ink, ink, 28);
+            for (int side = -1; side <= 1; side += 2)
+            {
+                Vector2 socket = skull + new Vector2(side * 0.85f, 0.15f) * size;
+                // Slanted sockets, so it scowls.
+                overlay.Quad(socket + new Vector2(-side * 0.6f, -0.35f) * size, socket + new Vector2(-side * 0.55f, 0.25f) * size,
+                    socket + new Vector2(side * 0.6f, 0.75f) * size, socket + new Vector2(side * 0.5f, -0.45f) * size, hole, hole, hole, hole);
+                overlay.Diamond(socket + new Vector2(0f, 0.1f) * size, 0.28f * size, eye);
+                if (frame == 0)
+                    overlay.Bar(socket + new Vector2(0f, 0.1f) * size, new Vector2(side * 0.45f, 1f).normalized, 2.6f, 0.3f, eye, FlameMesh.Alpha(eye, 0f));
+            }
+            overlay.Triangle(skull + new Vector2(-0.28f, -0.95f) * size, skull + new Vector2(0f, -0.35f) * size, skull + new Vector2(0.28f, -0.95f) * size, hole, hole, hole);
+            for (int i = -3; i <= 3; i++)
+                overlay.Bar(skull + new Vector2(i * 0.3f, -1.45f) * size, Vector2.down, 0.75f * size, 0.08f * size, hole, hole);
+            overlay.Bar(skull + new Vector2(-1.05f, -1.8f) * size, Vector2.right, 2.1f * size, 0.07f * size, hole, hole);
+            // A flat glare through the eyes.
+            if (frame == 0) overlay.Bar(skull + new Vector2(-9f, 0.25f), Vector2.right, 18f, 0.08f, FlameMesh.Alpha(soul, 0.9f), FlameMesh.Alpha(soul, 0.9f));
         }
 
         private void OnDestroy()
         {
             back?.Release();
             front?.Release();
+            overlay?.Release();
         }
     }
 }

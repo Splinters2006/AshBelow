@@ -30,6 +30,8 @@ namespace Slopgame
         }
         private SaveData data = Fresh();
         private bool dirty, recoveredBackup;
+        // Ranks bought for free in debug mode: they last for the session, count only while the mode is on, and are never saved.
+        private readonly Dictionary<string, int> debugRanks = new Dictionary<string, int>();
         public string SavePath { get; }
         public int Ash => data.ash;
         public int GuardiansDefeated => data.guardians;
@@ -58,7 +60,9 @@ namespace Slopgame
         public int Rank(string id)
         {
             var entry = data.upgrades.Find(value => value.id == id);
-            return entry == null ? 0 : Math.Min(entry.rank, PermanentUpgradeCatalog.Get(id)?.MaxRank ?? int.MaxValue);
+            int rank = entry == null ? 0 : entry.rank;
+            if (DebugMode.Enabled && debugRanks.TryGetValue(id, out int debugRank)) rank = Math.Max(rank, debugRank);
+            return Math.Min(rank, PermanentUpgradeCatalog.Get(id)?.MaxRank ?? int.MaxValue);
         }
 
         private static SaveData Read(string path)
@@ -148,12 +152,12 @@ namespace Slopgame
 
         /// <summary>
         /// Class upgrades gated behind guardians (the class mechanics) need that class to have beaten them; world rewards need
-        /// their world cleared once; a mechanic's R upgrade also needs the mechanic itself.
+        /// their world cleared once; a mechanic's R upgrade also needs the mechanic itself. Debug mode unlocks everything.
         /// </summary>
-        public bool IsAvailable(PermanentUpgradeDefinition upgrade) => upgrade != null
-            && (upgrade.ClassWeapon.HasValue ? GuardiansDefeatedAs(upgrade.ClassWeapon.Value) : data.guardians) >= upgrade.RequiredGuardians
+        public bool IsAvailable(PermanentUpgradeDefinition upgrade) => upgrade != null && (DebugMode.Enabled
+            || (upgrade.ClassWeapon.HasValue ? GuardiansDefeatedAs(upgrade.ClassWeapon.Value) : data.guardians) >= upgrade.RequiredGuardians
             && (upgrade.RequiredWorld < 0 || HasClearedWorld(upgrade.RequiredWorld))
-            && (upgrade.RequiredUpgrade == null || Rank(upgrade.RequiredUpgrade) > 0);
+            && (upgrade.RequiredUpgrade == null || Rank(upgrade.RequiredUpgrade) > 0));
 
         /// <summary>
         /// True once this world or any later one has been cleared: getting past a world counts, so worlds skipped on
@@ -224,6 +228,14 @@ namespace Slopgame
         public bool TryPurchase(string id)
         {
             var upgrade = PermanentUpgradeCatalog.Get(id);
+            // Debug mode sells every upgrade for free, whatever its requirements, without spending Ash or writing the save.
+            if (DebugMode.Enabled)
+            {
+                if (upgrade == null || Rank(id) >= upgrade.MaxRank) return false;
+                debugRanks[id] = Rank(id) + 1;
+                Changed?.Invoke();
+                return true;
+            }
             if (IsReadOnly || upgrade == null || !IsAvailable(upgrade) || Rank(id) >= upgrade.MaxRank || Ash < upgrade.Cost(Rank(id))) return false;
             var next = JsonUtility.FromJson<SaveData>(JsonUtility.ToJson(data));
             next.ash -= upgrade.Cost(Rank(id));

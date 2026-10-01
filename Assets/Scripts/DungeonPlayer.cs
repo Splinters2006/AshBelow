@@ -168,6 +168,12 @@ namespace Slopgame
                 scythe.Player = this;
                 Weapon = scythe;
             }
+            else if (weaponType == WeaponType.Katana)
+            {
+                var katana = gameObject.AddComponent<SamuraiAttack>();
+                katana.Player = this;
+                Weapon = katana;
+            }
             else if (weaponType == WeaponType.Staff)
             {
                 var staff = gameObject.AddComponent<WizardAttack>();

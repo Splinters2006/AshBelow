@@ -246,6 +246,8 @@ namespace Slopgame
                     ? player.Charge.Amount >= 1f ? "RELEASE TO FIRE A FULL RAY" : $"FOCUSING RAY  {player.Charge.Amount:P0}"
                     : player.ClassWeapon == WeaponType.Scythe
                     ? player.Charge.Amount >= 1f ? "RELEASE TO HARVEST SOULS" : $"RAISING THE SCYTHE  {player.Charge.Amount:P0}"
+                    : player.ClassWeapon == WeaponType.Katana
+                    ? player.Charge.Amount >= 1f ? "RELEASE FOR A FLURRY" : $"GATHERING A FLURRY  {player.Charge.Amount:P0}"
                     : player.Charge.Amount >= 1f ? "FULL CHARGE  /  RELEASE" : $"CHARGING  {player.Charge.Amount:P0}", 14, AbilityCatalog.Gold, TextAnchor.MiddleCenter);
                 DungeonUi.Bar(new Rect(500, 568, 280, 5), player.Charge.Amount, AbilityCatalog.Gold);
             }
@@ -276,6 +278,8 @@ namespace Slopgame
                 ? $"{attack}  tail stab     HOLD / RELEASE {attack}  paralysing vital stab     {KeyBindings.Label(GameAction.Special)}  tail sweep     {interact}  interact"
                 : player.ClassWeapon == WeaponType.Scythe
                 ? $"{attack}  scythe sweep     HOLD / RELEASE {attack}  harvest souls     HOLD / RELEASE {KeyBindings.Label(GameAction.Special)}  soul skulls     {(player.Mechanic != null ? KeyBindings.Label(GameAction.Mechanic) + "  raise skeleton     " : "")}{interact}  interact"
+                : player.ClassWeapon == WeaponType.Katana
+                ? $"{attack}  katana slash     HOLD / RELEASE {attack}  flurry of slashes     {KeyBindings.Label(GameAction.Special)}  dash slash     {(player.Mechanic != null ? KeyBindings.Label(GameAction.Mechanic) + "  pose / sheathe     " : "")}{interact}  interact"
                 : player.ClassWeapon == WeaponType.Beam
                 ? $"{attack}  plasma ray     HOLD / RELEASE {attack}  charged ray     HOLD / RELEASE {KeyBindings.Label(GameAction.Special)}  plasma cannon     {interact}  interact"
                 : $"{KeyBindings.MovementLabel()}  move     HOLD / RELEASE {attack}  charge attack     {interact}  interact", 13, DungeonUi.Muted, TextAnchor.UpperCenter);
