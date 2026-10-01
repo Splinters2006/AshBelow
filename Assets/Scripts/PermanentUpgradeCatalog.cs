@@ -94,7 +94,7 @@ namespace Slopgame
             Mechanic(WeaponType.Coins, "The Purse", "R: open your purse, a shop paid for in coins: healing, wards or loaded dice"),
             Mechanic(WeaponType.Beam, "Overclock", "R: after your plasma ray strikes 25 enemies, overclock for 8s: fully charged rays at double speed and a vented, faster cannon"),
             Mechanic(WeaponType.Scythe, "Army of the Dead", "R: spend 3 souls to raise a skeleton that fights for you. Frail and weak, but its health and damage grow with yours, and its blows strike fear for 1 second"),
-            Mechanic(WeaponType.Katana, "True Poser", "R: strike a pose. While you hold it, everything you do deals 0 damage. Press R again to sheathe your katana: every enemy takes all the damage it was owed at once, times 1.25"),
+            Mechanic(WeaponType.Katana, "True Poser", "R: strike a pose. While you hold it, everything you do deals 0 damage. Press R again to sheathe your katana: every enemy takes all the damage it was owed at once, times 1.25. After a sheathe you can pose again at once, but cannot sheathe again for 10 seconds"),
             // R upgrades: one per class mechanic, sold once the Neon Arcology is cleared and the mechanic itself is owned.
             MechanicUpgrade(WeaponType.Sword, "Retribution", "When Shield Taunt ends, every nearby enemy takes your damage multiplied by the hits you blocked or took while it lasted"),
             MechanicUpgrade(WeaponType.Bow, "Elemental Surge", "Hold R to surge for 6 seconds: every arrow sets off its element, crit or not. Tapping R still cycles elements. 30 second cooldown"),

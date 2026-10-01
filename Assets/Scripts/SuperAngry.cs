@@ -26,6 +26,9 @@ namespace Slopgame
         {
             Player.Buffs.Fury(Duration);
             var root = Player.Run.ProjectileRoot;
+            // The fire, cracked floor and anger mark follow her for as long as she is furious.
+            SuperAngryVfx.Play(root, transform, Duration, true);
+            CoopFx.SuperAngry(Player.Run, Duration);
             HeroVfx.Pulse(root, transform.position, 2.6f, HeroBuffs.FuryColor, 0.5f);
             HeroVfx.Sparks(root, transform.position, HeroBuffs.FuryColor, 26, 6f, 0.5f);
             CombatVfx.Ring(root, transform.position, 1.8f, Color.white, 0.4f);

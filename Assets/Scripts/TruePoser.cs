@@ -8,11 +8,12 @@ namespace Slopgame
     /// The Samurai's class mechanic, a toggle. Pressed once, he strikes a pose: everything he does deals no damage,
     /// and each enemy is instead owed what it would have taken. Pressed again, he sheathes his katana and every cut
     /// lands at once, multiplied by <see cref="ReleaseMultiplier"/>. With its R upgrade (Open Veins, from the Ash shop)
-    /// the sheathe also opens a bleed on each enemy, based on all the damage it dealt them.
+    /// the sheathe also opens a bleed on each enemy, based on all the damage it dealt them. A sheathe starts a cooldown
+    /// that only holds back the next sheathe: he can strike the pose again at once, but has to hold it until it runs out.
     /// </summary>
     public sealed class TruePoser : ClassMechanic
     {
-        public const float ReleaseMultiplier = 1.25f, Cooldown = 15f, SheatheTime = 0.5f, ImpactTime = 0.16f;
+        public const float ReleaseMultiplier = 1.25f, Cooldown = 10f, SheatheTime = 0.5f, ImpactTime = 0.16f;
         private readonly Dictionary<DungeonEnemy, int> owed = new Dictionary<DungeonEnemy, int>();
         private float readyAt, nextMote;
         private Coroutine sheathing;
@@ -31,8 +32,10 @@ namespace Slopgame
                 return total;
             }
         }
-        public override float Readiness => IsPosing ? 1f : 1f - Mathf.Clamp01(CooldownRemaining / Cooldown);
-        public override string Status => IsPosing ? $"SHEATHE  /  {Owed}" : CooldownRemaining > 0f ? Seconds(CooldownRemaining) : "READY";
+        /// <summary>True while he is posing and the last sheathe's cooldown still keeps the katana out.</summary>
+        public bool IsSheatheLocked => IsPosing && CooldownRemaining > 0f;
+        public override float Readiness => IsPosing ? 1f - Mathf.Clamp01(CooldownRemaining / Cooldown) : 1f;
+        public override string Status => IsSheatheLocked ? $"{Seconds(CooldownRemaining)}  /  {Owed}" : IsPosing ? $"SHEATHE  /  {Owed}" : "READY";
         public override void ReduceCooldown(float seconds) => readyAt = Cooldowns.Shorten(readyAt, seconds);
 
         public override bool TryActivate(Vector2 aim)
@@ -40,10 +43,10 @@ namespace Slopgame
             if (!CanAct || sheathing != null) return false;
             if (IsPosing)
             {
+                if (CooldownRemaining > 0f) return false;
                 sheathing = StartCoroutine(Sheathe());
                 return true;
             }
-            if (CooldownRemaining > 0f) return false;
             IsPosing = true;
             owed.Clear();
             var run = Player.Run;
