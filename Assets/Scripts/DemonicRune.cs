@@ -4,12 +4,13 @@ namespace Slopgame
 {
     /// <summary>
     /// The Demoness's passive (Demonic Runes): an enemy that dies while immobilized may leave a rune behind. Walking over
-    /// it makes every hit she lands paralyse for <see cref="BuffDuration"/> seconds. Each machine drops runes for its own hero.
+    /// it resets her Tail Sweep cooldown and makes every hit she lands paralyse for <see cref="BuffDuration"/> seconds.
+    /// Each machine drops runes for its own hero.
     /// </summary>
     public sealed class DemonicRune : MonoBehaviour
     {
         public const float DropChance = 0.1f, BuffDuration = 5f;
-        public const float MagnetRadius = 1.5f, PickupRadius = 0.45f;
+        public const float MagnetRadius = 10f, PickupRadius = 0.45f;
         private const float HopTime = 0.35f, HopHeight = 0.5f, Size = 0.45f;
         private static Sprite runeSprite;
         private static Sprite RuneSprite => runeSprite != null ? runeSprite : runeSprite = DungeonVisuals.PaletteSprite("Demonic rune", new[]
@@ -64,10 +65,11 @@ namespace Slopgame
             }
             bool alive = player.Health > 0;
             float distance = Vector2.Distance(rest, hero);
-            if (alive && distance <= MagnetRadius) rest = Vector2.MoveTowards(rest, hero, (6f - distance * 2f) * Time.deltaTime);
+            if (alive && distance <= MagnetRadius) rest = Vector2.MoveTowards(rest, hero, (12f + (MagnetRadius - distance) * 2f) * Time.deltaTime);
             Place(rest, 0.12f + 0.07f * Mathf.Sin(Time.time * 3f + phase));
             if (!alive || Vector2.Distance(rest, hero) > PickupRadius) return;
             player.Buffs.Rune(BuffDuration);
+            if (player.Weapon is DemonessAttack tail) tail.ResetSweepCooldown();
             HeroVfx.Motes(run.ProjectileRoot, hero, 0.8f, DemonessAttack.Violet, 14, 0.9f);
             HeroVfx.Pulse(run.ProjectileRoot, hero, 1.2f, DemonessAttack.Violet, 0.35f);
             CoopFx.Pulse(run, hero, 1.2f, DemonessAttack.Violet, 0.35f);

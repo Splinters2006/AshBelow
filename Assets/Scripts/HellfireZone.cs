@@ -570,7 +570,17 @@ namespace Slopgame
             if (warning)
             {
                 float pulse = 0.5f + 0.5f * Mathf.Sin(time * 22f);
-                flames.Bar(spec.Center, dir, length, width * warn, FlameMesh.Alpha(colors.Deep, 0.4f), FlameMesh.Alpha(colors.Deep, 0.15f));
+                if (spec.Style == HazardStyle.Brimstone)
+                {
+                    // The Court's floor is dark red and its guardians' lines cross the whole arena: crimson fading along
+                    // its length vanishes there, so these warn in bright orange, evenly from end to end.
+                    Color fill = FlameMesh.Alpha(colors.Main, 0.3f + 0.2f * warn), rim = FlameMesh.Alpha(colors.Bright, 0.6f + 0.4f * pulse);
+                    flames.Bar(spec.Center, dir, length, width * warn, fill, fill);
+                    flames.Bar(spec.Center + side * width * 0.5f, dir, length, 0.1f, rim, rim);
+                    flames.Bar(spec.Center - side * width * 0.5f, dir, length, 0.1f, rim, rim);
+                    return;
+                }
+                flames.Bar(spec.Center, dir, length, width * warn,FlameMesh.Alpha(colors.Deep, 0.4f), FlameMesh.Alpha(colors.Deep, 0.15f));
                 flames.Bar(spec.Center + side * width * 0.5f, dir, length, 0.05f, FlameMesh.Alpha(colors.Main, pulse), FlameMesh.Alpha(colors.Main, 0.2f));
                 flames.Bar(spec.Center - side * width * 0.5f, dir, length, 0.05f, FlameMesh.Alpha(colors.Main, pulse), FlameMesh.Alpha(colors.Main, 0.2f));
                 return;

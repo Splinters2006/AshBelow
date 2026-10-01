@@ -28,7 +28,7 @@ namespace Slopgame
             new ClassPassiveDefinition(WeaponType.Staff, "Elemental Mastery", "Your shocks start with 1.5x the base radius, your burns last 1.5x the base ticks and your freezes last 1.5x as long"),
             new ClassPassiveDefinition(WeaponType.Daggers, "Killer Instinct", "Backstabs with basic attacks deal double damage; every other backstab deals 15% more"),
             new ClassPassiveDefinition(WeaponType.Hammer, "Overflowing Faith", "Keep holding a fully charged blessing to overcharge it: +3 damage instead of +2, over a wider area"),
-            new ClassPassiveDefinition(WeaponType.Tail, "Demonic Runes", "Enemies that die while immobilized have a 10% chance to drop a demonic rune. Pick it up and every hit you land paralyses for 5 seconds"),
+            new ClassPassiveDefinition(WeaponType.Tail, "Demonic Runes", "Enemies that die while immobilized have a 10% chance to drop a demonic rune. Pick it up to reset your Tail Sweep cooldown, and every hit you land paralyses for 5 seconds"),
             new ClassPassiveDefinition(WeaponType.Beam, "Salvage", "Enemies you land the final hit on have a 5% chance to drop 1 scrap. Every 3 scrap heals you for 1 HP"),
             new ClassPassiveDefinition(WeaponType.Coins, "Compound Interest", "Every guardian you defeat multiplies the contents of The Safe by 1.25 instead of 1.1"),
             new ClassPassiveDefinition(WeaponType.Scythe, "Death's Bargain", "Everything that costs souls costs 1 soul less: skulls, Feast!, Army of the Dead and Avatar of Death"),

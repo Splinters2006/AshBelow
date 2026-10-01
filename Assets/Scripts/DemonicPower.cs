@@ -14,7 +14,10 @@ namespace Slopgame
         public const int ParalysesNeeded = 7;
         public const float Duration = 10f, SweepConeMultiplier = 2f, SweepReachMultiplier = 1.25f, AuraRadius = 5f, AuraParalysis = 2f;
         private readonly HashSet<DungeonEnemy> inside = new HashSet<DungeonEnemy>(), seen = new HashSet<DungeonEnemy>();
-        private float until, nextRing;
+        private const int RingPoints = 64;
+        private float until;
+        private LineRenderer ring;
+        private Material ringMaterial;
         public bool IsActive => Time.time < until;
         public override string Name => "Demonic Power";
         public override Color Color => DemonessAttack.Violet;
@@ -44,10 +47,12 @@ namespace Slopgame
 
         private void Update()
         {
-            if (Player == null || Player.Run == null || !IsActive || !IsUpgraded) return;
+            bool aura = Player != null && Player.Run != null && IsActive && IsUpgraded && Player.Run.IsPlaying && Player.Health > 0;
+            if (ring != null) ring.enabled = aura;
+            if (!aura) return;
             var run = Player.Run;
-            if (!run.IsPlaying || Player.Health <= 0) return;
             Vector2 center = transform.position;
+            DrawRing(center);
             var root = run.ProjectileRoot;
             // Dread Presence: whoever steps inside the ring is paralysed; stepping out and back in does it again.
             float hold = AuraParalysis + (Player.Weapon is DemonessAttack tail ? tail.ParalysisBonus : 0f);
@@ -64,9 +69,31 @@ namespace Slopgame
             }
             inside.Clear();
             inside.UnionWith(seen);
-            if (Time.time < nextRing) return;
-            nextRing = Time.time + 0.5f;
-            CombatVfx.Ring(root, center, AuraRadius, FlameMesh.Alpha(DemonessAttack.Violet, 0.45f), 0.5f);
         }
+
+        /// <summary>Dread Presence's edge: one steady circle that follows her for as long as the aura lasts.</summary>
+        private void DrawRing(Vector2 center)
+        {
+            if (ring == null)
+            {
+                ringMaterial = new Material(Shader.Find("Sprites/Default")) { name = "Dread Presence ring" };
+                ring = new GameObject("Dread Presence ring").AddComponent<LineRenderer>();
+                ring.transform.SetParent(transform, false);
+                ring.sharedMaterial = ringMaterial;
+                ring.useWorldSpace = true;
+                ring.loop = true;
+                ring.positionCount = RingPoints;
+                ring.widthMultiplier = 0.075f;
+                ring.sortingOrder = 9;
+                ring.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                ring.receiveShadows = false;
+                ring.startColor = ring.endColor = FlameMesh.Alpha(DemonessAttack.Violet, 0.45f);
+            }
+            ring.enabled = true;
+            for (int i = 0; i < RingPoints; i++)
+                ring.SetPosition(i, center + FlameMesh.Polar(i * Mathf.PI * 2f / RingPoints, AuraRadius));
+        }
+
+        private void OnDestroy() { if (ringMaterial != null) Destroy(ringMaterial); }
     }
 }

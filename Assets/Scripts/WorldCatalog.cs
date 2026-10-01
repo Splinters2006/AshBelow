@@ -56,12 +56,15 @@ namespace Slopgame
         /// specialists, and guardian health all scale with it; see the multipliers below.
         /// </summary>
         public float Threat { get; }
-        public float EnemyHealthMultiplier => Threat;
+        /// <summary>Extra enemy and guardian health for this world alone, on top of what <see cref="Threat"/> gives (1 = none).</summary>
+        public float EnemyHealthBonus { get; }
+        public float GuardianHealthBonus { get; }
+        public float EnemyHealthMultiplier => Threat * EnemyHealthBonus;
         public float EnemySpeedMultiplier => 1f + (Threat - 1f) * 0.2f;
         /// <summary>How much faster every enemy's attack clock runs here (guardians included).</summary>
         public float EnemyTempo => 1f + (Threat - 1f) * 0.25f;
         /// <summary>Guardians of every world past the first are tankier: half as much health again, on top of the world's threat.</summary>
-        public float GuardianHealthMultiplier => (1f + (Threat - 1f) * 0.6f) * (Index > 0 ? LaterGuardianHealth : 1f);
+        public float GuardianHealthMultiplier => (1f + (Threat - 1f) * 0.6f) * (Index > 0 ? LaterGuardianHealth : 1f) * GuardianHealthBonus;
         /// <summary>...and stronger: their attack clocks run faster and every blow costs one more HP.</summary>
         public float GuardianTempo => Index > 0 ? LaterGuardianTempo : 1f;
         public int GuardianHitDamage => DungeonBoss.HitDamage + (Index > 0 ? 1 : 0);
@@ -72,13 +75,14 @@ namespace Slopgame
         public WorldDefinition(int index, string name, bool highTech, Color background, Color floorA, Color floorB, Color wall, Color accent,
             Color arenaRune, string basicName, string casterName, string bruteName, Color basicTint, Color casterTint, Color bruteTint, BoltKind bolts,
             WeaponType? hero = null, bool placeholder = false, Vector2 mapPosition = default, MapLayout layout = MapLayout.Dungeon, TrapTheme[] traps = null, bool lava = false, HazardStyle element = HazardStyle.Hellfire,
-            BossKind firstGuardian = BossKind.AshWarden, bool waves = false, float threat = 1f)
+            BossKind firstGuardian = BossKind.AshWarden, bool waves = false, float threat = 1f, float enemyHealth = 1f, float guardianHealth = 1f)
         {
             Index = index; Name = name; HighTech = highTech; Background = background; FloorA = floorA; FloorB = floorB; Wall = wall; Accent = accent;
             ArenaRune = arenaRune; BasicName = basicName; CasterName = casterName; BruteName = bruteName;
             BasicTint = basicTint; CasterTint = casterTint; BruteTint = bruteTint; Bolts = bolts;
             Hero = hero; IsPlaceholder = placeholder; MapPosition = mapPosition; Layout = layout; Traps = traps ?? new TrapTheme[0]; HasLava = lava; Element = element; FirstGuardian = firstGuardian; IsWaveWorld = waves;
             Threat = Mathf.Max(1f, threat);
+            EnemyHealthBonus = Mathf.Max(1f, enemyHealth); GuardianHealthBonus = Mathf.Max(1f, guardianHealth);
         }
     }
 
@@ -90,6 +94,8 @@ namespace Slopgame
         public static readonly Color NeonPink = new Color(1f, 0.25f, 0.8f);
         /// <summary>World 3 is much deadlier than the rest: 60% more enemy health, faster enemies that attack sooner, an extra enemy per room, more specialists and tougher guardians.</summary>
         public const float InfernalCourtThreat = 1.6f;
+        /// <summary>Worlds 2 and 4 have tougher enemies, worlds 3 and 4 tougher guardians: 30% more enemy health, 95% more guardian health (30%, then half as much again).</summary>
+        public const float ToughEnemyHealth = 1.3f, ToughGuardianHealth = 1.3f * 1.5f;
 
         public static readonly WorldDefinition[] All =
         {
@@ -113,7 +119,7 @@ namespace Slopgame
                 {
                     new TrapTheme("Plasma laser", TrapKind.Jet, HazardStyle.Plasma, 9f),
                     new TrapTheme("Arc floor panel", TrapKind.Vent, HazardStyle.Circuit, 1.2f),
-                }, element: HazardStyle.Plasma, firstGuardian: BossKind.GridOverseer, waves: true),
+                }, element: HazardStyle.Plasma, firstGuardian: BossKind.GridOverseer, waves: true, enemyHealth: ToughEnemyHealth),
             // Placeholder hero worlds: their own names, colours and specialists, with the Ash Below's basic enemies (and guardians,
             // where they have none of their own yet) until each is designed.
             new WorldDefinition(2, "THE INFERNAL COURT", false, new Color(0.06f, 0.015f, 0.03f),
@@ -125,7 +131,7 @@ namespace Slopgame
                 {
                     new TrapTheme("Brimstone geyser", TrapKind.Vent, HazardStyle.Hellfire, 1.5f),
                     new TrapTheme("Fire jet", TrapKind.Jet, HazardStyle.Hellfire, 5f),
-                }, lava: true, firstGuardian: BossKind.HexMatriarch, threat: InfernalCourtThreat),
+                }, lava: true, firstGuardian: BossKind.HexMatriarch, threat: InfernalCourtThreat, guardianHealth: ToughGuardianHealth),
             new WorldDefinition(3, "THE ARCANE SPIRE", false, new Color(0.03f, 0.03f, 0.08f),
                 new Color(0.1f, 0.1f, 0.2f), new Color(0.12f, 0.12f, 0.23f), new Color(0.26f, 0.26f, 0.45f),
                 new Color(0.55f, 0.6f, 1f), new Color(0.4f, 0.85f, 1f),
@@ -135,7 +141,7 @@ namespace Slopgame
                 {
                     new TrapTheme("Frost rune", TrapKind.Rune, HazardStyle.Frost, 2.8f),
                     new TrapTheme("Arcane ray", TrapKind.Jet, HazardStyle.Void, 8f),
-                }, element: HazardStyle.Frost, firstGuardian: BossKind.Spellblade, waves: true),
+                }, element: HazardStyle.Frost, firstGuardian: BossKind.Spellblade, waves: true, enemyHealth: ToughEnemyHealth, guardianHealth: ToughGuardianHealth),
             new WorldDefinition(4, "THE SHADOW MARKET", false, new Color(0.02f, 0.04f, 0.035f),
                 new Color(0.09f, 0.12f, 0.11f), new Color(0.11f, 0.14f, 0.13f), new Color(0.22f, 0.28f, 0.26f),
                 new Color(0.45f, 0.95f, 0.7f), new Color(0.3f, 0.7f, 0.5f),

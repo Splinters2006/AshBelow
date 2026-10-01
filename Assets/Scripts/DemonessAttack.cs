@@ -29,7 +29,9 @@ namespace Slopgame
         public bool IsHeavyAttacking => false;
         public float HeavyCooldownRemaining => DebugMode.Cooldown(Mathf.Max(0f, sweepReadyAt - Time.time));
         public void ReduceHeavyCooldown(float seconds) => sweepReadyAt = Cooldowns.Shorten(sweepReadyAt, seconds);
-        public bool CanAttack => Player.Run.IsPlaying && !Player.IsRolling && !Player.IsBusy && Time.time >= readyAt;
+        /// <summary>A demonic rune: Tail Sweep is ready again at once.</summary>
+        public void ResetSweepCooldown() => sweepReadyAt = 0f;
+        public bool CanAttack =>Player.Run.IsPlaying && !Player.IsRolling && !Player.IsBusy && Time.time >= readyAt;
         /// <summary>Nerve Strike and Blood Pact: extra seconds on every paralysis she inflicts.</summary>
         public float ParalysisBonus => Player.Powerups.Count(PowerupType.NerveStrike) * 0.25f
             + (Player.Powerups.Count(PowerupType.BloodPact) > 0 ? 1f : 0f);
