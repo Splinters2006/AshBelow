@@ -212,7 +212,7 @@ namespace Slopgame
                 float distance = away.magnitude;
                 if (distance >= Spacing) continue;
                 // Two on exactly the same spot split along a direction of their own.
-                push += (distance > 0.01f ? away / distance : FlameMesh.Polar(GetInstanceID() * 1.7f, 1f)) * (1f - distance / Spacing);
+                push += (distance > 0.01f ? away / distance : FlameMesh.Polar(All.IndexOf(this) * 1.7f, 1f)) * (1f - distance / Spacing);
             }
             return push;
         }
