@@ -446,9 +446,19 @@ namespace Slopgame
             switch (spec.Style)
             {
                 case HazardStyle.Frost:
-                    Vector2 shard = (direction + Vector2.right * (seed - 0.5f) * 0.6f).normalized;
-                    flames.Bar(root, shard, height * 0.55f, width * 0.45f, FlameMesh.Alpha(colors.Main, 0.9f * fade), FlameMesh.Alpha(colors.Core, 0.2f * fade));
-                    flames.Diamond(root + shard * height * 0.55f, width * 0.18f, FlameMesh.Alpha(colors.Core, fade));
+                    // Shards punch up out of the ground the moment the ice strikes, then stand still.
+                    float grow = age < spec.Telegraph ? 1f : Mathf.Clamp01(ActiveTime / 0.14f);
+                    Vector2 lean = Vector2.Perpendicular(direction) * (seed < 0.5f ? 1f : -1f);
+                    Vector2 shard = (direction - lean * Mathf.Abs(seed - 0.5f) * 0.6f).normalized;
+                    // A smaller crystal splays out beside the big one.
+                    if (seed > 0.3f)
+                        flames.Crystal(root + lean * width * 0.22f, (direction + lean * 0.7f).normalized, width * 0.36f, height * 0.4f * grow, seed + 0.37f,
+                            colors.Core, colors.Bright, colors.Main, colors.Deep, fade);
+                    flames.Crystal(root, shard, width * 0.55f, height * 0.7f * grow, seed, colors.Core, colors.Bright, colors.Main, colors.Deep, fade);
+                    // Snow drifts down around it.
+                    float fall = Mathf.Repeat(Time.time * 0.5f + seed * 5f, 1f);
+                    flames.Diamond(root + new Vector2(Mathf.Sin(Time.time * 2f + seed * 20f) * 0.25f, height * (1.1f - fall)), 0.05f,
+                        FlameMesh.Alpha(colors.Core, 0.9f * (1f - fall) * fade));
                     break;
                 case HazardStyle.Steel:
                     float flicker = 0.5f + 0.5f * Mathf.Sin(Time.time * 25f + seed * 30f);
@@ -487,14 +497,26 @@ namespace Slopgame
                 {
                     Vector2 head = Vector2.Lerp(meteorFrom, spec.Center, fall * fall);
                     Vector2 back = (meteorFrom - spec.Center).normalized;
+                    if (spec.Style == HazardStyle.Frost)
+                    {
+                        // A hailstone: a hard chunk of ice with only a thin streak of cold air behind it.
+                        flames.Bar(head, back, 1.8f, 0.3f, FlameMesh.Alpha(colors.Bright, 0.7f), FlameMesh.Alpha(colors.Main, 0f));
+                        flames.Disc(head, 0.5f, colors.Bright, colors.Deep, 20);
+                        flames.Crystal(head + back * 0.4f, -back, 0.6f, 0.8f, spec.Center.x, colors.Core, colors.Bright, colors.Main, colors.Deep);
+                        return;
+                    }
                     flames.Bar(head, back, 3.2f, 0.9f, FlameMesh.Alpha(colors.Main, 0.9f), FlameMesh.Alpha(colors.Deep, 0f));
                     flames.Bar(head, back, 1.8f, 0.4f, FlameMesh.Alpha(colors.Core, 1f), FlameMesh.Alpha(colors.Bright, 0f));
                     flames.Disc(head, 0.55f, colors.Core, FlameMesh.Alpha(colors.Main, 0.6f), 20);
                 }
                 return;
             }
-            flames.Disc(spec.Center, r, FlameMesh.Alpha(colors.Bright, 0.7f * fade), FlameMesh.Alpha(colors.Deep, 0.55f * fade));
-            flames.Ring(spec.Center, r, 0.16f, FlameMesh.Alpha(colors.Dark, 0.9f * fade), FlameMesh.Alpha(colors.Main, 0.5f * fade));
+            if (spec.Style == HazardStyle.Frost) DrawFrozenGround(r, fade);
+            else
+            {
+                flames.Disc(spec.Center, r, FlameMesh.Alpha(colors.Bright, 0.7f * fade), FlameMesh.Alpha(colors.Deep, 0.55f * fade));
+                flames.Ring(spec.Center, r, 0.16f, FlameMesh.Alpha(colors.Dark, 0.9f * fade), FlameMesh.Alpha(colors.Main, 0.5f * fade));
+            }
             int count = Mathf.CeilToInt(r * 9f);
             for (int i = 0; i < count; i++)
             {
@@ -502,7 +524,28 @@ namespace Slopgame
                 Vector2 spot = spec.Center + FlameMesh.Polar(seed * 40f, r * Mathf.Sqrt(FlameMesh.Hash(i, 5.5f)) * 0.9f);
                 Tongue(spot, Vector2.up, 0.55f, 0.9f + seed * 0.7f, seed, fade);
             }
-            flames.Ring(spec.Center, r * (0.4f + 0.1f * Mathf.Sin(time * 9f)), 0.12f, FlameMesh.Alpha(colors.Core, 0.5f * fade));
+            // Fire throbs at its heart; ice lies still.
+            if (spec.Style != HazardStyle.Frost)
+                flames.Ring(spec.Center, r * (0.4f + 0.1f * Mathf.Sin(time * 9f)), 0.12f, FlameMesh.Alpha(colors.Core, 0.5f * fade));
+        }
+
+        /// <summary>A sheet of ice: deep blue glass under a white rim of rime, crazed with cracks from where the hail struck.</summary>
+        private void DrawFrozenGround(float r, float fade)
+        {
+            flames.Disc(spec.Center, r, FlameMesh.Alpha(colors.Main, 0.6f * fade), FlameMesh.Alpha(colors.Deep, 0.65f * fade));
+            flames.Ring(spec.Center, r, 0.18f, FlameMesh.Alpha(colors.Bright, 0.7f * fade), FlameMesh.Alpha(colors.Core, 0.9f * fade));
+            Color crack = FlameMesh.Alpha(colors.Core, 0.8f * fade), hairline = FlameMesh.Alpha(colors.Bright, 0.6f * fade);
+            float seed = spec.Center.x * 0.37f + spec.Center.y * 0.61f;
+            for (int i = 0; i < 6; i++)
+            {
+                float a = FlameMesh.Hash(i, seed), b = FlameMesh.Hash(i, seed + 4.7f);
+                float angle = (i + a * 0.7f) * Mathf.PI / 3f, reach = r * (0.4f + 0.2f * b);
+                Vector2 elbow = spec.Center + FlameMesh.Polar(angle, reach);
+                flames.Bar(spec.Center, FlameMesh.Polar(angle, 1f), reach, 0.07f, crack, crack);
+                // Each crack forks before it reaches the rim.
+                flames.Bar(elbow, FlameMesh.Polar(angle + 0.4f + b * 0.5f, 1f), r * 0.82f - reach, 0.05f, hairline, hairline);
+                flames.Bar(elbow, FlameMesh.Polar(angle - 0.4f - a * 0.5f, 1f), (r * 0.82f - reach) * 0.7f, 0.05f, hairline, hairline);
+            }
         }
 
         private void DrawBeam(bool warning, float warn, float fade)

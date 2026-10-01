@@ -98,7 +98,8 @@ namespace Slopgame
                     Vector2 root = body + new Vector2(i * 0.12f, 0.46f - Mathf.Abs(i) * 0.05f) * AshWardenBoss.Size;
                     Vector2 up = (Vector2.up + Vector2.right * i * 0.3f).normalized;
                     float length = (0.45f - Mathf.Abs(i) * 0.12f) * scale * (0.9f + 0.1f * Mathf.Sin(time * 5f + i));
-                    front.Bar(root, up, length, 0.12f * scale, FlameMesh.Alpha(AshWardenBoss.Frost, 0.9f), FlameMesh.Alpha(Color.white, 0.4f));
+                    front.Crystal(root, up, 0.2f * scale, length, i * 0.31f + 0.4f, Color.white, AshWardenBoss.Frost,
+                        Color.Lerp(AshWardenBoss.Frost, AshWardenBoss.Glacier, 0.5f), AshWardenBoss.Glacier);
                 }
             front.Commit();
         }

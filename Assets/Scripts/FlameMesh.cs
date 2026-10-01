@@ -4,7 +4,7 @@ using UnityEngine;
 namespace Slopgame
 {
     /// <summary>
-    /// A world-space mesh rebuilt every frame for hellfire effects: fills, rings, flickering flame tongues and embers.
+    /// A world-space mesh rebuilt every frame for hellfire and frost effects: fills, rings, flickering flame tongues, ice shards and embers.
     /// Owners call <see cref="Begin"/>, add shapes, then <see cref="Commit"/>.
     /// </summary>
     public sealed class FlameMesh
@@ -152,14 +152,49 @@ namespace Slopgame
             float time = Time.time;
             float flicker = 0.7f + 0.3f * Mathf.Sin(time * (9f + seed * 7f) + seed * 40f) + 0.15f * Mathf.Sin(time * 23f + seed * 13f);
             height *= flicker;
-            Vector2 side = Vector2.Perpendicular(up) * width * 0.5f;
-            Vector2 sway = Vector2.Perpendicular(up) * Mathf.Sin(time * 6f + seed * 30f) * width * 0.35f;
+            Vector2 across = Vector2.Perpendicular(up), side = across * width * 0.5f;
+            Vector2 sway = across * Mathf.Sin(time * 6f + seed * 30f) * width * 0.35f;
             Vector2 tip = root + up * height + sway;
+            // A dark, smoky backing so the flame reads against bright floors.
+            Triangle(root - side * 1.3f, root + up * height * 1.08f + sway * 1.1f, root + side * 1.3f, Alpha(Ember, 0.55f * alpha), Alpha(Ember, 0f), Alpha(Ember, 0.55f * alpha));
+            // A smaller tongue licks up one side and leans the other way.
+            float lean = Mathf.Repeat(seed, 1f) < 0.5f ? -1f : 1f;
+            Vector2 lickRoot = root + side * lean * 0.6f;
+            float lickHeight = height * (0.5f + 0.12f * Mathf.Sin(time * 13f + seed * 21f));
+            Triangle(lickRoot - side * 0.4f, lickRoot + up * lickHeight - sway * 0.6f + side * lean * 0.5f, lickRoot + side * 0.4f,
+                Alpha(Crimson, 0.85f * alpha), Alpha(Orange, 0f), Alpha(Orange, 0.85f * alpha));
             Triangle(root - side, tip, root + side, Alpha(Crimson, 0.85f * alpha), Alpha(Orange, 0f), Alpha(Crimson, 0.85f * alpha));
-            Vector2 mid = root + up * height * 0.7f + sway * 0.8f;
-            Triangle(root - side * 0.65f, mid, root + side * 0.65f, Alpha(Orange, alpha), Alpha(Yellow, 0.1f * alpha), Alpha(Orange, alpha));
-            Vector2 core = root + up * height * 0.38f + sway * 0.5f;
-            Triangle(root - side * 0.3f, core, root + side * 0.3f, Alpha(Core, alpha), Alpha(Yellow, 0.4f * alpha), Alpha(Core, alpha));
+            Vector2 mid = root + up * height * 0.72f + sway * 0.8f;
+            Triangle(root - side * 0.68f, mid, root + side * 0.68f, Alpha(Orange, alpha), Alpha(Yellow, 0.1f * alpha), Alpha(Orange, alpha));
+            Vector2 glow = root + up * height * 0.5f + sway * 0.6f;
+            Triangle(root - side * 0.45f, glow, root + side * 0.45f, Alpha(Yellow, alpha), Alpha(Yellow, 0.2f * alpha), Alpha(Yellow, alpha));
+            Vector2 core = root + up * height * 0.3f + sway * 0.4f;
+            Triangle(root - side * 0.24f, core, root + side * 0.24f, Alpha(Core, alpha), Alpha(Yellow, 0.4f * alpha), Alpha(Core, alpha));
+            // Sparks break off the tip and drift up.
+            for (int i = 0; i < 2; i++)
+            {
+                float s = Hash(seed * 13.7f + i, 4.2f), rise = Mathf.Repeat(time * (0.9f + s * 0.8f) + s, 1f);
+                Vector2 spark = root + up * height * (0.75f + 0.7f * rise) + across * (s - 0.5f) * width * 1.1f + sway * rise;
+                Quad(spark - up * width * 0.07f, spark - across * width * 0.04f, spark + up * width * 0.07f, spark + across * width * 0.04f,
+                    Alpha(Yellow, (1f - rise) * alpha), Alpha(Orange, (1f - rise) * alpha), Alpha(Yellow, (1f - rise) * alpha), Alpha(Orange, (1f - rise) * alpha));
+            }
+        }
+
+        /// <summary>
+        /// A faceted ice shard jutting from <paramref name="root"/> along <paramref name="up"/>: a lit facet and a shaded
+        /// one either side of a bright ridge, a pale tip, and a glint that twinkles now and then.
+        /// </summary>
+        public void Crystal(Vector2 root, Vector2 up, float width, float height, float seed, Color glint, Color light, Color shade, Color dark, float alpha = 1f)
+        {
+            if (alpha <= 0.01f || height <= 0.01f) return;
+            if (Pixelated) { PixelCrystal(root, up, width, height, seed, glint, light, shade, dark, alpha); return; }
+            Vector2 across = Vector2.Perpendicular(up), half = across * width * 0.5f, ridge = across * width * 0.12f;
+            Vector2 shoulder = root + up * height * 0.6f, tip = root + up * height;
+            Color l = Alpha(light, alpha), s = Alpha(shade, alpha), d = Alpha(dark, alpha), g = Alpha(glint, alpha);
+            Quad(root + half * 0.72f, shoulder + half, shoulder + ridge, root + ridge, l, l, g, l);
+            Quad(root + ridge, shoulder + ridge, shoulder - half, root - half * 0.72f, s, s, d, d);
+            Triangle(shoulder + half, tip, shoulder + ridge, g, g, g);
+            Triangle(shoulder + ridge, tip, shoulder - half, l, g, s);
         }
 
         public void Diamond(Vector2 center, float size, Color color)
@@ -250,30 +285,89 @@ namespace Slopgame
             }
         }
 
-        /// <summary>A tongue of fire built from stacked blocks in three flat colours, flickering a few frames a second.</summary>
+        /// <summary>
+        /// A tongue of fire built from stacked rows of pixels in five flat colours, from a smoky outline to a white-hot
+        /// core. Its edges ripple upward, a smaller tongue licks up one side and sparks break off the tip; it all
+        /// flickers a few frames a second.
+        /// </summary>
         private void PixelFlame(Vector2 root, Vector2 up, float width, float height, float seed, float alpha)
         {
             if (alpha <= 0.01f) return;
-            float time = Mathf.Floor(Time.time * 10f) / 10f;
+            float time = Mathf.Floor(Time.time * 12f) / 12f;
             height *= 0.7f + 0.3f * Mathf.Sin(time * (9f + seed * 7f) + seed * 40f) + 0.15f * Mathf.Sin(time * 23f + seed * 13f);
-            Vector2 sway = Vector2.Perpendicular(up) * Mathf.Sin(time * 6f + seed * 30f) * width * 0.35f;
-            FlameLayer(root, up, sway, width, height, 5, Alpha(Crimson, 0.9f * alpha));
-            FlameLayer(root, up, sway * 0.8f, width * 0.62f, height * 0.68f, 4, Alpha(Orange, alpha));
-            FlameLayer(root, up, sway * 0.5f, width * 0.3f, height * 0.36f, 2, Alpha(Core, alpha));
+            Vector2 across = Vector2.Perpendicular(up), sway = across * Mathf.Sin(time * 6f + seed * 30f) * width * 0.35f;
+            float ripple = time * 9f + seed * 30f;
+            FlameLayer(root, up, sway, width * 1.2f, height * 1.05f, 8, ripple, Alpha(Ember, 0.6f * alpha));
+            if (width >= Pixel * 4f)
+            {
+                Vector2 lick = root + across * (Mathf.Repeat(seed, 1f) < 0.5f ? -1f : 1f) * width * 0.3f;
+                FlameLayer(lick, up, -sway * 0.6f, width * 0.42f, height * 0.6f, 5, ripple + 2f, Alpha(Crimson, 0.9f * alpha));
+                FlameLayer(lick, up, -sway * 0.5f, width * 0.22f, height * 0.38f, 3, ripple + 2f, Alpha(Orange, alpha));
+            }
+            FlameLayer(root, up, sway, width, height, 8, ripple, Alpha(Crimson, 0.9f * alpha));
+            FlameLayer(root, up, sway * 0.8f, width * 0.68f, height * 0.72f, 6, ripple, Alpha(Orange, alpha));
+            FlameLayer(root, up, sway * 0.6f, width * 0.42f, height * 0.5f, 4, ripple, Alpha(Yellow, alpha));
+            FlameLayer(root, up, sway * 0.4f, width * 0.22f, height * 0.28f, 2, ripple, Alpha(Core, alpha));
+            for (int i = 0; i < 2; i++)
+            {
+                float s = Hash(seed * 13.7f + i, 4.2f), rise = Mathf.Repeat(time * (0.9f + s * 0.8f) + s, 1f);
+                Vector2 spark = Snap(root + up * height * (0.75f + 0.7f * rise) + across * (s - 0.5f) * width * 1.1f + sway * rise);
+                Block(spark.x, spark.y, spark.x + Pixel, spark.y + Pixel, Alpha(Color.Lerp(Yellow, Crimson, rise), (1f - rise) * alpha));
+            }
         }
 
-        private void FlameLayer(Vector2 root, Vector2 up, Vector2 sway, float width, float height, int blocks, Color color)
+        /// <summary>One colour of a pixel flame: rows that swell just above the root, taper to a point and ripple sideways.</summary>
+        private void FlameLayer(Vector2 root, Vector2 up, Vector2 sway, float width, float height, int rows, float ripple, Color color)
         {
-            float step = Mathf.Max(Pixel, height / blocks);
-            float ax = Mathf.Abs(up.x), ay = Mathf.Abs(up.y);
+            float step = Mathf.Max(Pixel, height / rows);
+            Vector2 across = Vector2.Perpendicular(up);
             for (int i = 0; i * step < height; i++)
             {
-                float u = (i + 0.5f) * step / Mathf.Max(step, height), thick = Mathf.Max(Pixel, width * (1f - u * 0.85f));
-                Vector2 mid = root + up * (i + 0.5f) * step + sway * u * u;
-                Vector2 half = new Vector2(ay * thick + ax * step, ax * thick + ay * step) * 0.5f;
-                Vector2 min = Snap(mid - half);
-                Block(min.x, min.y, Mathf.Max(min.x + Pixel, Snap(mid.x + half.x)), Mathf.Max(min.y + Pixel, Snap(mid.y + half.y)), color);
+                float u = (i + 0.5f) * step / Mathf.Max(step, height);
+                float thick = Mathf.Max(Pixel, width * (u < 0.22f ? 0.78f + u : Mathf.Pow(1f - (u - 0.22f) / 0.78f, 0.8f)));
+                Vector2 mid = root + up * (i + 0.5f) * step + sway * u * u + across * Mathf.Sin(ripple - u * 4.5f) * width * 0.16f * u;
+                Cell(mid, up, thick, step, color);
             }
+        }
+
+        /// <summary>A snapped block <paramref name="thick"/> across and <paramref name="step"/> along <paramref name="up"/>.</summary>
+        private void Cell(Vector2 mid, Vector2 up, float thick, float step, Color color)
+        {
+            float ax = Mathf.Abs(up.x), ay = Mathf.Abs(up.y);
+            Vector2 half = new Vector2(ay * thick + ax * step, ax * thick + ay * step) * 0.5f;
+            Vector2 min = Snap(mid - half);
+            Block(min.x, min.y, Mathf.Max(min.x + Pixel, Snap(mid.x + half.x)), Mathf.Max(min.y + Pixel, Snap(mid.y + half.y)), color);
+        }
+
+        /// <summary>
+        /// A pixel ice shard: each row has a lit facet, a bright ridge, a shaded facet and a dark edge, with the odd
+        /// fracture line across it and a pale tip. A cross-shaped glint twinkles on its shoulder.
+        /// </summary>
+        private void PixelCrystal(Vector2 root, Vector2 up, float width, float height, float seed, Color glint, Color light, Color shade, Color dark, float alpha)
+        {
+            Vector2 across = Vector2.Perpendicular(up);
+            float step = Mathf.Max(Pixel, height / 8f);
+            Color g = Alpha(glint, alpha), l = Alpha(light, alpha), s = Alpha(shade, alpha), d = Alpha(dark, alpha);
+            for (int i = 0; i * step < height; i++)
+            {
+                float u = (i + 0.5f) * step / Mathf.Max(step, height);
+                bool tip = u >= 0.6f;
+                float half = width * 0.5f * (tip ? (1f - u) / 0.4f : 0.72f + 0.28f * u / 0.6f);
+                Vector2 mid = root + up * (i + 0.5f) * step;
+                if (half < Pixel * 1.2f) { Cell(mid, up, Pixel, step, tip ? g : l); continue; }
+                // From the lit side across to the shaded one.
+                float ridge = half * 0.25f;
+                bool fracture = !tip && Hash(seed * 31.3f + i, 2.7f) > 0.8f;
+                Cell(mid + across * (half + ridge + Pixel * 0.5f) * 0.5f, up, half - ridge - Pixel * 0.5f, step, tip ? g : fracture ? g : l);
+                Cell(mid + across * ridge, up, Pixel, step, g);
+                Cell(mid + across * (ridge - half + Pixel * 0.5f) * 0.5f, up, half + ridge - Pixel * 1.5f, step, tip ? l : fracture ? d : s);
+                Cell(mid - across * (half - Pixel * 0.5f), up, Pixel, step, d);
+            }
+            if (width < Pixel * 3f || Hash(seed * 17.3f, Mathf.Floor(Time.time * 5f)) < 0.82f) return;
+            Vector2 spot = Snap(root + up * height * 0.6f + across * width * 0.25f);
+            Color white = Alpha(Color.white, alpha);
+            Block(spot.x - Pixel, spot.y, spot.x + Pixel * 2f, spot.y + Pixel, white);
+            Block(spot.x, spot.y - Pixel, spot.x + Pixel, spot.y + Pixel * 2f, white);
         }
 
         public static Vector2 Polar(float angle, float radius) => new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * radius;

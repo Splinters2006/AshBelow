@@ -12,7 +12,9 @@ namespace Slopgame
     public sealed class SiegeEngineBoss : NeonBossBehaviour
     {
         public const float RamLength = 16f, RamWidth = 2.2f, StompRadius = 3.2f, PerimeterRadius = 3.4f, PerimeterTelegraph = 2.4f, PerimeterDuration = 2.4f;
-        /// <summary>The guardian's name (the encyclopedia reads it outside a fight).</summary>
+        /// <summary>Missile Walk's blast radius, and how far apart its blasts land as they walk across the hero.</summary>
+        public const float MissileRadius = 2.5f, MissileSpacing = 4.8f;
+                /// <summary>The guardian's name (the encyclopedia reads it outside a fight).</summary>
         public const string FixedTitle = "BASTION, THE SIEGE ENGINE";
         public override string Title => FixedTitle;
         protected override Color Accent => new Color(1f, 0.65f, 0.15f);
@@ -124,7 +126,7 @@ namespace Slopgame
                 case 0:
                     foreach (Vector2 hero in LivingHeroPositions())
                         for (int i = 0; i < (IsEnraged ? 5 : 4); i++)
-                            Hazard(HazardShape.Pool, hero + aim * (i - 1) * 2.4f, aim, 1.25f, 0f, 1f + i * 0.4f, 0.6f);
+                            Hazard(HazardShape.Pool, hero + aim * (i - 1) * MissileSpacing, aim, MissileRadius, 0f, 1f + i * 0.4f, 0.6f);
                     return 3.5f;
                 case 1:
                 {
