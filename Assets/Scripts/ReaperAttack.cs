@@ -15,13 +15,7 @@ namespace Slopgame
         public const float SkullChargeTime = 0.9f, SkullCooldown = 1.5f, SkullRange = 13f, SkullFear = 1f, SkullSpread = 18f;
         public const int MaxSouls = 99;
         public static readonly Color Soul = new Color(0.55f, 1f, 0.8f), Bone = new Color(0.93f, 0.92f, 0.84f), Shade = new Color(0.2f, 0.45f, 0.4f);
-        private DungeonPlayer player;
-        /// <summary>Setting the hero hands him the souls his Grave Goods buried with him.</summary>
-        public DungeonPlayer Player
-        {
-            get => player;
-            set { player = value; Souls = Mathf.Min(MaxSouls, value != null && value.Permanent != null ? value.Permanent.StartingSouls : 0); }
-        }
+        public DungeonPlayer Player { get; set; }
         public int Souls { get; private set; }
         private float readyAt, skullReadyAt, skullStartedAt, nextMote;
         private bool skullCharging;
@@ -37,7 +31,15 @@ namespace Slopgame
         public void ReduceHeavyCooldown(float seconds) => skullReadyAt = Cooldowns.Shorten(skullReadyAt, seconds);
         public bool CanAttack => Player.Run.IsPlaying && !Player.IsRolling && !Player.IsBusy && !skullCharging && Time.time >= readyAt;
 
-        public void AddSouls(int amount) { if (amount > 0) Souls = Mathf.Min(MaxSouls, Souls + amount); }
+        /// <summary>Gains souls; Soul Echo gives each of them a chance to bring an extra one (which cannot echo again).</summary>
+        public void AddSouls(int amount)
+        {
+            if (amount <= 0) return;
+            float echo = Player != null && Player.Permanent != null ? Player.Permanent.ExtraSoulChance : 0f;
+            int extra = 0;
+            if (echo > 0f) for (int i = 0; i < amount; i++) if (Random.value < echo) extra++;
+            Souls = Mathf.Min(MaxSouls, Souls + amount + extra);
+        }
 
         /// <summary>Spends souls if he holds enough (debug mode pays for everything).</summary>
         public bool Spend(int amount)
@@ -257,13 +259,13 @@ namespace Slopgame
             return true;
         }
 
-        /// <summary>Sows fear in the enemy nearest <paramref name="at"/>; if it dies afraid, the fear spreads to everything near it.</summary>
+        /// <summary>Sows fear in the enemy nearest <paramref name="at"/>; if it dies afraid, the fear spreads to everything near it. Sow never deals damage.</summary>
         public bool Sow(Vector2 at, int rank)
         {
             var target = Player.Abilities.NearestEnemy(at, SowReach);
             if (target == null || target.IsInvulnerable) return false;
             float duration = SowTime + 0.5f * (rank - 1);
-            target.Fear(transform.position, duration);
+            target.Fear(transform.position, duration, true);
             target.SownFear = duration;
             var run = Player.Run;
             SowMarkVfx.Attach(run.ProjectileRoot, target);
@@ -281,7 +283,7 @@ namespace Slopgame
             {
                 if (enemy == null || enemy == fallen || enemy.Health <= 0 || enemy.IsInvulnerable
                     || Vector2.Distance(at, enemy.transform.position) > SowSpreadRadius + enemy.HitRadius) continue;
-                enemy.Fear(at, duration);
+                enemy.Fear(at, duration, true);
                 // The seed travels with the fear, so it can spread again.
                 enemy.SownFear = duration;
                 SowMarkVfx.Attach(run.ProjectileRoot, enemy);

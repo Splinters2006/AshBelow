@@ -6,6 +6,7 @@ namespace Slopgame
     /// <summary>
     /// The Reaper's class mechanic: three souls raise a skeleton that fights beside him. Skeletons are frail and hit
     /// softly, but their health and damage come from his own, so every talent that strengthens him strengthens them.
+    /// Each of their blows strikes fear into its target.
     /// </summary>
     public sealed class ArmyOfTheDead : ClassMechanic
     {

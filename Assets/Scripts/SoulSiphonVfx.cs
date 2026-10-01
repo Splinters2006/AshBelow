@@ -55,10 +55,10 @@ namespace Slopgame
                 mesh.Bar(trail, (wisp - trail).normalized, Vector2.Distance(trail, wisp), 0.07f, FlameMesh.Alpha(Soul, 0f), FlameMesh.Alpha(Soul, 0.8f * fade));
                 mesh.Diamond(wisp, 0.07f, FlameMesh.Alpha(Core, fade));
             }
-            // A stream of souls from every paralysed enemy she can reach, bowing out to one side as it comes.
+            // A stream of souls from every immobilized enemy she can reach, bowing out to one side as it comes.
             foreach (var enemy in run.Enemies)
             {
-                if (enemy == null || enemy.Health <= 0 || !enemy.IsParalyzed) continue;
+                if (enemy == null || enemy.Health <= 0 || !enemy.IsImmobilized) continue;
                 Vector2 from = enemy.transform.position;
                 if (Vector2.Distance(from, center) > radius + enemy.HitRadius) continue;
                 Vector2 bow = Vector2.Perpendicular(center - from) * 0.35f;

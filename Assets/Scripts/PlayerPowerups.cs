@@ -180,19 +180,29 @@ namespace Slopgame
         }
 
         public const float IronGripMultiplier = 1.25f, NumbingChill = 2f, DominoRadius = 1.5f, DominoStun = 0.75f;
+        private float elementalImmobilizationReadyAt;
+        /// <summary>Elemental Immobilization: true if it is off its cooldown, which this starts.</summary>
+        public bool TryElementalImmobilization()
+        {
+            if (Time.time < elementalImmobilizationReadyAt) return false;
+            elementalImmobilizationReadyAt = Time.time + CombatDamage.ElementalImmobilizationCooldown;
+            return true;
+        }
+
         /// <summary>Iron Grip: how much longer every paralysis, freeze, stun and root the hero inflicts lasts.</summary>
         public float HoldDurationMultiplier => Count(PowerupType.IronGrip) > 0 ? IronGripMultiplier : 1f;
 
         /// <summary>
         /// The hero just immobilized an enemy that was moving freely (repeat holds on an already held enemy do not count):
         /// Searing Hold, Static Hold and Numbing Hold set off their elements. <paramref name="duration"/> is the hold's length.
+        /// A <paramref name="harmless"/> hold (Sow) only numbs: the damaging talents stay quiet.
         /// </summary>
-        public void OnImmobilized(DungeonPlayer player, DungeonEnemy enemy, float duration)
+        public void OnImmobilized(DungeonPlayer player, DungeonEnemy enemy, float duration, bool harmless = false)
         {
             int hit = player.Damage;
-            if (Count(PowerupType.StaticHold) > 0) CombatDamage.ApplyEffect(player, enemy, DamageElement.Lightning, hit);
+            if (!harmless && Count(PowerupType.StaticHold) > 0) CombatDamage.ApplyEffect(player, enemy, DamageElement.Lightning, hit);
             if (enemy.Health <= 0) return;
-            if (Count(PowerupType.SearingHold) > 0) CombatDamage.ApplyEffect(player, enemy, DamageElement.Fire, hit);
+            if (!harmless && Count(PowerupType.SearingHold) > 0) CombatDamage.ApplyEffect(player, enemy, DamageElement.Fire, hit);
             // The chill runs out past the hold, so the enemy crawls for a while once it breaks free.
             if (Count(PowerupType.NumbingHold) > 0) enemy.Chill(duration + NumbingChill);
         }

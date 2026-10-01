@@ -8,7 +8,7 @@ namespace Slopgame
     public sealed partial class DemonessAttack
     {
         public const float WingDashDistance = 4.5f, WingDashParalysis = 2f, SiphonRadius = 5f, SiphonTime = 5f, SnapRadius = 4f;
-        /// <summary>How much remaining paralysis makes Nightmare Snap's tether flare at full width.</summary>
+        /// <summary>How much remaining hold makes Nightmare Snap's tether flare at full width.</summary>
         private const float SnapTetherFullAt = 1f;
         private readonly Dictionary<DungeonEnemy, int> torment = new Dictionary<DungeonEnemy, int>();
 
@@ -55,7 +55,7 @@ namespace Slopgame
             }
         }
 
-        /// <summary>Soul Siphon: for a few seconds she drains paralysed enemies nearby, healing 1 HP per enemy each second.</summary>
+        /// <summary>Soul Siphon: for a few seconds she drains immobilized enemies nearby, healing 1 HP per enemy each second.</summary>
         private IEnumerator SoulSiphon(float duration)
         {
             var run = Player.Run;
@@ -69,7 +69,7 @@ namespace Slopgame
                 Vector2 at = transform.position;
                 foreach (var enemy in run.Enemies.ToArray())
                 {
-                    if (enemy == null || enemy.Health <= 0 || !enemy.IsParalyzed || Vector2.Distance(at, enemy.transform.position) > SiphonRadius + enemy.HitRadius) continue;
+                    if (enemy == null || enemy.Health <= 0 || !enemy.IsImmobilized || Vector2.Distance(at, enemy.transform.position) > SiphonRadius + enemy.HitRadius) continue;
                     drained++;
                     HeroVfx.Sparks(run.ProjectileRoot, enemy.transform.position, Pale, 6, 2.5f, 0.3f, at - (Vector2)enemy.transform.position, 60f);
                     CombatDamage.Apply(Player, enemy, Player.Damage, DamageElement.Demonic, at, 0f);
@@ -81,8 +81,8 @@ namespace Slopgame
         }
 
         /// <summary>
-        /// Nightmare Snap (Imp Summon, reworked): the paralysis on every enemy nearby snaps at once; each takes demonic damage
-        /// that grows with how long its paralysis still had to run. Nothing happens if no one nearby is paralysed.
+        /// Nightmare Snap (Imp Summon, reworked): every hold on every enemy nearby (paralysis, freeze, stun or root) snaps at
+        /// once; each takes demonic damage that grows with how long it still had to be held. Nothing happens if no one nearby is immobilized.
         /// </summary>
         private bool NightmareSnap(int rank)
         {
@@ -90,7 +90,7 @@ namespace Slopgame
             Vector2 at = transform.position;
             var victims = new List<DungeonEnemy>();
             foreach (var enemy in run.Enemies)
-                if (enemy != null && enemy.Health > 0 && enemy.IsParalyzed && Vector2.Distance(at, enemy.transform.position) <= SnapRadius + enemy.HitRadius)
+                if (enemy != null && enemy.Health > 0 && enemy.IsImmobilized && Vector2.Distance(at, enemy.transform.position) <= SnapRadius + enemy.HitRadius)
                     victims.Add(enemy);
             if (victims.Count == 0) return false;
             NightmareSnapVfx.Snap(run.ProjectileRoot, at, SnapRadius);
@@ -98,9 +98,9 @@ namespace Slopgame
             ScreenFx.Shake(0.2f, 0.2f);
             foreach (var enemy in victims)
             {
-                float remaining = enemy.ConsumeParalysis();
+                float remaining = enemy.ConsumeHolds();
                 int damage = Player.Damage * (2 + rank - 1 + Mathf.CeilToInt(remaining * 3f));
-                // Each victim's shackle snaps; the more paralysis it had left, the wider the nightmare's eye.
+                // Each victim's shackle snaps; the longer it had left to be held, the wider the nightmare's eye.
                 float strength = remaining / SnapTetherFullAt;
                 NightmareSnapVfx.Tether(run.ProjectileRoot, at, enemy.transform.position, strength);
                 CoopFx.SnapTether(run, at, enemy.transform.position, strength);

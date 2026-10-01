@@ -44,7 +44,9 @@ namespace Slopgame
         // Universal: a big one-off attack speed boost. Always append new talents here; their numbers are their IDs.
         Frenzy,
         // Reaper.
-        GraveTithe
+        GraveTithe,
+        // Universal: elements set enemies up to be held.
+        ElementalImmobilization
     }
 
     public sealed class PowerupDefinition
@@ -156,7 +158,7 @@ namespace Slopgame
             new PowerupDefinition(PowerupType.SecondRound, "Brawler: Second Round", "Empower cooldown is 10% shorter per rank", 3, WeaponType.Fists),
             new PowerupDefinition(PowerupType.HeavyGloves, "Brawler: Heavy Gloves", "Punch, barrage and Knuckle Sandwich hit areas are 10% larger per rank", 3, WeaponType.Fists),
             new PowerupDefinition(PowerupType.TailRhythm, "Demoness: Tail Rhythm", "Tail Sweep cooldown is 10% shorter per rank", 3, WeaponType.Tail),
-            new PowerupDefinition(PowerupType.CruelTouch, "Demoness: Cruel Touch", "Vital stabs deal +1 damage to paralysed enemies per rank", 3, WeaponType.Tail),
+            new PowerupDefinition(PowerupType.CruelTouch, "Demoness: Cruel Touch", "Your hits deal +1 damage to immobilized enemies (paralysed, frozen, stunned or rooted) per rank", 3, WeaponType.Tail),
             new PowerupDefinition(PowerupType.QuickDeal, "Gambler: Quick Deal", "Coin Volley cooldown is 10% shorter per rank", 3, WeaponType.Coins),
             new PowerupDefinition(PowerupType.LuckyStreak, "Gambler: Lucky Streak", "Gamble win chance +3% per rank", 3, WeaponType.Coins),
             new PowerupDefinition(PowerupType.HeatSink, "Augment: Heat Sink", "Plasma Cannon cooldown is 10% shorter per rank", 3, WeaponType.Beam),
@@ -238,7 +240,8 @@ namespace Slopgame
             new PowerupDefinition(PowerupType.NumbingHold, "Numbing Hold", "Immobilizing an enemy chills it, so it stays slowed for 2 seconds after it breaks free", 1),
             new PowerupDefinition(PowerupType.Domino, "Domino", "When an immobilized enemy dies, enemies within 1.5 units are stunned for 0.75 seconds", 1),
             new PowerupDefinition(PowerupType.Frenzy, "Frenzy", "+25% attack and charge speed", 1),
-            new PowerupDefinition(PowerupType.GraveTithe, "Reaper: Grave Tithe", "Killing an immobilized enemy (afraid, paralysed, frozen, stunned or rooted) gives you a soul", 1, WeaponType.Scythe)
+            new PowerupDefinition(PowerupType.GraveTithe, "Reaper: Grave Tithe", "Killing an immobilized enemy (afraid, paralysed, frozen, stunned or rooted) gives you a soul", 1, WeaponType.Scythe),
+            new PowerupDefinition(PowerupType.ElementalImmobilization, "Elemental Immobilization", "When an enemy is affected by an element (burning, chilled, frozen or shocked), your next hit against it stuns it for 1 second (once every 3 seconds)", 1)
         };
 
         private static readonly Dictionary<PowerupType, PowerupDefinition> byType = BuildLookup();

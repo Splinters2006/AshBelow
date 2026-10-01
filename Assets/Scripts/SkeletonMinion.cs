@@ -5,12 +5,13 @@ namespace Slopgame
     /// <summary>
     /// A skeleton raised by the Reaper's <see cref="ArmyOfTheDead"/>. It chases the nearest enemy and hacks at it,
     /// falling back to its master's side when nothing is in sight. Its blows are dealt in the Reaper's name, so his
-    /// talents apply to them, and its health and damage are fractions of his. Enemies it stands against wear it down.
+    /// talents apply to them, and its health and damage are fractions of his. Every blow strikes fear into what it hits.
+    /// Enemies it stands against wear it down.
     /// It lasts until it is destroyed or the floor ends.
     /// </summary>
     public sealed class SkeletonMinion : MonoBehaviour
     {
-        public const float Sight = 9f, Reach = 0.75f, AttackInterval = 0.9f, FollowDistance = 1.6f, HurtInterval = 1f, Size = 0.8f;
+        public const float Sight = 9f, Reach = 0.75f, AttackInterval = 0.9f, FollowDistance = 1.6f, HurtInterval = 1f, Size = 0.8f, HitFear = 1f;
         private DungeonPlayer master;
         private DungeonRun run;
         private SpriteRenderer body;
@@ -83,6 +84,7 @@ namespace Slopgame
                 Vector2 aim = ((Vector2)target.transform.position - position).normalized;
                 HeroVfx.Slash(run.ProjectileRoot, position, aim, Reach + 0.3f, 90f, ReaperAttack.Bone, 0.15f);
                 CombatDamage.Apply(master, target, Damage, DamageElement.Physical, position, 0.3f);
+                if (target != null && target.Health > 0) target.Fear(position, HitFear);
             }
             // Whatever it stands toe to toe with hits back, once a second.
             if (Time.time < nextHurtAt) return;

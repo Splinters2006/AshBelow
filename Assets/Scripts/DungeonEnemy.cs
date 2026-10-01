@@ -23,6 +23,16 @@ namespace Slopgame
         public bool IsInvulnerable => Boss != null && Boss.IsInvulnerable;
         public float MoveRadius => IsTank ? 0.42f : 0.28f;
         public bool IsBurning => burnTicks > 0 || netBurning;
+        /// <summary>Elemental Immobilization: an element has touched this enemy (burn, chill, freeze or shock) since it was last seized.</summary>
+        public bool ElementTouched { get; private set; }
+        public void TouchWithElement() { if (!IsInvulnerable && Health > 0) ElementTouched = true; }
+        /// <summary>Spends the element's touch; true if there was one to spend.</summary>
+        public bool ConsumeElementTouch()
+        {
+            bool touched = ElementTouched;
+            ElementTouched = false;
+            return touched;
+        }
         /// <summary>Spawn-order id shared by every machine in a co-op run.</summary>
         public ushort NetId { get; set; }
         private Vector2 netPosition;
@@ -414,6 +424,7 @@ namespace Slopgame
         public void Chill(float duration)
         {
             if (IsInvulnerable) return;
+            TouchWithElement();
             if (Run.IsGuest) { Run.Coop.ReportDamage(this, CoopDamageKind.Chill, 0, transform.position, 0, duration); return; }
             chilledUntil = Mathf.Max(chilledUntil, Time.time + duration * (Boss != null ? BossCrowdControlDuration : 1f));
         }
@@ -427,12 +438,13 @@ namespace Slopgame
         /// Holds the enemy in place. Guardians are held for a fraction of the time and then resist for a few seconds.
         /// False when nothing took hold (an untouchable or resisting guardian); a co-op guest assumes it lands.
         /// </summary>
-        public bool Paralyze(float duration, bool lingering = false)
+        /// <param name="harmless">True when the hold must not set off the hero's damaging hold talents (Sow).</param>
+        public bool Paralyze(float duration, bool lingering = false, bool harmless = false)
         {
             if (IsInvulnerable || duration <= 0f || Health <= 0) return false;
             bool fresh = !IsImmobilized;
             duration = HoldTime(duration);
-            if (Run.IsGuest) { Run.Coop.ReportDamage(this, CoopDamageKind.Paralyze, 0, transform.position, lingering ? 1 : 0, duration); Held(fresh, duration); return true; }
+            if (Run.IsGuest) { Run.Coop.ReportDamage(this, CoopDamageKind.Paralyze, 0, transform.position, lingering ? 1 : 0, duration); Held(fresh, duration, harmless); return true; }
             // Lingering Terror: once this paralysis wears off, the enemy stays slowed for a while.
             if (lingering) terrorPending = true;
             if (Boss != null)
@@ -443,7 +455,7 @@ namespace Slopgame
             }
             paralyzedUntil = Mathf.Max(paralyzedUntil, Time.time + duration);
             if (Boss != null) paralysisImmuneUntil = paralyzedUntil + BossParalysisImmunity;
-            Held(fresh, duration);
+            Held(fresh, duration, harmless);
             return true;
         }
 
@@ -451,9 +463,10 @@ namespace Slopgame
         public void Freeze(float duration)
         {
             if (IsInvulnerable || duration <= 0f || Health <= 0) return;
+            TouchWithElement();
             bool fresh = !IsImmobilized;
             duration = HoldTime(duration);
-            if (Run.IsGuest) { Run.Coop.ReportDamage(this, CoopDamageKind.Freeze, 0, transform.position, 0, duration); Held(fresh, duration); return; }
+            if (Run.IsGuest) { Run.Coop.ReportDamage(this, CoopDamageKind.Freeze, 0, transform.position, 0, duration); Held(fresh, duration); Seized(); return; }
             if (Boss != null)
             {
                 if (Time.time < freezeImmuneUntil) return;
@@ -464,13 +477,15 @@ namespace Slopgame
             if (Run.ProjectileRoot != null)
                 HeroVfx.Sparks(Run.ProjectileRoot, transform.position, Color.Lerp(AbilityCatalog.Ice, Color.white, 0.5f), 8, 2.6f, 0.3f);
             Held(fresh, duration);
+            Seized();
         }
 
         /// <summary>
         /// Demonic Power: terror turns the enemy's back on <paramref name="from"/> and paralyses it on the spot.
         /// Returns whether the paralysis took hold.
         /// </summary>
-        public bool Fear(Vector2 from, float duration)
+        /// <param name="harmless">True when the fear must deal no damage of its own (Sow): the damaging hold talents stay quiet.</param>
+        public bool Fear(Vector2 from, float duration, bool harmless = false)
         {
             if (IsInvulnerable || duration <= 0f || Health <= 0) return false;
             if (Run.IsGuest)
@@ -479,12 +494,12 @@ namespace Slopgame
                 duration = HoldTime(duration);
                 Run.Coop.ReportDamage(this, CoopDamageKind.Fear, 0, from, 0, duration);
                 fearedUntil = Mathf.Max(fearedUntil, Time.time + duration * (Boss != null ? BossCrowdControlDuration : 1f));
-                Held(fresh, duration);
+                Held(fresh, duration, harmless);
                 return true;
             }
             Vector2 away = (Vector2)transform.position - from;
             if (away.sqrMagnitude > 0.0001f) Facing.Face(away.normalized);
-            if (!Paralyze(duration)) return false;
+            if (!Paralyze(duration, false, harmless)) return false;
             fearedUntil = paralyzedUntil;
             return true;
         }
@@ -512,7 +527,23 @@ namespace Slopgame
         private bool terrorPending;
         private float terrorUntil;
 
-        /// <summary>Nightmare Snap: ends the paralysis now and says how long it still had to run.</summary>
+        /// <summary>
+        /// Nightmare Snap: ends every hold on the enemy now (paralysis, freeze, stun and root) and says how long the
+        /// longest of them still had to run.
+        /// </summary>
+        public float ConsumeHolds()
+        {
+            float until = Mathf.Max(Mathf.Max(paralyzedUntil, frozenUntil), Mathf.Max(stunnedUntil, rootedUntil));
+            float remaining = Mathf.Max(0f, until - Time.time);
+            if (Run.IsGuest) { Run.Coop.ReportDamage(this, CoopDamageKind.ClearHolds, 0, transform.position, 0, 0f); return remaining; }
+            paralyzedUntil = Mathf.Min(paralyzedUntil, Time.time);
+            frozenUntil = Mathf.Min(frozenUntil, Time.time);
+            stunnedUntil = Mathf.Min(stunnedUntil, Time.time);
+            rootedUntil = Mathf.Min(rootedUntil, Time.time);
+            return remaining;
+        }
+
+        /// <summary>Reap: ends the paralysis now and says how long it still had to run.</summary>
         public float ConsumeParalysis()
         {
             float remaining = Mathf.Max(0f, paralyzedUntil - Time.time);
@@ -536,10 +567,16 @@ namespace Slopgame
         private float HoldTime(float duration) => FromLocalHero ? duration * Run.Player.Powerups.HoldDurationMultiplier : duration;
 
         /// <summary>A hold took: if it caught the enemy moving freely, the local hero's hold talents go off.</summary>
-        private void Held(bool fresh, float duration)
+        private void Held(bool fresh, float duration, bool harmless = false)
         {
-            if (fresh && Health > 0 && FromLocalHero) Run.Player.Powerups.OnImmobilized(Run.Player, this, duration);
+            if (fresh && Health > 0 && FromLocalHero) Run.Player.Powerups.OnImmobilized(Run.Player, this, duration, harmless);
         }
+
+        /// <summary>
+        /// A freeze, stun or root from the local hero took hold: it feeds their class mechanic (the Demoness's Demonic
+        /// Power). Her own paralyses are counted where she inflicts them, and fear never counts.
+        /// </summary>
+        private void Seized() { if (FromLocalHero) Run.Player.Mechanic?.OnImmobilized(); }
 
         /// <summary>Breaks the enemy out of its ice at once (Shatter).</summary>
         public void Thaw() { if (!Run.IsGuest) frozenUntil = Mathf.Min(frozenUntil, Time.time); }
@@ -550,7 +587,7 @@ namespace Slopgame
             if (IsInvulnerable || duration <= 0f || Health <= 0) return false;
             bool fresh = !IsImmobilized;
             duration = HoldTime(duration);
-            if (Run.IsGuest) { Run.Coop.ReportDamage(this, CoopDamageKind.Stun, 0, transform.position, 0, duration); Held(fresh, duration); return true; }
+            if (Run.IsGuest) { Run.Coop.ReportDamage(this, CoopDamageKind.Stun, 0, transform.position, 0, duration); Held(fresh, duration); Seized(); return true; }
             if (Boss != null)
             {
                 if (Time.time < stunImmuneUntil) return false;
@@ -560,6 +597,7 @@ namespace Slopgame
             if (Boss != null) stunImmuneUntil = stunnedUntil + BossParalysisImmunity;
             if (Run.ProjectileRoot != null) HeroVfx.Sparks(Run.ProjectileRoot, (Vector2)transform.position + Vector2.up * 0.5f, StunnedTint, 6, 1.6f, 0.4f);
             Held(fresh, duration);
+            Seized();
             return true;
         }
 
@@ -569,9 +607,10 @@ namespace Slopgame
             if (IsInvulnerable || duration <= 0f || Health <= 0 || Boss != null) return false;
             bool fresh = !IsImmobilized;
             duration = HoldTime(duration);
-            if (Run.IsGuest) { Run.Coop.ReportDamage(this, CoopDamageKind.Root, 0, transform.position, 0, duration); Held(fresh, duration); return true; }
+            if (Run.IsGuest) { Run.Coop.ReportDamage(this, CoopDamageKind.Root, 0, transform.position, 0, duration); Held(fresh, duration); Seized(); return true; }
             rootedUntil = Mathf.Max(rootedUntil, Time.time + duration);
             Held(fresh, duration);
+            Seized();
             return true;
         }
 
@@ -605,6 +644,7 @@ namespace Slopgame
         public void Burn(int ticks, int damage, Color? color = null)
         {
             if (IsInvulnerable) return;
+            TouchWithElement();
             if (Run.IsGuest) { Run.Coop.ReportDamage(this, CoopDamageKind.Burn, damage, transform.position, ticks, 0f, color); return; }
             if (burnTicks == 0)
             {

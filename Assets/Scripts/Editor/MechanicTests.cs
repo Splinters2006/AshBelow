@@ -267,7 +267,7 @@ namespace Slopgame.Editor
                     var power = (DemonicPower)player.Mechanic;
                     var tail = (DemonessAttack)player.Weapon;
                     Require(tail.TryAttack(aim, 1f) && enemies[0].IsParalyzed && power.Charge == 1, "A vital stab did not charge Demonic Power.");
-                    for (int i = 0; i < DemonicPower.ParalysesNeeded - 1; i++) power.OnParalyzed();
+                    for (int i = 0; i < DemonicPower.ParalysesNeeded - 1; i++) power.OnImmobilized();
                     enemies[1].Facing.Face(-(Vector2)(enemies[1].transform.position - player.transform.position));
                     Require(power.TryActivate(aim) && power.Charge == 0, "Demonic Power did not activate.");
                     Vector2 away = (enemies[1].transform.position - player.transform.position).normalized;

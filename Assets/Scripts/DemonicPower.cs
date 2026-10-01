@@ -3,7 +3,7 @@ using UnityEngine;
 namespace Slopgame
 {
     /// <summary>
-    /// The Demoness's class mechanic: each enemy she paralyses feeds it. After 7 she channels the Demon Lord himself,
+    /// The Demoness's class mechanic: each enemy she immobilizes (paralyses, freezes, stuns or roots) feeds it. After 7 she channels the Demon Lord himself,
     /// whose massive head rises behind her and roars: every enemy around her is struck with fear, turns its back to her and is paralysed on the spot.
     /// </summary>
     public sealed class DemonicPower : ChargedMechanic
@@ -14,7 +14,7 @@ namespace Slopgame
         public override Color Color => DemonessAttack.Violet;
         public override int Required => ParalysesNeeded;
 
-        public override void OnParalyzed() => AddCharge(1);
+        public override void OnImmobilized() => AddCharge(1);
 
         protected override bool Activate(Vector2 aim)
         {
@@ -23,7 +23,7 @@ namespace Slopgame
             var targets = run.Enemies.FindAll(enemy => enemy != null && enemy.Health > 0 && !enemy.IsInvulnerable
                 && Vector2.Distance(center, enemy.transform.position) <= Radius + enemy.HitRadius);
             if (targets.Count == 0) return false;
-            // The fear is not a paralysing strike of her own, so it does not feed the next Demonic Power.
+            // The fear is not a hold of her own, so it does not feed the next Demonic Power.
             float paralysis = Paralysis + (Player.Weapon is DemonessAttack tail ? tail.ParalysisBonus : 0f);
             foreach (var enemy in targets) enemy.Fear(center, paralysis);
             var root = run.ProjectileRoot;

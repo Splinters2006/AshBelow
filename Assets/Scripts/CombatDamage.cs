@@ -26,7 +26,9 @@ namespace Slopgame
             HitVfx(player, enemy.transform.position, source, new Color(0.8f, 0.5f, 1f), true);
             RearHitMarker.Show(player.Run, enemy);
             int damage = AssassinBonus(player, enemy, ShadowstepDamageForRoll(player, Random.value));
+            bool seize = SeizesTouched(player, enemy);
             enemy.Hit(damage, source);
+            if (seize) enemy.Stun(ElementalImmobilizationStun);
             player.Mechanic?.OnBackstab();
             OnBackstab(player, enemy, damage);
             CreditBlessing(player);
@@ -50,7 +52,16 @@ namespace Slopgame
         /// <summary>Fire, lightning and ice: the elements with a status effect.</summary>
         public static bool HasEffect(DamageElement element) => element == DamageElement.Fire || element == DamageElement.Lightning || element == DamageElement.Ice;
 
-        public const float SittingDuckMultiplier = 1.3f;
+        public const float SittingDuckMultiplier = 1.3f, ElementalImmobilizationStun = 1f, ElementalImmobilizationCooldown = 3f;
+
+        /// <summary>
+        /// Elemental Immobilization: whether this hit seizes an enemy an element has touched. An enemy that is already
+        /// held keeps the touch for the first hit after it breaks free, and so does any enemy hit while the talent is
+        /// still on its cooldown.
+        /// </summary>
+        private static bool SeizesTouched(DungeonPlayer player, DungeonEnemy enemy)
+            => player != null && player.Powerups.Count(PowerupType.ElementalImmobilization) > 0 && !enemy.IsImmobilized && enemy.ElementTouched
+                && player.Powerups.TryElementalImmobilization() && enemy.ConsumeElementTouch();
 
         /// <summary>Damage bonuses that depend on the target: Executioner, Sitting Duck and the Ash shop's Apex Predator.</summary>
         public static int ScaleForTarget(DungeonPlayer player, DungeonEnemy enemy, int damage)
@@ -99,6 +110,8 @@ namespace Slopgame
             if (enemy.IsInvulnerable) { enemy.Hit(0, source); return; }
             damage = ScaleForTarget(player, enemy, damage);
             int healthBefore = enemy.Health;
+            // Checked before this hit's own element lands, so the hit that touches an enemy is never the one that seizes it.
+            bool seize = SeizesTouched(player, enemy);
             // Opening Strike: the first hit on an unhurt enemy always crits (or, if elemental, sets off its element).
             bool opening = player != null && player.Powerups.Count(PowerupType.OpeningStrike) > 0 && enemy.IsUnhurt;
             // Smoke Bomb: hits on enemies inside the Assassin's smoke always count as backstabs.
@@ -114,6 +127,7 @@ namespace Slopgame
                 if (critical) player.Powerups.OnCritical(player);
                 HitVfx(player, enemy.transform.position, source, infusion != DamageElement.Physical ? ElementColor(infusion) : new Color(1f, 0.95f, 0.8f), critical);
                 enemy.Hit(rolled, source, knockback);
+                if (seize) enemy.Stun(ElementalImmobilizationStun);
                 if (player.ClassWeapon == WeaponType.Daggers && behind)
                 {
                     if (!ShadowClone.IsStriking) player.Mechanic?.OnBackstab();
@@ -129,6 +143,7 @@ namespace Slopgame
             bool wasBurning = enemy.IsBurning, wasFrozen = enemy.IsFrozen;
             HitVfx(player, enemy.transform.position, source, ElementColor(element), false);
             enemy.Hit(damage, source, knockback);
+            if (seize) enemy.Stun(ElementalImmobilizationStun);
             CreditBlessing(player);
             if (enemy.Health <= 0) Overkill(player, enemy, damage - healthBefore);
             if (player.Powerups.Count(PowerupType.ElementalClash) > 0 && HasEffect(element))
@@ -218,6 +233,7 @@ namespace Slopgame
         {
             if (enemy == null || !HasEffect(element)) return;
             player.Mechanic?.OnElementalEffect();
+            enemy.TouchWithElement();
             // Kindling: freezes and shocks set the target alight as well.
             bool kindle = element != DamageElement.Fire && player.Powerups.Count(PowerupType.Kindling) > 0;
             if (element == DamageElement.Lightning) Shock(player, enemy.transform.position, enemy, hit);
@@ -243,6 +259,7 @@ namespace Slopgame
                 CombatVfx.Bolt(run.ProjectileRoot, center, target, ShockColor);
                 CoopFx.Bolt(run, center, target, ShockColor);
                 HeroVfx.Sparks(run.ProjectileRoot, target, ShockColor, 5, 3f, 0.2f);
+                enemy.TouchWithElement();
                 enemy.Hit(damage, center, 0.3f);
             }
         }

@@ -57,13 +57,13 @@ namespace Slopgame
             new PermanentUpgradeDefinition("paladin_health", "Selfless Guardian", "+1 Paladin maximum HP per rank", 3, 35, 25, WeaponType.Hammer),
             new PermanentUpgradeDefinition("brawler_barrage", "Heavy Bag Drills", "+1 punch per charged barrage per rank", 2, 60, 50, WeaponType.Fists),
             new PermanentUpgradeDefinition("brawler_health", "Thick Fur", "+1 Brawler maximum HP per rank", 3, 35, 25, WeaponType.Fists),
-            new PermanentUpgradeDefinition("demoness_paralysis", "Pressure Points", "+1 damage to paralysed enemies per rank", 3, 45, 35, WeaponType.Tail),
+            new PermanentUpgradeDefinition("demoness_paralysis", "Pressure Points", "+1 damage to immobilized enemies (paralysed, frozen, stunned or rooted) per rank", 3, 45, 35, WeaponType.Tail),
             new PermanentUpgradeDefinition("demoness_health", "Infernal Blood", "+1 Demoness maximum HP per rank", 3, 35, 25, WeaponType.Tail),
             new PermanentUpgradeDefinition("gambler_pockets", "Deep Pockets", "The Gambler's purse never lets him drop below +1 more coin per rank", 3, 35, 25, WeaponType.Coins),
             new PermanentUpgradeDefinition("gambler_luck", "Lady Luck", "+4% odds on All In per rank", 3, 50, 40, WeaponType.Coins),
             new PermanentUpgradeDefinition("augment_capacitor", "Capacitor Bank", "10% shorter plasma cannon cooldown per rank", 3, 45, 35, WeaponType.Beam),
             new PermanentUpgradeDefinition("augment_health", "Titanium Frame", "+1 Augment maximum HP per rank", 3, 35, 25, WeaponType.Beam),
-            new PermanentUpgradeDefinition("reaper_souls", "Grave Goods", "The Reaper starts each descent with +2 souls per rank", 3, 45, 35, WeaponType.Scythe),
+            new PermanentUpgradeDefinition("reaper_souls", "Soul Echo", "Each soul the Reaper gains has a 10% / 25% / 50% chance by rank to bring an extra soul", 3, 45, 35, WeaponType.Scythe),
             new PermanentUpgradeDefinition("reaper_health", "Deathless", "+1 Reaper maximum HP per rank", 3, 35, 25, WeaponType.Scythe),
             AbilityUnlock(AbilityType.WarBanner, 150),
             AbilityUnlock(AbilityType.BearTrap, 150),
@@ -82,10 +82,10 @@ namespace Slopgame
             Mechanic(WeaponType.Daggers, "Sharpened Dagger", "R: +1 damage for 7.5s; every backstab adds +1 more and refreshes it"),
             Mechanic(WeaponType.Hammer, "Heavenly Host", "R: after 50 blessed bonus damage, angels revive the longest-fallen ally or fully heal the weakest"),
             Mechanic(WeaponType.Fists, "Super Angry", "R: after taking 5 damage, erupt with huge speed, reach, charge speed and damage"),
-            Mechanic(WeaponType.Tail, "Demonic Power", "R: after 7 paralyses, terrify everything nearby: they turn their backs and freeze in place"),
+            Mechanic(WeaponType.Tail, "Demonic Power", "R: after immobilizing enemies 7 times (paralysis, freeze, stun or root), terrify everything nearby: they turn their backs and freeze in place"),
             Mechanic(WeaponType.Coins, "The Purse", "R: open your purse, a shop paid for in coins: healing, wards or loaded dice"),
             Mechanic(WeaponType.Beam, "Overclock", "R: after your plasma ray strikes 25 enemies, overclock for 8s: fully charged rays at double speed and a vented, faster cannon"),
-            Mechanic(WeaponType.Scythe, "Army of the Dead", "R: spend 3 souls to raise a skeleton that fights for you. Frail and weak, but its health and damage grow with yours")
+            Mechanic(WeaponType.Scythe, "Army of the Dead", "R: spend 3 souls to raise a skeleton that fights for you. Frail and weak, but its health and damage grow with yours, and its blows strike fear for 1 second")
         };
 
         public const string EmberHeartId = "ember_heart", BackupDriveId = "backup_drive", TargetingChipId = "targeting_chip",

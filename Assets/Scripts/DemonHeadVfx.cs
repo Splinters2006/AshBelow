@@ -15,18 +15,20 @@ namespace Slopgame
         private const float PixelsPerUnit = 24f;
         private static readonly Color Soulfire = new Color(0.6f, 0.12f, 1f);
 
-        // Pixel art drawn as left halves and mirrored. N outline, H/h horn bone and shade, P violet skin, p dark skin,
-        // L skin highlight, c cracks, S hollow eye sockets, E/e burning pupils, B the black maw, T fangs.
+        // Pixel art drawn as left halves and mirrored, shaded as a rounded head lit from above and from its own maw.
+        // N outline; horn bone i/H/h/k from lit edge to dark underside; skin W/L/P/M/p from the brightest ridge to the
+        // shadowed sides; c cracks and the shadow under the brow; G skin lit by the throat's glow; S hollow eye sockets;
+        // E/e burning pupils; B the black maw; T/t fangs and their shaded tips.
         private static readonly string[] HeadHalf =
         {
-            "NH..............", "NHh.............", ".NHh............", ".NHhh...........", "..NHhh.....NNNNN",
-            "..NHHhNNNNNpPPPP", "...NHhpPPPPPPLPP", "...NNpPPLPPPPPcP", "....NpPPPPPPPPcP", "....NpPNNPPPPPPc",
-            "...NpPPNSSNNPPPP", "...NpPPNSeESSNPP", "...NpPPNSEESSNPP", "...NpPPPNSSSSNPP", "...NpLPPPNNNNPNS",
-            "....NpPPPPPPPPNS", "....NpPPLPPPPPPN", "....NpPBBBBBBBBB", "....NpPBTBBTBBBT", ".....NpBTBBTBBBT",
+            "Ni..............", "NHi.............", ".NHik...........", ".NHHhk..........", "..NHHhk....NNNNN",
+            "..NiHhkNNNNMPLLL", "...NHhkpMPPLLLWL", "...NNpMPPLLLPPcL", "....NpMPPLPPPMcP", "....NpMNNNPPPMMc",
+            "...NpMPNNNNNNMPP", "...NpMcNSeESSNcP", "...NpMPNSEESSNMP", "...NpMPLNSSSSNML", "...NpMLLPNNNNMNS",
+            "....NpMPPMMMMPNS", "....NpMMGGGGGGGN", "....NpMBBBBBBBBB", "....NpMBTBBTBBBT", ".....NpBtBBtBBBt",
         };
         private static readonly string[] JawHalf =
         {
-            ".....NpBBBBBBBBT", ".....NpBBTBBBTBB", ".....NpBTTBBTTBB", "......NpPPPPPPPP", ".......NNpPPPPPP", ".........NNNNNNN",
+            ".....NpBBBBBBBBt", ".....NpBBtBBBtBB", ".....NpBTTBBTTBB", "......NpMGGGGGGG", ".......NNpMMPPPP", ".........NNNNNNN",
         };
         private static Sprite headSprite, jawSprite;
         private static Sprite HeadSprite => headSprite != null ? headSprite : headSprite = Mirrored("Demon head", HeadHalf, new Vector2(0.5f, 0f));
@@ -167,10 +169,15 @@ namespace Slopgame
             switch (c)
             {
                 case 'N': return new Color(0.04f, 0.01f, 0.07f);
+                case 'i': return new Color(0.97f, 0.95f, 1f);
                 case 'H': return new Color(0.78f, 0.74f, 0.82f);
                 case 'h': return new Color(0.42f, 0.36f, 0.5f);
+                case 'k': return new Color(0.24f, 0.2f, 0.32f);
                 case 'P': return new Color(0.38f, 0.1f, 0.62f);
+                case 'M': return new Color(0.27f, 0.07f, 0.46f);
                 case 'p': return new Color(0.18f, 0.04f, 0.32f);
+                case 'W': return new Color(0.82f, 0.62f, 1f);
+                case 'G': return new Color(0.72f, 0.3f, 0.85f);
                 case 'L': return new Color(0.6f, 0.34f, 0.92f);
                 case 'c': return new Color(0.1f, 0.02f, 0.18f);
                 case 'S': return new Color(0.01f, 0f, 0.03f);
@@ -178,6 +185,7 @@ namespace Slopgame
                 case 'e': return DemonessAttack.Violet;
                 case 'B': return new Color(0.02f, 0f, 0.04f);
                 case 'T': return new Color(0.9f, 0.86f, 0.95f);
+                case 't': return new Color(0.62f, 0.56f, 0.72f);
                 default: return Color.clear;
             }
         }

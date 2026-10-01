@@ -22,7 +22,8 @@ namespace Slopgame
 
         public virtual void OnDamaged() { }
         public virtual void OnBackstab() { }
-        public virtual void OnParalyzed() { }
+        /// <summary>The hero immobilized an enemy (paralysed, froze, stunned or rooted it).</summary>
+        public virtual void OnImmobilized() { }
         public virtual void OnBlessedHit(int bonus) { }
         public virtual void OnElementalEffect() { }
         /// <summary>Kill talents shorten a mechanic that runs on a cooldown; charged mechanics ignore it.</summary>

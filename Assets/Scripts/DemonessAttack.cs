@@ -5,7 +5,8 @@ namespace Slopgame
 {
     /// <summary>
     /// The Demoness's pointed tail. Tapping stabs the nearest enemy in a narrow lane; a full charge strikes its vitals
-    /// and paralyses it. RMB sweeps the tail through a half circle, hitting paralysed enemies twice as hard. Her boss
+    /// and paralyses it. RMB sweeps the tail through a half circle, hitting immobilized enemies (paralysed, frozen,
+    /// stunned or rooted, whoever held them) twice as hard. Her boss
     /// artifacts (Archdemon's Technique, HEEEELP and Demon Curse) are cast from here.
     /// </summary>
     public sealed partial class DemonessAttack : MonoBehaviour, IPlayerWeapon
@@ -34,7 +35,7 @@ namespace Slopgame
             + (Player.Powerups.Count(PowerupType.BloodPact) > 0 ? 0.5f : 0f);
         /// <summary>How long a vital stab (or Archdemon's tail whip) holds its victims.</summary>
         public float ParalysisDuration => VitalParalysis + ParalysisBonus;
-        /// <summary>Pressure Points: extra damage on every hit against an already paralysed enemy.</summary>
+        /// <summary>Pressure Points: extra damage on every hit against an already immobilized enemy.</summary>
         public int ParalyzedBonusDamage => Player.Permanent.ParalyzedDamage + Player.Powerups.Count(PowerupType.CruelTouch);
         public float SweepReach => SweepRadius + Player.Powerups.Count(PowerupType.LongTail) * 0.3f;
         private float Interval => Player.Powerups.AttackIntervalMultiplier * Player.Buffs.AttackIntervalMultiplier;
@@ -130,7 +131,7 @@ namespace Slopgame
             }
         }
 
-        /// <summary>RMB: the tail sweeps a half circle ahead. Paralysed enemies take double damage.</summary>
+        /// <summary>RMB: the tail sweeps a half circle ahead. Immobilized enemies take double damage.</summary>
         public bool TryHeavyAttack(Vector2 aim)
         {
             if (!Player.Run.IsPlaying || Player.IsRolling || Player.IsBusy || HeavyCooldownRemaining > 0f || aim.sqrMagnitude < 0.001f) return false;
@@ -143,7 +144,7 @@ namespace Slopgame
             foreach (var enemy in Player.Run.Enemies.ToArray())
             {
                 if (!InCone(enemy, origin, aim, reach, SweepCone)) continue;
-                bool paralyzed = enemy.IsParalyzed;
+                bool paralyzed = enemy.IsImmobilized;
                 int damage = Player.Damage * SweepDamage * (paralyzed ? SweepParalyzedMultiplier : 1);
                 if (paralyzed)
                 {
@@ -159,14 +160,15 @@ namespace Slopgame
 
         /// <summary>
         /// Paralyses the enemy for <paramref name="duration"/> plus her paralysis bonus; every paralysis that takes hold
-        /// charges Demonic Power, and so does a paralysing hit that killed its target outright.
+        /// charges Demonic Power, and so does a paralysing hit that killed its target outright. (Her freezes, stuns and
+        /// roots charge it from <see cref="DungeonEnemy"/>.)
         /// </summary>
         private void ParalyzeCounted(DungeonEnemy enemy, float duration)
         {
-            if (enemy.Health <= 0 || enemy.Paralyze(duration + ParalysisBonus, Player.Powerups.Count(PowerupType.LingeringTerror) > 0)) Player.Mechanic?.OnParalyzed();
+            if (enemy.Health <= 0 || enemy.Paralyze(duration + ParalysisBonus, Player.Powerups.Count(PowerupType.LingeringTerror) > 0)) Player.Mechanic?.OnImmobilized();
         }
 
-        private int WithPressurePoints(DungeonEnemy enemy, int damage) => enemy.IsParalyzed ? damage + ParalyzedBonusDamage : damage;
+        private int WithPressurePoints(DungeonEnemy enemy, int damage) => enemy.IsImmobilized ? damage + ParalyzedBonusDamage : damage;
 
         private bool InCone(DungeonEnemy enemy, Vector2 origin, Vector2 aim, float reach, float cone)
         {
