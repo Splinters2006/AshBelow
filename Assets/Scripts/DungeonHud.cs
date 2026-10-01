@@ -8,6 +8,11 @@ namespace Slopgame
         public DungeonRun Run { get; set; }
         private float displayedHealth = 1f, displayedBossHealth = 1f, modalFade;
         private bool showTalents, showAbilitiesTab;
+        // The settings page behind the cog wheel; a solo descent pauses while it is open.
+        private readonly SettingsMenu settingsMenu = new SettingsMenu();
+        private bool showSettings, pausedForSettings;
+        public bool SettingsOpen => showSettings;
+        private static readonly Rect CogRect = new Rect(1216, 24, 40, 40);
         private Vector2 talentScroll, abilityScroll;
         // Co-op restart asks for a second click so a stray press does not throw away the party's run.
         private float restartConfirmUntil;
@@ -19,7 +24,9 @@ namespace Slopgame
         private AbilityType pendingAbility = AbilityType.None;
         private static readonly Rect RestartRect = new Rect(896, 24, 112, 40);
         private static readonly Rect PurseRect = new Rect(900, 262, 356, 260);
-        private static readonly Rect ShopRect = new Rect(876, 84, 380, 476);
+        /// <summary>The purse panel, taller when it holds the safe.</summary>
+        private static Rect PurseArea(GamblerPurse purse) => purse.HasSafe ? new Rect(PurseRect.x, PurseRect.y, PurseRect.width, PurseRect.height + 64) : PurseRect;
+        private static readonly Rect ShopRect = new Rect(836, 84, 420, 476);
         private bool ShopOpen => Run.Shop != null && Run.Shop.IsOpen;
         /// <summary>The run just ended with the hero's fall still playing: the game-over screen waits for it.</summary>
         private bool DeathPending => !Run.IsPlaying && !Run.ChoosingArtifact && !Run.ChoosingUpgrade && !Run.WorldComplete
@@ -29,15 +36,16 @@ namespace Slopgame
         public bool BlocksPointer(Vector2 screenPosition)
         {
             Vector2 point = DungeonUi.ScreenToCanvas(screenPosition, GameSettings.HudScale);
-            return !Run.IsPlaying || new Rect(1020, 24, 236, 40).Contains(point)
+            return !Run.IsPlaying || showSettings || new Rect(1020, 24, 236, 40).Contains(point)
                 || ((Run.CanSkipRoom || CanRestartCoop) && RestartRect.Contains(point))
                 || (showTalents && new Rect(922, 82, 334, 470).Contains(point))
                 || (ShopOpen && ShopPanelRect(Run.Shop).Contains(point))
-                || (!ShopOpen && Run.Player != null && Run.Player.Mechanic is GamblerPurse purse && purse.IsOpen && PurseRect.Contains(point));
+                || (!ShopOpen && Run.Player != null && Run.Player.Mechanic is GamblerPurse purse && purse.IsOpen && PurseArea(purse).Contains(point));
         }
 
         private void Update()
         {
+            if (showSettings && (Run.IsInMainMenu || Run.Player == null)) { showSettings = false; settingsMenu.Cancel(); }
             if (Run.Player == null) return;
             float smooth = 1f - Mathf.Exp(-9f * Time.unscaledDeltaTime);
             displayedHealth = Mathf.Lerp(displayedHealth, Run.Player.Health / (float)Run.Player.MaxHealth, smooth);
@@ -55,6 +63,8 @@ namespace Slopgame
             Matrix4x4 previous = DungeonUi.Begin(GameSettings.HudScale);
             try
             {
+                // The settings page covers everything else, so nothing under it can be clicked.
+                if (showSettings) { DrawSettings(); return; }
                 var flash = ScreenFx.FlashColor;
                 if (flash.a > 0f) DungeonUi.Panel(new Rect(0, 0, 1280, 720), flash);
                 DrawStatus();
@@ -67,14 +77,46 @@ namespace Slopgame
                 else if (Run.IsPlaying && mechanic is GamblerPurse purse && purse.IsOpen) DrawPurse(purse);
                 if (!ShopOpen && showTalents && Run.IsPlaying) DrawTalents();
                 else if (!ShopOpen && Run.IsPlaying && Run.Minimap != null) Run.Minimap.Draw(new Rect(1026, 84, 224, 159));
-                if (Run.IsPlaying || DeathPending) return;
+                if (Run.IsPlaying || DeathPending) { DrawCog(); return; }
                 DungeonUi.Panel(new Rect(0, 0, 1280, 720), new Color(0.01f, 0.018f, 0.035f, 0.88f * modalFade));
+                // Drawn over the dimmed floor, so the cog is there on every pick, world-cleared and game-over screen too.
+                DrawCog();
                 if (Run.ChoosingArtifact) DrawArtifacts();
                 else if (Run.ChoosingUpgrade) DrawUpgrades();
                 else if (Run.WorldComplete) DrawWorldComplete();
                 else DrawDeath();
             }
             finally { GUI.matrix = previous; }
+        }
+
+        private void DrawCog()
+        {
+            if (!DungeonUi.CogButton("hudCog", CogRect)) return;
+            showSettings = true;
+            // A solo descent stands still while the settings are open; a co-op one cannot.
+            pausedForSettings = Run.IsPlaying && !Run.IsNetworked;
+            if (pausedForSettings) Time.timeScale = 0f;
+        }
+
+        private void CloseSettings()
+        {
+            settingsMenu.Cancel();
+            showSettings = false;
+            if (pausedForSettings && Run.IsPlaying) Time.timeScale = 1f;
+            pausedForSettings = false;
+        }
+
+        /// <summary>The same settings page as the main menu's, over the descent.</summary>
+        private void DrawSettings()
+        {
+            DungeonUi.Panel(new Rect(-2000, -2000, 6000, 6000), DungeonUi.Background);
+            DungeonUi.Label(new Rect(70, 52, 700, 25), pausedForSettings ? "THE DESCENT IS PAUSED" : Run.IsNetworked && Run.IsPlaying ? "THE DESCENT GOES ON AROUND YOU" : "THE DESCENT WAITS", 14, AbilityCatalog.Gold);
+            DungeonUi.Label(new Rect(65, 80, 1100, 56), "SETTINGS", 40);
+            DungeonUi.Label(new Rect(70, 138, 1100, 30), "Resize the menus and HUD, toggle autofire and rebind every action. Changes save instantly.", 17, DungeonUi.Muted);
+            settingsMenu.Draw();
+            if (DungeonUi.Button("hudSettingsBack", new Rect(70, 598, 268, 48), "Back", DungeonUi.Muted)) CloseSettings();
+            if (DungeonUi.Button("hudSettingsReset", new Rect(860, 598, 350, 48), "Reset to defaults", DungeonUi.Teal)) settingsMenu.ResetToDefaults();
+            if (DungeonUi.CogButton("hudCogClose", CogRect, true)) CloseSettings();
         }
 
         private void DrawStatus()
@@ -154,8 +196,9 @@ namespace Slopgame
                     else restartConfirmUntil = Time.unscaledTime + 3f;
                 }
             }
-            if (DungeonUi.Button("talents", new Rect(1020, 24, 112, 40), "Build", DungeonUi.Teal)) showTalents = !showTalents;
-            if (DungeonUi.Button("menu", new Rect(1144, 24, 112, 40), Run.IsNetworked ? "Leave" : "Menu", DungeonUi.Muted)) Run.ShowMainMenu();
+            // Build and Menu share the corner with the settings cog (see DrawCog).
+            if (DungeonUi.Button("talents", new Rect(1020, 24, 92, 40), "Build", DungeonUi.Teal)) showTalents = !showTalents;
+            if (DungeonUi.Button("menu", new Rect(1118, 24, 92, 40), Run.IsNetworked ? "Leave" : "Menu", DungeonUi.Muted)) Run.ShowMainMenu();
         }
 
         private void DrawHotbar()
@@ -179,7 +222,7 @@ namespace Slopgame
                 DungeonUi.Label(new Rect(440, 505, 400, 24), $"BLESSED  +{player.Blessing.BonusDamage} DAMAGE  /  {player.Blessing.Remaining:0.0}s", 14, AbilityCatalog.Gold, TextAnchor.MiddleCenter);
             string buff = BuffStatus(player.Buffs);
             if (buff != null)
-                DungeonUi.Label(new Rect(440, 475, 400, 24), buff, 14, player.Buffs.IsFurious ? HeroBuffs.FuryColor
+                DungeonUi.Label(new Rect(440, 475, 400, 24), buff, 14, player.Buffs.IsIncarnate ? HeroBuffs.IncarnateColor : player.Buffs.IsFurious ? HeroBuffs.FuryColor
                     : player.Buffs.IsAscended ? HeroBuffs.AscendColor : player.Buffs.IsRaging ? HeroBuffs.RageColor
                     : player.Buffs.IsTired ? HeroBuffs.TiredColor : HeroBuffs.EmpowerColor, TextAnchor.MiddleCenter);
             string boons = BoonStatus(player.Crystals);
@@ -256,6 +299,7 @@ namespace Slopgame
             if (buffs.IsEmpowered) parts.Add($"EMPOWERED  {buffs.EmpowerRemaining:0.0}s");
             if (buffs.IsAscended) parts.Add($"ARCHDEMON'S TECHNIQUE  {buffs.AscendRemaining:0.0}s");
             if (buffs.IsFurious) parts.Add($"SUPER ANGRY  {buffs.FuryRemaining:0.0}s");
+            if (buffs.IsIncarnate) parts.Add($"AVATAR OF DEATH  x2 DAMAGE  {buffs.IncarnateRemaining:0.0}s");
             if (buffs.JackpotDamage > 0) parts.Add($"JACKPOT  +{buffs.JackpotDamage} DAMAGE  {buffs.JackpotDamageRemaining:0.0}s");
             if (buffs.JackpotSpeed > 1f) parts.Add($"JACKPOT  x{buffs.JackpotSpeed:0.0} SPEED  {buffs.JackpotSpeedRemaining:0.0}s");
             return parts.Count == 0 ? null : string.Join("  /  ", parts);
@@ -304,7 +348,7 @@ namespace Slopgame
         /// <summary>The Gambler's purse shop. Play goes on while it is open.</summary>
         private void DrawPurse(GamblerPurse purse)
         {
-            var rect = PurseRect;
+            var rect = PurseArea(purse);
             DungeonUi.Panel(rect, DungeonUi.Background);
             DungeonUi.Label(new Rect(rect.x + 20, rect.y + 14, 220, 28), "THE PURSE", 22, GamblerAttack.Gold);
             DungeonUi.Label(new Rect(rect.x + 190, rect.y + 18, 146, 24), $"{purse.Coins?.Coins ?? 1:N0} COINS", 16, GamblerAttack.Gold, TextAnchor.UpperRight);
@@ -315,6 +359,14 @@ namespace Slopgame
                 bool affordable = purse.CanBuy(offer);
                 if (DungeonUi.Button("purse" + i, new Rect(row.x, row.y, row.width, 32), $"{offer.Name}  /  {offer.Cost}c", GamblerAttack.Gold, affordable)) purse.Buy(offer);
                 DungeonUi.Label(new Rect(row.x + 6, row.y + 34, row.width - 12, 18), offer.Description, 12, DungeonUi.Muted);
+            }
+            if (purse.HasSafe)
+            {
+                // The safe: ten coins in per click, exactly half out per click, and interest from every guardian.
+                float top = rect.y + 52 + GamblerPurse.Offers.Length * 58, half = (rect.width - 40) / 2f;
+                DungeonUi.Label(new Rect(rect.x + 22, top, rect.width - 44, 18), $"THE SAFE  /  {purse.Safe:N0} COINS  /  x{GamblerPurse.SafeInterest:0.0} PER GUARDIAN", 12, GamblerAttack.Gold);
+                if (DungeonUi.Button("safeDeposit", new Rect(rect.x + 16, top + 22, half, 32), $"Deposit {GamblerPurse.SafeDeposit}c", GamblerAttack.Gold, purse.CanDeposit)) purse.Deposit();
+                if (DungeonUi.Button("safeWithdraw", new Rect(rect.x + 24 + half, top + 22, half, 32), $"Withdraw 50%  /  {purse.SafeWithdrawal:N0}c", GamblerAttack.Gold, purse.CanWithdraw)) purse.Withdraw();
             }
             DungeonUi.Label(new Rect(rect.x + 20, rect.yMax - 36, rect.width - 40, 30),
                 purse.LastResult ?? $"{KeyBindings.Label(GameAction.Mechanic)} closes the purse. Coins spent here leave your volley.", 13,
@@ -343,22 +395,37 @@ namespace Slopgame
             var pouch = Run.Player.Crystals;
             int wares = shop.Stock.Count;
             float step = ShopRowStep(wares);
-            // Roomy rows show the description under the button; squeezed rows shrink both to fit.
-            float buttonHeight = step >= 52f ? 32f : step - 20f;
-            int descriptionSize = step >= 52f ? 12 : 11;
+            // Roomy cards give the description two lines; squeezed ones shrink everything to one.
+            bool roomy = step >= 52f;
+            Color crystal = CrystalPouch.CrystalColor;
             DungeonUi.Panel(rect, DungeonUi.Background);
-            DungeonUi.Label(new Rect(rect.x + 20, rect.y + 14, 220, 28), "CRYSTAL SHOP", 22, CrystalPouch.CrystalColor);
-            DungeonUi.Label(new Rect(rect.x + 200, rect.y + 18, 160, 24), $"{pouch.Crystals} CRYSTALS", 16, CrystalPouch.CrystalColor, TextAnchor.UpperRight);
+            DungeonUi.Panel(new Rect(rect.x, rect.y, rect.width, 3), crystal);
+            DungeonUi.Label(new Rect(rect.x + 20, rect.y + 13, 220, 28), "CRYSTAL SHOP", 22, crystal);
+            // The purse: what there is to spend, set apart in its own chip.
+            var chip = new Rect(rect.xMax - 156, rect.y + 12, 140, 28);
+            DungeonUi.Panel(chip, DungeonUi.PanelColor);
+            DungeonUi.Label(new Rect(chip.x + 10, chip.y, 70, chip.height), "CRYSTALS", 11, DungeonUi.Muted, TextAnchor.MiddleLeft);
+            DungeonUi.Label(new Rect(chip.x, chip.y, chip.width - 10, chip.height), pouch.Crystals.ToString(), 18, crystal, TextAnchor.MiddleRight);
+            DungeonUi.Panel(new Rect(rect.x + 16, rect.y + 46, rect.width - 32, 1), new Color(DungeonUi.Muted.r, DungeonUi.Muted.g, DungeonUi.Muted.b, 0.25f));
+            const float PriceWidth = 96f;
             for (int i = 0; i < wares; i++)
             {
                 var offer = shop.Stock[i];
-                var row = new Rect(rect.x + 16, rect.y + 52 + i * step, rect.width - 32, step - 6);
+                // One card per ware: a strip in its colour, name and description on the left, the price to press on the right.
+                var card = new Rect(rect.x + 16, rect.y + 52 + i * step, rect.width - 32, step - 6);
                 bool maxed = offer.Powerup.HasValue && !Run.Player.Powerups.CanTake(offer.Powerup.Value);
-                string price = maxed ? "maxed" : $"{shop.Cost(offer)} crystals";
-                if (DungeonUi.Button("shop" + i, new Rect(row.x, row.y, row.width, buttonHeight), $"{offer.Name}  /  {price}", offer.Color, shop.CanBuy(offer)))
-                    shop.Buy(offer);
+                bool buyable = shop.CanBuy(offer);
+                Color accent = buyable ? offer.Color : new Color(offer.Color.r, offer.Color.g, offer.Color.b, 0.35f);
+                DungeonUi.Panel(card, DungeonUi.PanelColor);
+                DungeonUi.Panel(new Rect(card.x, card.y, 4, card.height), accent);
+                float textWidth = card.width - PriceWidth - 26f;
                 string description = offer.Category == CrystalShop.Category.Relic ? "Relic: " + offer.Description : offer.Description;
-                DungeonUi.Label(new Rect(row.x + 6, row.y + buttonHeight + 2, row.width - 12, 18), description, descriptionSize, DungeonUi.Muted);
+                DungeonUi.Label(new Rect(card.x + 14, card.y + (roomy ? 5 : 1), textWidth, 18), offer.Name, roomy ? 15 : 13, buyable ? offer.Color : DungeonUi.Muted);
+                DungeonUi.Label(new Rect(card.x + 14, card.y + (roomy ? 24 : 17), textWidth, card.height - (roomy ? 26 : 18)), description, roomy ? 11 : 10, DungeonUi.Muted);
+                float priceHeight = Mathf.Min(34f, card.height - 8f);
+                var price = new Rect(card.xMax - PriceWidth - 6, card.y + (card.height - priceHeight) / 2f, PriceWidth, priceHeight);
+                if (DungeonUi.Button("shop" + i, price, maxed ? "MAXED" : $"{shop.Cost(offer)} cr", offer.Color, buyable, maxed ? 12 : 15))
+                    shop.Buy(offer);
             }
             float below = rect.y + 52 + wares * step;
             if (shop.RerollsLeft > 0 && DungeonUi.Button("shopReroll", new Rect(rect.x + 16, below, rect.width - 32, 28),
@@ -420,7 +487,8 @@ namespace Slopgame
                 DungeonUi.Panel(new Rect(0, y, width, RowHeight - 6), DungeonUi.PanelColor);
                 DungeonUi.Label(new Rect(10, y + 4, 34, 44), ability.Glyph, 20, ability.Color, TextAnchor.MiddleCenter);
                 DungeonUi.Label(new Rect(50, y + 4, width - 160, 24), ability.Name, 15);
-                DungeonUi.Label(new Rect(50, y + 26, width - 160, 20), $"Rank {abilities.Rank(ability.Type)}", 12, DungeonUi.Muted);
+                DungeonUi.Label(new Rect(50, y + 26, width - 160, 20), abilities.Rank(ability.Type) >= PlayerAbilities.MaxRank ? $"Rank {abilities.Rank(ability.Type)}  /  MAX" : $"Rank {abilities.Rank(ability.Type)}",
+                    12, abilities.Rank(ability.Type) >= PlayerAbilities.MaxRank ? AbilityCatalog.Gold : DungeonUi.Muted);
                 for (int slot = 0; slot < PlayerAbilities.SlotCount; slot++)
                 {
                     bool here = abilities.Equipped(slot) == ability.Type;
@@ -479,9 +547,24 @@ namespace Slopgame
             }
             if (Run.Player.Health <= 0 && Run.IsPlaying)
             {
-                DungeonUi.Panel(new Rect(390, 104, 500, 64), DungeonUi.PanelColor);
+                var watched = Run.Coop.SpectateTarget;
+                DungeonUi.Panel(new Rect(390, 104, 500, watched != null ? 104 : 64), DungeonUi.PanelColor);
                 DungeonUi.Label(new Rect(400, 112, 480, 26), "YOU HAVE FALLEN", 20, new Color(1f, 0.45f, 0.45f), TextAnchor.MiddleCenter);
                 DungeonUi.Label(new Rect(400, 138, 480, 22), "Your party fights on. You rise at half health next floor.", 14, DungeonUi.Muted, TextAnchor.MiddleCenter);
+                if (watched != null)
+                {
+                    // Whom the camera follows; with more than one teammate standing, the arrows (or arrow keys) switch between them.
+                    bool choice = Run.Coop.SpectateCount > 1;
+                    DungeonUi.Label(new Rect(450, 168, 380, 30), "WATCHING  " + watched.PlayerName.ToUpperInvariant(), 15, watched.Character.Color, TextAnchor.MiddleCenter);
+                    if (choice && DungeonUi.Button("spectatePrev", new Rect(404, 168, 40, 30), "<", DungeonUi.Teal)) Run.Coop.CycleSpectate(-1);
+                    if (choice && DungeonUi.Button("spectateNext", new Rect(836, 168, 40, 30), ">", DungeonUi.Teal)) Run.Coop.CycleSpectate(1);
+                    var e = Event.current;
+                    if (choice && e.type == EventType.KeyDown && (e.keyCode == KeyCode.LeftArrow || e.keyCode == KeyCode.RightArrow))
+                    {
+                        Run.Coop.CycleSpectate(e.keyCode == KeyCode.RightArrow ? 1 : -1);
+                        e.Use();
+                    }
+                }
             }
         }
 
@@ -553,17 +636,17 @@ namespace Slopgame
                 int rank = Run.Player.Abilities.Rank(ability.Type);
                 Card(rect, rank > 0 ? $"KNOWN  /  RANK {rank}" : $"NEW ABILITY  /  {ability.Cooldown:0}s COOLDOWN", ability.Name, ability.Description, ability.Color, ability.Glyph);
                 if (DungeonUi.Button("offer" + ability.Type, new Rect(rect.x + 24, rect.yMax - 60, rect.width - 48, 40),
-                    rank > 0 ? $"Raise to rank {rank + 1}" : "Learn", ability.Color, pendingAbility == AbilityType.None))
+                    rank + 1 >= PlayerAbilities.MaxRank ? $"Raise to rank {rank + 1}  /  MAX" : rank > 0 ? $"Raise to rank {rank + 1}" : "Learn", ability.Color, pendingAbility == AbilityType.None))
                     pendingAbility = ability.Type;
             }
             if (offers.Count == 0)
-                DungeonUi.Label(new Rect(240, 380, 800, 60), $"You have mastered every ability this guardian could teach. Leave the artifact for {DungeonRun.LeftArtifactCrystals} crystals.", 20, DungeonUi.Muted, TextAnchor.MiddleCenter);
-            if (DungeonUi.Button("leaveArtifact", new Rect(470, 661, 340, 35), $"Leave it  /  +{DungeonRun.LeftArtifactCrystals} crystals", CrystalPouch.CrystalColor,
+                DungeonUi.Label(new Rect(240, 380, 800, 60), $"You have mastered every ability this guardian could teach. Leave the artifact for {Run.LeftArtifactCrystals} crystals.", 20, DungeonUi.Muted, TextAnchor.MiddleCenter);
+            if (DungeonUi.Button("leaveArtifact", new Rect(470, 661, 340, 35), $"Leave it  /  +{Run.LeftArtifactCrystals} crystals", CrystalPouch.CrystalColor,
                 pendingAbility == AbilityType.None)) Run.LeaveArtifact();
             if (pendingAbility == AbilityType.None) return;
             var picked = AbilityCatalog.Get(pendingAbility);
             int known = Run.Player.Abilities.Rank(picked.Type);
-            var answer = ConfirmPick(known > 0 ? $"Raise {picked.Name} to rank {known + 1}?" : $"Learn {picked.Name}?", picked.Description, picked.Color,
+            var answer = ConfirmPick(known + 1 >= PlayerAbilities.MaxRank ? $"Raise {picked.Name} to its max rank ({known + 1})?" : known > 0 ? $"Raise {picked.Name} to rank {known + 1}?" : $"Learn {picked.Name}?", picked.Description, picked.Color,
                 known > 0 ? "Raise rank" : "Learn");
             if (answer == true) { var type = pendingAbility; pendingAbility = AbilityType.None; Run.PickAbility(type); }
             else if (answer == false) pendingAbility = AbilityType.None;

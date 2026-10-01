@@ -95,8 +95,8 @@ namespace Slopgame
         public static void Flurry(DungeonRun run, float length, float halfWidth, Color color, float duration)
             => Send(run, FxKind.Flurry, default, default, color, length, halfWidth, Mathf.RoundToInt(duration * 1000f));
 
-        public static void TailStab(DungeonRun run, Vector2 origin, Vector2 aim, float reach, Color color)
-            => Send(run, FxKind.TailStab, origin, aim, color, reach);
+        public static void TailStab(DungeonRun run, Vector2 origin, Vector2 aim, float reach, Color color, bool twin = false)
+            => Send(run, FxKind.TailStab, origin, aim, color, reach, twin ? 1f : 0f);
         public static void TailSweep(DungeonRun run, Vector2 origin, Vector2 aim, float reach, float cone, Color color)
             => Send(run, FxKind.TailSweep, origin, aim, color, reach, cone);
         public static void Pentagram(DungeonRun run, Vector2 center, float radius, float windup)
@@ -105,6 +105,7 @@ namespace Slopgame
         public static void DemonPaw(DungeonRun run, Vector2 center, float radius, float windup)
             => Send(run, FxKind.DemonPaw, center, default, null, radius, windup);
         public static void DemonHead(DungeonRun run, Vector2 center, float radius) => Send(run, FxKind.DemonHead, center, default, null, radius);
+        public static void AvatarOfDeath(DungeonRun run, float duration) => Send(run, FxKind.AvatarOfDeath, default, default, null, duration);
         public static void Sharpen(DungeonRun run, int bonus, float duration, bool full)
             => Send(run, FxKind.Sharpen, default, default, null, duration, full ? 1f : 0f, bonus);
         public static void CoinFlip(DungeonRun run, bool won) => Send(run, FxKind.CoinFlip, default, default, null, 0f, 0f, won ? 1 : 0);
@@ -275,7 +276,7 @@ namespace Slopgame
                 case FxKind.HolySword: HolySwordVfx.Play(root, fx.A); break;
                 case FxKind.Venom: VenomVial.SpawnGhost(run, fx.A, fx.B, fx.F1, fx.F2); break;
                 case FxKind.HeavyPunch: BrawlerVfx.HeavyPunch(root, fx.A, fx.B, fx.F1, fx.F2, color); break;
-                case FxKind.TailStab: TailVfx.Stab(root, fx.A, fx.B, fx.F1, color); break;
+                case FxKind.TailStab: TailVfx.Stab(root, fx.A, fx.B, fx.F1, color, fx.F2 > 0.5f); break;
                 case FxKind.TailSweep: TailVfx.Sweep(root, fx.A, fx.B, fx.F1, fx.F2, color); break;
                 case FxKind.Pentagram: PentagramVfx.Play(root, fx.A, fx.F1, fx.F2); break;
                 case FxKind.DemonPaw: DemonPawVfx.Play(root, fx.A, fx.F1, fx.F2); break;
@@ -289,6 +290,10 @@ namespace Slopgame
                 case FxKind.Jackpot:
                     var winner = FindHero(run, fx.Origin);
                     if (winner != null) JackpotVfx.Play(root, winner.transform, (GamblerAttack.JackpotPrize)fx.N);
+                    break;
+                case FxKind.AvatarOfDeath:
+                    var reaper = FindHero(run, fx.Origin);
+                    if (reaper != null) AvatarOfDeathVfx.Play(root, reaper.transform, fx.F1);
                     break;
                 case FxKind.Sharpen:
                     var assassin = FindHero(run, fx.Origin);

@@ -26,8 +26,13 @@ namespace Slopgame
         public virtual void OnImmobilized() { }
         public virtual void OnBlessedHit(int bonus) { }
         public virtual void OnElementalEffect() { }
+        /// <summary>A guardian fell in this descent (the Gambler's safe pays interest).</summary>
+        public virtual void OnGuardianDefeated() { }
         /// <summary>Kill talents shorten a mechanic that runs on a cooldown; charged mechanics ignore it.</summary>
         public virtual void ReduceCooldown(float seconds) { }
+
+        /// <summary>True once the mechanic's R upgrade has been bought in the Ash shop.</summary>
+        protected bool IsUpgraded => Player.Permanent != null && Player.Permanent.MechanicUpgraded;
 
         protected bool CanAct => Player.Run.IsPlaying && Player.Health > 0 && !Player.IsRolling && !Player.IsBusy;
 

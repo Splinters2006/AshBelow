@@ -3,10 +3,11 @@ using UnityEngine;
 namespace Slopgame
 {
     /// <summary>
-    /// A crystal dropped by a slain enemy, spent at the crystal shop before each boss. Every machine drops crystals
-    /// for its own hero. It pops out of the body, bobs and glimmers on the floor, and walking close draws it in.
+    /// A crystal dropped by a slain enemy, spent at the crystal shop before each boss. It pops out of the body, bobs
+    /// and glimmers on the floor, and walking close draws it in. In co-op the crystals of a kill or a smashed urn are
+    /// shared: whoever picks one up, every hero is paid its value and it is gone for everyone.
     /// </summary>
-    public sealed class Crystal : MonoBehaviour
+    public sealed class Crystal : MonoBehaviour, ISharedPickup
     {
         public const float MagnetRadius = 2f, PickupRadius = 0.45f;
         private const float HopTime = 0.35f, HopHeight = 0.5f;
@@ -14,6 +15,8 @@ namespace Slopgame
         private Vector2 rest, hopFrom;
         private float phase, age, size;
         private bool magnetised, pulled;
+        /// <summary>Shared by every co-op machine's copy of this crystal; 0 for one only this hero sees (Prospector's extras).</summary>
+        private int netKey;
         /// <summary>How fast a crystal pulled in by a cleared wave flies to the hero, in units per second.</summary>
         public const float PullSpeed = 20f;
         private SpriteRenderer body;
@@ -24,7 +27,7 @@ namespace Slopgame
         public static int ValueFor(DungeonEnemy enemy) => enemy.Boss != null ? 15 : enemy.IsTank ? 3
             : enemy.Variant != null ? enemy.Variant.CrystalValue : 1;
 
-        public static Crystal Drop(DungeonRun run, Vector2 position, int value)
+        public static Crystal Drop(DungeonRun run, Vector2 position, int value, int netKey = 0)
         {
             if (run == null || run.ProjectileRoot == null || value <= 0) return null;
             float size = 0.26f + 0.05f * Mathf.Min(value, 6);
@@ -43,6 +46,8 @@ namespace Slopgame
             shadow.sprite = DungeonVisuals.CoinShadow;
             crystal.shadow = shadow.transform;
             HeroVfx.Sparks(run.ProjectileRoot, position, CrystalPouch.CrystalColor, 5, 2.5f, 0.25f, Vector2.up, 120f, 0.7f);
+            crystal.netKey = netKey;
+            if (netKey != 0 && run.IsNetworked) run.Coop.RegisterPickup(netKey, crystal);
             return crystal;
         }
 
@@ -71,6 +76,7 @@ namespace Slopgame
             body.color = Color.Lerp(new Color(0.82f, 0.78f, 0.9f), Color.white, 0.5f + 0.5f * Mathf.Sin(Time.time * 5f + phase));
             if (!alive || Vector2.Distance(rest, hero) > PickupRadius) return;
             pouch.Add(Value);
+            if (netKey != 0 && run.IsNetworked) run.Coop.ReportPickup(netKey);
             var root = run.ProjectileRoot;
             HeroVfx.Pulse(root, rest, 0.5f, new Color(0.78f, 0.5f, 1f, 0.7f), 0.2f);
             HeroVfx.Sparks(root, rest, CrystalPouch.CrystalColor, 8, 3f, 0.3f, Vector2.up, 150f, 0.8f);
@@ -89,6 +95,14 @@ namespace Slopgame
             Value = 0;
             gameObject.SetActive(false);
             Destroy(gameObject);
+        }
+
+        /// <summary>A teammate picked this crystal up: the local hero is paid too, wherever they stand (fallen heroes included).</summary>
+        public void CollectRemote()
+        {
+            if (Value > 0 && run != null && run.ProjectileRoot != null)
+                HeroVfx.Pulse(run.ProjectileRoot, transform.position, 0.5f, new Color(0.78f, 0.5f, 1f, 0.7f), 0.2f);
+            CollectNow();
         }
 
         private void Place(Vector2 ground, float height)

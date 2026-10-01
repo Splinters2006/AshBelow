@@ -50,7 +50,7 @@ namespace Slopgame
             ScreenFx.Shake(0.08f, 0.1f);
             foreach (var enemy in run.Enemies.ToArray())
                 if (enemy != null && enemy.Health > 0 && Vector2.Distance(spot, enemy.transform.position) <= StrikeRadius + enemy.HitRadius)
-                    CombatDamage.Apply(player, enemy, damage, DamageElement.Lightning, spot, 0.3f, guaranteedEffect: true);
+                    CombatDamage.Apply(player, enemy, damage, DamageElement.Lightning, spot, 0.3f);
         }
     }
 }

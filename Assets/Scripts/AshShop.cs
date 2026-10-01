@@ -10,8 +10,11 @@ namespace Slopgame
     /// </summary>
     public sealed class AshShop
     {
-        private static string LockedText(PermanentUpgradeDefinition item)
+        private static string LockedText(PermanentProgress progress, PermanentUpgradeDefinition item)
         {
+            bool worldLocked = item.RequiredWorld >= 0 && item.RequiredWorld < WorldCatalog.All.Length && !progress.HasClearedWorld(item.RequiredWorld);
+            // An R upgrade whose world is already cleared is only waiting on the mechanic it upgrades.
+            if (item.RequiredUpgrade != null && !worldLocked) return $"Buy {PermanentUpgradeCatalog.Get(item.RequiredUpgrade)?.Name} first";
             if (item.RequiredWorld >= 0 && item.RequiredWorld < WorldCatalog.All.Length)
                 return $"Clear {WorldCatalog.All[item.RequiredWorld].Name} or any later world to unlock";
             string hero = item.ClassWeapon.HasValue ? Tabs[System.Array.IndexOf(Weapons, item.ClassWeapon)] : null;
@@ -127,12 +130,12 @@ namespace Slopgame
                     progress.Switch(item.Id, !on);
             }
             else
-                DungeonUi.Label(new Rect(side.x, side.y + 12, side.width, 20), mechanic ? "CLASS MECHANIC" : $"RANK {rank} / {item.MaxRank}", 13,
-                    mechanic ? AbilityCatalog.Gold : DungeonUi.Muted, TextAnchor.MiddleRight);
+                DungeonUi.Label(new Rect(side.x, side.y + 12, side.width, 20), item.IsMechanicUpgrade ? "R UPGRADE" : mechanic ? "CLASS MECHANIC" : $"RANK {rank} / {item.MaxRank}", 13,
+                    mechanic || item.IsMechanicUpgrade ? AbilityCatalog.Gold : DungeonUi.Muted, TextAnchor.MiddleRight);
             var buy = new Rect(side.x, side.y + 46, side.width, 36);
             if (!available)
             {
-                DungeonUi.Label(new Rect(side.x, side.y + 38, side.width, 50), LockedText(item), 12, DungeonUi.Muted, TextAnchor.MiddleRight);
+                DungeonUi.Label(new Rect(side.x, side.y + 38, side.width, 50), LockedText(progress, item), 12, DungeonUi.Muted, TextAnchor.MiddleRight);
                 return;
             }
             string label = maxed ? (item.MaxRank == 1 ? "Owned" : "Maxed") : $"Buy  /  {cost} Ash";

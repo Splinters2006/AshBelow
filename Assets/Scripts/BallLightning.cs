@@ -68,7 +68,7 @@ namespace Slopgame
                 CombatVfx.Bolt(run.ProjectileRoot, position, enemy.transform.position, CombatDamage.ShockColor);
                 CoopFx.Bolt(run, position, enemy.transform.position, CombatDamage.ShockColor);
                 // Every Wizard ability sets off its element.
-                CombatDamage.Apply(player, enemy, damage, DamageElement.Lightning, position, 0.2f, guaranteedEffect: true);
+                CombatDamage.Apply(player, enemy, damage, DamageElement.Lightning, position, 0.2f);
             }
         }
 

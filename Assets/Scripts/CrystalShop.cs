@@ -6,8 +6,8 @@ namespace Slopgame
     /// <summary>
     /// The crystal shop visited before each boss: a warm, lantern-lit room with a hooded merchant behind a counter.
     /// Talking to him opens his wares, paid for in the crystals enemies drop: healing, boons for the guardian's arena
-    /// and relics that last the rest of the descent. Each shop stocks a random few of them (the same on every machine
-    /// in a co-op run), and each ware costs half as much again every time it is bought in the same shop. Haggler
+    /// and relics that last the rest of the descent. Each shop stocks a random few of them (in a co-op run every hero
+    /// is shown a stock of their own), and each ware costs half as much again every time it is bought in the same shop. Haggler
     /// lowers his prices, and Merchant's Favor lets a hero have him lay out fresh wares.
     /// </summary>
     public sealed class CrystalShop : MonoBehaviour
@@ -38,7 +38,7 @@ namespace Slopgame
         public static readonly Color HealColor = new Color(1f, 0.42f, 0.5f);
         public static readonly Offer[] Offers =
         {
-            new Offer(Ware.Draught, Category.Healing, "Healing Draught", "Restore 2 HP", 12, HealColor),
+            new Offer(Ware.Draught, Category.Healing, "Healing Draught", "Restore 2 HP", 20, HealColor),
             new Offer(Ware.Elixir, Category.Healing, "Grand Elixir", "Restore all of your HP", 30, HealColor),
             new Offer(Ware.Stoneskin, Category.Arena, "Stoneskin Tonic", "+2 wards in the boss arena", 20, AbilityCatalog.Ice),
             new Offer(Ware.Whetstone, Category.Arena, "Whetstone", "+1 damage in the boss arena", 35, AbilityCatalog.Gold),
@@ -124,7 +124,7 @@ namespace Slopgame
         {
             var random = new System.Random(seed);
             stock.Clear();
-            // Black Market Pass adds a relic, drawn last so the rest of the stock matches the party's.
+            // Black Market Pass adds a relic.
             int relics = RelicStock + (run != null && run.Progress != null && run.Progress.Rank(PermanentUpgradeCatalog.BlackMarketPassId) > 0 ? 1 : 0);
             foreach (var (category, count) in new[] { (Category.Healing, HealingStock), (Category.Arena, ArenaStock), (Category.Relic, relics) })
             {
@@ -249,11 +249,15 @@ namespace Slopgame
             root.transform.SetParent(level, false);
             var shop = root.AddComponent<CrystalShop>();
             shop.run = run;
-            shop.seed = run.Seed + run.Floor * 104729;
+            shop.seed = StockSeed(run.Seed, run.Floor, run.IsNetworked ? run.Coop.LocalId : (ulong?)null);
             shop.Restock(shop.seed);
             shop.Furnish();
             return shop;
         }
+
+        /// <summary>The seed a shop draws its stock from. In co-op each hero's id is mixed in, so everyone is offered different wares.</summary>
+        public static int StockSeed(int runSeed, int floor, ulong? heroId = null)
+            => runSeed + floor * 104729 + (heroId.HasValue ? (int)((heroId.Value + 1) * 15485863UL % 1000003UL) : 0);
 
         private SpriteRenderer Part(string name, Vector2 position, Vector2 size, Color color, int order = 1)
             => DungeonVisuals.Create(name, transform, position, size, color, order);

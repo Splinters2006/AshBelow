@@ -6,7 +6,8 @@ namespace Slopgame
     /// <summary>
     /// An urn (or, in high-tech worlds, a supply crate) standing in a room. Any hero attack, projectile or dodge roll
     /// smashes it. Most hold a crystal or two and a rare few hold a heart. Pots and their loot are seeded from the floor,
-    /// so every co-op machine sees the same ones; each hero smashes and loots their own, like crystals from kills.
+    /// so every co-op machine sees the same ones, and they are shared: an urn one hero smashes breaks for the whole
+    /// party, and so does the loot it spills (see <see cref="ISharedPickup"/>).
     /// </summary>
     public sealed class Breakable : MonoBehaviour
     {
@@ -16,6 +17,9 @@ namespace Slopgame
         private static readonly List<Breakable> active = new List<Breakable>();
         public static IReadOnlyList<Breakable> Active => active;
         private DungeonRun run;
+        public DungeonRun Run => run;
+        /// <summary>The urn's number on its floor, the same on every co-op machine; -1 for one only this machine has.</summary>
+        public int NetId { get; private set; } = -1;
         private Color shardColor;
         public int Crystals { get; private set; }
         public bool HoldsHeart { get; private set; }
@@ -40,7 +44,7 @@ namespace Slopgame
                     double roll = random.NextDouble();
                     int crystals = roll < CrystalChance ? 1 + random.Next(2) : 0;
                     bool heart = random.NextDouble() < HeartChance;
-                    Create(run, parent, cell, world, crystals, heart);
+                    Create(run, parent, cell, world, crystals, heart).NetId = taken.Count - 1;
                 }
             }
         }
@@ -99,15 +103,18 @@ namespace Slopgame
             return smashed;
         }
 
-        public void Smash(Vector2 source)
+        /// <param name="remote">True when a co-op teammate smashed it on their machine and this one is following suit.</param>
+        public void Smash(Vector2 source, bool remote = false)
         {
             if (!active.Remove(this)) return;
+            bool shared = NetId >= 0 && run != null && run.IsNetworked;
+            if (shared && !remote) run.Coop.ReportSmash(NetId, source);
             Vector2 position = transform.position;
             var root = run != null && run.ProjectileRoot != null ? run.ProjectileRoot : transform.parent;
             HeroVfx.Sparks(root, position, shardColor, 12, 4f, 0.35f, position - source, 200f, 1.3f);
             HeroVfx.Pulse(root, position, 0.5f, new Color(1f, 1f, 1f, 0.5f), 0.18f);
-            if (Crystals > 0) Crystal.Drop(run, position, Crystals);
-            if (HoldsHeart) HealthPickup.Drop(run, position);
+            if (Crystals > 0) Crystal.Drop(run, position, Crystals, shared ? CoopSync.BreakableKey(NetId, false) : 0);
+            if (HoldsHeart) HealthPickup.Drop(run, position, HealthPickup.HealAmount, shared ? CoopSync.BreakableKey(NetId, true) : 0);
             gameObject.SetActive(false);
             Destroy(gameObject);
         }

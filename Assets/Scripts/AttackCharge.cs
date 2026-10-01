@@ -19,7 +19,8 @@ namespace Slopgame
             * Player.Powerups.AttackIntervalMultiplier * Player.Buffs.ChargeDurationMultiplier;
         public const float KnightChargeDuration = 0.75f, WizardChargeMultiplier = 4f;
         // Retaliation: after a parry the Knight's next slash is fully charged the moment he starts it.
-        public float Amount => IsCharging ? (Player.Shield != null && Player.Shield.RetaliationReady ? 1f : Mathf.Clamp01((Time.time - startedAt) / Duration)) : 0f;
+        // Razor's Edge: so is every stab while the Assassin's upgraded Sharpened Dagger is up.
+        public float Amount => IsCharging ? ((Player.Shield != null && Player.Shield.RetaliationReady) || (Player.Mechanic is SharpenedDagger edge && edge.InstantCharge) ? 1f : Mathf.Clamp01((Time.time - startedAt) / Duration)) : 0f;
 
         public void Tick(bool held, bool allowed)
         {

@@ -58,6 +58,8 @@ namespace Slopgame
         private DungeonHud hud;
         public FloorMinimap Minimap { get; private set; }
         public bool IsPointerOverHud => hud != null && hud.BlocksPointer(PlayerInput.CursorPosition);
+        /// <summary>True while the HUD's settings page is open: the hero ignores the keys (they may be getting rebound).</summary>
+        public bool HudCapturesInput => hud != null && hud.SettingsOpen;
         private Transform level;
         private Camera view;
         private Vector2 exit;
@@ -643,7 +645,7 @@ namespace Slopgame
             if (!IsPlaying) return;
             UpdatePaths();
             if (UpdateWave()) return;
-            bool canInteract = Player.Health > 0 && PlayerInput.Interact;
+            bool canInteract = Player.Health > 0 && !HudCapturesInput && PlayerInput.Interact;
             if (Artifact != null && canInteract && Vector2.Distance(Player.transform.position, Artifact.transform.position) < 1.5f)
             {
                 if (IsNetworked) Coop.RequestInteract(CoopChoice.Artifact);
@@ -703,6 +705,7 @@ namespace Slopgame
             {
                 Progress.RecordGuardian(++guardiansThisRun, Player != null ? Player.ClassWeapon : (WeaponType?)null);
                 Progress.Discover(Encyclopedia.GuardianId(enemy.Boss.Title));
+                if (Player != null) Player.Mechanic?.OnGuardianDefeated();
             }
             if (Enemies.Count == 0 && !floorRewardGranted)
             { reward += 10; floorRewardGranted = true; }
@@ -841,8 +844,11 @@ namespace Slopgame
             FinishArtifactChoice();
             return true;
         }
-        /// <summary>Crystals the merchant's rivals pay for an artifact left unclaimed.</summary>
-        public const int LeftArtifactCrystals = 40;
+        /// <summary>Crystals the merchant's rivals pay for the first guardian's artifact left unclaimed, and how much more for each guardian after it.</summary>
+        public const int LeftArtifactBase = 40, LeftArtifactPerGuardian = 15;
+        /// <summary>What an unclaimed artifact is worth on a guardian floor: more the deeper the descent has gone.</summary>
+        public static int LeftArtifactCrystalsFor(int floor) => LeftArtifactBase + LeftArtifactPerGuardian * Mathf.Max(0, floor / 5 - 1);
+        public int LeftArtifactCrystals => LeftArtifactCrystalsFor(Floor);
 
         /// <summary>Leaves the guardian's artifact behind for a pile of crystals instead of an ability.</summary>
         public bool LeaveArtifact()

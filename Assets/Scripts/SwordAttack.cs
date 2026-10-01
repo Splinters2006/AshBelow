@@ -125,7 +125,9 @@ namespace Slopgame
             {
                 var enemy = Player.Run.Enemies[i];
                 Vector2 offset = enemy.transform.position - transform.position;
-                bool inside = HitsWholeBody ? OverlapsCone(offset, aim, reach, cone, enemy.HitRadius) : ContainsTarget(offset, aim, reach, cone);
+                // A dagger thrust is narrow, so it is tested against the enemy's whole body rather than its centre point:
+                // anything the blade visibly passes through (or that stands on top of the Assassin) is hit.
+                bool inside = HitsWholeBody || Player.ClassWeapon == WeaponType.Daggers ? OverlapsCone(offset, aim, reach, cone, enemy.HitRadius) : ContainsTarget(offset, aim, reach, cone);
                 if (inside && Player.Run.HasLineOfSight(transform.position, enemy.transform.position))
                 {
                     // Counterweight: a full slash hurls enemies back and staggers them.

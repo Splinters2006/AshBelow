@@ -6,6 +6,8 @@ namespace Slopgame
     /// The Gambler's class mechanic, bought in the Ash shop like the others: the key opens his purse, a small shop
     /// paid for in coins. Every coin spent here is one fewer in his volley. The game keeps running while it is open.
     /// The free coin he gets when he runs dry belongs to his weapon (GamblerAttack), not to this.
+    /// With its R upgrade (The Safe, from the Ash shop) the purse holds a safe: coins go in ten at a time, every
+    /// guardian that falls multiplies what is inside by 1.1, and each withdrawal takes out exactly half of it.
     /// </summary>
     public sealed class GamblerPurse : ClassMechanic
     {
@@ -27,7 +29,45 @@ namespace Slopgame
             new Offer(Ware.Dice, "Loaded Dice", "+1 damage until the next floor", 80),
         };
 
+        public const int SafeDeposit = 10;
+        public const float SafeInterest = 1.1f;
         private int diceFloor = -1, dice;
+        public bool HasSafe => IsUpgraded;
+        /// <summary>Coins locked in the safe for this descent.</summary>
+        public int Safe { get; private set; }
+        /// <summary>What one withdrawal pays out: half the safe, rounded up so the last coin can come out.</summary>
+        public int SafeWithdrawal => (Safe + 1) / 2;
+        public bool CanDeposit => HasSafe && Coins != null && Player.Run.IsPlaying && Player.Health > 0 && Coins.Coins >= SafeDeposit && Safe < GamblerAttack.MaxCoins;
+        public bool CanWithdraw => HasSafe && Coins != null && Player.Run.IsPlaying && Player.Health > 0 && Safe > 0;
+
+        public bool Deposit()
+        {
+            if (!CanDeposit || !Coins.Spend(SafeDeposit)) return false;
+            Safe += SafeDeposit;
+            LastResult = $"Clunk. {Safe:N0} in the safe.";
+            return true;
+        }
+
+        public bool Withdraw()
+        {
+            if (!CanWithdraw) return false;
+            int amount = SafeWithdrawal;
+            Safe -= amount;
+            Coins.AddCoins(amount);
+            HeroVfx.Sparks(Player.Run.ProjectileRoot, transform.position, GamblerAttack.Gold, 10, 3f, 0.3f, Vector2.up, 120f);
+            LastResult = $"Half out: +{amount:N0} coins.";
+            return true;
+        }
+
+        public override void OnGuardianDefeated()
+        {
+            if (!HasSafe || Safe <= 0) return;
+            int before = Safe;
+            Safe = (int)Mathf.Min(GamblerAttack.MaxCoins, Mathf.Round(Safe * SafeInterest));
+            LastResult = $"Interest: +{Safe - before:N0} in the safe.";
+            HeroVfx.Motes(Player.Run.ProjectileRoot, transform.position, 0.7f, GamblerAttack.Gold, 14, 0.9f);
+        }
+
         public bool IsOpen { get; private set; }
         public string LastResult { get; private set; }
         public GamblerAttack Coins => Player.Weapon as GamblerAttack;

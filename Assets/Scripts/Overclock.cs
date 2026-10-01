@@ -5,7 +5,8 @@ namespace Slopgame
     /// <summary>
     /// The Augment's class mechanic: every enemy his plasma ray strikes charges it. After 25 he overclocks for 8 seconds:
     /// every ray is fully charged and fires twice as fast, the cannon is vented (ready at once), fires fully charged and
-    /// cools down twice as fast.
+    /// cools down twice as fast. With its R upgrade (Missile Rack, from the Ash shop) every ray he fires while
+    /// overclocked is joined by a homing mini missile.
     /// </summary>
     public sealed class Overclock : ChargedMechanic
     {

@@ -15,6 +15,7 @@ namespace Slopgame
         public static readonly Color AscendColor = new Color(0.62f, 0.2f, 1f);
         public static readonly Color FuryColor = new Color(1f, 0.45f, 0.1f);
         public static readonly Color TauntColor = new Color(0.95f, 0.08f, 0.05f);
+        public static readonly Color IncarnateColor = new Color(0.7f, 1f, 0.88f);
         public DungeonPlayer Player { get; set; }
         private float empoweredUntil, ragingUntil, tiredUntil, ascendedUntil, furiousUntil, jackpotSpeedUntil, jackpotDamageUntil, nextFx;
         private float jackpotSpeed = 1f;
@@ -53,7 +54,12 @@ namespace Slopgame
         public float ChargeDurationMultiplier => (IsEmpowered ? 0.7f : 1f) * (IsRaging ? 0.5f : IsTired ? 1.5f : 1f) * (IsFurious ? 0.4f : 1f)
             * (IsAscended ? 1f / 1.5f : 1f);
         public float AttackSizeMultiplier => (IsEmpowered ? 1.1f : 1f) * (IsFurious ? 1.5f : 1f);
-        public float DamageMultiplier => (IsRaging ? 2f : IsTired ? 0.5f : 1f) * (IsFurious ? 2f : 1f) * (IsGreedy ? 2f : 1f);
+        public float DamageMultiplier => (IsRaging ? 2f : IsTired ? 0.5f : 1f) * (IsFurious ? 2f : 1f) * (IsGreedy ? 2f : 1f) * (IsIncarnate ? 2f : 1f);
+        /// <summary>The Reaper as the incarnation of death (Army of the Dead at 99 souls): double damage, and every hit strikes fear.</summary>
+        public bool IsIncarnate => Time.time < incarnateUntil;
+        public float IncarnateRemaining => Mathf.Max(0f, incarnateUntil - Time.time);
+        private float incarnateUntil;
+        public void Incarnate(float duration) => incarnateUntil = Mathf.Max(incarnateUntil, Time.time + duration);
         /// <summary>Snake Eyes: a lost All In doubles the Gambler's damage for a while.</summary>
         public bool IsGreedy => Time.time < greedUntil;
         private float greedUntil;
@@ -89,7 +95,8 @@ namespace Slopgame
         public void Clear() { empoweredUntil = ragingUntil = tiredUntil = ascendedUntil = furiousUntil = jackpotSpeedUntil = jackpotDamageUntil = 0f; }
 
         /// <summary>The hero's body colour with a hint of the strongest active buff.</summary>
-        public Color Tint(Color baseColor) => Tint(baseColor, IsEmpowered, IsRaging, IsTired, IsAscended, IsFurious);
+        public Color Tint(Color baseColor) => IsIncarnate ? Color.Lerp(baseColor, IncarnateColor, 0.55f + 0.3f * (0.5f + 0.5f * Mathf.Sin(Time.time * 14f)))
+            : Tint(baseColor, IsEmpowered, IsRaging, IsTired, IsAscended, IsFurious);
 
         /// <summary>Shield Taunt: the Knight goes red in the face with rage, throbbing fast.</summary>
         public static Color AngryTint(Color baseColor)

@@ -21,7 +21,7 @@ namespace Slopgame
         public bool IsSpent { get; private set; }
 
         /// <param name="origin">Where the spell starts; the caster's position by default (Wild Storm casts from its cloud).</param>
-        /// <param name="guaranteedEffect">Skip the effect roll: every hit sets off its element (Wild Storm, Inferno Orb).</param>
+        /// <param name="guaranteedEffect">Skip the effect roll: every hit sets off its element (Wild Storm).</param>
         public static SpellProjectile Spawn(DungeonPlayer player, Vector2 direction, int damage,
             DamageElement element, Color color, float range = 6f, float radius = 0f, int pierces = 0, Vector2? origin = null,
             bool guaranteedEffect = false)

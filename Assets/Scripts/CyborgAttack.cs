@@ -54,6 +54,8 @@ namespace Slopgame
             aim.Normalize();
             int hits = FireRay(Player, Muzzle(aim), aim, RayReach(charge), RayWidthFor(charge) + Player.Powerups.Count(PowerupType.WideBeam) * 0.08f, Player.Charge.Damage(charge));
             (Player.Mechanic as Overclock)?.OnRayHits(hits);
+            // Missile Rack (Overclock's R upgrade): while overclocked, every ray is joined by a homing mini missile.
+            if (IsOverclocked && Player.Permanent != null && Player.Permanent.MechanicUpgraded) LaunchEscort(aim);
             if (charge >= 1f) ScreenFx.Shake(0.06f, 0.1f);
             readyAt = Time.time + RayInterval * Player.Powerups.AttackIntervalMultiplier * (IsOverclocked ? 0.5f : 1f);
             return true;
@@ -237,6 +239,24 @@ namespace Slopgame
         public int MissileCount(int rank) => BaseMissiles + rank - 1 + Player.Powerups.Count(PowerupType.Payload) * 2;
         public float BoostReach => BoostDistance + Player.Powerups.Count(PowerupType.Afterburner) * 0.6f;
         public float TurretTime(int rank) => TurretDuration + rank - 1 + Player.Powerups.Count(PowerupType.ExtendedBattery) * 2f;
+
+        /// <summary>One mini missile fired alongside a ray, homing on the nearest enemy in sight (or flying straight with nobody to chase).</summary>
+        private void LaunchEscort(Vector2 aim)
+        {
+            var run = Player.Run;
+            Vector2 origin = transform.position;
+            DungeonEnemy target = null;
+            float nearest = MissileRange;
+            foreach (var enemy in run.Enemies)
+            {
+                if (enemy == null || enemy.Health <= 0) continue;
+                float distance = Vector2.Distance(origin, enemy.transform.position);
+                if (distance > nearest || !run.HasLineOfSight(origin, enemy.transform.position)) continue;
+                nearest = distance;
+                target = enemy;
+            }
+            MicroMissile.Launch(Player, origin + aim * 0.3f, aim, target, Player.Damage);
+        }
 
         /// <summary>A fan of homing missiles, shared out over the nearest enemies in sight.</summary>
         private void LaunchMissiles(Vector2 aim, int rank)

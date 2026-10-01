@@ -46,7 +46,9 @@ namespace Slopgame
         // Reaper.
         GraveTithe,
         // Universal: elements set enemies up to be held.
-        ElementalImmobilization
+        ElementalImmobilization,
+        // Reaper.
+        SoulFury
     }
 
     public sealed class PowerupDefinition
@@ -113,10 +115,10 @@ namespace Slopgame
             new PowerupDefinition(PowerupType.CraterMaker, "Crater Maker", "+0.5 Wild Leap slam radius", 3, WeaponType.Fists, AbilityType.WildLeap),
             new PowerupDefinition(PowerupType.Bloodlust, "Bloodlust", "+1 second of Primal Rage", 3, WeaponType.Fists, AbilityType.PrimalRage),
             new PowerupDefinition(PowerupType.NerveStrike, "Demoness: Nerve Strike", "+0.25 seconds on all your paralysis", 3, WeaponType.Tail),
-            new PowerupDefinition(PowerupType.LongTail, "Demoness: Long Tail", "+0.3 tail sweep reach", 3, WeaponType.Tail),
+            new PowerupDefinition(PowerupType.LongTail, "Demoness: Long Tail", "+0.5 tail sweep reach", 3, WeaponType.Tail),
             new PowerupDefinition(PowerupType.Bloodline, "Bloodline", "+1 second of Archdemon's Technique", 3, WeaponType.Tail, AbilityType.ArchdemonTechnique),
             new PowerupDefinition(PowerupType.BigPaws, "Good Boy", "+0.4 HEEEELP slam radius", 3, WeaponType.Tail, AbilityType.DemonPaw),
-            new PowerupDefinition(PowerupType.HexMastery, "Hex Mastery", "+0.5 seconds of Demon Curse paralysis", 3, WeaponType.Tail, AbilityType.DemonCurse),
+            new PowerupDefinition(PowerupType.HexMastery, "Hex Mastery", "Enemies under your Demon Curse take 25% more damage per rank", 3, WeaponType.Tail, AbilityType.DemonCurse),
             new PowerupDefinition(PowerupType.LooseChange, "Gambler: Loose Change", "+5% chance for a gold coin picked up to be worth an extra coin", 3, WeaponType.Coins),
             new PowerupDefinition(PowerupType.LongToss, "Gambler: Long Toss", "+1 coin throw and volley range", 3, WeaponType.Coins),
             new PowerupDefinition(PowerupType.MintCondition, "Mint Condition", "+2 coins from Windfall", 3, WeaponType.Coins, AbilityType.Windfall),
@@ -215,9 +217,9 @@ namespace Slopgame
             new PowerupDefinition(PowerupType.MeteorLeap, "Meteor Leap", "Wild Leap's slam sets enemies burning", 1, WeaponType.Fists, AbilityType.WildLeap),
             new PowerupDefinition(PowerupType.SandwichSpecial, "Sandwich Special", "Knuckle Sandwich sends a shockwave rolling forward past its box", 1, WeaponType.Fists, AbilityType.KnuckleSandwich),
             new PowerupDefinition(PowerupType.LingeringTerror, "Demoness: Lingering Terror", "When your paralysis wears off, the enemy stays 40% slower for 2 seconds", 1, WeaponType.Tail),
-            new PowerupDefinition(PowerupType.Torment, "Demoness: Torment", "Each vital stab on the same enemy deals +1 more than the last", 1, WeaponType.Tail),
+            new PowerupDefinition(PowerupType.Torment, "Demoness: Torment", "Each hit in a row on a paralysed enemy deals +1 more than the last, until its paralysis ends", 1, WeaponType.Tail),
             new PowerupDefinition(PowerupType.DreadAura, "Demoness: Dread Aura", "Enemies within 3 units act and attack 25% slower", 1, WeaponType.Tail),
-            new PowerupDefinition(PowerupType.BloodPact, "Demoness: Blood Pact", "-1 max HP, but all your paralysis lasts 0.5 seconds longer", 1, WeaponType.Tail),
+            new PowerupDefinition(PowerupType.BloodPact, "Demoness: Blood Pact", "-1 max HP, but all your paralysis lasts 1 second longer", 1, WeaponType.Tail),
             new PowerupDefinition(PowerupType.CursedPaw, "Cursed Paw", "HEEEELP's slam leaves a Demon Curse where it lands", 1, WeaponType.Tail, AbilityType.DemonPaw),
             new PowerupDefinition(PowerupType.InfernalTechnique, "Infernal Technique", "During Archdemon's Technique, tail whips set enemies burning", 1, WeaponType.Tail, AbilityType.ArchdemonTechnique),
             new PowerupDefinition(PowerupType.Ricochet, "Gambler: Ricochet", "Thrown coins bounce on to a second enemy", 1, WeaponType.Coins),
@@ -241,7 +243,8 @@ namespace Slopgame
             new PowerupDefinition(PowerupType.Domino, "Domino", "When an immobilized enemy dies, enemies within 1.5 units are stunned for 0.75 seconds", 1),
             new PowerupDefinition(PowerupType.Frenzy, "Frenzy", "+25% attack and charge speed", 1),
             new PowerupDefinition(PowerupType.GraveTithe, "Reaper: Grave Tithe", "Killing an immobilized enemy (afraid, paralysed, frozen, stunned or rooted) gives you a soul", 1, WeaponType.Scythe),
-            new PowerupDefinition(PowerupType.ElementalImmobilization, "Elemental Immobilization", "When an enemy is affected by an element (burning, chilled, frozen or shocked), your next hit against it stuns it for 1 second (once every 3 seconds)", 1)
+            new PowerupDefinition(PowerupType.ElementalImmobilization, "Elemental Immobilization", "When an enemy is affected by an element (burning, chilled, frozen or shocked), your next hit against it stuns it for 1 second (once every 3 seconds)", 1),
+            new PowerupDefinition(PowerupType.SoulFury, "Reaper: Soul Fury", "Deal 1% / 2% / 3% more damage by rank for every soul you hold", 3, WeaponType.Scythe)
         };
 
         private static readonly Dictionary<PowerupType, PowerupDefinition> byType = BuildLookup();

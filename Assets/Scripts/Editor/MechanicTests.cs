@@ -268,11 +268,10 @@ namespace Slopgame.Editor
                     var tail = (DemonessAttack)player.Weapon;
                     Require(tail.TryAttack(aim, 1f) && enemies[0].IsParalyzed && power.Charge == 1, "A vital stab did not charge Demonic Power.");
                     for (int i = 0; i < DemonicPower.ParalysesNeeded - 1; i++) power.OnImmobilized();
-                    enemies[1].Facing.Face(-(Vector2)(enemies[1].transform.position - player.transform.position));
-                    Require(power.TryActivate(aim) && power.Charge == 0, "Demonic Power did not activate.");
-                    Vector2 away = (enemies[1].transform.position - player.transform.position).normalized;
-                    Require(enemies[1].IsParalyzed && Vector2.Dot(enemies[1].Facing.Direction, away) > 0.99f && enemies[1].Facing.IsBehind(player.transform.position),
-                        "Feared enemies did not turn their backs and freeze.");
+                    float reach = tail.SweepReach;
+                    Require(power.TryActivate(aim) && power.Charge == 0 && power.IsActive, "Demonic Power did not activate.");
+                    Require(tail.HasTwinTails && tail.SweepArc == 360f && Mathf.Approximately(tail.SweepReach, reach * DemonicPower.SweepReachMultiplier),
+                        "Twin tails did not double the sweep's cone and lengthen its reach.");
                     return false;
                 }
                 case WeaponType.Beam:

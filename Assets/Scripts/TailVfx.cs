@@ -4,26 +4,39 @@ namespace Slopgame
 {
     /// <summary>
     /// The Demoness's tail: a black, violet-rimmed tail with a spade tip that curls up from behind her. A stab thrusts
-    /// it straight out and snaps back; a sweep swings it across a cone behind a crescent wake.
+    /// it straight out and snaps back; a sweep swings it across a cone behind a crescent wake. While Demonic Power has
+    /// split it in two, a stab shows both tails curling in from either side and a sweep swings one tail through each half of the circle.
     /// </summary>
     public sealed class TailVfx : MeshEffect
     {
         private const int Points = 14;
         private readonly Vector2[] points = new Vector2[Points];
         private Vector2 origin, aim;
-        private float reach, cone;
+        private float reach, cone, girth = 1f, flip = 1f;
         private Color color;
         private bool sweep;
 
-        public static void Stab(Transform root, Vector2 origin, Vector2 aim, float reach, Color color)
-            => Create(root, origin, aim, reach, 0f, color, false, 0.22f);
+        /// <param name="twin">True while the tail is split: a second tail mirrors the first.</param>
+        public static void Stab(Transform root, Vector2 origin, Vector2 aim, float reach, Color color, bool twin = false)
+        {
+            Create(root, origin, aim, reach, 0f, color, false, 0.22f);
+            if (twin) Create(root, origin, aim, reach, 0f, color, false, 0.22f, -1f);
+        }
 
         public static void Sweep(Transform root, Vector2 origin, Vector2 aim, float reach, float cone, Color color)
         {
+            // Twin tails (a sweep wider than a half circle): one tail swings through each half of it, back to back.
+            if (cone > SplitCone)
+            {
+                Sweep(root, origin, aim, reach, cone * 0.5f, color);
+                Sweep(root, origin, -aim, reach, cone * 0.5f, color);
+                return;
+            }
             if (Create(root, origin, aim, reach, cone, color, true, 0.3f)) HeroVfx.Slash(root, origin, aim, reach, cone, color, 0.26f);
         }
+        private const float SplitCone = 200f;
 
-        private static bool Create(Transform root, Vector2 origin, Vector2 aim, float reach, float cone, Color color, bool sweep, float duration)
+        private static bool Create(Transform root, Vector2 origin, Vector2 aim, float reach, float cone, Color color, bool sweep, float duration, float flip = 1f)
         {
             if (aim.sqrMagnitude < 0.0001f) return false;
             var effect = Spawn<TailVfx>(root, duration);
@@ -34,6 +47,9 @@ namespace Slopgame
             effect.cone = cone;
             effect.color = color;
             effect.sweep = sweep;
+            effect.flip = flip;
+            // A sweep longer than the base tail (Long Tail) is drawn proportionally thicker, with a bigger spade.
+            effect.girth = sweep ? Mathf.Max(1f, effect.reach / DemonessAttack.SweepRadius) : 1f;
             effect.Redraw();
             return true;
         }
@@ -56,20 +72,21 @@ namespace Slopgame
 
         private void DrawTail(Vector2 direction, float length, float fade, float glint)
         {
-            Vector2 side = Vector2.Perpendicular(direction);
+            Vector2 side = Vector2.Perpendicular(direction) * flip;
             // From behind her hip, arcing up over the shoulder and down onto the target.
             Vector2 start = origin - direction * 0.25f - side * 0.2f;
-            Vector2 tip = origin + direction * length;
+            // The spade's point, not its base, lands exactly on the hit reach.
+            Vector2 tip = origin + direction * Mathf.Max(0.2f, length - 0.14f * girth);
             Vector2 bend = origin + direction * length * 0.35f + side * (0.35f + length * 0.15f);
             for (int i = 0; i < Points; i++)
             {
                 float u = i / (float)(Points - 1);
                 points[i] = (1 - u) * (1 - u) * start + 2 * (1 - u) * u * bend + u * u * tip;
             }
-            Stroke(points, Points, 0.28f, 0.14f, FlameMesh.Alpha(color, 0.35f * fade), FlameMesh.Alpha(color, 0.6f * fade));
-            Stroke(points, Points, 0.15f, 0.07f, FlameMesh.Alpha(DemonessAttack.Abyss, fade), FlameMesh.Alpha(DemonessAttack.Abyss, fade));
+            Stroke(points, Points, 0.28f * girth, 0.14f * girth, FlameMesh.Alpha(color, 0.35f * fade), FlameMesh.Alpha(color, 0.6f * fade));
+            Stroke(points, Points, 0.15f * girth, 0.07f * girth, FlameMesh.Alpha(DemonessAttack.Abyss, fade), FlameMesh.Alpha(DemonessAttack.Abyss, fade));
             // The spade tip, pointing along the last stretch of tail.
-            Vector2 end = (tip - points[Points - 2]).normalized, normal = Vector2.Perpendicular(end);
+            Vector2 end = (tip - points[Points - 2]).normalized * girth, normal = Vector2.Perpendicular(end);
             Vector2 back = tip - end * 0.3f;
             Color dark = FlameMesh.Alpha(DemonessAttack.Abyss, fade), rim = FlameMesh.Alpha(color, fade);
             Mesh.Triangle(back + normal * 0.2f, tip + end * 0.14f, back - normal * 0.2f, rim, FlameMesh.Alpha(DemonessAttack.Pale, fade), rim);

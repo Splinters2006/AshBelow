@@ -107,12 +107,14 @@ namespace Slopgame
             HeroVfx.Motes(player.Run.ProjectileRoot, player.transform.position, 0.6f, DungeonEnemy.BleedColor, 8, 0.7f);
         }
 
+        /// <summary>Soul Fury: extra damage per rank for every soul held.</summary>
+        public const float SoulFuryPerSoul = 0.01f;
         /// <summary>Cheat Death's once-per-world save is spent.</summary>
         public bool CheatDeathSpent { get; set; }
 
         /// <summary>
-        /// Damage multiplier from the hero's own state: Glass Cannon, Last Stand, Berserker and the Ash shop's Infernal Pact,
-        /// plus Rhythm's double beat while a basic attack is being thrown.
+        /// Damage multiplier from the hero's own state: Glass Cannon, Last Stand, Berserker, Soul Fury and the Ash shop's
+        /// Infernal Pact, plus Rhythm's double beat while a basic attack is being thrown.
         /// </summary>
         public float DamageMultiplier(DungeonPlayer player)
         {
@@ -122,6 +124,9 @@ namespace Slopgame
             if (Count(PowerupType.Berserker) > 0 && player.MaxHealth > 0)
                 multiplier *= 1f + (player.MaxHealth - Mathf.Max(0, player.Health)) / (float)player.MaxHealth;
             if (inBasicAttack && rhythmBeat) multiplier *= 2f;
+            // Soul Fury: every soul the Reaper holds makes him hit harder.
+            if (Count(PowerupType.SoulFury) > 0 && player.Weapon is ReaperAttack reaper)
+                multiplier *= 1f + SoulFuryPerSoul * Count(PowerupType.SoulFury) * reaper.Souls;
             return multiplier;
         }
         /// <summary>Flat damage added while a basic attack is being thrown (Spellblade).</summary>

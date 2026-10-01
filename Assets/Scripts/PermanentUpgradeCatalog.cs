@@ -15,9 +15,14 @@ namespace Slopgame
         public int RequiredGuardians { get; }
         /// <summary>The world that must be cleared once (by any hero) before this is sold; -1 for none.</summary>
         public int RequiredWorld { get; }
+        /// <summary>Another upgrade that must be owned first (a class mechanic, for its R upgrade); null for none.</summary>
+        public string RequiredUpgrade { get; }
+        /// <summary>True for the upgrade to a class mechanic (see <see cref="PermanentUpgradeCatalog.MechanicUpgradeId"/>).</summary>
+        public bool IsMechanicUpgrade => RequiredUpgrade != null;
         public PermanentUpgradeDefinition(string id, string name, string description, int maxRank, int cost, int step, WeaponType? weapon = null,
-            int requiredGuardians = 0, int requiredWorld = -1)
+            int requiredGuardians = 0, int requiredWorld = -1, string requiredUpgrade = null)
         {
+            RequiredUpgrade = requiredUpgrade;
             Id = id; Name = name; Description = description; MaxRank = maxRank; BaseCost = cost; CostStep = step; ClassWeapon = weapon;
             RequiredGuardians = requiredGuardians; RequiredWorld = requiredWorld;
         }
@@ -82,10 +87,21 @@ namespace Slopgame
             Mechanic(WeaponType.Daggers, "Sharpened Dagger", "R: +1 damage for 7.5s; every backstab adds +1 more and refreshes it"),
             Mechanic(WeaponType.Hammer, "Heavenly Host", "R: after 50 blessed bonus damage, angels revive the longest-fallen ally or fully heal the weakest"),
             Mechanic(WeaponType.Fists, "Super Angry", "R: after taking 5 damage, erupt with huge speed, reach, charge speed and damage"),
-            Mechanic(WeaponType.Tail, "Demonic Power", "R: after immobilizing enemies 7 times (paralysis, freeze, stun or root), terrify everything nearby: they turn their backs and freeze in place"),
+            Mechanic(WeaponType.Tail, "Demonic Power", "R: after immobilizing enemies 7 times (paralysis, freeze, stun or root), split your tail in two for 10s: tail sweeps cover twice the cone and reach 25% farther"),
             Mechanic(WeaponType.Coins, "The Purse", "R: open your purse, a shop paid for in coins: healing, wards or loaded dice"),
             Mechanic(WeaponType.Beam, "Overclock", "R: after your plasma ray strikes 25 enemies, overclock for 8s: fully charged rays at double speed and a vented, faster cannon"),
-            Mechanic(WeaponType.Scythe, "Army of the Dead", "R: spend 3 souls to raise a skeleton that fights for you. Frail and weak, but its health and damage grow with yours, and its blows strike fear for 1 second")
+            Mechanic(WeaponType.Scythe, "Army of the Dead", "R: spend 3 souls to raise a skeleton that fights for you. Frail and weak, but its health and damage grow with yours, and its blows strike fear for 1 second"),
+            // R upgrades: one per class mechanic, sold once the Neon Arcology is cleared and the mechanic itself is owned.
+            MechanicUpgrade(WeaponType.Sword, "Retribution", "When Shield Taunt ends, every nearby enemy takes your damage multiplied by the hits you blocked or took while it lasted"),
+            MechanicUpgrade(WeaponType.Bow, "Elemental Surge", "Hold R to surge for 6 seconds: every arrow sets off its element, crit or not. Tapping R still cycles elements. 30 second cooldown"),
+            MechanicUpgrade(WeaponType.Staff, "Cataclysm", "Wild Storm grows wilder: a far bigger thundercloud that also rains meteors and lightning strikes from the sky onto nearby enemies, on top of its fireballs, zaps and ice bolts"),
+            MechanicUpgrade(WeaponType.Daggers, "Razor's Edge", "Sharpened Dagger lasts 10s instead of 7.5s, and while it is up every stab is fully charged instantly"),
+            MechanicUpgrade(WeaponType.Hammer, "Seraphim", "Heavenly Host helps 2 allies instead of 1. If only one needs it, you gain a +5 damage blessing for 30 seconds instead"),
+            MechanicUpgrade(WeaponType.Fists, "Mastered Technique", "While Super Angry, rolling no longer cuts your barrage short: you keep punching straight through the dodge"),
+            MechanicUpgrade(WeaponType.Coins, "The Safe", "Your purse holds a safe: deposit 10 coins per click, every guardian you defeat multiplies its contents by 1.1, and each withdrawal takes out exactly 50% of it"),
+            MechanicUpgrade(WeaponType.Beam, "Missile Rack", "While overclocked, every plasma ray you fire also launches a homing mini missile"),
+            MechanicUpgrade(WeaponType.Tail, "Dread Presence", "During Demonic Power, every enemy that comes within 5 units of you is paralysed for 2 seconds"),
+            MechanicUpgrade(WeaponType.Scythe, "Avatar of Death", "With 99 souls, R spends 99 instead of raising a skeleton: for 5 seconds you are the incarnation of death, dealing double damage and striking 1 second of fear with every hit")
         };
 
         public const string EmberHeartId = "ember_heart", BackupDriveId = "backup_drive", TargetingChipId = "targeting_chip",
@@ -109,6 +125,13 @@ namespace Slopgame
             return new PermanentUpgradeDefinition(ability.UnlockId, "Ability: " + ability.Name, ability.Description + " Guardians can offer it once bought.",
                 1, cost, 0, ability.ClassWeapon);
         }
+
+        /// <summary>The upgrade to a class mechanic (R): sold once its world is cleared, to heroes who already own the mechanic.</summary>
+        public const int MechanicUpgradeCost = 2500, MechanicUpgradeWorld = 1;
+        public static string MechanicUpgradeId(WeaponType weapon) => "mechanic_upgrade_" + weapon.ToString().ToLowerInvariant();
+
+        private static PermanentUpgradeDefinition MechanicUpgrade(WeaponType weapon, string name, string description)
+            => new PermanentUpgradeDefinition(MechanicUpgradeId(weapon), name, description, 1, MechanicUpgradeCost, 0, weapon, 0, MechanicUpgradeWorld, MechanicId(weapon));
 
         private static PermanentUpgradeDefinition Mechanic(WeaponType weapon, string name, string description)
             => new PermanentUpgradeDefinition(MechanicId(weapon), name, description, 1, MechanicCost, 0, weapon, MechanicGuardians);

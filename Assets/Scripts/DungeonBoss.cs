@@ -37,7 +37,10 @@ namespace Slopgame
         /// cooldowns and recoveries all come round sooner. Hazard warnings still last their full time.
         /// </summary>
         public const float AttackPace = 1.3f;
-        /// <summary>What every guardian blow costs the hero: its touch, its bolts and its hazards (everything else deals 1).</summary>
+        /// <summary>
+        /// What every guardian blow costs the hero in the first world: its touch, its bolts and its hazards (everything else
+        /// deals 1). Later worlds add to it, see <see cref="WorldDefinition.GuardianHitDamage"/>.
+        /// </summary>
         public const int HitDamage = 2;
         /// <summary>Guardians also close in this much faster than their style's base speed.</summary>
         public const float ChaseSpeedBoost = 1.15f;
@@ -91,7 +94,7 @@ namespace Slopgame
                 : Kind == BossKind.Duelist ? gameObject.AddComponent<DuelistBoss>()
                 : Kind == BossKind.Archdemon ? (BossBehaviour)gameObject.AddComponent<ArchdemonBoss>()
                 : gameObject.AddComponent<AshWardenBoss>();
-            // Deadlier worlds (the Infernal Court) field tougher guardians too.
+            // Every world past the first fields tougher guardians, deadlier worlds (the Infernal Court) tougher still.
             MaxHealth = Mathf.CeilToInt(ScaledHealth(Behaviour.BaseHealth(run.Floor), run.PartySize) * run.World.GuardianHealthMultiplier);
             Enemy.Health = MaxHealth;
             Behaviour.Setup(this);

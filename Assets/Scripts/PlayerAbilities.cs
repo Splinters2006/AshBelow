@@ -188,7 +188,8 @@ namespace Slopgame
                     BearTrap.Set(Player, FindGroundLanding(Player.Run.Map, transform.position, aim, Mathf.Min(BearTrap.Range, cursorDistance)),
                         Player.Damage * 3 + rank - 1, 2f + (rank - 1) * 0.5f); break;
                 case AbilityType.Volley:
-                    ArrowRain.Cast(Player, FindGroundLanding(Player.Run.Map, transform.position, aim, Mathf.Min(ArrowRain.Range, cursorDistance)),
+                    // Arrows fall from the sky, so the volley can be called down on the far side of a wall.
+                    ArrowRain.Cast(Player, FindOpenLanding(Player.Run.Map, transform.position, aim, Mathf.Min(ArrowRain.Range, cursorDistance)),
                         ArrowRain.BaseArrows + powers.Count(PowerupType.VolleyCount) * ArrowRain.ArrowsPerRank, Player.Damage + rank - 1); break;
                 case AbilityType.PiercingShot:
                     PiercingArrow.Fire(Player, aim, damage + 1 + powers.Count(PowerupType.PiercingPower) * 2); break;
@@ -197,7 +198,7 @@ namespace Slopgame
                     Fan(aim, 3, BowAttack.SpreadAngle, Player.Damage + rank - 1, BowAttack.HeavyRange); break;
                 case AbilityType.Fireball:
                     var orb = SpellProjectile.Spawn(Player, aim, damage, DamageElement.Fire, definition.Color, 7f,
-                        1.7f + powers.Count(PowerupType.FireballRadius) * 0.4f, guaranteedEffect: true);
+                        1.7f + powers.Count(PowerupType.FireballRadius) * 0.4f);
                     // Storm-Charged Orb: held to full charge, the blast shocks everything it burns.
                     if (orbCharge >= 1f) { orb.StormCharged = true; HeroVfx.Pulse(Player.Run.ProjectileRoot, transform.position, 1f, CombatDamage.ShockColor, 0.3f); }
                     break;
@@ -441,6 +442,22 @@ namespace Slopgame
             return landing;
         }
 
+        /// <summary>
+        /// The farthest standable point up to <paramref name="distance"/> along <paramref name="aim"/>, walls in between or
+        /// not: for whatever drops in from above (Arrow Volley).
+        /// </summary>
+        public static Vector2 FindOpenLanding(DungeonMap map, Vector2 from, Vector2 aim, float distance)
+        {
+            if (aim.sqrMagnitude < 0.0001f) return from;
+            aim.Normalize();
+            for (float travel = distance; travel > 0.05f; travel -= 0.1f)
+            {
+                Vector2 spot = from + aim * travel;
+                if (map.CanStand(spot, 0.1f)) return spot;
+            }
+            return from;
+        }
+
         public static bool FindShadowstepLanding(DungeonMap map, Vector2 from, Vector2 aim, float distance, out Vector2 landing)
         {
             landing = from;
@@ -551,7 +568,7 @@ namespace Slopgame
                     if (enemy != null && !hit.Contains(enemy) && InArea(enemy, center, r))
                     {
                         hit.Add(enemy);
-                        CombatDamage.Apply(Player, enemy, damage, DamageElement.Ice, center, guaranteedEffect: true);
+                        CombatDamage.Apply(Player, enemy, damage, DamageElement.Ice, center);
                         if (enemy.Health > 0) enemy.Freeze(freeze);
                     }
                 if (progress >= 1f)

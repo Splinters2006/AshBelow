@@ -5,13 +5,19 @@ namespace Slopgame
     /// <summary>
     /// The Knight's class mechanic: for 2.25 seconds he turns red with rage and stops bolts from every side. He can walk
     /// but do nothing else. It does not reflect, but every bolt he stops grants a ward. In co-op, enemies target him
-    /// first for a few seconds.
+    /// first for a few seconds. With its R upgrade (Retribution, from the Ash shop), the rage bursts out when the taunt
+    /// ends: every nearby enemy takes his damage once for each hit he stopped or took while it lasted.
     /// </summary>
     public sealed class ShieldTaunt : ClassMechanic
     {
         public const float Duration = 2.25f, Cooldown = 12f, Reach = 2.025f, Cone = 360f, AggroDuration = 6f;
         public static readonly Color ShieldColor = new Color(0.4f, 0.75f, 1f);
+        // Half as wide again as the taunt's own ring.
+        public const float RetributionRadius = Reach * 1.6f * 1.5f;
         private float until, readyAt, aggroUntil, nextFx;
+        private bool wasTaunting, listening;
+        /// <summary>Bolts stopped and blows taken during this taunt; Retribution's multiplier.</summary>
+        public int Hits { get; private set; }
         public override string Name => "Shield Taunt";
         public override Color Color => ShieldColor;
         public float CooldownRemaining => DebugMode.Cooldown(Mathf.Max(0f, readyAt - Time.time));
@@ -28,6 +34,9 @@ namespace Slopgame
             if (!CanAct || CooldownRemaining > 0f || aim.sqrMagnitude < 0.001f) return false;
             Direction = aim.normalized;
             until = Time.time + Duration;
+            Hits = 0;
+            if (!listening) { listening = true; Player.Struck += OnStruck; }
+            wasTaunting = true;
             aggroUntil = Time.time + AggroDuration;
             readyAt = Time.time + Cooldown;
             Player.Weapon?.Hide();
@@ -45,12 +54,44 @@ namespace Slopgame
 
         private void Update()
         {
-            if (Player == null || Player.Run == null || Player.Run.ProjectileRoot == null || !IsTaunting || Time.time < nextFx) return;
+            if (Player == null || Player.Run == null || Player.Run.ProjectileRoot == null) return;
+            if (!IsTaunting)
+            {
+                if (wasTaunting) { wasTaunting = false; Retribution(); }
+                return;
+            }
+            if (Time.time < nextFx) return;
             // Steam of rage puffing off his head.
             nextFx = Time.time + 0.1f;
             var root = Player.Run.ProjectileRoot;
             HeroVfx.Sparks(root, (Vector2)transform.position + Vector2.up * 0.45f, HeroBuffs.TauntColor, 3, 2.6f, 0.35f, Vector2.up, 80f, 1f);
             HeroVfx.Motes(root, (Vector2)transform.position + Vector2.up * 0.6f, 0.25f, new Color(1f, 0.55f, 0.45f), 1, 0.5f);
+        }
+
+        // Every blow that lands on him counts, whether it cost HP or only a ward.
+        private void OnStruck(bool warded) { if (IsTaunting) Hits++; }
+
+        private void OnDestroy() { if (listening && Player != null) Player.Struck -= OnStruck; }
+
+        /// <summary>Retribution: as the taunt ends, every enemy nearby takes his damage times the hits it soaked up.</summary>
+        private void Retribution()
+        {
+            var run = Player.Run;
+            if (!IsUpgraded || Hits <= 0 || !run.IsPlaying || Player.Health <= 0) return;
+            Vector2 at = transform.position;
+            int damage = Player.Damage * Hits;
+            var root = run.ProjectileRoot;
+            HeroVfx.Pulse(root, at, RetributionRadius, HeroBuffs.TauntColor, 0.4f);
+            HeroVfx.Sparks(root, at, HeroBuffs.TauntColor, 24, 6f, 0.45f);
+            CombatVfx.Ring(root, at, RetributionRadius, HeroBuffs.TauntColor, 0.4f);
+            CoopFx.Pulse(run, at, RetributionRadius, HeroBuffs.TauntColor, 0.4f);
+            CoopFx.Ring(run, at, RetributionRadius, HeroBuffs.TauntColor, 0.4f);
+            ScreenFx.Shake(0.25f, 0.25f);
+            foreach (var enemy in run.Enemies.ToArray())
+            {
+                if (enemy == null || enemy.Health <= 0 || Vector2.Distance(at, enemy.transform.position) > RetributionRadius + enemy.HitRadius) continue;
+                CombatDamage.Apply(Player, enemy, damage, DamageElement.Physical, at, 1.2f);
+            }
         }
 
         /// <summary>Stops a bolt at <paramref name="position"/> heading in from any side within reach; each block adds a ward.</summary>
@@ -59,6 +100,7 @@ namespace Slopgame
             Vector2 offset = position - (Vector2)transform.position;
             if (!IsTaunting || offset.sqrMagnitude > Reach * Reach || Vector2.Dot(incoming, offset) >= 0f) return false;
             Player.Powerups.AddWard();
+            Hits++;
             HeroVfx.Sparks(Player.Run.ProjectileRoot, position, ShieldColor, 8, 3.5f, 0.25f, -incoming, 100f);
             HeroVfx.Pulse(transform, transform.position, 0.95f, AbilityCatalog.Ice, 0.2f);
             return true;

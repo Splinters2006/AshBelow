@@ -11,14 +11,25 @@ namespace Slopgame
         /// <summary>How much remaining hold makes Nightmare Snap's tether flare at full width.</summary>
         private const float SnapTetherFullAt = 1f;
         private readonly Dictionary<DungeonEnemy, int> torment = new Dictionary<DungeonEnemy, int>();
+        private readonly List<DungeonEnemy> tormentEnded = new List<DungeonEnemy>();
 
-        /// <summary>Torment: each vital stab on the same enemy adds +1 more than the last (no limit).</summary>
+        /// <summary>Torment: each hit in a row on a paralysed enemy deals +1 more than the last, until its paralysis ends.</summary>
         private int TormentBonus(DungeonEnemy enemy)
         {
-            if (Player.Powerups.Count(PowerupType.Torment) == 0 || enemy == null) return 0;
-            int stabs = torment.TryGetValue(enemy, out int count) ? count : 0;
-            torment[enemy] = stabs + 1;
-            return stabs;
+            if (Player.Powerups.Count(PowerupType.Torment) == 0 || enemy == null || !enemy.IsParalyzed) return 0;
+            int hits = (torment.TryGetValue(enemy, out int count) ? count : 0) + 1;
+            torment[enemy] = hits;
+            return hits;
+        }
+
+        private void Update()
+        {
+            if (torment.Count == 0) return;
+            // The tally is lost the moment the paralysis wears off (or the enemy dies).
+            tormentEnded.Clear();
+            foreach (var enemy in torment.Keys)
+                if (enemy == null || enemy.Health <= 0 || !enemy.IsParalyzed) tormentEnded.Add(enemy);
+            foreach (var enemy in tormentEnded) torment.Remove(enemy);
         }
 
         /// <summary>Wing Dash: her demon wings beat once and she darts forward, paralysing every enemy she passes through.</summary>

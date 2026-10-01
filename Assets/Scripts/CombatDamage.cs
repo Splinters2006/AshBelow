@@ -102,7 +102,7 @@ namespace Slopgame
         /// An element carried by a physical hit (the Archer's Elemental Quiver): it still crits normally, and a critical
         /// hit also sets off that element's effect.
         /// </param>
-        /// <param name="guaranteedEffect">An elemental hit skips its effect roll and always sets off its element (Wild Storm, Inferno Orb, Lightning, Frost Nova).</param>
+        /// <param name="guaranteedEffect">An elemental hit skips its effect roll and always sets off its element (Wild Storm, a storm-charged Inferno Orb, a full plasma cannon).</param>
         public static void Apply(DungeonPlayer player, DungeonEnemy enemy, int damage, DamageElement element, Vector2 source, float knockback = 1f,
             DamageElement infusion = DamageElement.Physical, bool guaranteedEffect = false)
         {
@@ -134,7 +134,9 @@ namespace Slopgame
                     OnBackstab(player, enemy, rolled);
                 }
                 CreditBlessing(player);
-                if (critical && infusion != DamageElement.Physical) ApplyEffect(player, enemy, infusion, rolled);
+                IncarnateFear(player, enemy);
+                // Elemental Surge: while the Archer's quiver surges, every infused hit sets off its element, not only crits.
+                if (infusion != DamageElement.Physical && (critical || ElementalQuiver.IsImbued(player))) ApplyEffect(player, enemy, infusion, rolled);
                 if (enemy.Health <= 0) Overkill(player, enemy, rolled - healthBefore);
                 return;
             }
@@ -145,6 +147,7 @@ namespace Slopgame
             enemy.Hit(damage, source, knockback);
             if (seize) enemy.Stun(ElementalImmobilizationStun);
             CreditBlessing(player);
+            IncarnateFear(player, enemy);
             if (enemy.Health <= 0) Overkill(player, enemy, damage - healthBefore);
             if (player.Powerups.Count(PowerupType.ElementalClash) > 0 && HasEffect(element))
             {
@@ -205,6 +208,13 @@ namespace Slopgame
                 if (first == DamageElement.Fire) enemy.Burn(BurnTicks + player.Powerups.Count(PowerupType.SlowBurn), BurnTickDamage(hit));
                 else enemy.Freeze(FreezeDuration + player.Powerups.Count(PowerupType.Permafrost) * 0.3f);
             }
+        }
+
+        /// <summary>The incarnation of death: every hit the Reaper lands strikes fear into whatever survives it.</summary>
+        private static void IncarnateFear(DungeonPlayer player, DungeonEnemy enemy)
+        {
+            if (player != null && player.Buffs != null && player.Buffs.IsIncarnate && enemy != null && enemy.Health > 0)
+                enemy.Fear(player.transform.position, ArmyOfTheDead.IncarnationFear);
         }
 
         /// <summary>Hits dealt while blessed charge the Paladin who gave the blessing; the Paladin's own hits build Zeal.</summary>

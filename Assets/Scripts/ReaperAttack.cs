@@ -7,13 +7,12 @@ namespace Slopgame
     /// The Reaper's scythe. Left click is a slow, wide sweep; a fully charged sweep harvests a soul from every enemy it
     /// cuts. Right click spends souls on skulls that hunt their prey down: a tap throws one, half a charge throws one
     /// that strikes fear into its victim, and a full charge looses three. Souls also pay for his artifacts and for the
-    /// skeletons of his <see cref="ArmyOfTheDead"/>.
+    /// skeletons of his <see cref="ArmyOfTheDead"/>. There is no limit to how many he can hold.
     /// </summary>
     public sealed class ReaperAttack : MonoBehaviour, IPlayerWeapon
     {
         public const float Reach = 2.9f, TapCone = 110f, ChargedCone = 150f, ChargeDuration = 1.1f, SwingInterval = 0.75f;
         public const float SkullChargeTime = 0.9f, SkullCooldown = 1.5f, SkullRange = 13f, SkullFear = 1f, SkullSpread = 18f;
-        public const int MaxSouls = 99;
         public static readonly Color Soul = new Color(0.55f, 1f, 0.8f), Bone = new Color(0.93f, 0.92f, 0.84f), Shade = new Color(0.2f, 0.45f, 0.4f);
         public DungeonPlayer Player { get; set; }
         public int Souls { get; private set; }
@@ -38,7 +37,7 @@ namespace Slopgame
             float echo = Player != null && Player.Permanent != null ? Player.Permanent.ExtraSoulChance : 0f;
             int extra = 0;
             if (echo > 0f) for (int i = 0; i < amount; i++) if (Random.value < echo) extra++;
-            Souls = Mathf.Min(MaxSouls, Souls + amount + extra);
+            Souls += amount + extra;
         }
 
         /// <summary>Spends souls if he holds enough (debug mode pays for everything).</summary>
@@ -249,7 +248,7 @@ namespace Slopgame
         /// <summary>Eats 1, 3 or 5 souls to heal 1, 2 or 3 HP. Ranks above the first leave him untouchable for a second each.</summary>
         public bool Feast(int rank)
         {
-            int tier = FeastTier(DebugMode.Enabled ? MaxSouls : Souls, Player.MaxHealth - Player.Health);
+            int tier = FeastTier(DebugMode.Enabled ? FeastSouls[FeastSouls.Length - 1] : Souls, Player.MaxHealth - Player.Health);
             if (tier < 0 || !Spend(FeastSouls[tier])) return false;
             Player.Heal(FeastHealing[tier]);
             if (rank > 1) Player.Protect(rank - 1);

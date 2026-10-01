@@ -10,7 +10,14 @@ namespace Slopgame
             Damage = "ab.damage", Kill = "ab.kill", Bolt = "ab.bolt", BoltEvent = "ab.boltevent", Fx = "ab.fx",
             Support = "ab.support", Interact = "ab.interact", Choice = "ab.choice", ChoiceDone = "ab.done",
             Advance = "ab.advance", Died = "ab.died", Revived = "ab.revived", Over = "ab.over", Hazard = "ab.hazard",
-            RestartVote = "ab.restartvote", RestartVotes = "ab.restartvotes", Minion = "ab.minion";
+            RestartVote = "ab.restartvote", RestartVotes = "ab.restartvotes", Minion = "ab.minion", Smash = "ab.smash", Pickup = "ab.pickup";
+    }
+
+    /// <summary>A crystal or heart every machine drops in the same place: once one hero takes it, it is gone for everyone.</summary>
+    public interface ISharedPickup
+    {
+        /// <summary>A teammate took this pickup: remove this machine's copy (crystals still pay the local hero their share).</summary>
+        void CollectRemote();
     }
 
     public enum CoopChoice : byte { Upgrade, Artifact, Waves }
@@ -24,7 +31,7 @@ namespace Slopgame
     public enum FxKind : byte { Arrow, Spell, Slash, Bolt, GlowBolt, Ring, Pulse, Rift, Execution, Singularity, Punch, RearHit, Knife, PiercingShot, Aegis, Holy, Sanctuary,
         Windstep, Shadowstep, Stab, Quake, HolySword, Venom, HeavyPunch, Flurry, SanctuaryEnd, TailStab, TailSweep, Pentagram, DemonPaw, Coin, DemonHead, Sharpen, CoinFlip, CoinRain, Angel, Jackpot,
         PlasmaRay, PlasmaOrb, SentryTurret, MicroMissile, IceWall, Wings, SoulSiphon, Ricochet, Net, ShadowClone, DeathMark, RocketBoost, OrbitalLaser, Grapple, BrawlerMove, Insurance, InsuranceClaim, Card, Dice,
-        Shield, Whirlwind, WarBanner, Consecration, Heal, Lance, Intervention, BallLightning, IceBreak, NightmareSnap, SnapTether, InterventionSaved }
+        Shield, Whirlwind, WarBanner, Consecration, Heal, Lance, Intervention, BallLightning, IceBreak, NightmareSnap, SnapTether, InterventionSaved, AvatarOfDeath }
 
     public struct PlayerStateMessage
     {

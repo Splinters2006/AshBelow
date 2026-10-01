@@ -48,6 +48,8 @@ namespace Slopgame
             if (age >= windup + SlamTime) { Destroy(gameObject); return; }
             mesh.Begin();
             float size = radius * 0.62f;
+            // Where the landed paw rests: centred on the slam circle rather than standing on its middle.
+            float rest = size * 0.35f - PawHeight / PixelsPerUnit * size;
             if (age < windup)
             {
                 float t = age / windup;
@@ -58,7 +60,7 @@ namespace Slopgame
                 // The paw pushes through the portal, then plunges.
                 float drop = Mathf.Clamp01((t - 0.35f) / 0.65f);
                 drop *= drop;
-                Paw(Center + Vector2.up * Mathf.Lerp(PortalHeight, size * 0.35f, drop), size, t > 0.35f ? Mathf.Clamp01((t - 0.35f) * 6f) : 0f);
+                Paw(Center + Vector2.up * Mathf.Lerp(PortalHeight, rest, drop), size, t > 0.35f ? Mathf.Clamp01((t - 0.35f) * 6f) : 0f);
             }
             else
             {
@@ -67,7 +69,7 @@ namespace Slopgame
                 mesh.Ring(Center, radius * (1f + 0.4f * t), 0.14f * fade, FlameMesh.Alpha(Hellfire, 0.85f * fade), 56);
                 DrawCracks(fade);
                 // The paw lifts slightly as it withdraws.
-                Paw(Center + Vector2.up * (size * 0.35f + t * t * 1.2f), size, fade);
+                Paw(Center + Vector2.up * (rest + t * t * 1.2f), size, fade);
             }
             mesh.Commit();
         }

@@ -11,7 +11,7 @@ namespace Slopgame
     /// </summary>
     public sealed partial class DemonessAttack : MonoBehaviour, IPlayerWeapon
     {
-        public const float ChargeDuration = 1.1f;
+        public const float ChargeDuration = 1.1f / 1.25f;
         public const float StabReach = 1.9f, VitalReach = 2.4f, StabHalfWidth = 0.3f;
         public const float VitalParalysis = 1.5f;
         public const float SweepRadius = 2.8f, SweepCone = 180f, SweepCooldown = 5f;
@@ -20,8 +20,8 @@ namespace Slopgame
         public const float WhipRadius = 2.8f, WhipCone = 70f;
         public const float AscendDuration = 8f;
         public const float PortalRange = 8f, PortalWindup = 0.65f, PawRadius = 1.6f, PawStun = 0.6f;
-        // The pentagram is 25% wider than it used to be (2.2 → 2.75, and each rank adds 25% more than before).
-        public const float CurseRange = 7f, CurseRadius = 2.75f, CurseRankGrowth = 0.3125f, CurseWindup = 0.35f, CurseParalysis = 3f, CurseDuration = 6f;
+        // The pentagram has been widened twice: by 25% (2.2 → 2.75), then by 50% more; each rank's growth scaled with it.
+        public const float CurseRange = 7f, CurseRadius = 2.75f * 1.5f, CurseRankGrowth = 0.3125f * 1.5f, CurseWindup = 0.35f, CurseParalysis = 3f, CurseDuration = 6f;
         public static readonly Color Violet = new Color(0.66f, 0.3f, 1f);
         public static readonly Color Abyss = new Color(0.07f, 0.02f, 0.12f);
         public static readonly Color Pale = new Color(0.96f, 0.92f, 1f);
@@ -32,12 +32,15 @@ namespace Slopgame
         public bool CanAttack => Player.Run.IsPlaying && !Player.IsRolling && !Player.IsBusy && Time.time >= readyAt;
         /// <summary>Nerve Strike and Blood Pact: extra seconds on every paralysis she inflicts.</summary>
         public float ParalysisBonus => Player.Powerups.Count(PowerupType.NerveStrike) * 0.25f
-            + (Player.Powerups.Count(PowerupType.BloodPact) > 0 ? 0.5f : 0f);
+            + (Player.Powerups.Count(PowerupType.BloodPact) > 0 ? 1f : 0f);
         /// <summary>How long a vital stab (or Archdemon's tail whip) holds its victims.</summary>
         public float ParalysisDuration => VitalParalysis + ParalysisBonus;
         /// <summary>Pressure Points: extra damage on every hit against an already immobilized enemy.</summary>
         public int ParalyzedBonusDamage => Player.Permanent.ParalyzedDamage + Player.Powerups.Count(PowerupType.CruelTouch);
-        public float SweepReach => SweepRadius + Player.Powerups.Count(PowerupType.LongTail) * 0.3f;
+        /// <summary>Demonic Power: her tail is split in two, so the sweep covers twice the cone and reaches farther.</summary>
+        public bool HasTwinTails => Player.Mechanic is DemonicPower power && power.IsActive;
+        public float SweepReach => (SweepRadius + Player.Powerups.Count(PowerupType.LongTail) * 0.5f) * (HasTwinTails ? DemonicPower.SweepReachMultiplier : 1f);
+        public float SweepArc => Mathf.Min(360f, SweepCone * (HasTwinTails ? DemonicPower.SweepConeMultiplier : 1f));
         private float Interval => Player.Powerups.AttackIntervalMultiplier * Player.Buffs.AttackIntervalMultiplier;
         private Color TailColor => Player.Buffs.IsAscended ? HeroBuffs.AscendColor : Violet;
         private float readyAt, sweepReadyAt;
@@ -94,11 +97,12 @@ namespace Slopgame
             Color color = vital ? Color.Lerp(TailColor, Pale, 0.25f) : TailColor;
             // The tail stops in the victim rather than passing through it.
             float length = victim != null ? Mathf.Clamp(nearest, 0.6f, reach) : reach;
-            TailVfx.Stab(Player.Run.ProjectileRoot, origin, aim, length, color);
-            CoopFx.TailStab(Player.Run, origin, aim, length, color);
+            bool twin = HasTwinTails;
+            TailVfx.Stab(Player.Run.ProjectileRoot, origin, aim, length, color, twin);
+            CoopFx.TailStab(Player.Run, origin, aim, length, color, twin);
             if (victim == null) return;
             Vector2 hitPoint = victim.transform.position;
-            CombatDamage.Apply(Player, victim, WithPressurePoints(victim, damage) + (vital ? TormentBonus(victim) : 0), DamageElement.Physical, origin, vital ? 0.2f : 0.5f);
+            CombatDamage.Apply(Player, victim, WithPressurePoints(victim, damage), DamageElement.Physical, origin, vital ? 0.2f : 0.5f);
             if (!vital || victim == null) return;
             ParalyzeCounted(victim, paralysis);
             var root = Player.Run.ProjectileRoot;
@@ -137,13 +141,13 @@ namespace Slopgame
             if (!Player.Run.IsPlaying || Player.IsRolling || Player.IsBusy || HeavyCooldownRemaining > 0f || aim.sqrMagnitude < 0.001f) return false;
             aim.Normalize();
             Vector2 origin = transform.position;
-            float reach = SweepReach;
+            float reach = SweepReach, cone = SweepArc;
             var root = Player.Run.ProjectileRoot;
-            TailVfx.Sweep(root, origin, aim, reach, SweepCone, TailColor);
-            CoopFx.TailSweep(Player.Run, origin, aim, reach, SweepCone, TailColor);
+            TailVfx.Sweep(root, origin, aim, reach, cone, TailColor);
+            CoopFx.TailSweep(Player.Run, origin, aim, reach, cone, TailColor);
             foreach (var enemy in Player.Run.Enemies.ToArray())
             {
-                if (!InCone(enemy, origin, aim, reach, SweepCone)) continue;
+                if (!InCone(enemy, origin, aim, reach, cone)) continue;
                 bool paralyzed = enemy.IsImmobilized;
                 int damage = Player.Damage * SweepDamage * (paralyzed ? SweepParalyzedMultiplier : 1);
                 if (paralyzed)
@@ -168,7 +172,8 @@ namespace Slopgame
             if (enemy.Health <= 0 || enemy.Paralyze(duration + ParalysisBonus, Player.Powerups.Count(PowerupType.LingeringTerror) > 0)) Player.Mechanic?.OnImmobilized();
         }
 
-        private int WithPressurePoints(DungeonEnemy enemy, int damage) => enemy.IsImmobilized ? damage + ParalyzedBonusDamage : damage;
+        /// <summary>Her tail and paw hits: Pressure Points on an immobilized enemy, and Torment's growing tally on a paralysed one.</summary>
+        private int WithPressurePoints(DungeonEnemy enemy, int damage) => (enemy.IsImmobilized ? damage + ParalyzedBonusDamage : damage) + TormentBonus(enemy);
 
         private bool InCone(DungeonEnemy enemy, Vector2 origin, Vector2 aim, float reach, float cone)
         {
@@ -287,7 +292,7 @@ namespace Slopgame
         }
 
         public float CurseAreaRadius(int rank) => CurseRadius + (rank - 1) * CurseRankGrowth;
-        public float CurseHold(int rank) => CurseParalysis + (rank - 1) * 0.5f + Player.Powerups.Count(PowerupType.HexMastery) * 0.5f;
+        public float CurseHold(int rank) => CurseParalysis + (rank - 1) * 0.5f;
 
         /// <summary>Demon Curse: a pentagram flares at the cursor, paralysing and cursing every enemy on it.</summary>
         private IEnumerator CurseMark(Vector2 center, int rank)
@@ -305,7 +310,7 @@ namespace Slopgame
                 if (enemy == null || enemy.Health <= 0 || Vector2.Distance(center, enemy.transform.position) > radius + enemy.HitRadius
                     || !run.HasLineOfSight(center, enemy.transform.position)) continue;
                 // The brand deals no damage itself; it sets enemies up for her other attacks.
-                enemy.Curse(CurseDuration);
+                enemy.Curse(CurseDuration, Player.Powerups.Count(PowerupType.HexMastery));
                 ParalyzeCounted(enemy, hold);
             }
         }

@@ -11,7 +11,7 @@ namespace Slopgame
         public static readonly Color Muted = new Color(0.57f, 0.64f, 0.73f);
         public static readonly Color Text = new Color(0.91f, 0.93f, 0.98f);
         public static readonly Color Teal = new Color(0.42f, 0.88f, 0.79f);
-        private static Texture2D rounded;
+        private static Texture2D rounded, cog;
         private static GUIStyle panel, invisible;
         private static readonly Dictionary<int, GUIStyle> labels = new Dictionary<int, GUIStyle>();
         private static readonly Dictionary<string, float> hovers = new Dictionary<string, float>();
@@ -124,6 +124,43 @@ namespace Slopgame
             bool clicked = GUI.Button(rect, GUIContent.none, invisible);
             GUI.enabled = previous;
             return clicked;
+        }
+
+        /// <summary>The settings cog wheel shown on every menu and the HUD: a square button with a gear on it.</summary>
+        public static bool CogButton(string id, Rect rect, bool open = false)
+        {
+            bool clicked = Button(id, rect, "", open ? AbilityCatalog.Gold : Muted);
+            if (Event.current.type != EventType.Repaint) return clicked;
+            float size = Mathf.Min(rect.width, rect.height) - 14f;
+            Color previous = GUI.color;
+            GUI.color = open ? AbilityCatalog.Gold : Text;
+            GUI.DrawTexture(new Rect(rect.center.x - size / 2f, rect.center.y - size / 2f - 1f, size, size), CogTexture);
+            GUI.color = previous;
+            return clicked;
+        }
+
+        /// <summary>An eight-toothed gear with a hole through its hub.</summary>
+        private static Texture2D CogTexture
+        {
+            get
+            {
+                if (cog != null) return cog;
+                const int size = 64;
+                const float center = (size - 1) / 2f;
+                cog = new Texture2D(size, size, TextureFormat.RGBA32, false) { filterMode = FilterMode.Bilinear, hideFlags = HideFlags.HideAndDontSave };
+                for (int y = 0; y < size; y++)
+                    for (int x = 0; x < size; x++)
+                    {
+                        float dx = x - center, dy = y - center, radius = Mathf.Sqrt(dx * dx + dy * dy);
+                        // Teeth: the rim steps out wherever the angle falls on a tooth.
+                        float tooth = Mathf.Clamp01(Mathf.Cos(Mathf.Atan2(dy, dx) * 8f) * 4f + 0.5f);
+                        float outer = Mathf.Lerp(22f, 30f, tooth);
+                        float alpha = Mathf.Clamp01(outer - radius) * Mathf.Clamp01(radius - 9f);
+                        cog.SetPixel(x, y, new Color(1f, 1f, 1f, alpha));
+                    }
+                cog.Apply();
+                return cog;
+            }
         }
 
         /// <summary>

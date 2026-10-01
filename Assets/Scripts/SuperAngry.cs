@@ -5,6 +5,7 @@ namespace Slopgame
     /// <summary>
     /// The Brawler's class mechanic: every point of damage she takes stokes her temper. After 5 she can go Super
     /// Angry, with huge boosts to speed, reach, area, charge speed and damage (see <see cref="HeroBuffs.Fury"/>).
+    /// With its R upgrade (Mastered Technique, from the Ash shop) she keeps a barrage going through her rolls while furious.
     /// </summary>
     public sealed class SuperAngry : ChargedMechanic
     {

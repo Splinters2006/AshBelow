@@ -24,6 +24,8 @@ namespace Slopgame
         public static readonly Color Glove = new Color(0.95f, 0.3f, 0.26f);
         public DungeonPlayer Player { get; set; }
         public bool IsBarraging => barrage != null;
+        /// <summary>Mastered Technique (Super Angry's R upgrade): while furious, a roll no longer cuts her barrage short.</summary>
+        public bool KeepsBarrageWhileRolling => Player.Permanent != null && Player.Permanent.MechanicUpgraded && Player.Buffs.IsFurious;
         public bool IsLeaping => leap != null;
         public bool IsWindingUp => sandwich != null;
         // The barrage roots the Brawler like other heavy attacks: slower movement and no new charge.

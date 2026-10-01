@@ -402,10 +402,10 @@ namespace Slopgame.Editor
             var abilities = run.Player.Abilities;
             AbilityType q = abilities.Equipped(0), e = abilities.Equipped(1);
             int crystals = run.Player.Crystals.Crystals;
-            Require(run.LeaveArtifact() && run.Player.Crystals.Crystals == crystals + DungeonRun.LeftArtifactCrystals
+            Require(run.LeaveArtifact() && run.Player.Crystals.Crystals == crystals + run.LeftArtifactCrystals
                 && !run.ChoosingArtifact && run.IsPlaying && abilities.Equipped(0) == q && abilities.Equipped(1) == e,
                 "Leaving the artifact did not pay crystals and resume play unchanged.");
-            Require(!run.LeaveArtifact() && run.Player.Crystals.Crystals == crystals + DungeonRun.LeftArtifactCrystals, "A left artifact paid out twice.");
+            Require(!run.LeaveArtifact() && run.Player.Crystals.Crystals == crystals + run.LeftArtifactCrystals, "A left artifact paid out twice.");
         }
 
         private static void TestEnemyVariants(DungeonRun run)
@@ -452,7 +452,7 @@ namespace Slopgame.Editor
                 && Stocked(CrystalShop.Category.Relic) == CrystalShop.RelicStock && shop.Stock.Distinct().Count() == shop.Stock.Count,
                 "The shop did not stock one healing ware, two arena boons and two distinct relics.");
             var stocked = shop.Stock.ToList();
-            shop.Restock(run.Seed + run.Floor * 104729);
+            shop.Restock(CrystalShop.StockSeed(run.Seed, run.Floor));
             Require(shop.Stock.SequenceEqual(stocked), "The same run and floor stocked a different shop.");
             var assortments = new HashSet<string>();
             for (int seed = 0; seed < 40; seed++)

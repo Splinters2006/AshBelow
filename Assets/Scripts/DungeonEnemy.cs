@@ -110,6 +110,9 @@ namespace Slopgame
         /// <summary>Cursed enemies take <see cref="CurseDamageMultiplier"/> times the damage from every hit.</summary>
         public bool IsCursed => Time.time < cursedUntil;
         public const float CurseDamageMultiplier = 1.5f;
+        /// <summary>Hex Mastery: how much more damage a curse adds per rank of the talent it was cast with.</summary>
+        public const float CurseMasteryBonus = 0.25f;
+        private int curseMastery;
         /// <summary>After a paralysis wears off, a guardian shrugs off new ones for this long.</summary>
         public const float BossParalysisImmunity = 5f;
         /// <summary>Guardians shake off crowd control: holds and chills last this fraction as long on them.</summary>
@@ -128,7 +131,7 @@ namespace Slopgame
         /// How fast this enemy's attack clock runs: guardians fight at <see cref="DungeonBoss.AttackPace"/>, and deadlier
         /// worlds (<see cref="WorldDefinition.EnemyTempo"/>) speed every enemy up. Movement and telegraphs are unaffected.
         /// </summary>
-        public float Tempo => (Boss != null ? DungeonBoss.AttackPace : 1f) * (Run != null ? Run.World.EnemyTempo : 1f);
+        public float Tempo => (Boss != null ? DungeonBoss.AttackPace * (Run != null ? Run.World.GuardianTempo : 1f) : 1f) * (Run != null ? Run.World.EnemyTempo : 1f);
         private float contactReadyAt;
         public bool IsFlashing => Time.time < hitUntil;
         private float chilledUntil, nextBurn, paralyzedUntil, paralysisImmuneUntil, cursedUntil, frozenUntil, freezeImmuneUntil;
@@ -321,7 +324,7 @@ namespace Slopgame
         {
             if (!Run.IsPlaying || Health <= 0 || IsHeld || ActionTime < contactReadyAt || Run.Player.IsInvulnerable || Run.Player.IsIntangible || Run.Player.Health <= 0
                 || Vector2.Distance(transform.position, Run.Player.transform.position) >= reach) return;
-            Run.Player.Hit(Boss != null ? DungeonBoss.HitDamage : 1);
+            Run.Player.Hit(Boss != null ? Run.World.GuardianHitDamage : 1);
             contactReadyAt = ActionTime + 1f;
         }
 
@@ -402,10 +405,11 @@ namespace Slopgame
             if (Run.Player != null && Run.Player.Weapon is GamblerAttack) GoldCoin.Drop(Run, transform.position);
             // The Reaper takes the souls of the soul-bound, and fear he has sown spreads from the fallen.
             if (Run.Player != null && Run.Player.Weapon is ReaperAttack reaper) reaper.OnEnemyDied(this, localKill);
-            // Every fallen enemy leaves crystals for the shop before the next boss (each machine drops its own).
+            // Every fallen enemy leaves crystals for the shop before the next boss. In co-op they are shared: every machine
+            // drops the same ones, and whoever picks them up, the whole party is paid (Prospector's extras stay the hero's own).
             if (Run.Player != null)
             {
-                Crystal.Drop(Run, transform.position, Crystal.ValueFor(this));
+                Crystal.Drop(Run, transform.position, Crystal.ValueFor(this), Run.IsNetworked ? CoopSync.EnemyKey(NetId) : 0);
                 if (Run.Player.Powerups.RollExtraCrystals()) Crystal.Drop(Run, transform.position, Crystal.ValueFor(this));
             }
             CombatVfx.Ring(Run.ProjectileRoot, transform.position, Boss != null ? 1.6f : 0.45f, AbilityCatalog.Gold);
@@ -430,7 +434,7 @@ namespace Slopgame
         }
 
         /// <summary>Damage after the curse, rounded half up so even a 1-damage hit is worth more on a cursed enemy.</summary>
-        public int CursedDamage(int damage) => IsCursed ? Mathf.FloorToInt(damage * CurseDamageMultiplier + 0.5f) : damage;
+        public int CursedDamage(int damage) => IsCursed ? Mathf.FloorToInt(damage * (CurseDamageMultiplier + curseMastery * CurseMasteryBonus) + 0.5f) : damage;
 
         public static readonly Color FrozenTint = new Color(0.72f, 0.93f, 1f);
 
@@ -634,10 +638,12 @@ namespace Slopgame
             poisonTicks = Mathf.Max(poisonTicks, ticks);
         }
 
-        public void Curse(float duration)
+        /// <param name="mastery">Ranks of Hex Mastery behind the curse; a stronger curse is never weakened by a lesser one.</param>
+        public void Curse(float duration, int mastery = 0)
         {
             if (IsInvulnerable || duration <= 0f) return;
-            if (Run.IsGuest) { Run.Coop.ReportDamage(this, CoopDamageKind.Curse, 0, transform.position, 0, duration); return; }
+            curseMastery = IsCursed ? Mathf.Max(curseMastery, mastery) : mastery;
+            if (Run.IsGuest) { Run.Coop.ReportDamage(this, CoopDamageKind.Curse, 0, transform.position, mastery, duration); return; }
             cursedUntil = Mathf.Max(cursedUntil, Time.time + duration);
         }
 

@@ -49,7 +49,7 @@ namespace Slopgame
 
         /// <summary>Spawns an aimed enemy bolt (announced to co-op guests by the bolt itself).</summary>
         protected void Fire(Vector2 from, Vector2 direction, float speed = EnemyProjectile.DefaultSpeed, BoltKind? kind = null)
-            => EnemyProjectile.Spawn(Run, Run.ProjectileRoot, from + direction.normalized * 0.5f, direction, true, speed, kind ?? Bolts, DungeonBoss.HitDamage);
+            => EnemyProjectile.Spawn(Run, Run.ProjectileRoot, from + direction.normalized * 0.5f, direction, true, speed, kind ?? Bolts, Run.World.GuardianHitDamage);
 
         /// <summary>The guardian's theme: what its bolts and hazards look like (the Archdemon's hellfire by default).</summary>
         protected virtual BoltKind Bolts => BoltKind.Ember;
@@ -68,7 +68,7 @@ namespace Slopgame
             => HellfireZone.Spawn(Run, new HazardSpec
             {
                 Shape = shape, Style = style ?? Hazards, Center = center, Direction = direction, Radius = radius, Width = width, Telegraph = telegraph, Duration = duration,
-                Lethal = lethal, Damage = DungeonBoss.HitDamage
+                Lethal = lethal, Damage = Run.World.GuardianHitDamage
             });
 
         protected Color Flashing(Color normal, Color flash, bool active)

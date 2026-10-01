@@ -59,6 +59,8 @@ namespace Slopgame
             Session.Handle(CoopMessages.Died, OnDied);
             Session.Handle(CoopMessages.Revived, OnRevived);
             Session.Handle(CoopMessages.Hazard, OnHazard);
+            Session.Handle(CoopMessages.Smash, OnSmash);
+            Session.Handle(CoopMessages.Pickup, OnPickup);
             Session.Handle(CoopMessages.RestartVote, OnRestartVote);
             Session.Handle(CoopMessages.RestartVotes, OnRestartVotes);
             Session.Handle(CoopMessages.Over, (sender, reader) => { if (!IsHost) EndRunLocal(); });
@@ -172,6 +174,8 @@ namespace Slopgame
         {
             enemies.Clear();
             bolts.Clear();
+            pickups.Clear();
+            takenPickups.Clear();
             for (int i = 0; i < spawned.Count; i++)
             {
                 spawned[i].NetId = (ushort)i;
@@ -361,7 +365,7 @@ namespace Slopgame
                 else if (message.Kind == CoopDamageKind.Paralyze) enemy.Paralyze(message.Duration, message.Ticks > 0);
                 else if (message.Kind == CoopDamageKind.ClearParalysis) enemy.ConsumeParalysis();
                 else if (message.Kind == CoopDamageKind.ClearHolds) enemy.ConsumeHolds();
-                else if (message.Kind == CoopDamageKind.Curse) enemy.Curse(message.Duration);
+                else if (message.Kind == CoopDamageKind.Curse) enemy.Curse(message.Duration, message.Ticks);
                 else if (message.Kind == CoopDamageKind.Freeze) enemy.Freeze(message.Duration);
                 else if (message.Kind == CoopDamageKind.Fear) enemy.Fear(message.Source, message.Duration);
                 else if (message.Kind == CoopDamageKind.Stun) enemy.Stun(message.Duration);
@@ -473,6 +477,84 @@ namespace Slopgame
             if (IsHost) return;
             var message = HazardMessage.Read(reader);
             if (message.Floor == Run.Floor && Run.ProjectileRoot != null) HellfireZone.Spawn(Run, message.Spec, false);
+        }
+
+        // ---------------------------------------------------------------- shared breakables and pickups
+
+        private const int EnemyPickupKeys = 100000;
+        private readonly Dictionary<int, ISharedPickup> pickups = new Dictionary<int, ISharedPickup>();
+        private readonly HashSet<int> takenPickups = new HashSet<int>();
+
+        /// <summary>The key shared by every machine's copy of a seeded urn's crystals (or its heart). Zero is never a key: it marks a pickup only this machine has.</summary>
+        public static int BreakableKey(int breakable, bool heart) => 1 + breakable * 2 + (heart ? 1 : 0);
+        /// <summary>The key shared by every machine's copy of the crystals a fallen enemy leaves.</summary>
+        public static int EnemyKey(ushort enemy) => EnemyPickupKeys + enemy;
+
+        /// <summary>A local hit smashed a seeded urn: it breaks on every other machine too.</summary>
+        public void ReportSmash(int breakable, Vector2 source)
+        {
+            if (!Active) return;
+            using var writer = NetSession.Writer(32);
+            writer.WriteValueSafe(Run.Floor);
+            writer.WriteValueSafe(breakable);
+            writer.WriteValueSafe(source);
+            Session.Send(CoopMessages.Smash, writer);
+        }
+
+        private void OnSmash(ulong sender, FastBufferReader reader)
+        {
+            reader.ReadValueSafe(out int floor);
+            reader.ReadValueSafe(out int breakable);
+            reader.ReadValueSafe(out Vector2 source);
+            if (IsHost)
+            {
+                using var writer = NetSession.Writer(32);
+                writer.WriteValueSafe(floor);
+                writer.WriteValueSafe(breakable);
+                writer.WriteValueSafe(source);
+                Session.Send(CoopMessages.Smash, writer, NetworkDelivery.ReliableSequenced, sender);
+            }
+            if (floor != Run.Floor || Run.InShop) return;
+            foreach (var urn in Breakable.Active)
+                if (urn != null && urn.NetId == breakable && urn.Run == Run) { urn.Smash(source, true); break; }
+        }
+
+        /// <summary>
+        /// A shared crystal or heart landed on this machine. If a teammate already took their copy of it (their message
+        /// outran the drop), this one is collected at once.
+        /// </summary>
+        public void RegisterPickup(int key, ISharedPickup pickup)
+        {
+            if (!Active || key == 0) return;
+            if (takenPickups.Contains(key)) pickup.CollectRemote();
+            else pickups[key] = pickup;
+        }
+
+        /// <summary>The local hero took a shared pickup: every other machine's copy goes with it.</summary>
+        public void ReportPickup(int key)
+        {
+            if (!Active || key == 0 || !takenPickups.Add(key)) return;
+            pickups.Remove(key);
+            using var writer = NetSession.Writer(16);
+            writer.WriteValueSafe(Run.Floor);
+            writer.WriteValueSafe(key);
+            Session.Send(CoopMessages.Pickup, writer);
+        }
+
+        private void OnPickup(ulong sender, FastBufferReader reader)
+        {
+            reader.ReadValueSafe(out int floor);
+            reader.ReadValueSafe(out int key);
+            if (IsHost)
+            {
+                using var writer = NetSession.Writer(16);
+                writer.WriteValueSafe(floor);
+                writer.WriteValueSafe(key);
+                Session.Send(CoopMessages.Pickup, writer, NetworkDelivery.ReliableSequenced, sender);
+            }
+            if (floor != Run.Floor || !takenPickups.Add(key) || !pickups.TryGetValue(key, out var pickup)) return;
+            pickups.Remove(key);
+            if (pickup is Object copy && copy != null) pickup.CollectRemote();
         }
 
         // ---------------------------------------------------------------- teammate effects and support
@@ -798,7 +880,42 @@ namespace Slopgame
             Run.EndRun();
         }
 
-        /// <summary>A living teammate for a fallen player's camera to follow, if any.</summary>
-        public RemoteHero SpectateTarget => remoteHeroes.Find(hero => hero.IsAlive);
+        private ulong spectating;
+
+        /// <summary>
+        /// The living teammate a fallen player's camera follows, if any: the one last picked with
+        /// <see cref="CycleSpectate"/> while they live, otherwise the first still standing.
+        /// </summary>
+        public RemoteHero SpectateTarget
+        {
+            get
+            {
+                RemoteHero first = null;
+                foreach (var hero in remoteHeroes)
+                {
+                    if (hero == null || !hero.IsAlive) continue;
+                    if (hero.Id == spectating) return hero;
+                    if (first == null) first = hero;
+                }
+                if (first != null) spectating = first.Id;
+                return first;
+            }
+        }
+
+        /// <summary>Living teammates a fallen player can watch.</summary>
+        public int SpectateCount
+        {
+            get { int count = 0; foreach (var hero in remoteHeroes) if (hero != null && hero.IsAlive) count++; return count; }
+        }
+
+        /// <summary>Switches the fallen player's camera to the next (or, with -1, the previous) living teammate.</summary>
+        public void CycleSpectate(int step)
+        {
+            var current = SpectateTarget;
+            if (current == null) return;
+            var living = remoteHeroes.FindAll(hero => hero != null && hero.IsAlive);
+            int index = living.IndexOf(current);
+            spectating = living[((index + step) % living.Count + living.Count) % living.Count].Id;
+        }
     }
 }

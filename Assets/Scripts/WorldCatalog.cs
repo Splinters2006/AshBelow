@@ -60,7 +60,12 @@ namespace Slopgame
         public float EnemySpeedMultiplier => 1f + (Threat - 1f) * 0.2f;
         /// <summary>How much faster every enemy's attack clock runs here (guardians included).</summary>
         public float EnemyTempo => 1f + (Threat - 1f) * 0.25f;
-        public float GuardianHealthMultiplier => 1f + (Threat - 1f) * 0.6f;
+        /// <summary>Guardians of every world past the first are tankier: half as much health again, on top of the world's threat.</summary>
+        public float GuardianHealthMultiplier => (1f + (Threat - 1f) * 0.6f) * (Index > 0 ? LaterGuardianHealth : 1f);
+        /// <summary>...and stronger: their attack clocks run faster and every blow costs one more HP.</summary>
+        public float GuardianTempo => Index > 0 ? LaterGuardianTempo : 1f;
+        public int GuardianHitDamage => DungeonBoss.HitDamage + (Index > 0 ? 1 : 0);
+        public const float LaterGuardianHealth = 1.5f, LaterGuardianTempo = 1.15f;
         /// <summary>Extra enemies in every combat room.</summary>
         public int ExtraEnemiesPerRoom => Threat >= 1.5f ? 1 : 0;
 

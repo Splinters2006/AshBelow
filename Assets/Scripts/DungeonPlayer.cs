@@ -201,7 +201,7 @@ namespace Slopgame
             SetVeiledLook(IsVeiled || IsIntangible);
             if (IsVeiled && !wasVeiled && Powerups.Count(PowerupType.Ambush) > 0) Powerups.AmbushReady = true;
             wasVeiled = IsVeiled;
-            if (!Run.IsPlaying || Health <= 0 || IsBusy) { MoveInput = Vector2.zero; Charge.Tick(PlayerInput.Attack, false); return; }
+            if (!Run.IsPlaying || Health <= 0 || IsBusy || Run.HudCapturesInput) { MoveInput = Vector2.zero; Charge.Tick(PlayerInput.Attack, false); return; }
             Vector2 cursor = Run.View.ScreenToWorldPoint(new Vector3(PlayerInput.CursorPosition.x,
                 PlayerInput.CursorPosition.y, -Run.View.transform.position.z));
             CursorPoint = cursor;
@@ -277,7 +277,8 @@ namespace Slopgame
             rollReady = Time.time + Mathf.Max(0.2f, RollCooldown * Powerups.DodgeCooldownMultiplier * Buffs.DodgeCooldownMultiplier
                 - Buffs.DodgeCooldownReduction);
             // The Brawler keeps a held punch charging through the roll; every other class loses it.
-            if (Weapon is BrawlerAttack brawler) brawler.StopBarrage();
+            // Mastered Technique: while Super Angry she does not even stop a running barrage.
+            if (Weapon is BrawlerAttack brawler) { if (!brawler.KeepsBarrageWhileRolling) brawler.StopBarrage(); }
             else
             {
                 Weapon?.Hide();

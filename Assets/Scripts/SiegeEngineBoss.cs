@@ -115,7 +115,7 @@ namespace Slopgame
             HellfireZone.Spawn(Run, new HazardSpec
             {
                 Shape = HazardShape.Beam, Style = HazardStyle.Quake, Center = from, Direction = vertical ? Vector2.up : Vector2.right,
-                Radius = length, Width = band, Telegraph = QuakeWarning, Duration = hold, Damage = DungeonBoss.HitDamage
+                Radius = length, Width = band, Telegraph = QuakeWarning, Duration = hold, Damage = Run.World.GuardianHitDamage
             });
         }
 

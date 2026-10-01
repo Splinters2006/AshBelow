@@ -27,6 +27,8 @@ namespace Slopgame
         private FlameMesh mesh;
         private Vector2 center;
         private float radius, windup, age;
+        // The rune band's outer ring sits 1.2 circles out; the circle is drawn smaller so that ring lands on the cursed area's edge.
+        private float SigilRadius => radius / 1.2f;
 
         public static PentagramVfx Play(Transform root, Vector2 center, float radius, float windup)
         {
@@ -56,12 +58,13 @@ namespace Slopgame
         private void DrawSigil(float progress, float alpha, float flare)
         {
             Color violet = DemonessAttack.Violet, pale = DemonessAttack.Pale;
+            float r = SigilRadius;
             mesh.Disc(center, radius, FlameMesh.Alpha(DemonessAttack.Abyss, 0.45f * alpha), FlameMesh.Alpha(violet, (0.12f + 0.3f * flare) * alpha), 48);
-            mesh.Ring(center, radius, 0.09f, FlameMesh.Alpha(violet, (0.4f + 0.6f * progress) * alpha), 64);
-            mesh.Ring(center, radius * 0.86f, 0.04f, FlameMesh.Alpha(pale, 0.6f * progress * alpha), 56);
+            mesh.Ring(center, r, 0.09f, FlameMesh.Alpha(violet, (0.4f + 0.6f * progress) * alpha), 64);
+            mesh.Ring(center, r * 0.86f, 0.04f, FlameMesh.Alpha(pale, 0.6f * progress * alpha), 56);
             float spin = age * 0.6f + Mathf.PI / 2f;
             var tips = new Vector2[5];
-            for (int i = 0; i < 5; i++) tips[i] = center + FlameMesh.Polar(spin + i * Mathf.PI * 2f / 5f, radius * 0.86f);
+            for (int i = 0; i < 5; i++) tips[i] = center + FlameMesh.Polar(spin + i * Mathf.PI * 2f / 5f, r * 0.86f);
             // Each of the five strokes joins every second point; they draw in one after another.
             for (int i = 0; i < 5; i++)
             {
@@ -81,8 +84,9 @@ namespace Slopgame
         private void DrawRunes(float progress, float alpha, float flare)
         {
             Color violet = DemonessAttack.Violet, pale = DemonessAttack.Pale;
-            float band = radius * 1.1f, height = radius * 0.13f, width = 0.035f + 0.03f * flare;
-            mesh.Ring(center, radius * 1.2f, 0.05f, FlameMesh.Alpha(violet, 0.7f * progress * alpha), 72);
+            float r = SigilRadius;
+            float band = r * 1.1f, height = r * 0.13f, width = 0.035f + 0.03f * flare;
+            mesh.Ring(center, r * 1.2f, 0.05f, FlameMesh.Alpha(violet, 0.7f * progress * alpha), 72);
             mesh.Ring(center, band, height * 1.6f, FlameMesh.Alpha(DemonessAttack.Abyss, 0.35f * alpha), FlameMesh.Alpha(violet, 0.08f * alpha), 72);
             float spin = -age * 0.35f;
             for (int i = 0; i < RuneCount; i++)
@@ -105,7 +109,7 @@ namespace Slopgame
                 }
                 // A tick on the outer ring between each rune.
                 Vector2 tick = FlameMesh.Polar(a + Mathf.PI / RuneCount, 1f);
-                mesh.Bar(center + tick * radius * 1.16f, tick, radius * 0.08f, 0.04f, FlameMesh.Alpha(pale, 0.8f * glow), FlameMesh.Alpha(violet, 0f));
+                mesh.Bar(center + tick * r * 1.16f, tick, r * 0.08f, 0.04f, FlameMesh.Alpha(pale, 0.8f * glow), FlameMesh.Alpha(violet, 0f));
             }
         }
 

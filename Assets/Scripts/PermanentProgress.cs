@@ -148,11 +148,12 @@ namespace Slopgame
 
         /// <summary>
         /// Class upgrades gated behind guardians (the class mechanics) need that class to have beaten them; world rewards need
-        /// their world cleared once.
+        /// their world cleared once; a mechanic's R upgrade also needs the mechanic itself.
         /// </summary>
         public bool IsAvailable(PermanentUpgradeDefinition upgrade) => upgrade != null
             && (upgrade.ClassWeapon.HasValue ? GuardiansDefeatedAs(upgrade.ClassWeapon.Value) : data.guardians) >= upgrade.RequiredGuardians
-            && (upgrade.RequiredWorld < 0 || HasClearedWorld(upgrade.RequiredWorld));
+            && (upgrade.RequiredWorld < 0 || HasClearedWorld(upgrade.RequiredWorld))
+            && (upgrade.RequiredUpgrade == null || Rank(upgrade.RequiredUpgrade) > 0);
 
         /// <summary>
         /// True once this world or any later one has been cleared: getting past a world counts, so worlds skipped on

@@ -4,21 +4,23 @@ namespace Slopgame
 {
     /// <summary>
     /// A heart spilled from a smashed urn. It bobs on the floor until a wounded hero walks over it and restores
-    /// <see cref="HealAmount"/> HP; a hero at full health leaves it lying for later.
+    /// <see cref="HealAmount"/> HP; a hero at full health leaves it lying for later. In co-op an urn's heart is shared:
+    /// it heals whoever takes it and is gone for everyone else.
     /// </summary>
-    public sealed class HealthPickup : MonoBehaviour
+    public sealed class HealthPickup : MonoBehaviour, ISharedPickup
     {
         public const int HealAmount = 1;
         public const float MagnetRadius = 1.5f, PickupRadius = 0.45f;
         private const float HopTime = 0.35f, HopHeight = 0.5f, Size = 0.4f;
         private static readonly Color HeartColor = new Color(1f, 0.3f, 0.38f);
         private DungeonRun run;
-        private int heal = HealAmount;
+        private int heal = HealAmount, netKey;
         private Vector2 rest, hopFrom;
         private float phase, age;
         private Transform shadow;
 
-        public static HealthPickup Drop(DungeonRun run, Vector2 position, int heal = HealAmount)
+        /// <param name="netKey">Shared by every co-op machine's copy of this heart; 0 for one only this hero sees (Soul Tithe).</param>
+        public static HealthPickup Drop(DungeonRun run, Vector2 position, int heal = HealAmount, int netKey = 0)
         {
             if (run == null || run.ProjectileRoot == null) return null;
             var sprite = DungeonVisuals.Create("Heart", run.ProjectileRoot, position, Vector2.one * Size, Color.white, 5);
@@ -34,6 +36,8 @@ namespace Slopgame
             shadow.sprite = DungeonVisuals.CoinShadow;
             heart.shadow = shadow.transform;
             HeroVfx.Sparks(run.ProjectileRoot, position, HeartColor, 6, 2.5f, 0.25f, Vector2.up, 120f, 0.7f);
+            heart.netKey = netKey;
+            if (netKey != 0 && run.IsNetworked) run.Coop.RegisterPickup(netKey, heart);
             return heart;
         }
 
@@ -56,8 +60,18 @@ namespace Slopgame
             if (!wounded || Vector2.Distance(rest, hero) > PickupRadius) return;
             player.Heal(heal);
             player.CurePoison();
+            if (netKey != 0 && run.IsNetworked) run.Coop.ReportPickup(netKey);
             HeroVfx.Motes(run.ProjectileRoot, hero, 0.7f, HeartColor, 10, 0.8f);
             HeroVfx.Pulse(run.ProjectileRoot, rest, 0.5f, new Color(1f, 0.4f, 0.45f, 0.7f), 0.2f);
+            Destroy(gameObject);
+        }
+
+        /// <summary>A teammate took this heart: it vanishes here without healing anyone.</summary>
+        public void CollectRemote()
+        {
+            if (run != null && run.ProjectileRoot != null)
+                HeroVfx.Pulse(run.ProjectileRoot, transform.position, 0.5f, new Color(1f, 0.4f, 0.45f, 0.7f), 0.2f);
+            gameObject.SetActive(false);
             Destroy(gameObject);
         }
 

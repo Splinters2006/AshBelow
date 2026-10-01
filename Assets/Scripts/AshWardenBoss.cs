@@ -7,6 +7,8 @@ namespace Slopgame
     /// The first guardian, the Rime Warden: a slow, crowned frost caster drawing, in a shuffled order, an aimed Icicle
     /// Fan, a full Frost Nova, a rotating Blizzard Spiral, Hailfall (hailstones crash onto every hero) and Ice Cage (a
     /// ring of icicles closes in on every hero). Once bloodied it blinks across the arena before Hailfall.
+    /// It paces itself: a clear pause follows every attack, and after every third it stands winded for a few seconds,
+    /// which is the opening to strike.
     /// In the Neon Arcology it returns as the Cryo Sentinel, a chrome frost machine with the same attacks.
     /// (The class keeps its original Ash Warden name so the boss roster and asset references stay put.)
     /// </summary>
@@ -17,13 +19,18 @@ namespace Slopgame
         // Cage icicles start this far out and creep in slowly enough to find the gap.
         private const float CageRadius = 5.5f, CageBoltSpeed = 3.4f;
         // Spiral bolts drift slower than aimed ones so the rotating arms can be read and walked around.
-        private const float SpiralBoltSpeed = 5f, SpiralDuration = 2.2f;
+        private const float SpiralBoltSpeed = 5f, SpiralDuration = 1.8f, SpiralShotInterval = 0.2f;
+        // The pause after each attack, and the longer one after every AttacksPerBreath-th (shorter once bloodied).
+        private const float Recovery = 1.6f, EnragedRecovery = 1.1f, WindedTime = 2.6f, EnragedWindedTime = 1.8f;
+        private const int AttacksPerBreath = 3;
+        /// <summary>Bit of <see cref="NetState"/> set while the Warden stands winded.</summary>
+        private const byte WindedBit = 8;
         public const float Size = 1.8f;
         public static readonly Color Frost = new Color(0.55f, 0.85f, 1f);
         public static readonly Color Glacier = new Color(0.3f, 0.5f, 1f);
-        private float readyAt, fireAt, spiralUntil, nextSpiralShot, spiralAngle;
-        private bool charging;
-        private int pattern;
+        private float readyAt, fireAt, spiralUntil, nextSpiralShot, spiralAngle, windedUntil;
+        private bool charging, guestWinded;
+        private int pattern, attacksSinceBreath;
         private readonly List<Vector2> cageCenters = new List<Vector2>();
         private readonly AttackDeck<int> deck = new AttackDeck<int>(Fan, Nova, Spiral, Hailfall, Cage);
         private Vector2 lockedAim;
@@ -39,13 +46,15 @@ namespace Slopgame
             Spiral => "BLIZZARD SPIRAL - CIRCLE WITH THE ARMS",
             Cage => "ICE CAGE - SLIP THROUGH THE GAP",
             _ => "HAILFALL - LEAVE THE MARKS"
-        } : IsEnraged ? "ENRAGED" : HighTech ? "CRYOGENIC CONTAINMENT UNIT" : "GUARDIAN OF THE RELIC";
+        } : IsWinded ? "WINDED - STRIKE NOW" : IsEnraged ? "ENRAGED" : HighTech ? "CRYOGENIC CONTAINMENT UNIT" : "GUARDIAN OF THE RELIC";
         public override int BaseHealth(int floor) => 24 + floor * 3;
         public override bool IsCharging => charging || Spiraling;
         public override float HitRadius => 0.95f;
         public override float ContactReach => 1.15f;
-        public override byte NetState => (byte)(pattern % Patterns);
+        public override byte NetState => (byte)(pattern % Patterns | (IsWinded ? WindedBit : 0));
         public int Pattern => pattern % Patterns;
+        /// <summary>Catching its breath after a run of attacks: it neither moves nor attacks.</summary>
+        public bool IsWinded => Run.IsGuest ? guestWinded : !charging && !Spiraling && Enemy.ActionTime < windedUntil;
         public bool Spiraling => spiralUntil > Enemy.ActionTime;
         protected override BoltKind Bolts => BoltKind.Frost;
         protected override HazardStyle Hazards => HazardStyle.Frost;
@@ -77,7 +86,7 @@ namespace Slopgame
             }
             else if (Enemy.ActionTime >= readyAt)
                 BeginWindup(offset);
-            else if (offset.magnitude > 2f)
+            else if (!IsWinded && offset.magnitude > 2f)
                 transform.position = Run.Map.Move(transform.position, offset.normalized * Enemy.Speed * Enemy.MoveMultiplier * Time.deltaTime);
         }
 
@@ -105,7 +114,7 @@ namespace Slopgame
             {
                 case Fan:
                 case Nova:
-                    int shots = pattern % Patterns == Fan ? (IsEnraged ? 7 : 5) : (IsEnraged ? 16 : 12);
+                    int shots = pattern % Patterns == Fan ? (IsEnraged ? 7 : 5) : (IsEnraged ? 14 : 10);
                     for (int i = 0; i < shots; i++)
                     {
                         float angle = pattern % Patterns == Fan ? (i - (shots - 1) * 0.5f) * 14f : i * 360f / shots;
@@ -134,7 +143,12 @@ namespace Slopgame
         private void Finish()
         {
             pattern = deck.Draw();
-            readyAt = Enemy.ActionTime + (IsEnraged ? 0.65f : 1f);
+            readyAt = Enemy.ActionTime + (IsEnraged ? EnragedRecovery : Recovery);
+            if (++attacksSinceBreath < AttacksPerBreath) return;
+            // Three attacks in, it has to catch its breath.
+            attacksSinceBreath = 0;
+            readyAt = windedUntil = Enemy.ActionTime + (IsEnraged ? EnragedWindedTime : WindedTime);
+            HeroVfx.Motes(Run.ProjectileRoot, transform.position, 1.2f, Frost, 10, 1f);
         }
 
         /// <summary>Two (bloodied: three) arms of icicles sweep around the Warden.</summary>
@@ -142,8 +156,9 @@ namespace Slopgame
         {
             while (Enemy.ActionTime >= nextSpiralShot && Spiraling)
             {
-                nextSpiralShot += 0.14f;
-                spiralAngle += IsEnraged ? 13f : 11f;
+                nextSpiralShot += SpiralShotInterval;
+                // The arms turn as far per second as before, with fewer icicles along them.
+                spiralAngle += IsEnraged ? 18f : 15f;
                 int arms = IsEnraged ? 3 : 2;
                 for (int i = 0; i < arms; i++)
                     Fire(transform.position, Quaternion.Euler(0, 0, spiralAngle + i * 360f / arms) * Vector2.up, SpiralBoltSpeed);
@@ -161,7 +176,7 @@ namespace Slopgame
             float telegraph = 1.1f, linger = IsEnraged ? 2.2f : 1.6f;
             foreach (var hero in LivingHeroPositions()) Hazard(HazardShape.Pool, hero, Vector2.up, 1.2f, 0f, telegraph, linger);
             var arena = DungeonMap.Arena;
-            int extra = IsEnraged ? 5 : 3;
+            int extra = IsEnraged ? 4 : 2;
             for (int i = 0; i < extra; i++)
             {
                 var spot = new Vector2(Random.Range(arena.xMin + 1f, arena.xMax - 2f), Random.Range(arena.yMin + 1f, arena.yMax - 2f));
@@ -212,7 +227,8 @@ namespace Slopgame
         public override void ApplyNetState(bool isCharging, byte state)
         {
             charging = isCharging;
-            pattern = state % Patterns;
+            pattern = (state & ~WindedBit) % Patterns;
+            guestWinded = (state & WindedBit) != 0;
         }
 
         public override void OnDefeated()
