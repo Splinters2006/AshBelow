@@ -32,7 +32,10 @@ namespace Slopgame
             : IsBossFloor && Enemies.Count > 0 ? "Defeat the arena guardian"
             : WavesPending ? "Touch the monolith to call the waves  /  " + KeyBindings.Label(GameAction.Interact)
             : IsWaveFloor ? (Enemies.Count == 0 ? "Level cleared" : waveReserves.Count > 0 ? $"Survive the waves  /  {waveReserves.Count} more to come" : "Survive the final wave")
-            : Enemies.Count == 0 ? "Find the gold stairs  /  " + KeyBindings.Label(GameAction.Interact) : "Clear the floor to unlock the stairs";
+            : Enemies.Count == 0 ? (ExitIsPortal ? "Step through the portal  /  " : "Find the gold stairs  /  ") + KeyBindings.Label(GameAction.Interact)
+            : "Clear the floor to unlock the stairs";
+        /// <summary>True on a world's third guardian floor, where a portal out of the world stands in for the stairs.</summary>
+        public bool ExitIsPortal => IsBossFloor && !InShop && WorldCatalog.CompletesWorld(Floor);
         private string ShopObjective => Shop != null && Shop.IsNear(Player) ? "Trade crystals with the merchant  /  " + KeyBindings.Label(GameAction.Interact)
             : IsNetworked ? "Spend crystals, then gather the party at the stairs to face the guardian"
             : "Spend crystals at the merchant, then take the stairs to the guardian";
@@ -286,7 +289,7 @@ namespace Slopgame
             Player.Crystals.BeginFloor(Floor, InShop);
             Player.transform.position = (Vector2)Map.Centers[0];
             exit = Map.Centers[Map.Centers.Count - 1];
-            stairs = StairVisual.Create(level, exit);
+            stairs = ExitIsPortal ? StairVisual.CreatePortal(level, exit, World.Accent) : StairVisual.Create(level, exit);
             if (InShop) Shop = CrystalShop.Create(this, level);
             if (IsBossFloor)
             {
@@ -316,7 +319,7 @@ namespace Slopgame
             {
                 DungeonVisuals.DecorateArena(level, World);
                 SpawnWave(variants);
-                monolith = WaveMonolith.Create(level, MonolithPoint(), World.Accent);
+                monolith = WaveMonolith.Create(this, level, MonolithPoint());
             }
             for (int room = 1; !IsBossFloor && !InShop && !IsWaveFloor && room < Map.Centers.Count; room++)
             {

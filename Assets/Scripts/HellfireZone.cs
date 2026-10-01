@@ -125,7 +125,9 @@ namespace Slopgame
                 zone.colors = new Palette(Color.white, Color.Lerp(tint, Color.white, 0.4f), tint, tint * 0.4f, tint * 0.15f);
             }
             zone.gameObject.name = spec.Style + " " + spec.Shape;
-            zone.flames = new FlameMesh(zone.gameObject, spec.Shape == HazardShape.Inferno ? 2 : 3);
+            zone.flames = new FlameMesh(zone.gameObject, spec.Shape == HazardShape.Inferno ? 2 : 3)
+            // Fire and ice are drawn as pixel art, like the guardians that throw them.
+            { Pixelated = spec.Style == HazardStyle.Hellfire || spec.Style == HazardStyle.Brimstone || spec.Style == HazardStyle.Frost };
             zone.meteorFrom = spec.Center + new Vector2(Random.Range(-4f, 4f), 11f);
             if (announce && run.IsNetworked && run.Coop.IsHost) run.Coop.AnnounceHazard(spec);
             return zone;

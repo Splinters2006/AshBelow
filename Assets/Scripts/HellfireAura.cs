@@ -16,12 +16,12 @@ namespace Slopgame
             var aura = new GameObject("Hellfire aura").AddComponent<HellfireAura>();
             aura.transform.SetParent(boss.Boss.Enemy.Run.ProjectileRoot, false);
             aura.boss = boss;
-            aura.behind = new FlameMesh(aura.gameObject, 3);
+            aura.behind = new FlameMesh(aura.gameObject, 3) { Pixelated = true };
             // A second renderer needs its own object.
             var frontObject = new GameObject("Hellfire aura front");
             frontObject.transform.SetParent(aura.transform, false);
             // In front of his body (4) and its detail layer (5).
-            aura.front = new FlameMesh(frontObject, 6);
+            aura.front = new FlameMesh(frontObject, 6) { Pixelated = true };
             return aura;
         }
 

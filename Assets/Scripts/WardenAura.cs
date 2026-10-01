@@ -17,11 +17,11 @@ namespace Slopgame
             var aura = new GameObject("Warden aura").AddComponent<WardenAura>();
             aura.transform.SetParent(boss.Boss.Enemy.Run.ProjectileRoot, false);
             aura.boss = boss;
-            aura.behind = new FlameMesh(aura.gameObject, 3);
+            aura.behind = new FlameMesh(aura.gameObject, 3) { Pixelated = true };
             // A second renderer needs its own object; it sits in front of the body (4) and its detail layer (5).
             var frontObject = new GameObject("Warden aura front");
             frontObject.transform.SetParent(aura.transform, false);
-            aura.front = new FlameMesh(frontObject, 6);
+            aura.front = new FlameMesh(frontObject, 6) { Pixelated = true };
             return aura;
         }
 

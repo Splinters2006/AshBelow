@@ -78,7 +78,8 @@ namespace Slopgame
             until = Enemy.ActionTime + 1.2f;
             auraObject = new GameObject(Title + " aura");
             auraObject.transform.SetParent(Run.ProjectileRoot, false);
-            aura = new FlameMesh(auraObject, 5);
+            // Fire and ice guardians wear pixel-art auras to match their hazards.
+            aura = new FlameMesh(auraObject, 5) { Pixelated = Hazards == HazardStyle.Hellfire || Hazards == HazardStyle.Brimstone || Hazards == HazardStyle.Frost };
         }
 
         public override Color BodyColor() => Flashing(IsEnraged ? Color.Lerp(BodyTint, Accent, 0.3f) : BodyTint, SpentFlash, state == Spent);
