@@ -359,12 +359,15 @@ namespace Slopgame
         /// <summary>Divine Intervention: for a while, a killing blow is turned aside.</summary>
         public void Intercede(float duration) => interventionUntil = Mathf.Max(interventionUntil, Time.time + duration);
 
-        /// <summary>Saved by Divine Intervention: back at a quarter of max HP, untouchable and empowered for 2 seconds.</summary>
+        public const float InterventionRescueHealth = 0.75f;
+
+        /// <summary>Saved by Divine Intervention: back at three quarters of max HP, untouchable and empowered for 2 seconds.</summary>
         private void Rescue()
         {
             interventionUntil = 0f;
-            GuardianAngelsVfx.Rescued(transform);
-            Health = Mathf.Max(1, Mathf.CeilToInt(MaxHealth * 0.25f));
+            GuardianAngelsVfx.Rescued(Run.ProjectileRoot, transform);
+            CoopFx.InterventionSaved(Run);
+            Health = Mathf.Max(1, Mathf.CeilToInt(MaxHealth * InterventionRescueHealth));
             Protect(2f);
             Blessing.Apply(2, 2f);
             HeroVfx.Pulse(Run.ProjectileRoot, transform.position, 2f, new Color(1f, 0.95f, 0.7f), 0.6f);

@@ -6,12 +6,13 @@ namespace Slopgame
     /// <summary>
     /// Divine Intervention: three little guardian angels circle the marked hero for as long as the mark lasts, bobbing
     /// and beating their wings in a warm glow, passing behind the hero on the far side of their circle, with a ring of
-    /// light at the hero's feet. If the hero is saved, the angels flare and fly up and away; otherwise they fade.
+    /// light at the hero's feet. If the hero is saved, a pillar of light slams down on them, a golden shockwave rolls
+    /// out and the angels flare and soar away; otherwise they quietly fade.
     /// </summary>
     public sealed class GuardianAngelsVfx : MonoBehaviour
     {
         private const int Count = 3;
-        private const float Orbit = 0.75f, Scale = 0.6f, FadeTime = 0.35f, LeaveTime = 0.6f;
+        private const float Orbit = 0.75f, Scale = 0.6f, FadeTime = 0.35f, LeaveTime = 1.1f;
         private static readonly Color Glow = new Color(1f, 0.93f, 0.62f);
         private static readonly Dictionary<Transform, GuardianAngelsVfx> watching = new Dictionary<Transform, GuardianAngelsVfx>();
         private Transform root, hero;
@@ -44,12 +45,25 @@ namespace Slopgame
             HeroVfx.Motes(root, hero.position, 0.8f, Glow, 16, 1f);
         }
 
-        /// <summary>The hero was saved: the angels flare and fly away upward.</summary>
-        public static void Rescued(Transform hero)
+        /// <summary>
+        /// The hero was saved: a pillar of light and a shockwave mark the rescue while the angels soar away.
+        /// Plays even if this machine never saw the angels arrive, so the save always reads.
+        /// </summary>
+        public static void Rescued(Transform root, Transform hero)
         {
-            if (hero == null || !watching.TryGetValue(hero, out var angels) || angels == null || angels.leftAt >= 0f) return;
+            if (root == null || hero == null) return;
+            if (!watching.TryGetValue(hero, out var angels) || angels == null || angels.leftAt >= 0f)
+            {
+                Play(root, hero, 0f);
+                angels = watching[hero];
+            }
             angels.leftAt = angels.age;
-            HeroVfx.Pulse(angels.root, hero.position, 1.6f, FlameMesh.Alpha(Glow, 0.9f), 0.4f);
+            Vector2 at = hero.position;
+            HeroVfx.Pulse(root, at, 2.4f, FlameMesh.Alpha(Glow, 0.9f), 0.5f);
+            HeroVfx.Pulse(root, at, 1.2f, Color.white, 0.25f);
+            CombatVfx.Ring(root, at, 3f, Glow, 0.6f);
+            HeroVfx.Motes(root, at, 1.2f, AbilityCatalog.Gold, 32, 1.4f);
+            HeroVfx.Sparks(root, at, Glow, 20, 5f, 0.6f);
         }
 
         private SpriteRenderer Layer(string name, Sprite sprite)
@@ -73,6 +87,17 @@ namespace Slopgame
             float time = Time.time;
 
             mesh.Begin();
+            if (leaving)
+            {
+                // The rescue: a pillar of light slams down and thins out, and a golden shockwave rolls outward.
+                float t = (age - leftAt) / LeaveTime, fade = 1f - t;
+                float width = Mathf.Lerp(1.6f, 0.3f, Mathf.Sqrt(t));
+                Vector2 top = center + Vector2.up * 12f, feet = center + Vector2.down * 0.45f;
+                mesh.Bar(top, Vector2.down, 12.45f, width, FlameMesh.Alpha(Glow, 0f), FlameMesh.Alpha(Glow, 0.55f * fade));
+                mesh.Bar(top, Vector2.down, 12.45f, width * 0.35f, FlameMesh.Alpha(Color.white, 0f), FlameMesh.Alpha(Color.white, 0.8f * fade));
+                mesh.Ellipse(feet, 1.1f + t, 0.45f + 0.4f * t, FlameMesh.Alpha(Color.white, 0.6f * fade), FlameMesh.Alpha(Glow, 0f), 28);
+                mesh.Ring(feet, 0.6f + 3f * t, 0.12f * fade + 0.02f, FlameMesh.Alpha(Glow, 0.8f * fade), 40);
+            }
             float pulse = 0.5f + 0.5f * Mathf.Sin(time * 3f);
             mesh.Ellipse(center + Vector2.down * 0.45f, 0.75f, 0.3f, FlameMesh.Alpha(Glow, (0.25f + 0.1f * pulse) * alpha), FlameMesh.Alpha(Glow, 0f), 24);
             mesh.Ring(center + Vector2.down * 0.45f, 0.6f, 0.03f, FlameMesh.Alpha(Glow, 0.5f * alpha), 32);

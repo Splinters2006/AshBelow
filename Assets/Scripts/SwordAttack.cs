@@ -8,6 +8,8 @@ namespace Slopgame
         public const float ConeAngle = 60f;
         /// <summary>The Assassin stabs rather than sweeps, so her hit area is a narrow wedge.</summary>
         public const float StabAngle = 40f;
+        /// <summary>Her thrust lunges far past a sword's sweep, trading width for reach.</summary>
+        public const float StabReach = 4f;
         public bool ShowChargePreview { get; set; } = true;
         /// <summary>Enemies are hit when any part of their body is inside the cone, so what the cone shows is what gets hit.</summary>
         public bool HitsWholeBody { get; set; }
@@ -62,7 +64,7 @@ namespace Slopgame
                 (offset.sqrMagnitude < 0.0001f || Vector2.Dot(offset.normalized, aim.normalized) >= Mathf.Cos(coneAngle * 0.5f * Mathf.Deg2Rad));
         }
 
-        public float AttackReach => Reach + 0.25f * (Player.Powerups.Count(PowerupType.Longsword) + Player.Powerups.Count(PowerupType.LongDaggers));
+        public float AttackReach => (Player.ClassWeapon == WeaponType.Daggers ? StabReach : Reach) + 0.25f * (Player.Powerups.Count(PowerupType.Longsword) + Player.Powerups.Count(PowerupType.LongDaggers));
 
         public float ChargedCone(float charge) => Mathf.Lerp(Player.ClassWeapon == WeaponType.Daggers ? StabAngle : ConeAngle,
             Player.ClassWeapon == WeaponType.Daggers ? 22f

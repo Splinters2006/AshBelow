@@ -167,7 +167,7 @@ namespace Slopgame
                 case AbilityType.Consecration:
                     Consecration.Sanctify(Player, Consecration.Duration + (rank - 1) * 1f, Mathf.Max(1, Player.Damage / 2) + rank - 1); break;
                 case AbilityType.DivineIntervention:
-                    Intervene((Vector2)transform.position + aim * Mathf.Min(cursorDistance, 8f)); break;
+                    Intervene((Vector2)transform.position + aim * cursorDistance); break;
                 case AbilityType.CardToss:
                     ThrownCard.Toss(Player, aim, 3, Player.Damage + rank); break;
                 case AbilityType.DiceBomb:
@@ -310,21 +310,39 @@ namespace Slopgame
         /// <summary>Holy Lance: a lance of light flies along a wide line, piercing with holy damage; the first enemy it meets is stunned.</summary>
         private void HolyLance(Vector2 aim, int damage) => ThrownLance.Throw(Player, aim, damage);
 
-        /// <summary>Divine Intervention: the ally nearest the cursor (the Paladin, if none is closer) is watched over for a few seconds.</summary>
+        /// <summary>Hovering this close to themselves, the Paladin watches over themselves instead of an ally.</summary>
+        public const float InterventionSelfRadius = 1f;
+
+        /// <summary>
+        /// Divine Intervention: the living ally nearest the cursor is watched over for a few seconds. The Paladin
+        /// only picks themselves when no ally is alive or the cursor is right on top of them.
+        /// </summary>
         private void Intervene(Vector2 cursor)
         {
             var run = Player.Run;
-            Vector2 target = transform.position;
             RemoteHero chosen = null;
-            if (run.IsNetworked)
+            if (run.IsNetworked && Vector2.Distance(cursor, transform.position) > InterventionSelfRadius)
+            {
+                float best = float.MaxValue;
                 foreach (var hero in run.Coop.RemoteHeroes)
-                    if (hero != null && hero.IsAlive && Vector2.Distance(cursor, hero.transform.position) < Vector2.Distance(cursor, target))
-                    { chosen = hero; target = hero.transform.position; }
+                {
+                    if (hero == null || !hero.IsAlive) continue;
+                    float distance = Vector2.Distance(cursor, hero.transform.position);
+                    if (distance < best) { best = distance; chosen = hero; }
+                }
+            }
             if (chosen == null) Player.Intercede(InterventionTime);
-            else run.Coop.SupportAllies(target, 0.6f, SupportKind.Intervention, 0, InterventionTime);
+            else
+            {
+                run.Coop.SendSupport(chosen.Id, SupportKind.Intervention, 0, InterventionTime);
+                // A golden tether shows the caster exactly who was chosen.
+                CombatVfx.GlowBolt(run.ProjectileRoot, transform.position, chosen.transform.position, AbilityCatalog.Gold);
+                CoopFx.Bolt(run, transform.position, chosen.transform.position, AbilityCatalog.Gold, true);
+            }
             // Guardian angels circle whoever is watched over, on every machine.
-            GuardianAngelsVfx.Play(run.ProjectileRoot, chosen != null ? chosen.transform : transform, InterventionTime);
-            CoopFx.Intervention(run, target, InterventionTime);
+            var watched = chosen != null ? chosen.transform : transform;
+            GuardianAngelsVfx.Play(run.ProjectileRoot, watched, InterventionTime);
+            CoopFx.Intervention(run, watched.position, InterventionTime, chosen != null ? chosen.Id : (ulong?)null);
         }
 
         public const float EmpRadius = 4f, EmpStun = 1.5f, GrappleRange = 7f;

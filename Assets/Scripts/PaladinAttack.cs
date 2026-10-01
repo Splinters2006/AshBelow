@@ -37,6 +37,9 @@ namespace Slopgame
             swipe.HitsWholeBody = true;
             relics = GetComponent<PaladinRelics>();
             Player.Struck += warded => { if (Player.Powerups.Count(PowerupType.Retribution) > 0) retributionReady = true; };
+            // Zeal: flames orbit the Paladin, one per stack, with a halo once the next blessing is doubled.
+            ZealVfx.Attach(transform, () => Player.Run != null ? Player.Run.ProjectileRoot : null, () => Player.Powerups.Zeal,
+                () => Player.Run != null && Player.Run.IsPlaying && Player.Health > 0 && Player.Powerups.Count(PowerupType.Zeal) > 0);
             // Teammates see the same ring through RemoteHero.
             BlessingChargeRing.Attach(transform, () => Player.Run.IsPlaying && Player.Health > 0 && Player.Charge.IsCharging
                 && !Player.IsRolling && !IsHeavyAttacking, () => Player.Charge.Amount);

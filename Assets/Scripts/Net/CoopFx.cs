@@ -41,8 +41,11 @@ namespace Slopgame
         public static void Consecration(DungeonRun run, Vector2 at, float duration, float radius) => Send(run, FxKind.Consecration, at, default, null, duration, radius);
         public static void Heal(DungeonRun run, Vector2 center, float radius) => Send(run, FxKind.Heal, center, default, null, radius);
         public static void Lance(DungeonRun run, Vector2 origin, Vector2 aim) => Send(run, FxKind.Lance, origin, aim);
-        /// <summary>Teammates see guardian angels circle the hero nearest <paramref name="at"/> (which may be themselves).</summary>
-        public static void Intervention(DungeonRun run, Vector2 at, float duration) => Send(run, FxKind.Intervention, at, default, null, duration);
+        /// <summary>Teammates see guardian angels circle the watched hero: the caster, or the teammate <paramref name="target"/>.</summary>
+        public static void Intervention(DungeonRun run, Vector2 at, float duration, ulong? target)
+            => Send(run, FxKind.Intervention, at, default, null, duration, 0f, target.HasValue ? (int)target.Value : -1);
+        /// <summary>Teammates see this hero's Divine Intervention trigger and save them.</summary>
+        public static void InterventionSaved(DungeonRun run) => Send(run, FxKind.InterventionSaved, default);
         public static void BallLightning(DungeonRun run, Vector2 origin, Vector2 aim, float duration) => Send(run, FxKind.BallLightning, origin, aim, null, duration);
         /// <summary>An Ice Wall block broke here; every machine breaks its copy.</summary>
         public static void IceBreak(DungeonRun run, Vector2 at) => Send(run, FxKind.IceBreak, at);
@@ -218,8 +221,20 @@ namespace Slopgame
                 case FxKind.Heal: HealVfx.PlayAround(run, fx.A, fx.F1); break;
                 case FxKind.Lance: ThrownLance.SpawnGhost(run, fx.A, fx.B); break;
                 case FxKind.Intervention:
-                    var watched = NearestHero(run, fx.A);
+                    // N names the watched hero (-1: the caster); fall back to position for anything unexpected.
+                    Transform watched = null;
+                    if (fx.N >= 0 && (ulong)fx.N == run.Coop.LocalId) { if (run.Player != null) watched = run.Player.transform; }
+                    else
+                    {
+                        var watchedHero = FindHero(run, fx.N < 0 ? fx.Origin : (ulong)fx.N);
+                        if (watchedHero != null) watched = watchedHero.transform;
+                    }
+                    if (watched == null) watched = NearestHero(run, fx.A);
                     if (watched != null) GuardianAngelsVfx.Play(root, watched, fx.F1);
+                    break;
+                case FxKind.InterventionSaved:
+                    var saved = FindHero(run, fx.Origin);
+                    if (saved != null) GuardianAngelsVfx.Rescued(root, saved.transform);
                     break;
                 case FxKind.BallLightning: Slopgame.BallLightning.SpawnGhost(run, fx.A, fx.B, fx.F1); break;
                 case FxKind.IceBreak: Slopgame.IceWall.BreakAt(run, fx.A); break;

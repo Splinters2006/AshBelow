@@ -162,6 +162,7 @@ namespace Slopgame
                     player.Abilities.CooldownRemaining(i), ability?.Cooldown ?? 1f, ability?.Color ?? DungeonUi.Muted, ability == null);
             }
             if (mechanicSlot) MechanicSlot(new Rect(left + 576, 596, 180, 78), player.Mechanic);
+            if (player.Powerups.Count(PowerupType.Zeal) > 0) ZealMeter(new Rect(left, 562, 180, 28), player.Powerups.Zeal);
             Slot(new Rect(left + (mechanicSlot ? 768 : 576), 596, 180, 78), KeyBindings.Label(GameAction.Dodge), "Dodge", player.DodgeCooldownRemaining, DungeonPlayer.RollCooldown, DungeonUi.Teal);
             if (player.Blessing.BonusDamage > 0)
                 DungeonUi.Label(new Rect(440, 505, 400, 24), $"BLESSED  +{player.Blessing.BonusDamage} DAMAGE  /  {player.Blessing.Remaining:0.0}s", 14, AbilityCatalog.Gold, TextAnchor.MiddleCenter);
@@ -206,6 +207,19 @@ namespace Slopgame
                 : player.ClassWeapon == WeaponType.Beam
                 ? $"{attack}  plasma ray     HOLD / RELEASE {attack}  charged ray     HOLD / RELEASE {KeyBindings.Label(GameAction.Special)}  plasma cannon     {interact}  interact"
                 : $"{KeyBindings.MovementLabel()}  move     HOLD / RELEASE {attack}  charge attack     {interact}  interact", 13, DungeonUi.Muted, TextAnchor.UpperCenter);
+        }
+
+        /// <summary>Zeal stacks as a row of pips over the Paladin's special; a full row means the next blessing is doubled.</summary>
+        private static void ZealMeter(Rect rect, int zeal)
+        {
+            bool full = zeal >= PlayerPowerups.ZealStacks;
+            float pulse = full ? 0.6f + 0.4f * Mathf.Sin(Time.unscaledTime * 8f) : 1f;
+            DungeonUi.Label(new Rect(rect.x + 2, rect.y, 110, 16), full ? "ZEAL  x2 BLESSING" : $"ZEAL  {zeal}/{PlayerPowerups.ZealStacks}", 12,
+                full ? FlameMesh.Alpha(AbilityCatalog.Gold, pulse) : DungeonUi.Muted);
+            float gap = 3f, width = (rect.width - gap * (PlayerPowerups.ZealStacks - 1)) / PlayerPowerups.ZealStacks;
+            for (int i = 0; i < PlayerPowerups.ZealStacks; i++)
+                DungeonUi.Panel(new Rect(rect.x + i * (width + gap), rect.yMax - 8, width, 6),
+                    i < zeal ? FlameMesh.Alpha(full ? FlameMesh.Core : AbilityCatalog.Gold, pulse) : DungeonUi.PanelColor);
         }
 
         /// <summary>The key bound to relic slot 0 or 1.</summary>
