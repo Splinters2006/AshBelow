@@ -96,6 +96,8 @@ namespace Slopgame
         public const float InfernalCourtThreat = 1.6f;
         /// <summary>Worlds 2 and 4 have tougher enemies, worlds 3 and 4 tougher guardians: 30% more enemy health, 95% more guardian health (30%, then half as much again).</summary>
         public const float ToughEnemyHealth = 1.3f, ToughGuardianHealth = 1.3f * 1.5f;
+        /// <summary>Guardian health on top of all that: 25% more in world 2, 50% more in world 3, double in world 4.</summary>
+        public const float NeonGuardianHealth = 1.25f, InfernalGuardianHealth = ToughGuardianHealth * 1.5f, ArcaneGuardianHealth = ToughGuardianHealth * 2f;
 
         public static readonly WorldDefinition[] All =
         {
@@ -119,7 +121,7 @@ namespace Slopgame
                 {
                     new TrapTheme("Plasma laser", TrapKind.Jet, HazardStyle.Plasma, 9f),
                     new TrapTheme("Arc floor panel", TrapKind.Vent, HazardStyle.Circuit, 1.2f),
-                }, element: HazardStyle.Plasma, firstGuardian: BossKind.GridOverseer, waves: true, enemyHealth: ToughEnemyHealth),
+                }, element: HazardStyle.Plasma, firstGuardian: BossKind.GridOverseer, waves: true, enemyHealth: ToughEnemyHealth, guardianHealth: NeonGuardianHealth),
             // Placeholder hero worlds: their own names, colours and specialists, with the Ash Below's basic enemies (and guardians,
             // where they have none of their own yet) until each is designed.
             new WorldDefinition(2, "THE INFERNAL COURT", false, new Color(0.06f, 0.015f, 0.03f),
@@ -131,7 +133,7 @@ namespace Slopgame
                 {
                     new TrapTheme("Brimstone geyser", TrapKind.Vent, HazardStyle.Hellfire, 1.5f),
                     new TrapTheme("Fire jet", TrapKind.Jet, HazardStyle.Hellfire, 5f),
-                }, lava: true, firstGuardian: BossKind.HexMatriarch, threat: InfernalCourtThreat, guardianHealth: ToughGuardianHealth),
+                }, lava: true, firstGuardian: BossKind.HexMatriarch, threat: InfernalCourtThreat, guardianHealth: InfernalGuardianHealth),
             new WorldDefinition(3, "THE ARCANE SPIRE", false, new Color(0.03f, 0.03f, 0.08f),
                 new Color(0.1f, 0.1f, 0.2f), new Color(0.12f, 0.12f, 0.23f), new Color(0.26f, 0.26f, 0.45f),
                 new Color(0.55f, 0.6f, 1f), new Color(0.4f, 0.85f, 1f),
@@ -141,7 +143,7 @@ namespace Slopgame
                 {
                     new TrapTheme("Frost rune", TrapKind.Rune, HazardStyle.Frost, 2.8f),
                     new TrapTheme("Arcane ray", TrapKind.Jet, HazardStyle.Void, 8f),
-                }, element: HazardStyle.Frost, firstGuardian: BossKind.Spellblade, waves: true, enemyHealth: ToughEnemyHealth, guardianHealth: ToughGuardianHealth),
+                }, element: HazardStyle.Frost, firstGuardian: BossKind.Spellblade, waves: true, enemyHealth: ToughEnemyHealth, guardianHealth: ArcaneGuardianHealth),
             new WorldDefinition(4, "THE SHADOW MARKET", false, new Color(0.02f, 0.04f, 0.035f),
                 new Color(0.09f, 0.12f, 0.11f), new Color(0.11f, 0.14f, 0.13f), new Color(0.22f, 0.28f, 0.26f),
                 new Color(0.45f, 0.95f, 0.7f), new Color(0.3f, 0.7f, 0.5f),
