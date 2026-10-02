@@ -1,8 +1,38 @@
-sprites in encyclopedia
-ready up instead of host starts in co op
-reaper skeletons not visible in coop
-make avatar of death only consume and require 50 souls
-make soul limit 100 instead of 99
-make reaper skeletons tank hits, they have 3 hp
-double avatar of death duration
+rework autofire setting, holding m1 releases as soon as charged and immediately begins charging again, add a menu per character to turn this on or off
+hud should be moved more outwards in game
 
+
+set reaper soul limit to 100
+make archer's elemental quiver only trigger the element that is selected if that isnt the case already
+add very clean crimson bloom vfx
+organize all heroes to be in the same order everywhere
+demoness: rework demonic runes to be 25% dropchance and 10% on HITTING an immobilized boss
+remove soul harvest entirely
+add ranks to pyre burst giving it more AOE, give pyre burst new vfx
+massacre rework: killing 3 enemies with one skill/attack resets your class skill
+buff still hunter to 1sec
+add new talent: increase crystal (and character mechanic if applicable) homing and pickup strength by 25%/50%
+make glass canon stackable up to 3 times
+rework last stand to trigger when below or at 25% hp, nerf it to 1.5x damage
+hunter's mark should have some vfx
+remove vanish from assasin
+add reaper talent: killing an enemy that would drop a soul on death now makes them explode aswell
+add reaper talent: increase soul limit by 25/50/100 
+add reaper talent: reapers technique's swings now harvest souls of all mobs they hit
+add samurai talent: bleeding you inflict against immobilized enemies deals 1.5x the damage during immobilization
+
+
+second passives:
+price 5k ash each
+unlocked for purchase after killing aurelion the grand magister
+archer: barbed arrows: your critical strikes now apply bleed
+knight: deal +1 damage for each ward or hp you currently have
+wizard: on freezing an enemy make it brittle: the next hit it takes deals 2x damage
+assasin: killing an enemy with a backstab now briefly renders you invisible
+paladin: your overcharged blessing now grants 4 ward split equally between everyone in it, if 3 players it goes 2 for paladin one for the rest
+brawler: your barrages now end in an even stronger punch, that deals higher damage and has bigger aoe
+demoness: demonic runes now create a paralyzing blast when picked up, paralyzing anything in 5 unit radius, no line of sight check
+gambler: add a new item to the purse shop: card deck, you can buy 52 cards, for each coin thrown out with, left or rightclick, a card is thrown out that deals half the damage of said coin costs 52 coins
+augment: scrap drop chance raised to 10%
+reaper: avatar of death cost reduced to 25 souls
+samurai: trail of blood: killing a bleeding enemy gives you +1 base damage for 5 seconds, does not refresh but does stack
