@@ -3,8 +3,10 @@ hud should be moved more outwards in game
 make tail sweep cooldown start ticking down when the animation starts, not when it ends
 make "on paralysis" talents also apply if the paralysing hit kills the target
 remove line of sight check from nightmare snap
-nightmare snap damage should be: level of skill X seconds of paralysis left X demoness damage
+anightmare snap damage should be: level of skill X seconds of paralysis left X demoness damage
 make all shop prices stay increasing during a run and not reset on new shop
+sync knight attack hitboxes with animations
+
 
 set reaper soul limit to 100
 make archer's elemental quiver only trigger the element that is selected if that isnt the case already
