@@ -19,6 +19,7 @@ import zipfile
 DEFAULT_REPO = "Splinters2006/AshBelow"
 MAX_ARCHIVE_BYTES = 2 * 1024**3
 MAX_EXTRACTED_BYTES = 8 * 1024**3
+RELEASE_MARKER = ".ashbelow-release.json"
 # Each build ZIP is recognised by its asset name prefix, its launcher and the Unity runtime next to it.
 PLATFORMS = {
     "windows": {"label": "Windows", "prefix": "AshBelow-", "executable": "AshBelow.exe", "runtime": "UnityPlayer.dll"},
@@ -154,40 +155,63 @@ def extract_release(archive_path, destination, platform="windows"):
     return root
 
 
+def replace_installation(directory, root, previous):
+    """Swap the new build's files into the install. The old ones are parked in `previous` and put back on failure."""
+    swapped = []
+    try:
+        for entry in sorted(root.iterdir()):
+            target = directory / entry.name
+            parked = previous / entry.name if target.exists() or target.is_symlink() else None
+            if parked:
+                target.rename(parked)
+            swapped.append((entry, target, parked))
+            entry.rename(target)
+    except OSError:
+        for entry, target, parked in reversed(swapped):
+            if target.exists():
+                target.rename(entry)
+            if parked:
+                parked.rename(target)
+        raise
+
+
 def install_release(directory, repo, save_directory, asset_name=None, check=False, platform="windows"):
     executable = PLATFORMS[platform]["executable"]
     require_separate_save_directory(directory, save_directory)
+    # Only an existing install is replaced, so the build is never unpacked into some unrelated folder.
+    if not (directory / executable).is_file():
+        raise RuntimeError(f"No Ash Below installation found in {directory} ({executable} is missing). Run the updater from the game folder.")
     release = request_json(f"https://api.github.com/repos/{repo}/releases/latest")
     asset = select_asset(release, asset_name, platform)
     print(f"Latest release: {release['tag_name']} / {asset['name']}")
     if check:
         return None
-    # A versioned sibling install allows rollback and never overwrites a running executable.
-    releases = directory.parent if directory.parent.name == "AshBelow-updates" else directory.parent / "AshBelow-updates"
-    require_separate_save_directory(releases, save_directory)
-    tag = re.sub(r"[^A-Za-z0-9._-]", "_", str(release["tag_name"]))[:80].strip(".") or "release"
-    target = releases / f"{tag}-{int(asset['id'])}"
-    require_separate_save_directory(target, save_directory)
-    if target.exists():
-        marker = target / ".ashbelow-release.json"
-        if marker.exists() and json.loads(marker.read_text(encoding="utf-8")).get("asset_id") == asset["id"] and (target / executable).is_file():
-            print(f"Already downloaded. Launch: {target / executable}")
-            return target
-        raise RuntimeError(f"Destination already exists and will not be overwritten: {target}")
+    marker = directory / RELEASE_MARKER
+    if marker.is_file() and json.loads(marker.read_text(encoding="utf-8")).get("asset_id") == asset["id"]:
+        print(f"Already up to date. Launch: {directory / executable}")
+        return directory
+    # A running game keeps its executable locked against writing on both Windows and Linux.
+    try:
+        with (directory / executable).open("r+b"):
+            pass
+    except OSError as error:
+        raise RuntimeError("Close Ash Below before updating; its files are in use or cannot be written.") from error
     backup_saves(save_directory)
-    releases.mkdir(parents=True, exist_ok=True)
-    with tempfile.TemporaryDirectory(prefix=".ashbelow-download-", dir=releases) as temp:
+    # Staging inside the install keeps every move on one filesystem; files the new build does not ship are left alone.
+    with tempfile.TemporaryDirectory(prefix=".ashbelow-update-", dir=directory, ignore_cleanup_errors=True) as temp:
         staging = Path(temp)
         archive = staging / "release.zip"
         download_asset(asset, archive)
         unpacked = staging / "unpacked"
         unpacked.mkdir()
         root = extract_release(archive, unpacked, platform)
-        (root / ".ashbelow-release.json").write_text(json.dumps({"tag": release["tag_name"], "asset_id": asset["id"]}), encoding="utf-8")
-        root.rename(target)
-    print(f"Update ready. Launch: {target / executable}")
-    print("Your previous installation is retained. Ash and upgrades stay in the shared save folder.")
-    return target
+        (root / RELEASE_MARKER).write_text(json.dumps({"tag": release["tag_name"], "asset_id": asset["id"]}), encoding="utf-8")
+        previous = staging / "previous"
+        previous.mkdir()
+        replace_installation(directory, root, previous)
+    print(f"Updated to {release['tag_name']}. Launch: {directory / executable}")
+    print("Ash and upgrades stay in the shared save folder.")
+    return directory
 
 
 def git(directory, *args):

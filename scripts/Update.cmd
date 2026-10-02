@@ -1,6 +1,6 @@
 @echo off
 setlocal
-rem Runs the Ash Below updater. When no Python 3.10+ is installed, a private copy of Python is downloaded
+rem Runs the Ash Below updater on Windows. When no Python 3.10+ is installed, a private copy of Python is downloaded
 rem once from python.org (checksum-verified) into %LOCALAPPDATA%\AshBelow\python. It needs no admin rights
 rem and changes nothing else on the PC.
 set "PRIVATE_DIR=%LOCALAPPDATA%\AshBelow\python"
@@ -10,7 +10,7 @@ if not defined PYTHON call :try py -3
 if not defined PYTHON call :try python
 if defined PYTHON goto run
 
-echo Python was not found. Setting up a private copy for the updater (one time only, about 12 MB)...
+echo Python 3.10 or newer was not found. Setting up a private copy for the updater (one time only, about 12 MB)...
 powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0install-python.ps1" -Destination "%PRIVATE_DIR%"
 call :try "%PRIVATE_DIR%\python.exe"
 if defined PYTHON goto run
@@ -22,10 +22,8 @@ pause
 exit /b 1
 
 :run
-%PYTHON% "%~dp0update-game.py" --mode release --directory "%~dp0." %*
-echo.
-pause
-exit /b
+rem The updater replaces this file while it runs, so everything after it stays on one line that cmd has already read.
+%PYTHON% "%~dp0update-game.py" --mode release --platform windows --directory "%~dp0." %* && (echo. & pause & exit /b 0) || (echo. & pause & exit /b 1)
 
 rem Sets PYTHON to the given command if it runs Python 3.10 or newer.
 :try

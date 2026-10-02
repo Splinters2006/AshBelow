@@ -43,8 +43,8 @@ namespace Slopgame.Editor
                 + "WASD / arrows: move | Mouse: aim | Hold/release left: charged attack | Right: class skill | Q/E: artifact abilities\n"
                 + "Space: dodge | F: interact / descend after clearing the floor\n\n"
                 + "Ash and shop upgrades are saved under ~/.config/unity3d/DefaultCompany/Ash Below.\n"
-                + "To update: close the game, run 'sh Update.sh' (needs Python 3.10+), then launch the new version at the printed path.\n"
-                + "The updater backs up saves and retains the old installation for rollback. Do not delete your save folder.\n");
+                + "To update: close the game, run 'sh Update.sh' (needs Python 3.10+), then run ./AshBelow.x86_64 again.\n"
+                + "The updater backs up saves and replaces this installation with the new version. Do not delete your save folder.\n");
             string archive = Path.Combine(releases, release + ".zip");
             ZipFile.CreateFromDirectory(folder, archive, System.IO.Compression.CompressionLevel.Optimal, true);
             Debug.Log("LINUX_BUILD_OK: " + archive);

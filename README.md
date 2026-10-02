@@ -167,7 +167,7 @@ Everyone picks a hero in the lobby, then the host presses **Begin descent**.
 
 ## Updating
 
-Close the game and run **`Update.cmd`** from the game folder. It downloads the latest release and installs it next to your current one, so you can go back if needed. It then prints where the new version is. Your save is backed up first and is never reset.
+Close the game and run **`Update.cmd`** from the game folder. It downloads the latest release and replaces your current install with it, so you launch the game the same way as before. If the update fails partway, the old version is put back. Your save is backed up first and is never reset.
 
 `Update.cmd` needs Python. If Python isn't installed, it downloads a portable copy into `%LOCALAPPDATA%\AshBelow\python` without needing admin rights. Delete that folder to remove it.
 
