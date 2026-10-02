@@ -78,7 +78,7 @@ namespace Slopgame
                 var peer = session.Peers[i];
                 var hero = run.Characters[Mathf.Clamp(peer.ClassIndex, 0, run.Characters.Count - 1)];
                 string tags = (i == 0 ? "  /  HOST" : "") + (peer.Id == session.LocalId ? "  /  YOU" : "");
-                DungeonUi.Label(new Rect(100, 390 + i * 46, 300, 40), peer.Name + tags, 18, DungeonUi.Text);
+                DungeonUi.Label(new Rect(100, 390 + i * 46, 300, 40), peer.Name + tags + (peer.Ready ? "  /  READY" : ""), 14, DungeonUi.Text);
                 DungeonUi.Label(new Rect(400, 390 + i * 46, 180, 40), hero.DisplayName, 18, hero.Color, TextAnchor.UpperRight);
             }
 
@@ -99,13 +99,12 @@ namespace Slopgame
                 }
             }
             GUI.EndScrollView();
-            DungeonUi.Label(new Rect(680, 486, 500, 60), "Enemies grow tougher with every hero. Each player earns Ash into their own save.", 15, DungeonUi.Muted);
+            DungeonUi.Label(new Rect(680, 486, 500, 60), "The descent starts when everyone is ready. Enemies scale with the party; each hero keeps their own Ash.", 15, DungeonUi.Muted);
 
-            if (session.IsHost)
-            {
-                if (DungeonUi.Button("coopBegin", new Rect(860, 598, 350, 48), "Begin descent", AbilityCatalog.Gold)) run.Coop.HostBeginRun();
-            }
-            else DungeonUi.Label(new Rect(860, 608, 350, 30), "Waiting for the host to begin…", 17, DungeonUi.Muted, TextAnchor.MiddleRight);
+            if (DungeonUi.Button("coopReady", new Rect(860, 598, 350, 48),
+                session.LocalReady ? "Cancel ready" : "Ready up", session.LocalReady ? DungeonUi.Teal : AbilityCatalog.Gold))
+                session.SetLocalReady(!session.LocalReady);
+
         }
 
         /// <summary>The share panel of a direct host: the internet address with a copy button, the LAN one and the router result.</summary>

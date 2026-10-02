@@ -6,6 +6,7 @@ namespace Slopgame
     /// <summary>Named-message ids and payloads for co-op. Every payload has matching Write/Read helpers.</summary>
     public static class CoopMessages
     {
+        public const string Skeletons = "ab.skeletons";
         public const string Start = "ab.start", Lobby = "ab.lobby", State = "ab.state", Enemies = "ab.enemies",
             Damage = "ab.damage", Kill = "ab.kill", Bolt = "ab.bolt", BoltEvent = "ab.boltevent", Fx = "ab.fx",
             Support = "ab.support", Interact = "ab.interact", Choice = "ab.choice", ChoiceDone = "ab.done",
@@ -31,7 +32,7 @@ namespace Slopgame
     public enum FxKind : byte { Arrow, Spell, Slash, Bolt, GlowBolt, Ring, Pulse, Punch, RearHit, Knife, PiercingShot, Aegis, Holy, Sanctuary,
         Windstep, Shadowstep, Stab, Quake, HolySword, Venom, HeavyPunch, Flurry, SanctuaryEnd, TailStab, TailSweep, Pentagram, DemonPaw, Coin, DemonHead, Sharpen, CoinFlip, CoinRain, Angel, Jackpot,
         PlasmaRay, PlasmaOrb, SentryTurret, MicroMissile, IceWall, Wings, SoulSiphon, Ricochet, Net, ShadowClone, DeathMark, RocketBoost, OrbitalLaser, Grapple, BrawlerMove, Insurance, InsuranceClaim, Card, Dice,
-        Shield, Whirlwind, WarBanner, Consecration, Heal, Lance, Intervention, BallLightning, IceBreak, NightmareSnap, SnapTether, InterventionSaved, AvatarOfDeath, DemonicPower, SuperAngry, ShieldTaunt, Retribution, RockCover, HallowedGround, KatanaCrescent, KatanaThrust, KatanaSlice, KatanaSheathe, SliceDiceChunk, Bloodpop, PrimalRage, Bloodscent }
+        Shield, Whirlwind, WarBanner, Consecration, Heal, Lance, Intervention, BallLightning, IceBreak, NightmareSnap, SnapTether, InterventionSaved, AvatarOfDeath, DemonicPower, SuperAngry, ShieldTaunt, Retribution, RockCover, HallowedGround, KatanaCrescent, KatanaThrust, KatanaSlice, KatanaSheathe, SliceDiceChunk, Bloodpop, PrimalRage, Bloodscent, CrimsonBloom }
 
     public struct PlayerStateMessage
     {
@@ -64,6 +65,28 @@ namespace Slopgame
             r.ReadValueSafe(out m.Flags); r.ReadValueSafe(out m.MoreFlags); r.ReadValueSafe(out m.Health); r.ReadValueSafe(out m.MaxHealth);
             r.ReadValueSafe(out m.Charge);
             return m;
+        }
+    }
+
+    public struct SkeletonSnapshot
+    {
+        public Vector2 Position, Scale;
+        public float Angle;
+        public bool Flip;
+        public Color32 Color;
+
+        public void Write(FastBufferWriter writer)
+        {
+            writer.WriteValueSafe(Position); writer.WriteValueSafe(Scale); writer.WriteValueSafe(Angle);
+            writer.WriteValueSafe(Flip); writer.WriteValueSafe(Color);
+        }
+
+        public static SkeletonSnapshot Read(FastBufferReader reader)
+        {
+            var value = new SkeletonSnapshot();
+            reader.ReadValueSafe(out value.Position); reader.ReadValueSafe(out value.Scale); reader.ReadValueSafe(out value.Angle);
+            reader.ReadValueSafe(out value.Flip); reader.ReadValueSafe(out value.Color);
+            return value;
         }
     }
 

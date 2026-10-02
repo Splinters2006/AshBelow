@@ -1,1 +1,8 @@
+sprites in encyclopedia
+ready up instead of host starts in co op
+reaper skeletons not visible in coop
+make avatar of death only consume and require 50 souls
+make soul limit 100 instead of 99
+make reaper skeletons tank hits, they have 3 hp
+double avatar of death duration
 

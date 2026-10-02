@@ -371,7 +371,13 @@ namespace Slopgame
         /// <summary>Contact damage against the local hero (each machine judges its own hero).</summary>
         public void TryContactHit(float reach)
         {
-            if (!Run.IsPlaying || Health <= 0 || IsHeld || ActionTime < contactReadyAt || Run.Player.IsInvulnerable || Run.Player.IgnoresContact || Run.Player.Health <= 0
+            if (!Run.IsPlaying || Health <= 0 || IsHeld || ActionTime < contactReadyAt) return;
+            if (SkeletonMinion.TryBlock(Run, transform.position, reach))
+            {
+                contactReadyAt = ActionTime + 1f;
+                return;
+            }
+            if (Run.Player.IsInvulnerable || Run.Player.IgnoresContact || Run.Player.Health <= 0
                 || Vector2.Distance(transform.position, Run.Player.transform.position) >= reach) return;
             Run.Player.Hit(Boss != null ? Run.World.GuardianHitDamage : 1);
             contactReadyAt = ActionTime + 1f;

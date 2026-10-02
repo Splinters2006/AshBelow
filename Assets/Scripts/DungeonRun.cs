@@ -92,8 +92,8 @@ namespace Slopgame
         public int PartySize { get; private set; } = 1;
         /// <summary>An enemy's health for this world and party: deadlier worlds (see <see cref="WorldDefinition.Threat"/>) add to it first.</summary>
         public int EnemyHealthScaled(int health) => ScaleHealth(Mathf.CeilToInt(health * World.EnemyHealthMultiplier), PartySize);
-        /// <summary>Each extra hero adds half of an enemy's base health.</summary>
-        public static int ScaleHealth(int health, int partySize) => Mathf.CeilToInt(health * (1f + 0.5f * (Mathf.Max(1, partySize) - 1)));
+        /// <summary>Each extra hero adds a full enemy's base health.</summary>
+        public static int ScaleHealth(int health, int partySize) => Mathf.CeilToInt(health * (float)Mathf.Max(1, partySize));
         private readonly int[,] distances = new int[DungeonMap.Width, DungeonMap.Height];
         private static readonly Vector2Int[] Steps = { Vector2Int.up, Vector2Int.down, Vector2Int.left, Vector2Int.right };
         private readonly List<Vector2Int> heroCells = new List<Vector2Int>(), lastHeroCells = new List<Vector2Int>();
@@ -494,8 +494,8 @@ namespace Slopgame
         /// <summary>A wave arrives once the fight is down to a quarter of a wave's size (at least 2 enemies).</summary>
         public static int WaveReleaseThreshold(int waveSize) => Mathf.Max(2, waveSize / 4);
 
-        /// <summary>More heroes fight better together than alone, so enemies grow slower than the party: 1x, 1.6x, 2.1x, 2.5x.</summary>
-        public static float WavePartyMultiplier(int partySize) => partySize <= 1 ? 1f : partySize == 2 ? 1.6f : partySize == 3 ? 2.1f : 2.5f;
+        /// <summary>Wave counts scale with the party: 1x, 2x, 3x, 4x, capped by the arena limit.</summary>
+        public static float WavePartyMultiplier(int partySize) => Mathf.Clamp(partySize, 1, NetSession.MaxPlayers);
 
         /// <summary>
         /// Builds the level's waves around the arena, away from the heroes. All of them are built now (seeded, so every

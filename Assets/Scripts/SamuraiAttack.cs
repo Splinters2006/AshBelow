@@ -358,11 +358,8 @@ namespace Slopgame
             var root = run.ProjectileRoot;
             yield return new WaitForSeconds(BloomDelay);
             if (!run.IsPlaying || root != run.ProjectileRoot) yield break;
-            HeroVfx.Pulse(root, center, radius, Blood, 0.35f);
-            CombatVfx.Ring(root, center, radius, Blood, 0.35f);
-            HeroVfx.Sparks(root, center, Blood, 16, 5.5f, 0.4f);
-            CoopFx.Pulse(run, center, radius, Blood, 0.35f);
-            CoopFx.Ring(run, center, radius, Blood, 0.35f);
+            KatanaVfx.CrimsonBloom(root, center, radius);
+            CoopFx.CrimsonBloom(run, center, radius);
             foreach (var enemy in run.Enemies.ToArray())
                 if (enemy != null && enemy.Health > 0 && Vector2.Distance(center, enemy.transform.position) <= radius + enemy.HitRadius)
                     enemy.Hit(damage, center, 0.6f);

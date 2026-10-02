@@ -8,7 +8,7 @@ namespace Slopgame
     /// its master, casters, and anything not already held come first, and skeletons share targets out between them
     /// rather than piling onto one. It finds its way around walls, keeps apart from the others, never strays far from
     /// its master (and digs itself back up beside him if left behind). Its blows are dealt in the Reaper's name, so his
-    /// talents apply to them, and its health and damage are fractions of his. Every blow strikes fear into what it hits.
+    /// talents apply to them, and it has three hit points and its attacks deal a fixed 1 damage. Every blow strikes fear into what it hits.
     /// Enemies it stands against wear it down.
     /// It lasts until it is destroyed or the floor ends.
     /// </summary>
@@ -38,11 +38,11 @@ namespace Slopgame
         private int wounds;
         private static Sprite sprite;
 
-        /// <summary>A third of the Reaper's maximum health, rounded up.</summary>
-        public int MaxHealth => Mathf.Max(1, Mathf.CeilToInt(master.MaxHealth / 3f));
+        /// <summary>Each skeleton can take three hits.</summary>
+        public int MaxHealth => 3;
         public int Health => MaxHealth - wounds;
-        /// <summary>Half the Reaper's damage, rounded up.</summary>
-        public int Damage => Mathf.Max(1, Mathf.CeilToInt(master.Damage * 0.5f));
+        /// <summary>Fixed attack damage, independent of the Reaper's damage purchases.</summary>
+        public int Damage => 1;
 
         // W bone, w shaded bone, D outline, G soul-fire in the eye sockets, K rusted blade, B hilt.
         public static Sprite Sprite => sprite != null ? sprite : sprite = DungeonVisuals.PaletteSprite("Skeleton", new[]
@@ -128,18 +128,39 @@ namespace Slopgame
                 // Its victim is frightened stiff now: look at once for someone who is not.
                 nextThink = 0f;
             }
-            // Whatever it stands toe to toe with hits back, once a second.
-            if (Time.time < nextHurtAt) return;
-            foreach (var enemy in run.Enemies)
+        }
+
+        /// <summary>Local skeletons intercept enemy attacks before they reach the hero.</summary>
+        public static bool TryBlock(DungeonRun run, Vector2 position, float radius)
+        {
+            foreach (var skeleton in All)
             {
-                if (enemy == null || enemy.Health <= 0 || enemy.IsHeld || enemy.IsRanged
-                    || Vector2.Distance(position, enemy.transform.position) > enemy.HitRadius + 0.5f) continue;
-                nextHurtAt = Time.time + HurtInterval;
-                wounds++;
-                flashUntil = Time.time + 0.15f;
-                HeroVfx.Sparks(run.ProjectileRoot, position, ReaperAttack.Bone, 6, 3f, 0.25f, position - (Vector2)enemy.transform.position, 120f);
-                break;
+                if (skeleton == null || skeleton.run != run || skeleton.Health <= 0
+                    || skeleton.master == null || skeleton.master.Health <= 0
+                    || Vector2.Distance(position, skeleton.transform.position) > radius + 0.3f) continue;
+                if (Time.time >= skeleton.nextHurtAt)
+                {
+                    skeleton.nextHurtAt = Time.time + HurtInterval;
+                    skeleton.wounds++;
+                    skeleton.flashUntil = Time.time + 0.15f;
+                    HeroVfx.Sparks(run.ProjectileRoot, skeleton.transform.position, ReaperAttack.Bone, 6, 3f, 0.25f);
+                    if (skeleton.Health <= 0) skeleton.Crumble();
+                }
+                return true;
             }
+            return false;
+        }
+
+        public static void Capture(DungeonRun run, List<SkeletonSnapshot> snapshots)
+        {
+            snapshots.Clear();
+            foreach (var skeleton in All)
+                if (skeleton != null && skeleton.run == run && skeleton.Health > 0 && skeleton.transform.parent == run.ProjectileRoot)
+                    snapshots.Add(new SkeletonSnapshot
+                    {
+                        Position = skeleton.transform.position, Scale = skeleton.transform.localScale,
+                        Angle = skeleton.transform.eulerAngles.z, Flip = skeleton.body.flipX, Color = skeleton.body.color
+                    });
         }
 
         private void OnDestroy() { All.Remove(this); if (shadow != null) Destroy(shadow.gameObject); }

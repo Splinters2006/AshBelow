@@ -8,20 +8,18 @@ namespace Slopgame
     /// The Samurai's class mechanic, a toggle. Pressed once, she strikes a pose: everything she does deals no damage,
     /// and each enemy is instead owed what it would have taken. Pressed again, she sheathes her katana and every cut
     /// lands at once, multiplied by <see cref="ReleaseMultiplier"/>. With its R upgrade (Open Veins, from the Ash shop)
-    /// the sheathe also opens a bleed on each enemy it cut, based on the total damage it dealt to all of them together. A sheathe starts a cooldown
-    /// that only holds back the next sheathe: she can strike the pose again at once, but has to hold it until it runs out.
+    /// the sheathe also opens a bleed on each enemy it cut, based on the total damage it dealt to all of them together. She can pose and sheathe again as soon as the animation ends.
     /// </summary>
     public sealed class TruePoser : ClassMechanic
     {
-        public const float ReleaseMultiplier = 1.25f, Cooldown = 10f, SheatheTime = 0.5f, ImpactTime = 0.16f;
+        public const float ReleaseMultiplier = 1.25f, SheatheTime = 0.5f, ImpactTime = 0.16f;
         private readonly Dictionary<DungeonEnemy, int> owed = new Dictionary<DungeonEnemy, int>();
-        private float readyAt, nextMote;
+        private float nextMote;
         private Coroutine sheathing;
         public override string Name => "True Poser";
         public override Color Color => SamuraiAttack.Blood;
         /// <summary>True while she holds the pose: her damage is stored instead of dealt.</summary>
         public bool IsPosing { get; private set; }
-        private float CooldownRemaining => DebugMode.Cooldown(Mathf.Max(0f, readyAt - Time.time));
         /// <summary>All the damage waiting on the sheathe, before its multiplier.</summary>
         public int Owed
         {
@@ -32,18 +30,14 @@ namespace Slopgame
                 return total;
             }
         }
-        /// <summary>True while she is posing and the last sheathe's cooldown still keeps the katana out.</summary>
-        public bool IsSheatheLocked => IsPosing && CooldownRemaining > 0f;
-        public override float Readiness => IsPosing ? 1f - Mathf.Clamp01(CooldownRemaining / Cooldown) : 1f;
-        public override string Status => IsSheatheLocked ? $"{Seconds(CooldownRemaining)}  /  {Owed}" : IsPosing ? $"SHEATHE  /  {Owed}" : "READY";
-        public override void ReduceCooldown(float seconds) => readyAt = Cooldowns.Shorten(readyAt, seconds);
+        public override float Readiness => 1f;
+        public override string Status => IsPosing ? $"SHEATHE  /  {Owed}" : "READY";
 
         public override bool TryActivate(Vector2 aim)
         {
             if (!CanAct || sheathing != null) return false;
             if (IsPosing)
             {
-                if (CooldownRemaining > 0f) return false;
                 sheathing = StartCoroutine(Sheathe());
                 return true;
             }
@@ -137,7 +131,6 @@ namespace Slopgame
                 ScreenFx.Flash(FlameMesh.Alpha(SamuraiAttack.Blood, 0.3f), 0.25f);
                 ScreenFx.Shake(0.22f + 0.04f * Mathf.Min(cuts, 8), 0.3f);
             }
-            readyAt = Time.time + Cooldown;
             sheathing = null;
         }
 

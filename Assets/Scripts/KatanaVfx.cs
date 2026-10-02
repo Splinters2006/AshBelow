@@ -8,7 +8,7 @@ namespace Slopgame
     /// </summary>
     public sealed class KatanaVfx : MeshEffect
     {
-        private enum Style { Crescent, Thrust, Slice, Sheathe, Impact }
+        private enum Style { Crescent, Thrust, Slice, Sheathe, Impact, Bloom }
         private Style style;
         private Vector2 origin, aim, end;
         private float reach, cone, width;
@@ -91,12 +91,56 @@ namespace Slopgame
             effect.Redraw();
         }
 
+        /// <summary>A bleeding death unfolds into a crimson flower, reaching the passive's actual damage radius.</summary>
+        public static void CrimsonBloom(Transform root, Vector2 center, float radius)
+        {
+            var effect = Spawn<KatanaVfx>(root, 0.65f, 10);
+            if (effect == null) return;
+            effect.style = Style.Bloom;
+            effect.origin = center;
+            effect.reach = Mathf.Max(0.1f, radius);
+            effect.Redraw();
+        }
+
+        private void DrawBloom(float t)
+        {
+            float spread = EaseOut(t / 0.42f), fade = (1f - t) * (1f - t);
+            Color blood = FlameMesh.Alpha(SamuraiAttack.Blood, 0.8f * fade);
+            Color pale = FlameMesh.Alpha(new Color(1f, 0.8f, 0.84f), fade);
+            Color clear = FlameMesh.Alpha(SamuraiAttack.Blood, 0f);
+            // A crisp boundary shows the full area, while the petals open inside it.
+            Mesh.Ring(origin, reach * Mathf.Lerp(0.15f, 1f, spread), 0.035f + 0.07f * fade, blood, clear, 64);
+            Mesh.Disc(origin, reach * 0.25f * (1f - t) + 0.05f, pale, clear, 24);
+            for (int petal = 0; petal < 8; petal++)
+            {
+                float angle = petal * Mathf.PI / 4f + 0.3f * t;
+                Vector2 tip = origin + FlameMesh.Polar(angle + 0.25f * spread, reach * spread);
+                Vector2 left = origin + FlameMesh.Polar(angle - 0.3f, reach * spread * 0.52f);
+                Vector2 right = origin + FlameMesh.Polar(angle + 0.5f, reach * spread * 0.62f);
+                Mesh.Quad(origin, left, tip, right, pale, blood, clear, blood);
+                // Bright curved veins bend into each petal and fade at its point.
+                Vector2 previous = origin;
+                for (int segment = 1; segment <= 6; segment++)
+                {
+                    float u = segment / 6f;
+                    Vector2 next = origin + FlameMesh.Polar(angle + 0.25f * spread * u * u, reach * spread * u);
+                    Mesh.Bar(previous, (next - previous).normalized, Vector2.Distance(previous, next),
+                        0.035f * (1f - u) + 0.006f, FlameMesh.Alpha(pale, fade * (1f - u)), clear);
+                    previous = next;
+                }
+                // Small red fragments drift outward after the flower has opened.
+                Vector2 mote = origin + FlameMesh.Polar(angle + 0.2f, reach * Mathf.Lerp(0.2f, 1.12f, EaseOut(t)));
+                Mesh.Diamond(mote, reach * 0.025f * (1f - t), blood);
+            }
+        }
+
         protected override void Draw(float t)
         {
             if (style == Style.Crescent) DrawCrescent(t);
             else if (style == Style.Thrust) DrawThrust(t);
             else if (style == Style.Slice) DrawSlice(t);
             else if (style == Style.Impact) DrawImpact(t);
+            else if (style == Style.Bloom) DrawBloom(t);
             else DrawSheathe(t);
         }
 

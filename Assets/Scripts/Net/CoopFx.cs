@@ -77,6 +77,7 @@ namespace Slopgame
         /// <summary>Teammates see Slice Dice Chunk's own effect for the slash thrown: 0 Slice, 1 Dice, 2 Chunk.</summary>
         public static void SliceDiceChunk(DungeonRun run, Vector2 origin, Vector2 aim, float reach, float cone, int stage)
             => Send(run, FxKind.SliceDiceChunk, origin, aim, null, reach, cone, stage);
+        public static void CrimsonBloom(DungeonRun run, Vector2 at, float radius) => Send(run, FxKind.CrimsonBloom, at, default, null, radius);
         public static void Bloodpop(DungeonRun run, Vector2 at, float radius) => Send(run, FxKind.Bloodpop, at, default, null, radius);
         /// <summary>Bloodscent's thread from the Samurai to a bleeding enemy; with no radius, the breath she takes to cast it.</summary>
         public static void Bloodscent(DungeonRun run, Vector2 from, Vector2 at, float radius) => Send(run, FxKind.Bloodscent, from, at, null, radius);
@@ -279,6 +280,7 @@ namespace Slopgame
                 case FxKind.KatanaThrust: KatanaVfx.Thrust(root, fx.A, fx.B, fx.F1, fx.F2, color); break;
                 case FxKind.KatanaSlice: KatanaVfx.Slice(root, fx.A, fx.B, color, fx.F1, fx.F2); break;
                 case FxKind.SliceDiceChunk: SliceDiceChunkVfx.Play(root, fx.A, fx.B, fx.F1, fx.F2, fx.N); break;
+                case FxKind.CrimsonBloom: KatanaVfx.CrimsonBloom(root, fx.A, fx.F1); break;
                 case FxKind.Bloodpop: BloodpopVfx.Play(root, fx.A, fx.F1); break;
                 case FxKind.Bloodscent:
                     if (fx.F1 > 0f) BloodscentVfx.Play(root, fx.A, fx.B, fx.F1);

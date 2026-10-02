@@ -90,6 +90,12 @@ namespace Slopgame
                     }
                     continue;
                 }
+                if (SkeletonMinion.TryBlock(run, next, 0.11f))
+                {
+                    if (run.IsNetworked) run.Coop.ReportBolt(this, CoopBoltEventKind.Consumed);
+                    Consume();
+                    return;
+                }
                 if (run.Player.Health <= 0) continue;
                 // Shield Taunt stops bolts outright (no reflection); teammates see the bolt vanish too.
                 if (run.Player.Mechanic is ShieldTaunt taunt && taunt.TryBlock(next, direction))

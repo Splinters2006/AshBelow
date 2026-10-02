@@ -35,6 +35,8 @@ namespace Slopgame
         private CoopChoice? openChoice;
         private float nextState, nextSnapshot;
         private int nextBolt;
+        private readonly List<SkeletonSnapshot> localSkeletons = new List<SkeletonSnapshot>();
+        private readonly Dictionary<ulong, List<SpriteRenderer>> remoteSkeletons = new Dictionary<ulong, List<SpriteRenderer>>();
 
         private void Awake()
         {
@@ -44,6 +46,7 @@ namespace Slopgame
             Session.Handle(CoopMessages.Start, OnStart);
             Session.Handle(CoopMessages.Lobby, (sender, reader) => { if (!IsHost) ReturnToLobbyLocal(); });
             Session.Handle(CoopMessages.State, OnState);
+            Session.Handle(CoopMessages.Skeletons, OnSkeletons);
             Session.Handle(CoopMessages.Enemies, OnEnemies);
             Session.Handle(CoopMessages.Damage, OnDamage);
             Session.Handle(CoopMessages.Kill, OnKill);
@@ -72,6 +75,7 @@ namespace Slopgame
         public void HostBeginRun()
         {
             if (!IsHost || (Session.State != NetState.Lobby && Session.State != NetState.InRun)) return;
+            if (Session.State == NetState.Lobby && !Session.AllReady) return;
             int seed = Random.Range(0, 1000000);
             int party = Session.Peers.Count;
             // The host's travel-map pick decides where the whole party begins.
@@ -167,6 +171,7 @@ namespace Slopgame
         {
             foreach (var hero in remoteHeroes) if (hero != null) Destroy(hero.gameObject);
             remoteHeroes.Clear();
+            foreach (var id in new List<ulong>(remoteSkeletons.Keys)) ClearSkeletons(id);
         }
 
         /// <summary>Called by the run whenever a floor is built, on every machine, in the same order.</summary>
@@ -192,6 +197,7 @@ namespace Slopgame
 
         private void OnPeerLeft(ulong id)
         {
+            ClearSkeletons(id);
             var hero = remoteHeroes.Find(candidate => candidate.Id == id);
             if (hero != null) { remoteHeroes.Remove(hero); Destroy(hero.gameObject); }
             if (!IsHost || !Active) return;
@@ -206,11 +212,13 @@ namespace Slopgame
 
         private void Update()
         {
+            if (IsHost && Session.AllReady) HostBeginRun();
             if (!Active || Run.Player == null || Run.Map == null) return;
             if (Time.unscaledTime >= nextState)
             {
                 nextState = Time.unscaledTime + StateInterval;
                 SendState();
+                SendSkeletons();
             }
             if (IsHost && Time.unscaledTime >= nextSnapshot)
             {
@@ -558,6 +566,64 @@ namespace Slopgame
             if (floor != Run.Floor || !takenPickups.Add(key) || !pickups.TryGetValue(key, out var pickup)) return;
             pickups.Remove(key);
             if (pickup is Object copy && copy != null) pickup.CollectRemote();
+        }
+
+        private void ClearSkeletons(ulong owner)
+        {
+            if (!remoteSkeletons.TryGetValue(owner, out var bodies)) return;
+            foreach (var body in bodies) if (body != null) Destroy(body.gameObject);
+            remoteSkeletons.Remove(owner);
+        }
+
+        private void SendSkeletons()
+        {
+            SkeletonMinion.Capture(Run, localSkeletons);
+            using var writer = NetSession.Writer();
+            writer.WriteValueSafe(LocalId); writer.WriteValueSafe(Run.Floor); writer.WriteValueSafe(localSkeletons.Count);
+            foreach (var skeleton in localSkeletons) skeleton.Write(writer);
+            Session.Send(CoopMessages.Skeletons, writer);
+        }
+
+        private void OnSkeletons(ulong sender, FastBufferReader reader)
+        {
+            reader.ReadValueSafe(out ulong owner); reader.ReadValueSafe(out int floor); reader.ReadValueSafe(out int count);
+            if (!Active || count < 0 || count > ArmyOfTheDead.MaxSkeletons) return;
+            if (IsHost) owner = sender;
+            if (owner == LocalId || Session.Peer(owner) == null) return;
+            var snapshots = new List<SkeletonSnapshot>(count);
+            for (int i = 0; i < count; i++) snapshots.Add(SkeletonSnapshot.Read(reader));
+            if (IsHost)
+            {
+                using var writer = NetSession.Writer();
+                writer.WriteValueSafe(owner); writer.WriteValueSafe(floor); writer.WriteValueSafe(count);
+                foreach (var snapshot in snapshots) snapshot.Write(writer);
+                Session.Send(CoopMessages.Skeletons, writer, NetworkDelivery.ReliableSequenced, sender);
+            }
+            if (floor != Run.Floor || Run.ProjectileRoot == null) return;
+            if (!remoteSkeletons.TryGetValue(owner, out var bodies))
+                remoteSkeletons[owner] = bodies = new List<SpriteRenderer>();
+            while (bodies.Count > count)
+            {
+                var body = bodies[bodies.Count - 1];
+                if (body != null) Destroy(body.gameObject);
+                bodies.RemoveAt(bodies.Count - 1);
+            }
+            for (int i = 0; i < count; i++)
+            {
+                if (i == bodies.Count) bodies.Add(null);
+                if (bodies[i] == null)
+                {
+                    bodies[i] = DungeonVisuals.Create("Teammate skeleton", Run.ProjectileRoot, snapshots[i].Position, Vector2.one, Color.white, 4);
+                    bodies[i].sprite = SkeletonMinion.Sprite;
+                }
+                var body = bodies[i];
+                var snapshot = snapshots[i];
+                body.transform.position = snapshot.Position;
+                body.transform.localScale = new Vector3(snapshot.Scale.x, snapshot.Scale.y, 1f);
+                body.transform.rotation = Quaternion.Euler(0f, 0f, snapshot.Angle);
+                body.flipX = snapshot.Flip;
+                body.color = snapshot.Color;
+            }
         }
 
         // ---------------------------------------------------------------- teammate effects and support

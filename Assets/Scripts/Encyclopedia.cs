@@ -24,6 +24,7 @@ namespace Slopgame
             public bool Found;
             public string Name, Tag, Description, Glyph;
             public Color Color;
+            public Sprite Sprite, Details;
         }
 
         private const float RowHeight = 92f, CardWidth = 549f;
@@ -110,7 +111,15 @@ namespace Slopgame
             DungeonUi.Panel(new Rect(rect.x, rect.y, 4, rect.height), entry.Found ? color : new Color(color.r, color.g, color.b, 0.3f));
             var badge = new Rect(rect.x + 16, rect.y + 14, 54, 54);
             DungeonUi.Panel(badge, new Color(color.r * 0.2f, color.g * 0.2f, color.b * 0.2f, entry.Found ? 1f : 0.5f));
-            DungeonUi.Label(badge, entry.Found ? entry.Glyph : "?", entry.Found ? 22 : 26, entry.Found ? color : DungeonUi.Muted * 0.7f, TextAnchor.MiddleCenter);
+            if (entry.Found && entry.Sprite != null)
+            {
+                var previous = GUI.color;
+                GUI.color = previous * color;
+                GUI.DrawTexture(badge, entry.Sprite.texture, ScaleMode.ScaleToFit, true);
+                GUI.color = previous;
+                if (entry.Details != null) GUI.DrawTexture(badge, entry.Details.texture, ScaleMode.ScaleToFit, true);
+            }
+            else DungeonUi.Label(badge, entry.Found ? entry.Glyph : "?", entry.Found ? 22 : 26, entry.Found ? color : DungeonUi.Muted * 0.7f, TextAnchor.MiddleCenter);
             DungeonUi.Label(new Rect(rect.x + 86, rect.y + 10, 280, 24), entry.Found ? entry.Name : "???", 19, entry.Found ? DungeonUi.Text : DungeonUi.Muted);
             DungeonUi.Label(new Rect(rect.x + 336, rect.y + 13, rect.width - 350, 20), entry.Tag, 12, color, TextAnchor.UpperRight);
             DungeonUi.ScrollingText("codex" + entry.Tag + entry.Name, new Rect(rect.x + 86, rect.y + 38, rect.width - 100, rect.height - 42),
@@ -130,6 +139,7 @@ namespace Slopgame
                             // Heroes who beat a guardian before the encyclopedia existed count as played.
                             Found = progress.IsDiscovered(HeroId(hero.Weapon)) || progress.GuardiansDefeatedAs(hero.Weapon) > 0,
                             Name = hero.DisplayName, Tag = $"{hero.StartingHealth} HP{Separator}{hero.StartingDamage} DMG{Separator}{hero.MoveSpeed:0.#} SPEED",
+                            Sprite = HeroSprites.Body(hero.Weapon), Details = HeroSprites.Accent(hero.Weapon),
                             Description = hero.Description, Glyph = GlyphFor(hero.Weapon), Color = hero.Color
                         });
                     break;
@@ -146,6 +156,8 @@ namespace Slopgame
                         {
                             Found = progress.IsDiscovered(TalentId(talent.Type)), Name = TalentName(talent), Tag = string.Join(Separator, tag),
                             Description = talent.Description,
+                            Sprite = talent.ClassWeapon.HasValue ? HeroSprites.Body(talent.ClassWeapon.Value) : DungeonVisuals.CrystalSprite,
+                            Details = talent.ClassWeapon.HasValue ? HeroSprites.Accent(talent.ClassWeapon.Value) : null,
                             Glyph = talent.ClassWeapon.HasValue ? GlyphFor(talent.ClassWeapon.Value) : "+",
                             Color = talent.ClassWeapon.HasValue ? HeroColor(run, talent.ClassWeapon.Value) : DungeonUi.Teal
                         });
@@ -159,6 +171,7 @@ namespace Slopgame
                         {
                             Found = progress.IsDiscovered(AbilityId(ability.Type)), Name = ability.Name,
                             Tag = (filterAll ? HeroName(run, ability.ClassWeapon) + Separator : "") + $"{ability.Cooldown:0.#}s" + (ability.ShopUnlock ? Separator + "ASH SHOP" : ""),
+                            Sprite = HeroSprites.Body(ability.ClassWeapon), Details = HeroSprites.Accent(ability.ClassWeapon),
                             Description = ability.Description, Glyph = ability.Glyph, Color = ability.Color
                         });
                     }
@@ -174,6 +187,7 @@ namespace Slopgame
                             Tag = $"WORLD {world.Index + 1}" + (world.IsWaveWorld ? Separator + "WAVES" : "") + (world.HighTech ? Separator + "HIGH TECH" : ""),
                             Description = $"Home of the {world.BasicName}, the {world.CasterName} and the {world.BruteName}."
                                 + (progress.HasClearedWorld(world.Index) ? "  Cleared." : ""),
+                            Sprite = GuardianPortrait(world.FirstGuardian, false), Details = GuardianPortrait(world.FirstGuardian, true),
                             Glyph = (world.Index + 1).ToString(), Color = world.Accent
                         });
                     break;
@@ -191,11 +205,30 @@ namespace Slopgame
                     if (!listed.Add(title)) continue;
                     entries.Add(new Entry
                     {
+                        Sprite = GuardianPortrait((BossKind)((int)world.FirstGuardian + i), false),
+                        Details = GuardianPortrait((BossKind)((int)world.FirstGuardian + i), true),
                         Found = progress.IsDiscovered(GuardianId(title)), Name = title, Tag = $"WORLD {world.Index + 1}{Separator}GUARDIAN {i + 1}",
                         Description = $"Guards {(world.IsWaveWorld ? "level" : "floor")} {(i + 1) * 5} of {world.Name}.", Glyph = "!", Color = world.Accent
                     });
                 }
         }
+
+        private static Sprite GuardianPortrait(BossKind kind, bool details) => kind switch
+        {
+            BossKind.AshWarden => details ? GuardianSprites.WardenDetails : GuardianSprites.Warden,
+            BossKind.Duelist => details ? GuardianSprites.DuelistDetails : GuardianSprites.Duelist,
+            BossKind.Archdemon => details ? GuardianSprites.ArchdemonDetails : GuardianSprites.Archdemon,
+            BossKind.GridOverseer => details ? GuardianSprites.OverseerDetails : GuardianSprites.Overseer,
+            BossKind.SiegeEngine => details ? GuardianSprites.BastionDetails : GuardianSprites.Bastion,
+            BossKind.SingularityCore => details ? GuardianSprites.CoreDetails : GuardianSprites.Core,
+            BossKind.HexMatriarch => details ? InfernalBossSprites.MatriarchDetails : InfernalBossSprites.Matriarch,
+            BossKind.BrimstoneHound => details ? InfernalBossSprites.HoundDetails : InfernalBossSprites.Hound,
+            BossKind.InfernalJudge => details ? InfernalBossSprites.JudgeDetails : InfernalBossSprites.Judge,
+            BossKind.Spellblade => details ? ArcaneBossSprites.SpellbladeDetails : ArcaneBossSprites.Spellblade,
+            BossKind.RimeArchmage => details ? ArcaneBossSprites.ArchmageDetails : ArcaneBossSprites.Archmage,
+            BossKind.GrandMagister => details ? ArcaneBossSprites.MagisterDetails : ArcaneBossSprites.Magister,
+            _ => null
+        };
 
         /// <summary>Class talents are named "Hero: Talent" for the in-run picker; the card already shows the hero, so drop the prefix.</summary>
         private static string TalentName(PowerupDefinition talent)

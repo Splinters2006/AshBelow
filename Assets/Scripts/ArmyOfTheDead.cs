@@ -5,7 +5,7 @@ namespace Slopgame
 {
     /// <summary>
     /// The Reaper's class mechanic: three souls raise a skeleton that fights beside him. Skeletons are frail and hit
-    /// softly, but their health and damage come from his own, so every talent that strengthens him strengthens them.
+    /// softly: they have three hit points and deal a fixed 1 damage per attack.
     /// Each of their blows strikes fear into its target. With its R upgrade (Avatar of Death, from the Ash shop), once
     /// he holds <see cref="IncarnationSouls"/> souls the mechanic spends them instead and he becomes the incarnation of
     /// death: for <see cref="IncarnationTime"/> seconds all his damage is doubled and every hit he lands strikes
@@ -13,17 +13,17 @@ namespace Slopgame
     /// </summary>
     public sealed class ArmyOfTheDead : ClassMechanic
     {
-        public const int SoulCost = 3, MaxSkeletons = 4, IncarnationSouls = 99;
-        public const float IncarnationTime = 5f, IncarnationFear = 1f;
+        public const int SoulCost = 3, MaxSkeletons = 4, IncarnationSouls = 50;
+        public const float IncarnationTime = 10f, IncarnationFear = 1f;
         private readonly List<SkeletonMinion> skeletons = new List<SkeletonMinion>();
         private float nextMote;
         public override string Name => IsIncarnate || CanIncarnate ? "Avatar of Death" : "Army of the Dead";
         public override Color Color => ReaperAttack.Soul;
         private ReaperAttack Reaper => Player.Weapon as ReaperAttack;
         private int Souls => DebugMode.Enabled ? SoulCost : Reaper != null ? Reaper.Souls : 0;
-        /// <summary>What a skeleton and the incarnation cost him (one soul less with Death's Bargain, his passive).</summary>
+        /// <summary>What a skeleton costs him (one soul less with Death's Bargain, his passive).</summary>
         private int SkeletonCost => Reaper != null ? Reaper.Cost(SoulCost) : SoulCost;
-        private int IncarnationCost => Reaper != null ? Reaper.Cost(IncarnationSouls) : IncarnationSouls;
+        private int IncarnationCost => IncarnationSouls;
         public bool IsIncarnate => Player.Buffs != null && Player.Buffs.IsIncarnate;
         /// <summary>
         /// True with the Avatar of Death upgrade and enough souls to become the incarnation of death (and not already it).
@@ -68,7 +68,7 @@ namespace Slopgame
             return true;
         }
 
-        /// <summary>Ninety-nine souls burn away at once and death itself walks the floor.</summary>
+        /// <summary>Fifty souls burn away at once and death itself walks the floor.</summary>
         private bool Incarnate(ReaperAttack reaper)
         {
             if (!reaper.Spend(IncarnationCost)) return false;

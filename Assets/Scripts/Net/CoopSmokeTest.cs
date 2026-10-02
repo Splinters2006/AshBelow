@@ -137,7 +137,7 @@ namespace Slopgame
             session.SetLocalClass(seat % run.Characters.Count);
             yield return new WaitForSecondsRealtime(1f);
             yield return Snap("lobby");
-            if (host) run.Coop.HostBeginRun();
+            session.SetLocalReady(true);
             yield return Wait("floor 1 with every teammate", () => run.Floor == 1 && run.IsPlaying && run.Coop.RemoteHeroes.Count == partySize - 1);
             Debug.Log($"COOP_SMOKE layout {role} seed={run.Seed} enemies={run.Enemies.Count} party={run.PartySize} hp={run.Enemies[0].Health}");
             Require(run.PartySize == partySize, "Wrong party size.");

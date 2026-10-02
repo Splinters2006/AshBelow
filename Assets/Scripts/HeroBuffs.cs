@@ -55,7 +55,7 @@ namespace Slopgame
             * (IsAscended ? 1f / 1.5f : 1f);
         public float AttackSizeMultiplier => (IsEmpowered ? 1.1f : 1f) * (IsFurious ? 1.5f : 1f);
         public float DamageMultiplier => (IsRaging ? 2f : IsTired ? 0.5f : 1f) * (IsFurious ? 2f : 1f) * (IsGreedy ? 2f : 1f) * (IsIncarnate ? 2f : 1f);
-        /// <summary>The Reaper as the incarnation of death (Army of the Dead at 99 souls): double damage, and every hit strikes fear.</summary>
+        /// <summary>The Reaper as the incarnation of death (Army of the Dead at 50 souls): double damage, and every hit strikes fear.</summary>
         public bool IsIncarnate => Time.time < incarnateUntil;
         public float IncarnateRemaining => Mathf.Max(0f, incarnateUntil - Time.time);
         private float incarnateUntil;

@@ -46,10 +46,10 @@ namespace Slopgame
         public const float ChaseSpeedBoost = 1.15f;
 
         /// <summary>
-        /// A guardian's health for a party: every hero adds a full guardian's worth (normal enemies only add half),
+        /// A guardian's health for a party: each extra hero adds 150% of solo health (normal enemies add 100%),
         /// so a bigger party still has to work through every attack.
         /// </summary>
-        public static int ScaledHealth(int baseHealth, int partySize) => Mathf.CeilToInt(baseHealth * HealthMultiplier * Mathf.Max(1, partySize));
+        public static int ScaledHealth(int baseHealth, int partySize) => Mathf.CeilToInt(baseHealth * HealthMultiplier * (1f + 1.5f * (Mathf.Max(1, partySize) - 1)));
 
         /// <summary>
         /// Each world's three guardians in order from its <see cref="WorldDefinition.FirstGuardian"/>: the ash guardians on

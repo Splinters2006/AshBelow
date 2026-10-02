@@ -17,7 +17,7 @@ namespace Slopgame
         public event System.Action Deflected;
         public int Health { get; private set; } = 6;
         public int BaseDamage { get; private set; } = 1;
-        public int Damage => Mathf.Max(1, Mathf.RoundToInt((BaseDamage + (Blessing != null ? Blessing.BonusDamage : 0)
+        public int Damage => Mathf.Max(1, Mathf.RoundToInt((BaseDamage * (ClassWeapon == WeaponType.Scythe ? ReaperAttack.BaseDamageMultiplier : 1f) + (Blessing != null ? Blessing.BonusDamage : 0)
             + (Mechanic != null ? Mechanic.BonusDamage : 0) + (Buffs != null ? Buffs.JackpotDamage : 0) + (Crystals != null ? Crystals.BonusDamage : 0)
             + (Powerups != null ? Powerups.BasicAttackBonus : 0) + WarBanner.BonusAt(transform.position))
             * (Buffs != null ? Buffs.DamageMultiplier : 1f) * (Powerups != null ? Powerups.DamageMultiplier(this) : 1f)));

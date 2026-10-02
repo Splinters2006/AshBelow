@@ -44,7 +44,7 @@ namespace Slopgame
             new Offer(Ware.Whetstone, Category.Arena, "Whetstone", "+1 damage in the boss arena", 35, AbilityCatalog.Gold),
             new Offer(Ware.Quicksilver, Category.Arena, "Quicksilver", "+20% move speed in the boss arena", 25, DungeonUi.Teal),
             new Offer(Ware.HeartCrystal, Category.Relic, "Heart Crystal", "+1 max HP", 45, CrystalPouch.CrystalColor),
-            new Offer(Ware.EmberHone, Category.Relic, "Ember Hone", "+1 base attack damage", 60, AbilityCatalog.Gold, PowerupType.Damage),
+            new Offer(Ware.EmberHone, Category.Relic, "Ember Hone", "+1 base attack damage", 180, AbilityCatalog.Gold, PowerupType.Damage),
             new Offer(Ware.WindrunnerBoots, Category.Relic, "Windrunner Boots", "+0.7 move speed", 40, DungeonUi.Teal, PowerupType.Movement),
             new Offer(Ware.QuickfingerGloves, Category.Relic, "Quickfinger Gloves", "+20% attack and charge speed", 50, new Color(1f, 0.62f, 0.3f), PowerupType.AttackSpeed),
             new Offer(Ware.HawkeyeLens, Category.Relic, "Hawkeye Lens", "+10% crit and elemental effect chance", 50, new Color(0.55f, 0.8f, 1f), PowerupType.CriticalHits),

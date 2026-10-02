@@ -19,6 +19,7 @@ namespace Slopgame
         public ulong Id;
         public string Name;
         public int ClassIndex;
+        public bool Ready;
     }
 
     public enum NetState { Offline, Connecting, Lobby, InRun }
@@ -49,6 +50,8 @@ namespace Slopgame
         public IReadOnlyList<CoopPeer> Peers => peers;
         public string LocalName { get; set; } = "Player";
         public int LocalClassIndex { get; private set; }
+        public bool LocalReady => Peer(LocalId)?.Ready == true;
+        public bool AllReady => State == NetState.Lobby && peers.Count > 0 && peers.TrueForAll(peer => peer.Ready);
         public event Action<ulong> PeerLeft;
         public event Action Disconnected;
 
@@ -143,11 +146,22 @@ namespace Slopgame
 
         public void SetLocalClass(int index)
         {
+            if (LocalClassIndex == index) return;
             LocalClassIndex = index;
             var self = State != NetState.Offline ? Peer(LocalId) : null;
-            if (self != null) self.ClassIndex = index;
+            if (self != null) { self.ClassIndex = index; self.Ready = false; }
             if (IsHost) BroadcastRoster();
             else if (State == NetState.Lobby) SendHello();
+        }
+
+        public void SetLocalReady(bool ready)
+        {
+            if (State != NetState.Lobby) return;
+            var self = Peer(LocalId);
+            if (self == null) return;
+            self.Ready = ready;
+            if (IsHost) BroadcastRoster();
+            else SendHello();
         }
 
         public async void HostOnline()
@@ -290,7 +304,12 @@ namespace Slopgame
         }
 
         public void StartRun() { if (State == NetState.Lobby) State = NetState.InRun; }
-        public void ReturnToLobby() { if (State == NetState.InRun) State = NetState.Lobby; }
+        public void ReturnToLobby()
+        {
+            if (State == NetState.InRun) State = NetState.Lobby;
+            foreach (var peer in peers) peer.Ready = false;
+            if (IsHost) BroadcastRoster();
+        }
 
         /// <summary>Leaves the session and shuts Netcode down. Safe to call at any time.</summary>
         public void Leave()
@@ -366,17 +385,20 @@ namespace Slopgame
             using var writer = Writer();
             writer.WriteValueSafe(LocalName ?? "Player");
             writer.WriteValueSafe(LocalClassIndex);
+            writer.WriteValueSafe(LocalReady);
             Send(HelloMessage, writer);
         }
 
         private void ReceiveHello(ulong sender, FastBufferReader reader)
         {
-            if (!IsHost) return;
+            if (!IsHost || State != NetState.Lobby) return;
             reader.ReadValueSafe(out string name);
             reader.ReadValueSafe(out int classIndex);
+            reader.ReadValueSafe(out bool ready);
             var peer = Peer(sender);
             if (peer == null) return;
             peer.Name = CleanName(name);
+            peer.Ready = peer.ClassIndex == classIndex && ready;
             peer.ClassIndex = classIndex;
             BroadcastRoster();
         }
@@ -408,6 +430,7 @@ namespace Slopgame
                 writer.WriteValueSafe(peer.Id);
                 writer.WriteValueSafe(peer.Name);
                 writer.WriteValueSafe(peer.ClassIndex);
+                writer.WriteValueSafe(peer.Ready);
             }
             Send(RosterMessage, writer);
         }
@@ -425,6 +448,7 @@ namespace Slopgame
                 reader.ReadValueSafe(out peer.Id);
                 reader.ReadValueSafe(out peer.Name);
                 reader.ReadValueSafe(out peer.ClassIndex);
+                reader.ReadValueSafe(out peer.Ready);
                 peers.Add(peer);
             }
             foreach (var id in previous)

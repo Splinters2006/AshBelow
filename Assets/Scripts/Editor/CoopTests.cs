@@ -20,6 +20,7 @@ namespace Slopgame.Editor
             try
             {
                 TestMessages();
+                TestReadyAndSouls();
                 TestFlowField();
                 TestScaling();
                 TestDeterminism();
@@ -35,6 +36,37 @@ namespace Slopgame.Editor
         }
 
         private static void Require(bool condition, string message) { if (!condition) throw new Exception(message); }
+
+        private static void TestReadyAndSouls()
+        {
+            var holder = new GameObject("Ready and souls test");
+            try
+            {
+                var session = holder.AddComponent<NetSession>();
+                typeof(NetSession).GetField("<State>k__BackingField", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+                    .SetValue(session, NetState.Lobby);
+                var peers = (List<CoopPeer>)session.Peers;
+                Require(!session.AllReady, "Empty party is ready.");
+                peers.Add(new CoopPeer { Id = 0 });
+                peers.Add(new CoopPeer { Id = 1 });
+                session.SetLocalReady(true);
+                Require(!session.AllReady, "One ready hero started the party.");
+                peers[1].Ready = true;
+                Require(session.AllReady, "Fully ready party cannot start.");
+                session.SetLocalClass(1);
+                Require(!session.LocalReady && !session.AllReady, "Changing hero did not cancel readiness.");
+                session.SetLocalReady(true);
+                session.StartRun();
+                session.ReturnToLobby();
+                Require(!session.LocalReady && !peers[1].Ready, "Returning to lobby kept old ready votes.");
+                var reaper = holder.AddComponent<ReaperAttack>();
+                reaper.AddSouls(99);
+                reaper.AddSouls(int.MaxValue);
+                Require(reaper.Souls == 100, "Soul cap overflowed or is not 100.");
+                Require(reaper.Spend(50) && reaper.Souls == 50, "Spending 50 souls consumed the wrong amount.");
+            }
+            finally { UnityEngine.Object.DestroyImmediate(holder); }
+        }
 
         private static void TestP2pAddresses()
         {
@@ -69,6 +101,11 @@ namespace Slopgame.Editor
             var stateBack = RoundTrip(state, (m, w) => m.Write(w), PlayerStateMessage.Read);
             Require(stateBack.Id == 3 && stateBack.Floor == 7 && stateBack.Position == state.Position && stateBack.Aim == Vector2.up
                 && stateBack.Flags == buffFlags && stateBack.MoreFlags == PlayerStateMessage.Blessed && stateBack.Health == 4 && stateBack.MaxHealth == 8 && stateBack.Charge == 200, "Player state did not round-trip.");
+
+            var skeleton = new SkeletonSnapshot { Position = new Vector2(3, 7), Scale = new Vector2(0.8f, 0.6f), Angle = 15, Flip = true, Color = new Color32(1, 2, 3, 255) };
+            var skeletonBack = RoundTrip(skeleton, (m, w) => m.Write(w), SkeletonSnapshot.Read);
+            Require(skeletonBack.Position == skeleton.Position && skeletonBack.Scale == skeleton.Scale && skeletonBack.Angle == skeleton.Angle
+                && skeletonBack.Flip == skeleton.Flip && skeletonBack.Color.Equals(skeleton.Color), "Skeleton snapshot did not round-trip.");
 
             var enemy = new EnemySnapshot { Id = 12, Position = new Vector2(20f, 9f), Facing = Vector2.left, Health = 31, Flags = EnemySnapshot.Burning | EnemySnapshot.Charging,
                 MoreFlags = EnemySnapshot.Paralyzed | EnemySnapshot.Cursed };
@@ -149,13 +186,21 @@ namespace Slopgame.Editor
 
         private static void TestScaling()
         {
+            foreach (var world in WorldCatalog.All)
+            {
+                float expected = (1f + (world.Threat - 1f) * 0.6f) * world.GuardianHealthBonus * (world.Index > 0 ? 2.25f : 1f);
+                Require(Mathf.Abs(world.GuardianHealthMultiplier - expected) < 0.001f, "Later-world boss health boost is wrong for " + world.Name);
+            }
+            Require(DungeonRun.WaveEnemyCount(1, 2) == 14 && DungeonRun.WaveEnemyCount(1, 3) == 21
+                && DungeonRun.WaveEnemyCount(1, 4) == 28 && DungeonRun.WaveEnemyCount(14, 4) == DungeonRun.MaxWaveEnemies,
+                "Wave counts did not scale with the party or exceeded the arena cap.");
             Require(DungeonRun.ScaleHealth(2, 1) == 2, "Solo health must be unchanged.");
-            Require(DungeonRun.ScaleHealth(2, 2) == 3, "Two heroes: 1.5x health.");
-            Require(DungeonRun.ScaleHealth(3, 2) == 5, "Scaled health rounds up.");
-            Require(DungeonRun.ScaleHealth(27, 4) == 68, "Four heroes: 2.5x health.");
+            Require(DungeonRun.ScaleHealth(2, 2) == 4, "Two heroes: 2x health.");
+            Require(DungeonRun.ScaleHealth(3, 3) == 9, "Three heroes: 3x health.");
+            Require(DungeonRun.ScaleHealth(27, 4) == 108, "Four heroes: 4x health.");
             Require(DungeonRun.ScaleHealth(5, 0) == 5, "A missing party size counts as solo.");
             Require(DungeonBoss.ScaledHealth(10, 1) == 60 && DungeonBoss.ScaledHealth(10, 0) == 60, "Solo guardians: 6x base health.");
-            Require(DungeonBoss.ScaledHealth(10, 2) == 120 && DungeonBoss.ScaledHealth(10, 4) == 240, "Every hero adds a full guardian's health.");
+            Require(DungeonBoss.ScaledHealth(10, 2) == 150 && DungeonBoss.ScaledHealth(10, 3) == 240 && DungeonBoss.ScaledHealth(10, 4) == 330, "Each extra hero adds 150% of solo guardian health.");
         }
 
         private static void TestDeterminism()

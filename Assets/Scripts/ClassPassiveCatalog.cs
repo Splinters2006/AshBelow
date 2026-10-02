@@ -33,7 +33,7 @@ namespace Slopgame
             new ClassPassiveDefinition(WeaponType.Tail, "Demonic Runes", "Enemies that die while immobilized have a 10% chance to drop a demonic rune. Pick it up to reset your Tail Sweep cooldown, and every hit you land paralyses for 5 seconds"),
             new ClassPassiveDefinition(WeaponType.Beam, "Salvage", "Enemies you land the final hit on have a 5% chance to drop 1 scrap. Every 3 scrap heals you for 1 HP"),
             new ClassPassiveDefinition(WeaponType.Coins, "Compound Interest", "Every guardian you defeat multiplies the contents of The Safe by 1.25 instead of 1.1"),
-            new ClassPassiveDefinition(WeaponType.Scythe, "Death's Bargain", "Everything that costs souls costs 1 soul less: skulls, Feast!, Army of the Dead and Avatar of Death"),
+            new ClassPassiveDefinition(WeaponType.Scythe, "Death's Bargain", "Skulls, Feast! and Army of the Dead cost 1 soul less. Avatar of Death costs 50 souls"),
             new ClassPassiveDefinition(WeaponType.Fists, "Mastered Technique", "Rolling no longer cuts your barrage short: you keep punching straight through the dodge"),
             new ClassPassiveDefinition(WeaponType.Katana, "Crimson Bloom", "Enemies that die while bleeding burst: every enemy within 2.5 units takes the bleed damage they had left. The more maximum health the fallen had, the wider the burst"),
         };

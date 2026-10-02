@@ -21,7 +21,7 @@ namespace Slopgame.Editor
         private static readonly WeaponType[] Classes =
         {
             WeaponType.Sword, WeaponType.Bow, WeaponType.Staff, WeaponType.Daggers, WeaponType.Hammer, WeaponType.Fists, WeaponType.Tail, WeaponType.Coins,
-            WeaponType.Beam, WeaponType.Mutation
+            WeaponType.Beam, WeaponType.Mutation, WeaponType.Katana, WeaponType.Scythe
         };
 
         [InitializeOnLoadMethod]
@@ -76,11 +76,15 @@ namespace Slopgame.Editor
             {
                 if (hero < 0)
                 {
+                    Require(run.UnlockSpecimen("1234"), "Could not unlock Specimen for the mechanic checks.");
                     Require(ContainsGambler(run), "The Gambler is missing from the hero list.");
                     run.Progress.AwardAsh(PermanentUpgradeCatalog.MechanicCost * Classes.Length);
                     foreach (var weapon in Classes) run.Progress.RecordGuardian(PermanentUpgradeCatalog.MechanicGuardians, weapon);
                     foreach (var weapon in Classes)
                         Require(run.TryBuyUpgrade(PermanentUpgradeCatalog.MechanicId(weapon)), "Could not buy the mechanic for " + weapon);
+                    run.Progress.RecordWorldCleared(PermanentUpgradeCatalog.MechanicUpgradeWorld);
+                    run.Progress.AwardAsh(PermanentUpgradeCatalog.MechanicUpgradeCost);
+                    Require(run.TryBuyUpgrade(PermanentUpgradeCatalog.MechanicUpgradeId(WeaponType.Scythe)), "Could not buy Avatar of Death.");
                     hero = 0;
                     StartHero(run);
                     return;
@@ -150,6 +154,40 @@ namespace Slopgame.Editor
             var enemies = Line(run, aim);
             switch (player.ClassWeapon)
             {
+                case WeaponType.Katana:
+                {
+                    KatanaVfx.CrimsonBloom(run.ProjectileRoot, player.transform.position, SamuraiAttack.BloomRadius);
+                    var poser = (TruePoser)player.Mechanic;
+                    Require(poser.TryActivate(aim), "True Poser could not pose.");
+                    poser.Store(enemies[0], 8);
+                    watched = enemies[0];
+                    Require(poser.TryActivate(aim), "True Poser could not sheathe.");
+                    waiting = true;
+                    waitUntil = Time.time + TruePoser.SheatheTime + TruePoser.ImpactTime + 0.2f;
+                    return true;
+                }
+                case WeaponType.Scythe:
+                {
+                    var reaper = (ReaperAttack)player.Weapon;
+                    for (int purchase = 0; purchase < 7; purchase++) player.GrantPowerup(PowerupType.Damage);
+                    Require(player.BaseDamage == 8 && player.Damage == 4, "Reaper base damage was not halved after damage purchases.");
+                    var army = (ArmyOfTheDead)player.Mechanic;
+                    reaper.AddSouls(49);
+                    Require(!army.CanIncarnate, "Avatar of Death accepted fewer than 50 souls.");
+                    reaper.AddSouls(51);
+                    Require(army.TryActivate(aim) && reaper.Souls == 50 && army.IsIncarnate, "Avatar of Death did not spend exactly 50 souls.");
+                    Near(player.Buffs.IncarnateRemaining, 10f, "Avatar of Death did not last 10 seconds.");
+                    var skeleton = SkeletonMinion.Raise(player, player.transform.position);
+                    Require(skeleton.Health == 3 && skeleton.Damage == 1, "Skeleton health or fixed damage changed with damage purchases.");
+                    var hurt = typeof(SkeletonMinion).GetField("nextHurtAt", BindingFlags.Instance | BindingFlags.NonPublic);
+                    for (int hit = 0; hit < 3; hit++)
+                    {
+                        hurt.SetValue(skeleton, 0f);
+                        Require(SkeletonMinion.TryBlock(run, skeleton.transform.position, 0.1f), "Skeleton failed to block a hit.");
+                        Require(skeleton.Health == 2 - hit, "Skeleton lost the wrong HP.");
+                    }
+                    return false;
+                }
                 case WeaponType.Sword:
                 {
                     // Elemental rework, checked once with the Knight's run.
@@ -416,6 +454,13 @@ namespace Slopgame.Editor
         private static void FinishWait(DungeonRun run)
         {
             var player = run.Player;
+            if (player.ClassWeapon == WeaponType.Katana)
+            {
+                var poser = (TruePoser)player.Mechanic;
+                Require(watched.Health == 990 && !poser.IsPosing, "Sheathing did not release stored damage.");
+                Require(poser.TryActivate(Vector2.right) && poser.TryActivate(Vector2.right), "True Poser still has a repeat sheathe cooldown.");
+                return;
+            }
             if (player.ClassWeapon == WeaponType.Staff)
             {
                 Require(watched == null || watched.Health < 1000, "Wild Storm never struck the nearby enemy.");

@@ -482,7 +482,7 @@ namespace Slopgame.Editor
             Require(run.World.IsWaveWorld && run.IsWaveFloor && run.LevelNumber == 1 && run.Floor == 16, "The Arcology's first floor is not a wave level");
             Require(!WorldCatalog.All[0].IsWaveWorld && WorldCatalog.All[1].IsWaveWorld && !WorldCatalog.All[2].IsWaveWorld && WorldCatalog.All[3].IsWaveWorld,
                 "Worlds 2 and 4 should be the wave worlds");
-            Require(DungeonRun.WaveEnemyCount(1, 1) == 7 && DungeonRun.WaveEnemyCount(1, 2) == 11 && DungeonRun.WaveEnemyCount(1, 4) == 18
+            Require(DungeonRun.WaveEnemyCount(1, 1) == 7 && DungeonRun.WaveEnemyCount(1, 2) == 14 && DungeonRun.WaveEnemyCount(1, 4) == 28
                 && DungeonRun.WaveEnemyCount(14, 4) == DungeonRun.MaxWaveEnemies, "Wave sizes do not follow the party");
             for (int party = 1; party < 4; party++)
                 Require(DungeonRun.WaveEnemyCount(5, party + 1) > DungeonRun.WaveEnemyCount(5, party), "A bigger party did not face a bigger wave");
