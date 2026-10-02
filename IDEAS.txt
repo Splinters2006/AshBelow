@@ -6,7 +6,11 @@ remove line of sight check from nightmare snap
 anightmare snap damage should be: level of skill X seconds of paralysis left X demoness damage
 make all shop prices stay increasing during a run and not reset on new shop
 sync knight attack hitboxes with animations
-
+knight taunt inconsistent, should give full invuln against melee and proj attacks
+knight shield rush grants one ward per enemy hit
+increase tail sweep damage buff against paralyzed enemies, nerf demoness basic attack dmg
+make bastion the siege engine have more cooldown between area restricting attacks
+add a confirmation popup to go back to menu
 
 set reaper soul limit to 100
 make archer's elemental quiver only trigger the element that is selected if that isnt the case already
