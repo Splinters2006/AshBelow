@@ -167,6 +167,7 @@ namespace Slopgame
             HeroVfx.Pulse(fx, HeroAt, 2f, rage, 0.5f);
             HeroVfx.Sparks(fx, HeroAt, rage, 22, 5f, 0.45f);
             CombatVfx.Ring(fx, HeroAt, 1.4f, rage, 0.5f);
+            PrimalRageVfx.Play(fx, hero.transform, 2.8f);
             TintHero(rage, 2.8f);
             yield return Wait(0.6f);
             yield return Jabs(12, rage, 1f, 0.12f);

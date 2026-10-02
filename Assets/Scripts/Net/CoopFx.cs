@@ -78,6 +78,8 @@ namespace Slopgame
         public static void SliceDiceChunk(DungeonRun run, Vector2 origin, Vector2 aim, float reach, float cone, int stage)
             => Send(run, FxKind.SliceDiceChunk, origin, aim, null, reach, cone, stage);
         public static void Bloodpop(DungeonRun run, Vector2 at, float radius) => Send(run, FxKind.Bloodpop, at, default, null, radius);
+        /// <summary>Bloodscent's thread from the Samurai to a bleeding enemy; with no radius, the breath she takes to cast it.</summary>
+        public static void Bloodscent(DungeonRun run, Vector2 from, Vector2 at, float radius) => Send(run, FxKind.Bloodscent, from, at, null, radius);
         public static void KatanaSheathe(DungeonRun run, Vector2 hero, Vector2 facing, Color color, float duration)
             => Send(run, FxKind.KatanaSheathe, hero, facing, color, duration);
 
@@ -124,6 +126,8 @@ namespace Slopgame
         public static void DemonicPower(DungeonRun run, float duration, float auraRadius) => Send(run, FxKind.DemonicPower, default, default, null, duration, auraRadius);
         /// <summary>Teammates see the Brawler's fury burning on her.</summary>
         public static void SuperAngry(DungeonRun run, float duration) => Send(run, FxKind.SuperAngry, default, default, null, duration);
+        /// <summary>Teammates see the Brawler's hackles rise for Primal Rage.</summary>
+        public static void PrimalRage(DungeonRun run, float duration) => Send(run, FxKind.PrimalRage, default, default, null, duration);
         /// <summary>Teammates see the Knight's ward of rage around him.</summary>
         public static void ShieldTaunt(DungeonRun run, float duration, float radius) => Send(run, FxKind.ShieldTaunt, default, default, null, duration, radius);
         public static void Retribution(DungeonRun run, Vector2 center, float radius, int hits) => Send(run, FxKind.Retribution, center, default, null, radius, 0f, hits);
@@ -276,6 +280,10 @@ namespace Slopgame
                 case FxKind.KatanaSlice: KatanaVfx.Slice(root, fx.A, fx.B, color, fx.F1, fx.F2); break;
                 case FxKind.SliceDiceChunk: SliceDiceChunkVfx.Play(root, fx.A, fx.B, fx.F1, fx.F2, fx.N); break;
                 case FxKind.Bloodpop: BloodpopVfx.Play(root, fx.A, fx.F1); break;
+                case FxKind.Bloodscent:
+                    if (fx.F1 > 0f) BloodscentVfx.Play(root, fx.A, fx.B, fx.F1);
+                    else BloodscentVfx.Sniff(root, fx.A);
+                    break;
                 case FxKind.KatanaSheathe: KatanaVfx.Sheathe(root, fx.A, fx.B, color, fx.F1); break;
                 case FxKind.Punch: BrawlerVfx.Punch(root, fx.A, fx.B, fx.F1, fx.F2, color); break;
                 case FxKind.RearHit: RearHitMarker.Draw(root, fx.A, fx.B, fx.F1); break;
@@ -328,6 +336,10 @@ namespace Slopgame
                 case FxKind.SuperAngry:
                     var furious = FindHero(run, fx.Origin);
                     if (furious != null) SuperAngryVfx.Play(root, furious.transform, fx.F1);
+                    break;
+                case FxKind.PrimalRage:
+                    var raging = FindHero(run, fx.Origin);
+                    if (raging != null) PrimalRageVfx.Play(root, raging.transform, fx.F1);
                     break;
                 case FxKind.ShieldTaunt:
                     var taunter = FindHero(run, fx.Origin);

@@ -141,11 +141,11 @@ namespace Slopgame
             // The wounds are nearly spent...
             yield return Wait(2f);
             Cast();
+            BloodscentVfx.Sniff(fx, HeroAt);
             foreach (var dummy in dummies)
             {
                 dummy.Bleed(DungeonEnemy.BleedDuration);
-                CombatVfx.Ring(fx, dummy.Position, DummyRadius + 0.3f, Blood, 0.4f);
-                HeroVfx.Motes(fx, dummy.Position, 0.4f, Blood, 6, 0.6f);
+                BloodscentVfx.Play(fx, HeroAt, dummy.Position, DummyRadius);
             }
             // ...and now they run their whole course again.
             yield return Wait(3f);

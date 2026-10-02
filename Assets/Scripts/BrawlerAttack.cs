@@ -215,8 +215,14 @@ namespace Slopgame
 
         private void PrimalRage(int rank)
         {
-            Player.Buffs.Rage(RageDuration + rank - 1 + Player.Powerups.Count(PowerupType.Bloodlust), TiredDuration);
+            float duration = RageDuration + rank - 1 + Player.Powerups.Count(PowerupType.Bloodlust);
+            Player.Buffs.Rage(duration, TiredDuration);
             var root = Player.Run.ProjectileRoot;
+            // Her hackles, heartbeat and claws follow her for as long as she rages.
+            PrimalRageVfx.Play(root, transform, duration);
+            CoopFx.PrimalRage(Player.Run, duration);
+            ScreenFx.Shake(0.25f, 0.25f);
+            ScreenFx.Flash(new Color(0.8f, 0.05f, 0.05f, 0.18f), 0.2f);
             HeroVfx.Pulse(root, transform.position, 2f, HeroBuffs.RageColor, 0.5f);
             HeroVfx.Sparks(root, transform.position, HeroBuffs.RageColor, 22, 5f, 0.45f);
             CombatVfx.Ring(root, transform.position, 1.4f, HeroBuffs.RageColor, 0.5f);

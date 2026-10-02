@@ -296,18 +296,22 @@ namespace Slopgame
         private bool Bloodscent(int rank)
         {
             var run = Player.Run;
+            Vector2 origin = transform.position;
             int found = 0;
             foreach (var enemy in run.Enemies)
             {
                 if (enemy == null || enemy.Health <= 0 || !enemy.IsBleeding) continue;
                 enemy.RefreshBleed(BloodscentScale[rank - 1]);
                 Vector2 at = enemy.transform.position;
-                CombatVfx.Ring(run.ProjectileRoot, at, enemy.HitRadius + 0.3f, Blood, 0.4f);
-                HeroVfx.Motes(run.ProjectileRoot, at, 0.4f, Blood, 6, 0.6f);
-                CoopFx.Ring(run, at, enemy.HitRadius + 0.3f, Blood, 0.4f);
+                BloodscentVfx.Play(run.ProjectileRoot, origin, at, enemy.HitRadius);
+                CoopFx.Bloodscent(run, origin, at, enemy.HitRadius);
                 found++;
             }
-            return found > 0;
+            if (found == 0) return false;
+            BloodscentVfx.Sniff(run.ProjectileRoot, origin);
+            CoopFx.Bloodscent(run, origin, origin, 0f);
+            ScreenFx.Flash(FlameMesh.Alpha(Blood, 0.1f), 0.15f);
+            return true;
         }
 
         /// <summary>Every bleeding enemy takes all the bleed damage it had left, at once. False (and no cooldown) when there is nothing to pop.</summary>
