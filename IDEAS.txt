@@ -2,6 +2,8 @@ rework autofire setting, holding m1 releases as soon as charged and immediately 
 hud should be moved more outwards in game
 make tail sweep cooldown start ticking down when the animation starts, not when it ends
 make "on paralysis" talents also apply if the paralysing hit kills the target
+remove line of sight check from nightmare snap
+niughtmare snap damage should be: level of skill X seconds of paralysis left X demoness damage
 
 set reaper soul limit to 100
 make archer's elemental quiver only trigger the element that is selected if that isnt the case already
