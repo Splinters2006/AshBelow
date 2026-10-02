@@ -40,6 +40,10 @@ namespace Slopgame
             return bubble;
         }
 
+        /// <summary>A Sanctuary bubble without a run (the ability demo): it only looks the part and shoves nobody.</summary>
+        public static HolyBubble Sanctuary(Transform root, Vector2 center, float radius, float duration, Transform follow)
+            => Create(root, follow, center, radius, duration, Holy, true);
+
         /// <summary>Drops the Sanctuary following <paramref name="hero"/> early, with its usual fade.</summary>
         public static void EndFollowing(Transform hero)
         {

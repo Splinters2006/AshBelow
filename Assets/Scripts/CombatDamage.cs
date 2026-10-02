@@ -92,6 +92,9 @@ namespace Slopgame
         public static readonly int[] DeepWoundsTicks = { 0, 1, 3, 5 };
         public const float JaggedBladeChance = 0.1f;
 
+        /// <summary>Bled Dry's stun once a bleed has run out, by rank.</summary>
+        public static readonly float[] BledDryStun = { 0f, 0.5f, 1f, 1.5f };
+
         /// <summary>How many times a bleed this hero opens cuts: the base ten plus Deep Wounds, over the same five seconds.</summary>
         public static int BleedTicksFor(DungeonPlayer player)
             => DungeonEnemy.BleedTicks + (player != null ? DeepWoundsTicks[Mathf.Clamp(player.Powerups.Count(PowerupType.DeepWounds), 0, DeepWoundsTicks.Length - 1)] : 0);
@@ -100,7 +103,8 @@ namespace Slopgame
         public static void InflictBleed(DungeonPlayer player, DungeonEnemy enemy, int hit)
         {
             if (enemy == null || enemy.Health <= 0 || hit <= 0) return;
-            enemy.Bleed(hit, DungeonEnemy.BleedDuration, BleedTicksFor(player));
+            float stun = player != null ? BledDryStun[Mathf.Clamp(player.Powerups.Count(PowerupType.BledDry), 0, BledDryStun.Length - 1)] : 0f;
+            enemy.Bleed(hit, DungeonEnemy.BleedDuration, BleedTicksFor(player), stun);
         }
 
         /// <summary>The Samurai's katana: Blood Shall Flow bleeds on every hit and Jagged Blade on one in ten. A hit can open both.</summary>

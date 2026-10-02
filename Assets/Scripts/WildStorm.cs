@@ -182,7 +182,7 @@ namespace Slopgame
         /// A pixel-art thundercloud: billowing heads lit from the upper left, a bruised underbelly, and the three
         /// elements it hurls (an ember, a fork of lightning and an icicle) dripping from it.
         /// </summary>
-        private static Sprite CloudSprite => cloudSprite != null ? cloudSprite : cloudSprite = BuildSprite(2.2f, CloudPixel,
+        internal static Sprite CloudSprite => cloudSprite != null ? cloudSprite : cloudSprite = BuildSprite(2.2f, CloudPixel,
             "...........OOOO.........", "......OO.OOHHLLOO.......", "....OOHHOHHLLLLLWO......", "...OHHLLLLLLLLWWWWOOO...",
             "..OHLLLLWWLLWWWWWLLLLO..", "..OLLLWWWWWWWWWWMLLWWWO.", ".OMMWWWWMWLWWWMMLWWMMMO.", ".OPMMWWMPMLWWMPMWWMMPMPO",
             ".OPPMMMPPPMMMPPPMMMPPPPO", ".OOOPMPPOPPMPPOPPMPOOOO.", "....OPPO.OPPPO.OPPO.....", ".....OO...OOO...OO......",

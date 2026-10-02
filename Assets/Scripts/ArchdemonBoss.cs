@@ -4,7 +4,7 @@ namespace Slopgame
 {
     /// <summary>
     /// The third guardian, an archdemon of hellfire. Draws Infernal Cross, Brimstone Rain, Hellfire Nova and
-    /// Serpent's Wake (eruptions racing toward every hero) in a shuffled order, and every fourth attack casts Cataclysm: the whole arena erupts except one small circle while he takes to the sky,
+    /// Serpent's Wake (eruptions racing toward every hero) in a shuffled order, and every seventh attack casts Cataclysm: the whole arena erupts except one small circle while he takes to the sky,
     /// invulnerable, and bombards the party. He crashes down afterwards and is briefly staggered.
     /// In the Neon Arcology he returns as Omega, the Reactor Titan: the same fight in plasma instead of hellfire.
     /// </summary>
@@ -12,7 +12,7 @@ namespace Slopgame
     {
         private enum State : byte { Idle, Cross, Meteors, Nova, Ascend, Bombard, Descend, Staggered, Wake }
         private enum Attack { Cross, Meteors, Nova, Cataclysm, Wake }
-        private const int CataclysmEvery = 4;
+        private const int CataclysmEvery = 7;
         private const float WakeStep = 1.25f, WakeLength = 19f;
         private readonly AttackDeck<Attack> deck = new AttackDeck<Attack>(Attack.Cross, Attack.Meteors, Attack.Nova, Attack.Wake);
         private const float FlightHeight = 2.6f, InfernoTelegraph = 4.6f, InfernoDuration = 6.5f;
@@ -202,7 +202,8 @@ namespace Slopgame
             state = State.Nova;
             int rings = IsEnraged ? 3 : 2;
             for (int i = 0; i < rings; i++)
-                Hazard(HazardShape.Ring, ground, Vector2.up, 17f, 0.9f, 0.9f + i * 0.85f, 2.4f);
+                // Half as far again as they used to reach, at the same speed.
+                Hazard(HazardShape.Ring, ground, Vector2.up, 25.5f, 0.9f, 0.9f + i * 0.85f, 3.6f);
             stateUntil = Enemy.ActionTime + 1.4f;
         }
 

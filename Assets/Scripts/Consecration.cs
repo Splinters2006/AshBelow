@@ -53,29 +53,42 @@ namespace Slopgame
         private const float FadeTime = 0.35f, Interval = 1f;
         private static readonly Color Gold = new Color(1f, 0.82f, 0.3f), Pale = new Color(1f, 0.96f, 0.78f), Amber = new Color(1f, 0.6f, 0.15f);
         private DungeonRun run;
+        private Transform root;
+        // The ability demo has no run: it says itself where the enemies standing in the ground are.
+        private System.Func<System.Collections.Generic.IEnumerable<Vector2>> smitten;
         private Vector2 center;
         private float age, duration, radius, nextWave;
         private FlameMesh mesh;
 
         public static void Play(DungeonRun run, Vector2 center, float duration, float radius)
         {
-            if (run == null || run.ProjectileRoot == null) return;
+            if (run == null) return;
+            var vfx = Play(run.ProjectileRoot, center, duration, radius, null);
+            if (vfx != null) vfx.run = run;
+        }
+
+        /// <summary>The same ground without a run; each wave's pillars of light fall on <paramref name="smitten"/>.</summary>
+        public static ConsecrationVfx Play(Transform root, Vector2 center, float duration, float radius, System.Func<System.Collections.Generic.IEnumerable<Vector2>> smitten)
+        {
+            if (root == null) return null;
             var vfx = new GameObject("Consecrated ground").AddComponent<ConsecrationVfx>();
             // The owner stays at the origin: FlameMesh draws in its local space.
-            vfx.transform.SetParent(run.ProjectileRoot, false);
-            vfx.run = run;
+            vfx.transform.SetParent(root, false);
+            vfx.root = root;
+            vfx.smitten = smitten;
             vfx.center = center;
             vfx.duration = duration;
             vfx.radius = radius;
             vfx.mesh = new FlameMesh(vfx.gameObject, 2);
-            HeroVfx.Pulse(run.ProjectileRoot, center, radius, FlameMesh.Alpha(Pale, 0.8f), 0.4f);
-            ScreenFx.Flash(new Color(1f, 0.95f, 0.75f, 0.12f), 0.15f);
+            HeroVfx.Pulse(root, center, radius, FlameMesh.Alpha(Pale, 0.8f), 0.4f);
+            if (smitten == null) ScreenFx.Flash(new Color(1f, 0.95f, 0.75f, 0.12f), 0.15f);
+            return vfx;
         }
 
         private void Update()
         {
             age += Time.deltaTime;
-            if (run == null || run.ProjectileRoot == null || age >= duration + FadeTime) { Destroy(gameObject); return; }
+            if (root == null || transform.parent != root || age >= duration + FadeTime) { Destroy(gameObject); return; }
             float alpha = Mathf.Clamp01(age / 0.25f) * Mathf.Clamp01((duration + FadeTime - age) / FadeTime);
             float time = Time.time;
             if (age >= nextWave && age < duration)
@@ -141,9 +154,11 @@ namespace Slopgame
         /// <summary>A pillar of light slams down on each enemy standing in the ground (visual only).</summary>
         private void Smite()
         {
+            if (smitten != null) { foreach (var spot in smitten()) HolySmiteVfx.Play(root, spot); return; }
+            if (run == null) return;
             foreach (var enemy in run.Enemies)
                 if (enemy != null && enemy.Health > 0 && Vector2.Distance(center, enemy.transform.position) <= radius + enemy.HitRadius)
-                    HolySmiteVfx.Play(run.ProjectileRoot, enemy.transform.position);
+                    HolySmiteVfx.Play(root, enemy.transform.position);
         }
 
         private void Line(Vector2 from, Vector2 to, float width, Color color)

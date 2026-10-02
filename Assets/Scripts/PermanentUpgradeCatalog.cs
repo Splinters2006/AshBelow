@@ -48,7 +48,7 @@ namespace Slopgame
             WorldReward(ScholarsRerollId, "Scholar's Reroll", "Reroll the floor talent pick once per world", 1, 450, 0, 3),
             WorldReward(DungeonRun.SanctifiedRelicsId, "Sanctified Relics", "Guardians offer 4 abilities to pick from instead of 3", 1, 700, 0, 3),
             WorldReward(BlackMarketPassId, "Black Market Pass", "Crystal shops stock one extra relic", 1, 500, 0, 4),
-            WorldReward(SmugglersStashId, "Smuggler's Stash", "Keep 25% of your unspent crystals (up to 100) for the next descent", 1, 600, 0, 4),
+            WorldReward(SmugglersStashId, "Smuggler's Stash", "When a descent ends, your unspent crystals are sold for Ash: 1 Ash for every 2 crystals", 1, 600, 0, 4),
             WorldReward(WildGrowthId, "Wild Growth", "+1 maximum HP for each world you clear within a descent", 1, 600, 0, 5),
             WorldReward(ApexPredatorId, "Apex Predator", "+10% damage against guardians and armoured brutes per rank", 3, 450, 150, 5),
             new PermanentUpgradeDefinition("knight_reflect", "Polished Steel", "+1 reflected bolt damage per rank", 3, 45, 35, WeaponType.Sword),
@@ -112,7 +112,7 @@ namespace Slopgame
             MechanicUpgrade(WeaponType.Tail, "Dread Presence", "During Demonic Power, every enemy that comes within 5 units of you is paralysed for 2 seconds"),
             MechanicUpgrade(WeaponType.Mutation, "Apex Mutation", "Rampage ends in a roar that draws every enemy to you and stuns everything nearby for 2 seconds, and every kill during Overdrive adds 0.5 seconds to it"),
             MechanicUpgrade(WeaponType.Scythe, "Avatar of Death", "With 99 souls, R spends 99 instead of raising a skeleton: for 5 seconds you are the incarnation of death, dealing double damage and striking 1 second of fear with every hit"),
-            MechanicUpgrade(WeaponType.Katana, "Open Veins", "Sheathing also makes every enemy it cuts bleed, based on all the damage the sheathe dealt it")
+            MechanicUpgrade(WeaponType.Katana, "Open Veins", "Sheathing also makes every enemy it cuts bleed, based on the total damage the sheathe dealt to every enemy")
         });
 
         private static PermanentUpgradeDefinition[] AddPassives(PermanentUpgradeDefinition[] existing)

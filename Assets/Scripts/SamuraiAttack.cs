@@ -68,7 +68,7 @@ namespace Slopgame
             Vector2 origin = transform.position;
             int hits = Sweep(origin, aim, damage, reach, cone, knockback, struck);
             KatanaVfx.Crescent(run.ProjectileRoot, origin, aim, reach, cone, color, backhand, duration);
-            CoopFx.Slash(run, origin, aim, reach, cone, color);
+            CoopFx.KatanaCrescent(run, origin, aim, reach, cone, color, backhand, duration);
             backhand = !backhand;
             return hits;
         }
@@ -146,7 +146,9 @@ namespace Slopgame
             KatanaVfx.Slice(root, from, to, Blood, 0.34f, DashHalfWidth * Size);
             CombatVfx.Ring(root, from, 0.7f, Steel, 0.2f);
             KatanaVfx.Crescent(root, to, aim, DashHalfWidth * Size, 180f, Steel, backhand, 0.24f);
-            CoopFx.Bolt(run, from, to, Steel, true);
+            CoopFx.KatanaSlice(run, from, to, Blood, 0.34f, DashHalfWidth * Size);
+            CoopFx.Ring(run, from, 0.7f, Steel, 0.2f);
+            CoopFx.KatanaCrescent(run, to, aim, DashHalfWidth * Size, 180f, Steel, backhand, 0.24f);
             HeroVfx.Sparks(root, to, Steel, 14, 5.5f, 0.3f, to - from, 100f);
             int damage = Player.Damage * 2;
             foreach (var enemy in cut)
@@ -154,6 +156,7 @@ namespace Slopgame
                 if (enemy == null || enemy.Health <= 0) continue;
                 Vector2 at = enemy.transform.position;
                 KatanaVfx.Slice(root, at - aim * (enemy.HitRadius + 0.6f), at + aim * (enemy.HitRadius + 0.6f), Blood, 0.3f);
+                CoopFx.KatanaSlice(run, at - aim * (enemy.HitRadius + 0.6f), at + aim * (enemy.HitRadius + 0.6f), Blood, 0.3f);
                 HeroVfx.Sparks(root, at, Blood, 12, 5.5f, 0.3f, Vector2.Perpendicular(aim), 70f);
                 HeroVfx.Sparks(root, at, Blood, 12, 5.5f, 0.3f, -Vector2.Perpendicular(aim), 70f);
                 CombatDamage.Apply(Player, enemy, damage, DamageElement.Physical, at - aim, 0.2f);
@@ -168,7 +171,7 @@ namespace Slopgame
         // ---------------------------------------------------------------- boss artifacts
 
         public const float ComboWindow = 2.5f, ComboGap = 0.15f;
-        public const float TechniqueTime = 10f, ThrustReach = 3.3f, ThrustHalfWidth = 0.45f, ThrustMultiplier = 1.5f;
+        public const float TechniqueTime = 10f, ThrustReach = 3.3f, ThrustHalfWidth = 0.45f, ThrustMultiplier = 1.5f, TechniqueMultiplier = 1.5f;
         public const float SwiftAttackSpeed = 0.5f;
         /// <summary>Slice, Dice and Chunk: each slash's reach, cone and damage (in multiples of the hero's damage).</summary>
         public static readonly float[] ComboReach = { 2.4f, 3.1f, 3.9f }, ComboCone = { 90f, 125f, 165f };
@@ -215,6 +218,7 @@ namespace Slopgame
                 case AbilityType.SwiftAsTheWind:
                     swiftUntil = Time.time + SwiftTime[rank - 1];
                     WindstepVfx.Play(root, (Vector2)transform.position - aim * 1.2f, transform.position);
+                    CoopFx.Windstep(Player.Run, (Vector2)transform.position - aim * 1.2f, transform.position);
                     return true;
                 case AbilityType.Bloodpop: return Bloodpop(rank);
                 default: return false;
@@ -240,11 +244,13 @@ namespace Slopgame
             int damage = Mathf.Max(1, Mathf.RoundToInt((Player.Damage * ComboDamage[stage] + (rank - 1) * (stage + 1)) * bonus));
             var struck = new List<DungeonEnemy>();
             int hits = Cut(aim, damage, ComboReach[stage] * Size, ComboCone[stage], chunk ? 2f : 0.6f, chunk ? Blood : Steel, chunk ? 0.45f : 0.3f, struck);
+            // Each slash has its own look over the blade's arc: a ruled line, a lattice of cuts, a ground-splitting cleave.
+            var root = Player.Run.ProjectileRoot;
+            SliceDiceChunkVfx.Play(root, transform.position, aim, ComboReach[stage] * Size, ComboCone[stage], stage);
+            CoopFx.SliceDiceChunk(Player.Run, transform.position, aim, ComboReach[stage] * Size, ComboCone[stage], stage);
             if (chunk)
             {
                 foreach (var enemy in struck) CombatDamage.InflictBleed(Player, enemy, damage);
-                var root = Player.Run.ProjectileRoot;
-                HeroVfx.Slash(root, transform.position, aim, ComboReach[stage] * Size, ComboCone[stage], FlameMesh.Alpha(Blood, 0.5f), 0.25f);
                 if (hits > 0) HeroVfx.Sparks(root, (Vector2)transform.position + aim * ComboReach[stage] * Size * 0.6f, Blood, 18, 6f, 0.4f, aim, 110f, 1.3f);
                 ScreenFx.Shake(0.25f, 0.2f);
             }
@@ -256,21 +262,21 @@ namespace Slopgame
             readyAt = Mathf.Max(readyAt, Time.time + 0.2f);
         }
 
-        /// <summary>Maestro's Technique: sweep, sweep, thrust. The thrust hits half as hard again and opens a wound.</summary>
+        /// <summary>Maestro's Technique: sweep, sweep, thrust, every hit half as hard again. The thrust hits harder still and opens a wound.</summary>
         private bool TechniqueStrike(Vector2 aim)
         {
             techniqueStep = Time.time - lastTechniqueAt > 1.2f ? 0 : (techniqueStep + 1) % 3;
             lastTechniqueAt = Time.time;
             if (techniqueStep < 2)
             {
-                Cut(aim, Player.Damage, (Reach + 0.2f) * Size, 130f, 0.8f, Steel);
+                Cut(aim, Mathf.Max(1, Mathf.RoundToInt(Player.Damage * TechniqueMultiplier)), (Reach + 0.2f) * Size, 130f, 0.8f, Steel);
                 readyAt = Time.time + SlashInterval * 0.85f * Interval;
                 return true;
             }
             var run = Player.Run;
             Vector2 origin = transform.position;
             float length = ThrustReach * Size, halfWidth = ThrustHalfWidth * Size;
-            int damage = Mathf.Max(1, Mathf.RoundToInt(Player.Damage * ThrustMultiplier));
+            int damage = Mathf.Max(1, Mathf.RoundToInt(Player.Damage * TechniqueMultiplier * ThrustMultiplier));
             foreach (var enemy in run.Enemies.ToArray())
             {
                 if (enemy == null || enemy.Health <= 0
@@ -280,7 +286,7 @@ namespace Slopgame
                 CombatDamage.InflictBleed(Player, enemy, damage);
             }
             KatanaVfx.Thrust(run.ProjectileRoot, origin, aim, length, halfWidth, Blood);
-            CoopFx.Bolt(run, origin, origin + aim * length, Steel);
+            CoopFx.KatanaThrust(run, origin, aim, length, halfWidth, Blood);
             ScreenFx.Shake(0.08f, 0.1f);
             readyAt = Time.time + SlashInterval * 1.4f * Interval;
             return true;
@@ -314,9 +320,8 @@ namespace Slopgame
                 if (enemy == null || enemy.Health <= 0 || enemy.BleedRemaining <= 0f) continue;
                 int damage = Mathf.RoundToInt(enemy.ConsumeBleed() * BloodpopScale[rank - 1]);
                 Vector2 at = enemy.transform.position;
-                HeroVfx.Pulse(run.ProjectileRoot, at, enemy.HitRadius + 0.6f, Blood, 0.3f);
-                HeroVfx.Sparks(run.ProjectileRoot, at, Blood, 14, 5f, 0.4f);
-                CoopFx.Pulse(run, at, enemy.HitRadius + 0.6f, Blood, 0.3f);
+                BloodpopVfx.Play(run.ProjectileRoot, at, enemy.HitRadius);
+                CoopFx.Bloodpop(run, at, enemy.HitRadius);
                 if (damage > 0) enemy.Hit(damage, at, 0f);
                 popped++;
             }
@@ -353,6 +358,7 @@ namespace Slopgame
             CombatVfx.Ring(root, center, radius, Blood, 0.35f);
             HeroVfx.Sparks(root, center, Blood, 16, 5.5f, 0.4f);
             CoopFx.Pulse(run, center, radius, Blood, 0.35f);
+            CoopFx.Ring(run, center, radius, Blood, 0.35f);
             foreach (var enemy in run.Enemies.ToArray())
                 if (enemy != null && enemy.Health > 0 && Vector2.Distance(center, enemy.transform.position) <= radius + enemy.HitRadius)
                     enemy.Hit(damage, center, 0.6f);

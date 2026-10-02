@@ -10,7 +10,9 @@ namespace Slopgame
         public const int SlotCount = 2;
         public const int MaxRank = 3;
         public const float ShadowstepDistance = 5f;
-        public const float FrostNovaRadius = 3.1f, FrostNovaExpandTime = 0.75f, FrostNovaFreeze = 2f;
+        public const float FrostNovaRadius = 5f, FrostNovaExpandTime = 0.5f, FrostNovaFreeze = 3f;
+        /// <summary>Frost Nova's damage, in multiples of the hero's (other artifacts deal 3).</summary>
+        public const int FrostNovaDamage = 5;
         public const float BlinkDistance = 6f;
         /// <summary>Earthshatter is 25% bigger than its original 2.6-unit reach.</summary>
         public const float EarthshatterRadius = 3.25f;
@@ -230,7 +232,7 @@ namespace Slopgame
                     if (orbCharge >= 1f) { orb.StormCharged = true; HeroVfx.Pulse(Player.Run.ProjectileRoot, transform.position, 1f, CombatDamage.ShockColor, 0.3f); }
                     break;
                 case AbilityType.FrostNova:
-                    StartCoroutine(ExpandingNova(transform.position, FrostNovaRadius, FrostNovaExpandTime, damage, definition.Color,
+                    StartCoroutine(ExpandingNova(transform.position, FrostNovaRadius, FrostNovaExpandTime, Player.Damage * FrostNovaDamage + rank - 1, definition.Color,
                         FrostNovaFreeze + powers.Count(PowerupType.FrostDuration) * 0.5f + (rank - 1) * 0.25f)); break;
                 case AbilityType.Blink:
                     Vector2 blinkFrom = transform.position;

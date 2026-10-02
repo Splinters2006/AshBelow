@@ -51,7 +51,7 @@ namespace Slopgame
         // Reaper.
         SoulFury,
         // Samurai.
-        DeepWounds, BloodInTheWater, JaggedBlade, FineDicing,
+        DeepWounds, BloodInTheWater, JaggedBlade, FineDicing, BledDry,
         // The Specimen's Edge talents, then his hybrids.
         RazorTip, LongChain, WeightedTip, ReelIn, Featherweight, BleedingEdge, LightOnHisFeet,
         FreightTrain, RubbleWall, Hardened, Zipline, LowBlow, Shackles
@@ -255,6 +255,7 @@ namespace Slopgame
             new PowerupDefinition(PowerupType.BloodInTheWater, "Samurai: Blood in the Water", "Bleeding enemies take 10% / 15% / 25% more damage by rank from your attacks", 3, WeaponType.Katana),
             new PowerupDefinition(PowerupType.JaggedBlade, "Samurai: Jagged Blade", "Your attacks have a 10% chance to inflict bleeding", 1, WeaponType.Katana),
             new PowerupDefinition(PowerupType.FineDicing, "Fine Dicing", "Slice Dice Chunk deals 10% / 30% / 50% more damage by rank", 3, WeaponType.Katana, AbilityType.SliceDiceChunk),
+            new PowerupDefinition(PowerupType.BledDry, "Samurai: Bled Dry", "When bleeding you inflicted ends, the enemy is stunned for 0.5 / 1 / 1.5 seconds by rank", 3, WeaponType.Katana),
             new PowerupDefinition(PowerupType.RazorTip, "Edge: Razor Tip", "+10% critical hit chance", 3, WeaponType.Mutation),
             new PowerupDefinition(PowerupType.LongChain, "Edge: Long Chain", "+0.5 lash reach", 2, WeaponType.Mutation),
             new PowerupDefinition(PowerupType.WeightedTip, "Edge: Weighted Tip", "The sweet spot at the tip of your lash is 50% longer, and tip crits deal +1 damage", 2, WeaponType.Mutation),

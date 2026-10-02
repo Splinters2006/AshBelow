@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Slopgame
@@ -11,16 +12,29 @@ namespace Slopgame
         private static readonly Color Soul = new Color(0.78f, 0.55f, 1f), Core = new Color(0.97f, 0.92f, 1f), Deep = new Color(0.35f, 0.1f, 0.55f);
         private const int Wisps = 7, StreamSouls = 6;
         private DungeonRun run;
+        private Transform root;
+        // The ability demo has no run: it names the victims itself, each as a position with its hit radius in z.
+        private System.Func<IEnumerable<Vector3>> victims;
         private Transform target;
         private FlameMesh mesh;
         private float age, duration, radius;
 
         public static SoulSiphonVfx Play(DungeonRun run, Transform target, float duration, float radius)
         {
-            if (run == null || run.ProjectileRoot == null || target == null) return null;
+            if (run == null) return null;
+            var vfx = Play(run.ProjectileRoot, target, duration, radius, null);
+            if (vfx != null) vfx.run = run;
+            return vfx;
+        }
+
+        /// <summary>The same effect without a run, drawing its streams from <paramref name="victims"/> (position, with the hit radius in z).</summary>
+        public static SoulSiphonVfx Play(Transform root, Transform target, float duration, float radius, System.Func<IEnumerable<Vector3>> victims)
+        {
+            if (root == null || target == null) return null;
             var vfx = new GameObject("Soul siphon").AddComponent<SoulSiphonVfx>();
-            vfx.transform.SetParent(run.ProjectileRoot, false);
-            vfx.run = run;
+            vfx.transform.SetParent(root, false);
+            vfx.root = root;
+            vfx.victims = victims;
             vfx.target = target;
             vfx.duration = duration;
             vfx.radius = radius;
@@ -32,8 +46,8 @@ namespace Slopgame
         public void Flare(int drained)
         {
             if (target == null) return;
-            HeroVfx.Pulse(run.ProjectileRoot, target.position, 0.9f, Soul, 0.3f);
-            HeroVfx.Motes(run.ProjectileRoot, target.position, 0.6f, Core, 6 + drained * 3, 0.7f);
+            HeroVfx.Pulse(root, target.position, 0.9f, Soul, 0.3f);
+            HeroVfx.Motes(root, target.position, 0.6f, Core, 6 + drained * 3, 0.7f);
         }
 
         private void Update()
@@ -56,11 +70,11 @@ namespace Slopgame
                 mesh.Diamond(wisp, 0.07f, FlameMesh.Alpha(Core, fade));
             }
             // A stream of souls from every immobilized enemy she can reach, bowing out to one side as it comes.
-            foreach (var enemy in run.Enemies)
+            foreach (var victim in Victims())
             {
-                if (enemy == null || enemy.Health <= 0 || !enemy.IsImmobilized) continue;
-                Vector2 from = enemy.transform.position;
-                if (Vector2.Distance(from, center) > radius + enemy.HitRadius) continue;
+                Vector2 from = victim;
+                float hitRadius = victim.z;
+                if (Vector2.Distance(from, center) > radius + hitRadius) continue;
                 Vector2 bow = Vector2.Perpendicular(center - from) * 0.35f;
                 Vector2 control = Vector2.Lerp(from, center, 0.5f) + bow;
                 Vector2 last = from;
@@ -73,16 +87,26 @@ namespace Slopgame
                 }
                 for (int k = 0; k < StreamSouls; k++)
                 {
-                    float t = Mathf.Repeat(age * 1.6f + k / (float)StreamSouls + (enemy.GetHashCode() % 97) * 0.137f, 1f);
+                    float t = Mathf.Repeat(age * 1.6f + k / (float)StreamSouls + FlameMesh.Hash(from.x, from.y), 1f);
                     Vector2 soul = Bezier(from, control, center, t);
                     float size = Mathf.Lerp(0.12f, 0.05f, t);
                     mesh.Disc(soul, size * 1.8f, FlameMesh.Alpha(Soul, 0.45f * fade), FlameMesh.Alpha(Soul, 0f), 10);
                     mesh.Diamond(soul, size, FlameMesh.Alpha(Core, fade));
                 }
                 // The victim's soul wavers as it is pulled out.
-                mesh.Ring(from, enemy.HitRadius + 0.1f + 0.05f * Mathf.Sin(age * 12f), 0.05f, FlameMesh.Alpha(Soul, 0.7f * fade), 20);
+                mesh.Ring(from, hitRadius + 0.1f + 0.05f * Mathf.Sin(age * 12f), 0.05f, FlameMesh.Alpha(Soul, 0.7f * fade), 20);
             }
             mesh.Commit();
+        }
+
+        /// <summary>Every immobilized enemy still standing: its position, with its hit radius in z.</summary>
+        private IEnumerable<Vector3> Victims()
+        {
+            if (victims != null) { foreach (var victim in victims()) yield return victim; yield break; }
+            if (run == null) yield break;
+            foreach (var enemy in run.Enemies)
+                if (enemy != null && enemy.Health > 0 && enemy.IsImmobilized)
+                    yield return new Vector3(enemy.transform.position.x, enemy.transform.position.y, enemy.HitRadius);
         }
 
         private static Vector2 Bezier(Vector2 a, Vector2 b, Vector2 c, float t) => Vector2.Lerp(Vector2.Lerp(a, b, t), Vector2.Lerp(b, c, t), t);

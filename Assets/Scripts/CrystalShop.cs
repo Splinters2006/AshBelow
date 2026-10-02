@@ -128,15 +128,22 @@ namespace Slopgame
             int relics = RelicStock + (run != null && run.Progress != null && run.Progress.Rank(PermanentUpgradeCatalog.BlackMarketPassId) > 0 ? 1 : 0);
             foreach (var (category, count) in new[] { (Category.Healing, HealingStock), (Category.Arena, ArenaStock), (Category.Relic, relics) })
             {
-                var choices = new List<Offer>(System.Array.FindAll(Offers, offer => offer.Category == category));
-                for (int i = 0; i < count && choices.Count > 0; i++)
+                // Wares the hero can still use are drawn first; a relic already at its highest rank only fills a gap they leave.
+                var choices = new List<Offer>(System.Array.FindAll(Offers, offer => offer.Category == category && !IsMaxed(offer)));
+                var maxed = new List<Offer>(System.Array.FindAll(Offers, offer => offer.Category == category && IsMaxed(offer)));
+                for (int i = 0; i < count && choices.Count + maxed.Count > 0; i++)
                 {
-                    int pick = random.Next(choices.Count);
-                    stock.Add(choices[pick]);
-                    choices.RemoveAt(pick);
+                    var pool = choices.Count > 0 ? choices : maxed;
+                    int pick = random.Next(pool.Count);
+                    stock.Add(pool[pick]);
+                    pool.RemoveAt(pick);
                 }
             }
         }
+
+        /// <summary>A relic whose boon the hero already holds at its highest rank (or cannot take at all).</summary>
+        private bool IsMaxed(Offer offer)
+            => offer.Powerup.HasValue && run != null && run.Player != null && !run.Player.Powerups.CanTake(offer.Powerup.Value);
 
         /// <summary>Puts exactly <paramref name="offers"/> on sale (used by tests).</summary>
         public void SetStock(IEnumerable<Offer> offers)

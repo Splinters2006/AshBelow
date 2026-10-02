@@ -26,7 +26,7 @@ namespace Slopgame
         private float age;
 
         /// <summary>A heater shield: dark outline, bright steel rim, blue field with a highlight, and a gold cross.</summary>
-        private static Sprite ShieldSprite => shieldSprite != null ? shieldSprite : shieldSprite = DungeonVisuals.PaletteSprite("Knight shield", new[]
+        internal static Sprite ShieldSprite => shieldSprite != null ? shieldSprite : shieldSprite = DungeonVisuals.PaletteSprite("Knight shield", new[]
         {
             ".OOOOOOOOOO.",
             "OSSSSSSSSSSO",

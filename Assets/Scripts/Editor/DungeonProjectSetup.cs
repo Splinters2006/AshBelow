@@ -605,11 +605,11 @@ namespace Slopgame.Editor
             EnsureHero("Paladin", WeaponType.Hammer, 7, 4.5f, new Color(0.95f, 0.78f, 0.4f),
                 "A holy warrior who would die for his allies. Hold to bless nearby friends with extra damage, and call down holy swords on the enemies around you.");
             EnsureHero("Brawler", WeaponType.Fists, 6, 5.3f, new Color(0.98f, 0.62f, 0.42f), BrawlerDescription);
-            EnsureHero("Demoness", WeaponType.Tail, 5, 5.2f, new Color(0.6f, 0.36f, 0.9f), DemonessDescription);
+            EnsureHero("Demoness", WeaponType.Tail, 5, 5.2f, new Color(0.6f, 0.36f, 0.9f), DemonessDescription, 2);
             EnsureHero("Gambler", WeaponType.Coins, 5, 5.1f, new Color(0.35f, 0.72f, 0.45f), GamblerDescription);
             EnsureHero("Augment", WeaponType.Beam, 5, 5f, new Color(0.55f, 0.68f, 0.9f), AugmentDescription);
             EnsureHero("Reaper", WeaponType.Scythe, 5, 4.8f, new Color(0.5f, 0.56f, 0.7f), ReaperDescription);
-            EnsureHero("Samurai", WeaponType.Katana, 5, 5.3f, new Color(0.86f, 0.2f, 0.22f), SamuraiDescription);
+            EnsureHero("Samurai", WeaponType.Katana, 5, 5.3f, new Color(0.86f, 0.2f, 0.22f), SamuraiDescription, 2);
             EnsureHero("Specimen", WeaponType.Mutation, 3, 5f, new Color(0.62f, 0.74f, 0.7f), SpecimenDescription);
             AssetDatabase.SaveAssets();
             Debug.Log("CHARACTER_ASSETS_OK: Twelve classes ready.");

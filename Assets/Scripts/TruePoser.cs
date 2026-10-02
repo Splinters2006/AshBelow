@@ -8,7 +8,7 @@ namespace Slopgame
     /// The Samurai's class mechanic, a toggle. Pressed once, she strikes a pose: everything she does deals no damage,
     /// and each enemy is instead owed what it would have taken. Pressed again, she sheathes her katana and every cut
     /// lands at once, multiplied by <see cref="ReleaseMultiplier"/>. With its R upgrade (Open Veins, from the Ash shop)
-    /// the sheathe also opens a bleed on each enemy, based on all the damage it dealt them. A sheathe starts a cooldown
+    /// the sheathe also opens a bleed on each enemy it cut, based on the total damage it dealt to all of them together. A sheathe starts a cooldown
     /// that only holds back the next sheathe: she can strike the pose again at once, but has to hold it until it runs out.
     /// </summary>
     public sealed class TruePoser : ClassMechanic
@@ -79,6 +79,7 @@ namespace Slopgame
             // Nothing can touch her while the katana slides home.
             Player.Protect(SheatheTime + ImpactTime);
             KatanaVfx.Sheathe(root, transform.position, Player.AimDirection, SamuraiAttack.Blood, SheatheTime / 0.72f);
+            CoopFx.KatanaSheathe(run, transform.position, Player.AimDirection, SamuraiAttack.Blood, SheatheTime / 0.72f);
             // The click comes 72% of the way through the effect, exactly when the cuts land.
             for (float t = 0f; t < SheatheTime; t += Time.deltaTime)
             {
@@ -108,7 +109,8 @@ namespace Slopgame
                 }
             }
             IsPosing = false;
-            int cuts = 0;
+            int cuts = 0, total = 0;
+            var cut = new List<DungeonEnemy>();
             for (int i = 0; i < marked.Count; i++)
             {
                 var enemy = marked[i];
@@ -119,12 +121,16 @@ namespace Slopgame
                 HeroVfx.Sparks(root, at, SamuraiAttack.Blood, 16, 6f, 0.45f);
                 HeroVfx.Sparks(root, at, SamuraiAttack.Steel, 6, 3f, 0.25f);
                 CombatVfx.Ring(root, at, enemy.HitRadius + 0.6f, SamuraiAttack.Blood, 0.3f);
-                CoopFx.Bolt(run, from, to, SamuraiAttack.Steel, true);
+                CoopFx.KatanaSlice(run, from, to, SamuraiAttack.Blood, 0.5f);
+                CoopFx.Ring(run, at, enemy.HitRadius + 0.6f, SamuraiAttack.Blood, 0.3f);
                 enemy.Hit(damage, hero, 0.6f);
-                // Open Veins: the sheathe leaves them bleeding for what it just dealt.
-                if (IsUpgraded) CombatDamage.InflictBleed(Player, enemy, damage);
+                total += damage;
+                cut.Add(enemy);
                 cuts++;
             }
+            // Open Veins: every survivor is left bleeding for the whole sheathe's damage, not just its own share.
+            if (IsUpgraded)
+                foreach (var enemy in cut) CombatDamage.InflictBleed(Player, enemy, total);
             owed.Clear();
             if (cuts > 0)
             {

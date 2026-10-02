@@ -38,7 +38,7 @@ namespace Slopgame
         private static Color Ink(Suit suit) => suit == Suit.Hearts || suit == Suit.Diamonds ? new Color(0.82f, 0.1f, 0.14f) : new Color(0.1f, 0.1f, 0.14f);
 
         /// <summary>An 11x15 card: dark border, rounded corners, off-white face, a big pip and two small corner pips.</summary>
-        private static Sprite CardSprite(Suit suit)
+        internal static Sprite CardSprite(Suit suit)
         {
             int index = (int)suit;
             if (cardSprites[index] != null) return cardSprites[index];
@@ -74,7 +74,7 @@ namespace Slopgame
         }
 
         /// <summary>The suit's pip on its own, in white so it can be tinted.</summary>
-        private static Sprite PipSprite(Suit suit)
+        internal static Sprite PipSprite(Suit suit)
         {
             int index = (int)suit;
             return pipSprites[index] != null ? pipSprites[index]
@@ -184,7 +184,7 @@ namespace Slopgame
         }
 
         /// <summary>A pip that springs up out of a hit, swells and fades.</summary>
-        private sealed class SuitPop : MonoBehaviour
+        internal sealed class SuitPop : MonoBehaviour
         {
             private const float Life = 0.45f;
             private float age;

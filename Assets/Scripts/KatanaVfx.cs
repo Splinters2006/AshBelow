@@ -284,6 +284,52 @@ namespace Slopgame
             }
         }
 
+        /// <summary>
+        /// 斬 (zan, "to cut down"), stroke by stroke in a unit box, in the order a brush writes it: 車 on the left, 斤 on the right.
+        /// </summary>
+        private static readonly Vector2[][] ZanStrokes =
+        {
+            new[] { new Vector2(0.08f, 0.86f), new Vector2(0.46f, 0.86f) },
+            new[] { new Vector2(0.12f, 0.72f), new Vector2(0.12f, 0.38f) },
+            new[] { new Vector2(0.12f, 0.72f), new Vector2(0.42f, 0.72f), new Vector2(0.42f, 0.38f) },
+            new[] { new Vector2(0.12f, 0.55f), new Vector2(0.42f, 0.55f) },
+            new[] { new Vector2(0.12f, 0.38f), new Vector2(0.42f, 0.38f) },
+            new[] { new Vector2(0.03f, 0.24f), new Vector2(0.51f, 0.24f) },
+            new[] { new Vector2(0.27f, 0.98f), new Vector2(0.27f, 0.02f) },
+            new[] { new Vector2(0.92f, 0.94f), new Vector2(0.63f, 0.83f) },
+            new[] { new Vector2(0.63f, 0.83f), new Vector2(0.63f, 0.45f), new Vector2(0.55f, 0.06f) },
+            new[] { new Vector2(0.63f, 0.58f), new Vector2(0.99f, 0.58f) },
+            new[] { new Vector2(0.83f, 0.58f), new Vector2(0.83f, 0.02f) }
+        };
+
+        /// <summary>
+        /// Brushes 斬 into a square of <paramref name="size"/> centred on <paramref name="center"/>. <paramref name="written"/>
+        /// runs 0..1 as the strokes go down one after another; each is a wide stroke of <paramref name="ink"/> with a thin <paramref name="core"/>.
+        /// </summary>
+        private void DrawZan(Vector2 center, float size, float written, Color ink, Color core)
+        {
+            float strokes = Mathf.Clamp01(written) * ZanStrokes.Length, width = size * 0.075f;
+            Vector2 corner = center - Vector2.one * size * 0.5f;
+            for (int i = 0; i < ZanStrokes.Length; i++)
+            {
+                float done = Mathf.Clamp01(strokes - i);
+                if (done <= 0f) break;
+                var stroke = ZanStrokes[i];
+                float total = 0f;
+                for (int p = 0; p + 1 < stroke.Length; p++) total += Vector2.Distance(stroke[p], stroke[p + 1]);
+                float left = total * done;
+                for (int p = 0; p + 1 < stroke.Length && left > 0f; p++)
+                {
+                    float length = Vector2.Distance(stroke[p], stroke[p + 1]), drawn = Mathf.Min(length, left);
+                    Vector2 from = corner + stroke[p] * size, dir = (stroke[p + 1] - stroke[p]) / length;
+                    left -= drawn;
+                    // Run a little past each corner so the joints close up square.
+                    Mesh.Bar(from - dir * width * 0.5f, dir, drawn * size + width, width, ink, ink);
+                    Mesh.Bar(from, dir, drawn * size, width * 0.3f, core, core);
+                }
+            }
+        }
+
         private void DrawSheathe(float t)
         {
             // The scabbard rests at her hip, pointing down and back; the blade is drawn up and out ahead of her.
@@ -343,6 +389,10 @@ namespace Slopgame
                     Mesh.Bar(mouth, FlameMesh.Polar(Mathf.PI * (0.25f + 0.5f * i), 1f), 0.6f * click, 0.05f, FlameMesh.Alpha(color, click), FlameMesh.Alpha(color, 0f));
                 Mesh.Disc(mouth, 0.4f * click, FlameMesh.Alpha(Color.white, 0.9f * click), FlameMesh.Alpha(color, 0f), 16);
             }
+            // 斬 is brushed in the air above her while the blade slides home, burns white on the click, and is gone.
+            float burn = Mathf.Clamp01(1f - Mathf.Abs(t - Click) / 0.12f), gone = t > Click ? Mathf.Clamp01(1f - (t - Click) / 0.22f) : 1f;
+            DrawZan(origin + Vector2.up * 2.1f, 1.5f * (1f + 0.12f * burn), t / (Click - 0.1f),
+                FlameMesh.Alpha(Color.Lerp(color, Color.white, burn), gone), FlameMesh.Alpha(Color.Lerp(scabbard, Color.white, burn), gone));
             // Then the shock of it rolls outward.
             if (t <= Click) return;
             float after = (t - Click) / (1f - Click), spread = EaseOut(after);
@@ -379,6 +429,8 @@ namespace Slopgame
                 Mesh.Triangle(middle - along * 30f, middle + side * half, middle - side * half, ink, ink, ink);
                 Mesh.Triangle(middle + along * 30f, middle - side * half, middle + side * half, ink, ink, ink);
             }
+            // 斬 stamped huge behind her, in the frame's ink.
+            DrawZan(origin + Vector2.up * 2.6f, 3.2f, 1f, frame == 0 ? color : ink, ink);
             // And the glint where the guard met the scabbard.
             float star = frame == 0 ? 1f : frame == 1 ? 0.7f : 0.4f;
             Mesh.Bar(origin + Vector2.left * 1.6f * star, Vector2.right, 3.2f * star, 0.09f, ink, ink);

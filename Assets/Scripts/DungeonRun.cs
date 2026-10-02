@@ -222,7 +222,7 @@ namespace Slopgame
             Player.Initialize(SelectedCharacter);
             Progress.Discover(Encyclopedia.HeroId(SelectedCharacter.Weapon));
             crystalsStashed = false;
-            // Smuggler's Stash: last descent's crystals come along.
+            // Smuggler's Stash used to carry crystals over; any still put aside in an old save come along one last time.
             Player.Crystals.Add(Progress.TakeStash());
             // Ember Heart: the descent begins with one random talent.
             if (Progress.Rank(PermanentUpgradeCatalog.EmberHeartId) > 0)
@@ -236,12 +236,19 @@ namespace Slopgame
 
         private bool crystalsStashed, rerolledThisWorld;
 
-        /// <summary>Smuggler's Stash: when a descent ends, a quarter of the unspent crystals (up to 100) is put aside.</summary>
+        /// <summary>Unspent crystals fetch 1 Ash for this many.</summary>
+        public const int CrystalsPerAsh = 2;
+
+        /// <summary>Smuggler's Stash: when a descent ends, the unspent crystals are sold for Ash.</summary>
         private void StashCrystals()
         {
             if (crystalsStashed || Player == null || Progress.Rank(PermanentUpgradeCatalog.SmugglersStashId) == 0) return;
             crystalsStashed = true;
-            Progress.Stash(Player.Crystals.Crystals / 4);
+            int ash = Player.Crystals.Crystals / CrystalsPerAsh;
+            if (ash <= 0) return;
+            Player.Crystals.Spend(ash * CrystalsPerAsh);
+            RunAshEarned += ash;
+            Progress.AwardAsh(ash);
         }
 
         /// <summary>Scholar's Reroll: whether the floor's talent pick can still be rerolled in this world.</summary>

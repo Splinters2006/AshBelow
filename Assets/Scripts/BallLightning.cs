@@ -10,7 +10,7 @@ namespace Slopgame
     /// </summary>
     public sealed class BallLightning : MonoBehaviour
     {
-        public const float Speed = 2.2f, Duration = 4f, Reach = 1.4f, ZapInterval = 0.4f, OrbRadius = 0.32f;
+        public const float Speed = 3.3f, Duration = 4f, Reach = 1.4f, ZapInterval = 0.4f, OrbRadius = 0.32f;
         private const int ArcCount = 4, ArcPoints = 6;
         private DungeonRun run;
         private DungeonPlayer player;

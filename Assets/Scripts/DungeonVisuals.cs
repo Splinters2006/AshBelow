@@ -9,7 +9,7 @@ namespace Slopgame
         private static Sprite thrownBlade;
 
         private static readonly Sprite[] enemySprites = new Sprite[3];
-        private static Sprite flameSprite, skullSprite, duelistSprite, archdemonSprite, wardenSprite,
+        private static Sprite flameSprite, skullSprite, bloodDropSprite, duelistSprite, archdemonSprite, wardenSprite,
             sentinelDetails, titanDetails;
         public static Sprite FlameSprite => flameSprite != null ? flameSprite : flameSprite = PixelSprite("Burn flame", new[]
         {
@@ -17,6 +17,11 @@ namespace Slopgame
         });
 
         /// <summary>The mark of a Demon Curse: a skull, tinted violet over a cursed enemy.</summary>
+        /// <summary>A drop of blood, shown over a bleeding enemy. Tint it.</summary>
+        public static Sprite BloodDropSprite => bloodDropSprite != null ? bloodDropSprite : bloodDropSprite = PixelSprite("Blood drop", new[]
+        {
+            "...W...", "...W...", "..WWW..", "..WWW..", ".WWWWW.", "WWWWWWW", "WWWWWWW", ".WWWWW.", "..WWW.."
+        });
         public static Sprite SkullSprite => skullSprite != null ? skullSprite : skullSprite = PixelSprite("Curse skull", new[]
         {
             "..WWWWW..", ".WWWWWWW.", "WWWWWWWWW", "WW..W..WW", "WW..W..WW", "WWWW.WWWW", ".WWWWWWW.", "..WWWWW..", "..W.W.W.."

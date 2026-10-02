@@ -120,11 +120,12 @@ namespace Slopgame
             yield return new WaitForSeconds(HolySwordVfx.ImpactDelay);
             if (!run.IsPlaying || root != run.ProjectileRoot || sword == null) yield break;
             ScreenFx.Shake(0.08f, 0.12f);
+            // Holy Ground: the sword hallows wherever it lands, even if its target died or slipped away.
+            if (Player.Powerups.Count(PowerupType.HolyGround) > 0) HallowedGround.Leave(run, sword.Target);
             if (target == null || target.Health <= 0
                 || Vector2.Distance(sword.Target, target.transform.position) > HolySwordReach + target.HitRadius) yield break;
             CombatDamage.Apply(Player, target, damage, DamageElement.Physical, sword.Target + Vector2.up, 0.2f);
             if (target != null && target.Health > 0) target.Chill(0.8f);
-            if (Player.Powerups.Count(PowerupType.HolyGround) > 0) HallowedGround.Leave(run, sword.Target);
         }
         public void Hide() { swipe.Hide(); }
     }

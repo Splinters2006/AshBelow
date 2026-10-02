@@ -22,7 +22,7 @@ namespace Slopgame
         private bool ghost;
 
         /// <summary>A white die showing 1 to 6 pips, with a dark outline and its lower and right edges shaded.</summary>
-        private static Sprite Face(int value)
+        internal static Sprite Face(int value)
         {
             if (faces[value - 1] != null) return faces[value - 1];
             string[] pips =

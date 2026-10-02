@@ -38,7 +38,7 @@ namespace Slopgame
         private Vector2 netPosition;
         private bool netBurning, netFlashing, hasSnapshot;
         private EnemyTactics tactics;
-        private SpriteRenderer burnIndicator;
+        private SpriteRenderer burnIndicator, bleedIndicator;
         public bool IsChilled => Time.time < chilledUntil;
         /// <summary>Frozen solid by ice: like paralysis, a frozen enemy cannot move, turn or attack.</summary>
         public bool IsFrozen => Time.time < frozenUntil;
@@ -162,12 +162,37 @@ namespace Slopgame
             burnIndicator.sprite = DungeonVisuals.FlameSprite;
             burnIndicator.transform.localPosition = new Vector2(0, 0.95f);
             burnIndicator.gameObject.SetActive(IsBurning);
+            bleedIndicator = DungeonVisuals.Create("Bleed indicator", transform, transform.position,
+                BleedDropSize, BleedColor, 9);
+            bleedIndicator.sprite = DungeonVisuals.BloodDropSprite;
+            bleedIndicator.gameObject.SetActive(false);
             curseIndicator = DungeonVisuals.Create("Curse indicator", transform, transform.position,
                 Vector2.one * CurseSkullSize, HeroBuffs.AscendColor, 10);
             curseIndicator.sprite = DungeonVisuals.SkullSprite;
             curseIndicator.transform.localPosition = new Vector2(0, CurseSkullHeight);
             curseIndicator.gameObject.SetActive(false);
         }
+
+        private static readonly Vector2 BleedDropSize = new Vector2(0.24f, 0.31f);
+
+        /// <summary>The bleed status: blood runs off the enemy's body, and a drop hangs over it, swelling and falling again and again (beside the flame if it burns too).</summary>
+        private void UpdateBleedIndicator()
+        {
+            if (bleedIndicator == null) return;
+            bool bleeding = IsBleeding && Health > 0;
+            bleedIndicator.gameObject.SetActive(bleeding);
+            if (!bleeding) return;
+            float drip = Mathf.Repeat(Time.time * 1.4f, 1f), fall = Mathf.Clamp01((drip - 0.5f) / 0.5f);
+            bleedIndicator.transform.localPosition = new Vector2(IsBurning ? -0.32f : 0f, 0.95f - 0.3f * fall * fall);
+            bleedIndicator.transform.localScale = (Vector3)(BleedDropSize * Mathf.Lerp(0.5f, 1f, Mathf.Clamp01(drip / 0.5f))) + Vector3.forward;
+            bleedIndicator.color = FlameMesh.Alpha(BleedColor, 1f - fall * fall);
+            // Blood keeps running off the body between the cuts, on every machine.
+            if (Time.time < nextBleedDrip || Run.ProjectileRoot == null) return;
+            nextBleedDrip = Time.time + Random.Range(0.12f, 0.22f);
+            Vector2 wound = (Vector2)transform.position + Random.insideUnitCircle * HitRadius * 0.7f;
+            HeroVfx.Sparks(Run.ProjectileRoot, wound, BleedColor, 2, 1.6f, 0.35f, Vector2.down, 50f, 0.8f);
+        }
+        private float nextBleedDrip;
 
         private const float CurseSkullSize = 0.42f, CurseSkullHeight = 1.4f, CurseSkullPop = 0.3f;
 
@@ -228,6 +253,7 @@ namespace Slopgame
                 Hit(poisonDamage, transform.position, 0f);
                 if (Health <= 0) return;
             }
+            UpdateBleedIndicator();
             if (burnIndicator != null)
             {
                 burnIndicator.gameObject.SetActive(IsBurning);
@@ -291,6 +317,7 @@ namespace Slopgame
             if (hasSnapshot)
                 transform.position = Vector2.Distance(transform.position, netPosition) > 2.5f ? netPosition
                     : Vector2.Lerp(transform.position, netPosition, 1f - Mathf.Exp(-14f * Time.deltaTime));
+            UpdateBleedIndicator();
             if (burnIndicator != null)
             {
                 burnIndicator.gameObject.SetActive(IsBurning);
@@ -666,7 +693,7 @@ namespace Slopgame
             public int Ticks, TicksLeft;
         }
         private readonly System.Collections.Generic.List<Wound> wounds = new System.Collections.Generic.List<Wound>();
-        private float bleedCarry;
+        private float bleedCarry, bleedStun;
 
         /// <summary>The damage every open wound still has to deal.</summary>
         public float BleedRemaining
@@ -682,11 +709,14 @@ namespace Slopgame
         /// <summary>
         /// Bleeding: <paramref name="ticks"/> cuts over <paramref name="duration"/> seconds, each for a tenth of the
         /// <paramref name="hit"/> that opened the wound. Wounds stack: every bleed runs on its own, and one hit can open several.
+        /// With a <paramref name="stun"/> (Bled Dry), the enemy is stunned that long once its last wound closes.
         /// </summary>
-        public void Bleed(int hit, float duration = BleedDuration, int ticks = BleedTicks)
+        public void Bleed(int hit, float duration = BleedDuration, int ticks = BleedTicks, float stun = 0f)
         {
             if (IsInvulnerable || hit <= 0 || ticks <= 0 || duration <= 0f || Health <= 0) return;
             if (Run.IsGuest) Run.Coop.ReportDamage(this, CoopDamageKind.Bleed, hit, transform.position, ticks, duration);
+            // The stun stays on the machine that opened the wound: a guest reports it to the host when its own count runs out.
+            bleedStun = Mathf.Max(bleedStun, stun);
             float interval = duration / ticks;
             wounds.Add(new Wound { PerTick = hit * BleedTickShare, Interval = interval, NextAt = Time.time + interval, Ticks = ticks, TicksLeft = ticks });
         }
@@ -708,17 +738,28 @@ namespace Slopgame
             }
             int due = Mathf.FloorToInt(bleedCarry + 0.0001f);
             // The last wound to close pays out what is left of the fractions, rounded.
-            if (wounds.Count == 0) { due = Mathf.RoundToInt(bleedCarry); bleedCarry = 0f; }
+            if (wounds.Count == 0) { due = Mathf.RoundToInt(bleedCarry); bleedCarry = 0f; BledDry(); }
             else bleedCarry -= due;
             return due;
+        }
+
+        /// <summary>Bled Dry: the bleeding has just ended, so the enemy seizes up for as long as its wounds promised.</summary>
+        private void BledDry()
+        {
+            float stun = bleedStun;
+            bleedStun = 0f;
+            if (stun <= 0f || Health <= 0) return;
+            if (Stun(stun) && Run.ProjectileRoot != null) CombatVfx.Ring(Run.ProjectileRoot, transform.position, HitRadius + 0.4f, BleedColor, 0.35f);
         }
 
         /// <summary>Bloodpop: closes every wound now and says how much damage they still had to deal.</summary>
         public float ConsumeBleed()
         {
             float remaining = BleedRemaining;
+            bool bleeding = wounds.Count > 0;
             wounds.Clear();
             bleedCarry = 0f;
+            if (bleeding) BledDry();
             if (Run.IsGuest) Run.Coop.ReportDamage(this, CoopDamageKind.ClearBleed, 0, transform.position, 0, 0f);
             return remaining;
         }

@@ -21,7 +21,7 @@ namespace Slopgame
             public List<RankEntry> upgrades;
             /// <summary>Worlds cleared at least once, by index; each unlocks two Ash shop items.</summary>
             public List<int> clearedWorlds;
-            /// <summary>Smuggler's Stash: crystals carried over to the next descent.</summary>
+            /// <summary>Crystals Smuggler's Stash put aside, back when it carried them over to the next descent.</summary>
             public int stashedCrystals;
             /// <summary>Switched-off toggles, such as the Infernal Pact.</summary>
             public List<string> flags;
@@ -175,19 +175,9 @@ namespace Slopgame
             Changed?.Invoke();
         }
 
-        public const int StashCap = 100;
         public int StashedCrystals => data.stashedCrystals;
 
-        /// <summary>Smuggler's Stash: puts crystals aside for the next descent (never more than the cap).</summary>
-        public void Stash(int crystals)
-        {
-            if (IsReadOnly) return;
-            data.stashedCrystals = Mathf.Clamp(crystals, 0, StashCap);
-            dirty = true;
-            Save();
-        }
-
-        /// <summary>Takes the stashed crystals out for a new descent.</summary>
+        /// <summary>Takes out any crystals an older save still has put aside (Smuggler's Stash sells them for Ash now).</summary>
         public int TakeStash()
         {
             int crystals = data.stashedCrystals;

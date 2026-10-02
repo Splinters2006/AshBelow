@@ -39,6 +39,7 @@ namespace Slopgame
         public static void Whirlwind(DungeonRun run, float duration, float radius) => Send(run, FxKind.Whirlwind, default, default, null, duration, radius);
         public static void WarBanner(DungeonRun run, Vector2 at, float duration, float radius) => Send(run, FxKind.WarBanner, at, default, null, duration, radius);
         public static void Consecration(DungeonRun run, Vector2 at, float duration, float radius) => Send(run, FxKind.Consecration, at, default, null, duration, radius);
+        public static void HallowedGround(DungeonRun run, Vector2 at, float duration, float radius) => Send(run, FxKind.HallowedGround, at, default, null, duration, radius);
         public static void Heal(DungeonRun run, Vector2 center, float radius) => Send(run, FxKind.Heal, center, default, null, radius);
         public static void Lance(DungeonRun run, Vector2 origin, Vector2 aim) => Send(run, FxKind.Lance, origin, aim);
         /// <summary>Teammates see guardian angels circle the watched hero: the caster, or the teammate <paramref name="target"/>.</summary>
@@ -65,6 +66,20 @@ namespace Slopgame
         /// <summary>The Specimen's Boulder Toss leaves a rock wall that blocks bolts on every machine.</summary>
         public static void RockCover(DungeonRun run, Vector2 center, Vector2 facing, float width, float duration)
             => Send(run, FxKind.RockCover, center, facing, null, width, duration);
+
+        /// <summary>Teammates see the Samurai's crescent; its duration travels in milliseconds, negative for a backhand.</summary>
+        public static void KatanaCrescent(DungeonRun run, Vector2 origin, Vector2 aim, float reach, float cone, Color color, bool reverse = false, float duration = 0.2f)
+            => Send(run, FxKind.KatanaCrescent, origin, aim, color, reach, cone, Mathf.Max(1, Mathf.RoundToInt(duration * 1000f)) * (reverse ? -1 : 1));
+        public static void KatanaThrust(DungeonRun run, Vector2 origin, Vector2 aim, float reach, float halfWidth, Color color)
+            => Send(run, FxKind.KatanaThrust, origin, aim, color, reach, halfWidth);
+        public static void KatanaSlice(DungeonRun run, Vector2 from, Vector2 to, Color color, float duration = 0.45f, float halfWidth = 0f)
+            => Send(run, FxKind.KatanaSlice, from, to, color, duration, halfWidth);
+        /// <summary>Teammates see Slice Dice Chunk's own effect for the slash thrown: 0 Slice, 1 Dice, 2 Chunk.</summary>
+        public static void SliceDiceChunk(DungeonRun run, Vector2 origin, Vector2 aim, float reach, float cone, int stage)
+            => Send(run, FxKind.SliceDiceChunk, origin, aim, null, reach, cone, stage);
+        public static void Bloodpop(DungeonRun run, Vector2 at, float radius) => Send(run, FxKind.Bloodpop, at, default, null, radius);
+        public static void KatanaSheathe(DungeonRun run, Vector2 hero, Vector2 facing, Color color, float duration)
+            => Send(run, FxKind.KatanaSheathe, hero, facing, color, duration);
 
         public static void Punch(DungeonRun run, Vector2 origin, Vector2 aim, float length, float halfWidth, Color color)
             => Send(run, FxKind.Punch, origin, aim, color, length, halfWidth);
@@ -225,6 +240,7 @@ namespace Slopgame
                     break;
                 case FxKind.WarBanner: WarBannerVfx.Play(root, fx.A, fx.F1, fx.F2); break;
                 case FxKind.Consecration: ConsecrationVfx.Play(run, fx.A, fx.F1, fx.F2); break;
+                case FxKind.HallowedGround: HallowedGroundVfx.Play(run, fx.A, fx.F1, fx.F2); break;
                 case FxKind.Heal: HealVfx.PlayAround(run, fx.A, fx.F1); break;
                 case FxKind.Lance: ThrownLance.SpawnGhost(run, fx.A, fx.B); break;
                 case FxKind.Intervention:
@@ -255,6 +271,12 @@ namespace Slopgame
                 case FxKind.Ring: CombatVfx.Ring(root, fx.A, fx.F1, color, fx.F2); break;
                 case FxKind.Pulse: HeroVfx.Pulse(root, fx.A, fx.F1, color, fx.F2); break;
                 case FxKind.RockCover: Slopgame.RockCover.Raise(run, fx.A, fx.B, fx.F1, fx.F2, true); break;
+                case FxKind.KatanaCrescent: KatanaVfx.Crescent(root, fx.A, fx.B, fx.F1, fx.F2, color, fx.N < 0, Mathf.Abs(fx.N) / 1000f); break;
+                case FxKind.KatanaThrust: KatanaVfx.Thrust(root, fx.A, fx.B, fx.F1, fx.F2, color); break;
+                case FxKind.KatanaSlice: KatanaVfx.Slice(root, fx.A, fx.B, color, fx.F1, fx.F2); break;
+                case FxKind.SliceDiceChunk: SliceDiceChunkVfx.Play(root, fx.A, fx.B, fx.F1, fx.F2, fx.N); break;
+                case FxKind.Bloodpop: BloodpopVfx.Play(root, fx.A, fx.F1); break;
+                case FxKind.KatanaSheathe: KatanaVfx.Sheathe(root, fx.A, fx.B, color, fx.F1); break;
                 case FxKind.Punch: BrawlerVfx.Punch(root, fx.A, fx.B, fx.F1, fx.F2, color); break;
                 case FxKind.RearHit: RearHitMarker.Draw(root, fx.A, fx.B, fx.F1); break;
                 case FxKind.Knife:
