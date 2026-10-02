@@ -1,6 +1,7 @@
 rework autofire setting, holding m1 releases as soon as charged and immediately begins charging again, add a menu per character to turn this on or off
 hud should be moved more outwards in game
 make tail sweep cooldown start ticking down when the animation starts, not when it ends
+make "on paralysis" talents also apply if the paralysing hit kills the target
 
 set reaper soul limit to 100
 make archer's elemental quiver only trigger the element that is selected if that isnt the case already
