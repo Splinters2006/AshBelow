@@ -398,6 +398,8 @@ namespace Slopgame
                     : Floor >= 2 && roll < HuskChance + SkitterChance ? enemy.gameObject.AddComponent<AshSkitter>() : null;
                 variant?.Configure(enemy);
             }
+            // Double the finished stats so specialist bonuses and rounding receive the full wave-world buff.
+            if (World.IsWaveWorld) enemy.Health *= 2;
             // A later wave's enemies go to its reserve instead of into the fight.
             (into ?? Enemies).Add(enemy);
             return enemy;
@@ -643,6 +645,7 @@ namespace Slopgame
                 var variant = (EnemyVariant)enemy.gameObject.AddComponent(roster[(kind - MinionSpecialist) % roster.Length]);
                 variant.Configure(enemy);
             }
+            if (World.IsWaveWorld) enemy.Health *= 2;
             Enemies.Add(enemy);
             HeroVfx.Pulse(level, position, 1f, World.Accent, 0.4f);
             HeroVfx.Sparks(level, position, World.Accent, 12, 4f, 0.4f, Vector2.up, 120f);

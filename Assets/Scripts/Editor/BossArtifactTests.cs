@@ -486,6 +486,13 @@ namespace Slopgame.Editor
                 "Arena boons could not be bought.");
             Require(player.Damage == damage && pouch.SpeedMultiplier == 1f && pouch.PendingDamage == 1 && pouch.PendingWards == CrystalShop.StoneskinWards,
                 "Arena boons applied in the shop instead of waiting for the guardian.");
+            var nextShop = CrystalShop.Create(run, run.ProjectileRoot);
+            var whetstone = Offer(CrystalShop.Ware.Whetstone);
+            Require(nextShop.Cost(hone) == shop.Cost(hone) && nextShop.Cost(hone) == 270
+                && nextShop.Cost(whetstone) == shop.Cost(whetstone) && nextShop.Cost(whetstone) > whetstone.BaseCost,
+                "Damage upgrade prices reset when a new shop was created.");
+            Require(nextShop.Cost(draught) == draught.BaseCost, "Non-damage prices carried over to a new shop.");
+            UnityEngine.Object.Destroy(nextShop.gameObject);
             pouch.Spend(pouch.Crystals);
             Require(!shop.CanBuy(Offer(CrystalShop.Ware.Whetstone)), "The shop sold a ware the hero could not afford.");
             player.transform.position = (Vector2)run.Map.Centers[0];

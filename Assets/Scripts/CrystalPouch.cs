@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Slopgame
@@ -13,6 +14,11 @@ namespace Slopgame
         public const float SwiftnessPerBoon = 0.2f;
         public DungeonPlayer Player { get; set; }
         public int Crystals { get; private set; }
+        private readonly Dictionary<CrystalShop.Ware, int> damagePurchases = new Dictionary<CrystalShop.Ware, int>();
+
+        /// <summary>Damage upgrade purchases follow this hero for the whole descent, across shops and worlds.</summary>
+        public int DamagePurchases(CrystalShop.Ware ware) => damagePurchases.TryGetValue(ware, out int count) ? count : 0;
+        public void RecordDamagePurchase(CrystalShop.Ware ware) => damagePurchases[ware] = DamagePurchases(ware) + 1;
         private int boonFloor = -1, damage, wards, swiftness;
 
         private bool BoonsActive => Player != null && Player.Run != null && Player.Run.Floor == boonFloor && !Player.Run.InShop;

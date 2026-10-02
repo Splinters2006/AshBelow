@@ -7,7 +7,8 @@ namespace Slopgame
     /// The crystal shop visited before each boss: a warm, lantern-lit room with a hooded merchant behind a counter.
     /// Talking to him opens his wares, paid for in the crystals enemies drop: healing, boons for the guardian's arena
     /// and relics that last the rest of the descent. Each shop stocks a random few of them (in a co-op run every hero
-    /// is shown a stock of their own), and each ware costs half as much again every time it is bought in the same shop. Haggler
+    /// is shown a stock of their own), and each ware costs half as much again every time it is bought in the same shop.
+    /// Damage upgrade price increases last the whole descent. Haggler
     /// lowers his prices, and Merchant's Favor lets a hero have him lay out fresh wares.
     /// </summary>
     public sealed class CrystalShop : MonoBehaviour
@@ -92,13 +93,16 @@ namespace Slopgame
 
         public int Cost(Offer offer)
         {
-            int cost = offer.BaseCost + offer.BaseCost * Bought(offer.Ware) / 2;
+            int purchases = IsDamageUpgrade(offer.Ware) && run != null && run.Player != null
+                ? run.Player.Crystals.DamagePurchases(offer.Ware) : Bought(offer.Ware);
+            int cost = offer.BaseCost + offer.BaseCost * purchases / 2;
             return run != null && run.Player != null ? Mathf.Max(1, Mathf.RoundToInt(cost * run.Player.Powerups.ShopPriceMultiplier)) : cost;
         }
 
         /// <summary>Merchant's Favor rerolls the hero has left in this shop.</summary>
         public int RerollsLeft => run != null && run.Player != null ? Mathf.Max(0, run.Player.Powerups.ShopRerolls - rerolls) : 0;
         public int Bought(Ware ware) => bought.TryGetValue(ware, out int count) ? count : 0;
+        private static bool IsDamageUpgrade(Ware ware) => ware == Ware.EmberHone || ware == Ware.Whetstone;
 
         public void Toggle()
         {
@@ -168,6 +172,7 @@ namespace Slopgame
             var player = run.Player;
             player.Crystals.Spend(Cost(offer));
             bought[offer.Ware] = Bought(offer.Ware) + 1;
+            if (IsDamageUpgrade(offer.Ware)) player.Crystals.RecordDamagePurchase(offer.Ware);
             // The shop sits on the floor before the guardian's, so boons wait for the next floor.
             int arena = run.Floor + 1;
             var root = run.ProjectileRoot;
