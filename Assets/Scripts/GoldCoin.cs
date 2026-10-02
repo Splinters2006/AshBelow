@@ -60,10 +60,12 @@ namespace Slopgame
             }
 
             float distance = Vector2.Distance(rest, hero);
-            if (purse != null && player.Health > 0 && (distance <= MagnetRadius || pulled))
+            // Lodestone: drawn in from farther, faster, and picked up from farther away.
+            float reach = player.Powerups != null ? player.Powerups.PickupReach : 1f;
+            if (purse != null && player.Health > 0 && (distance <= MagnetRadius * reach || pulled))
             {
                 if (!magnetised) { magnetised = true; CombatVfx.Trail(gameObject, new Color(1f, 0.82f, 0.3f, 0.7f), 0.12f, 0.12f); }
-                rest = Vector2.MoveTowards(rest, hero, (pulled ? Crystal.PullSpeed : 7f - distance * 2f) * Time.deltaTime);
+                rest = Vector2.MoveTowards(rest, hero, (pulled ? Crystal.PullSpeed : (7f - distance / reach * 2f) * reach) * Time.deltaTime);
             }
             height = 0.08f + 0.06f * Mathf.Sin(Time.time * 4f + phase);
             Place(rest, height, 1f);
@@ -79,7 +81,7 @@ namespace Slopgame
                 glint.transform.rotation = Quaternion.Euler(0f, 0f, flash * 45f);
             }
 
-            if (purse == null || player.Health <= 0 || Vector2.Distance(rest, hero) > PickupRadius) return;
+            if (purse == null || player.Health <= 0 || Vector2.Distance(rest, hero) > PickupRadius * reach) return;
             int gained = purse.PickupCoinsForRoll(Random.value);
             purse.AddCoins(gained);
             player.Powerups.OnCoinsPicked(player, gained);

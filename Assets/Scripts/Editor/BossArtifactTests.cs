@@ -491,7 +491,8 @@ namespace Slopgame.Editor
             Require(nextShop.Cost(hone) == shop.Cost(hone) && nextShop.Cost(hone) == 270
                 && nextShop.Cost(whetstone) == shop.Cost(whetstone) && nextShop.Cost(whetstone) > whetstone.BaseCost,
                 "Damage upgrade prices reset when a new shop was created.");
-            Require(nextShop.Cost(draught) == draught.BaseCost, "Non-damage prices carried over to a new shop.");
+            // Every price keeps climbing for the whole descent: a new shop never resets it.
+            Require(nextShop.Cost(draught) == shop.Cost(draught) && nextShop.Cost(draught) > draught.BaseCost, "Prices reset when a new shop was created.");
             UnityEngine.Object.Destroy(nextShop.gameObject);
             pouch.Spend(pouch.Crystals);
             Require(!shop.CanBuy(Offer(CrystalShop.Ware.Whetstone)), "The shop sold a ware the hero could not afford.");
@@ -722,16 +723,20 @@ namespace Slopgame.Editor
             target.transform.position = player.transform.position + Vector3.right;
             bystander.transform.position = player.transform.position + Vector3.right * 1.6f;
             target.Health = bystander.Health = 100;
-            Require(player.Weapon.TryAttack(Vector2.right, 0f) && (target.Health == 99 || target.Health == 98) && bystander.Health == 100
-                && !target.IsParalyzed, "Tail stab did not hit only the nearest enemy, or paralysed without a full charge.");
+            // Her stabs deal three quarters of a normal hit (a crit doubles that).
+            int stab = DemonessAttack.StabDamage(player.Charge.Damage(0f));
+            Require(player.Weapon.TryAttack(Vector2.right, 0f) && (target.Health == 100 - stab || target.Health == 100 - player.Powerups.CriticalDamage(stab)) && bystander.Health == 100
+                && !target.IsParalyzed, "Tail stab did not hit only the nearest enemy, dealt the wrong damage, or paralysed without a full charge.");
             Require(!player.Weapon.TryAttack(Vector2.right, 0f), "Tail stab ignored its attack interval.");
-            // The sweep covers a half circle and hits paralysed enemies twice as hard.
+            // The sweep covers a half circle and hits paralysed enemies three times as hard.
             target.Paralyze(2f);
             Require(target.IsParalyzed && target.ActionSpeedMultiplier == 0f, "Paralysis did not stop the enemy.");
             bystander.transform.position = player.transform.position + new Vector3(0.2f, 1.2f);
             target.Health = bystander.Health = 100;
-            Require(player.Weapon.TryHeavyAttack(Vector2.right) && (target.Health == 96 || target.Health == 92)
-                && (bystander.Health == 98 || bystander.Health == 96), "Tail sweep missed its half circle or its bonus on paralysed enemies.");
+            var tail = (DemonessAttack)player.Weapon;
+            int sweep = player.Damage * DemonessAttack.SweepDamage, held = sweep * DemonessAttack.SweepParalyzedMultiplier + tail.ParalyzedBonusDamage;
+            Require(player.Weapon.TryHeavyAttack(Vector2.right) && (target.Health == 100 - held || target.Health == 100 - player.Powerups.CriticalDamage(held))
+                && (bystander.Health == 100 - sweep || bystander.Health == 100 - player.Powerups.CriticalDamage(sweep)), "Tail sweep missed its half circle or its bonus on paralysed enemies.");
             Require(!player.Weapon.TryHeavyAttack(Vector2.right), "Tail sweep bypassed its cooldown.");
             target.Curse(1f);
             Require(target.CursedDamage(1) == 2 && target.CursedDamage(4) == 6, "Curse did not raise damage taken by 50%.");

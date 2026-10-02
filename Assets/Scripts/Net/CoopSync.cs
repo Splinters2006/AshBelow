@@ -296,7 +296,7 @@ namespace Slopgame
                     | (enemy.IsStunned ? EnemySnapshot.Stunned : 0) | (enemy.IsRooted ? EnemySnapshot.Rooted : 0)
                     | (enemy.IsBleeding ? EnemySnapshot.Bleeding : 0) | (enemy.IsPoisoned ? EnemySnapshot.Poisoned : 0));
                 new EnemySnapshot { Id = enemy.NetId, Position = enemy.transform.position, Facing = enemy.Facing.Direction, Health = enemy.Health,
-                    MaxHealth = enemy.Boss != null ? enemy.Boss.MaxHealth : 0, Flags = flags, MoreFlags = more }.Write(writer);
+                    MaxHealth = enemy.Boss != null ? enemy.Boss.MaxHealth : 0, Flags = flags, MoreFlags = more, HoldLeft = enemy.HoldRemaining }.Write(writer);
             }
             Session.Send(CoopMessages.Enemies, writer, NetworkDelivery.UnreliableSequenced);
         }
@@ -379,7 +379,8 @@ namespace Slopgame
                 else if (message.Kind == CoopDamageKind.Fear) enemy.Fear(message.Source, message.Duration);
                 else if (message.Kind == CoopDamageKind.Stun) enemy.Stun(message.Duration);
                 else if (message.Kind == CoopDamageKind.Root) enemy.Root(message.Duration);
-                else if (message.Kind == CoopDamageKind.Bleed) enemy.Bleed(message.Amount, message.Duration, message.Ticks);
+                // A bleed's knockback carries its Pinned Wounds multiplier.
+                else if (message.Kind == CoopDamageKind.Bleed) enemy.Bleed(message.Amount, message.Duration, message.Ticks, 0f, message.Knockback);
                 else if (message.Kind == CoopDamageKind.ClearBleed) enemy.ConsumeBleed();
                 else if (message.Kind == CoopDamageKind.RefreshBleed) enemy.RefreshBleed(message.Duration);
                 else if (message.Kind == CoopDamageKind.Poison) enemy.Poison(message.Ticks, message.Amount);

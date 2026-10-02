@@ -55,6 +55,8 @@ namespace Slopgame
         protected abstract void DrawAura(FlameMesh mesh, Vector2 center, float intensity);
         /// <summary>True to deal the attacks in a freshly shuffled order each cycle (see <see cref="AttackDeck{T}"/>) rather than in order.</summary>
         protected virtual bool ShuffleAttacks => false;
+        /// <summary>False while an attack must not be started (it is skipped and the next one dealt instead); every attack is usable by default.</summary>
+        protected virtual bool CanUseAttack(int index) => true;
         protected virtual float Scale => 2f;
         protected virtual string SummonTell => "SUMMONING THE COURT";
         protected virtual string SpentTell => "SPENT - STRIKE NOW";
@@ -110,6 +112,8 @@ namespace Slopgame
                 if (nextAttack > 0 && nextAttack % 3 == 0 && !summonedThisCycle && BeginSummon()) return;
                 summonedThisCycle = false;
                 int attack = NextAttack(nextAttack++);
+                // An attack that cannot go now (Bastion between area lockdowns) gives way to the next one dealt.
+                for (int tries = 1; tries < AttackCount && !CanUseAttack(attack); tries++) attack = NextAttack(nextAttack++);
                 state = (byte)(attack + 1);
                 attackStart = Enemy.ActionTime;
                 until = attackStart + Attack(attack, toHero.sqrMagnitude > 0.01f ? toHero.normalized : Vector2.down);

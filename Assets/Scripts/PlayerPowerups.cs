@@ -6,7 +6,7 @@ namespace Slopgame
     public sealed class PlayerPowerups : MonoBehaviour
     {
         private readonly Dictionary<PowerupType, int> stacks = new Dictionary<PowerupType, int>();
-        private int harvestKills, soulShieldKills;
+        private int soulShieldKills;
         public WeaponType ClassWeapon { get; set; }
         public PermanentBonuses Permanent { get; set; } = new PermanentBonuses(null, WeaponType.Sword);
         public PlayerAbilities Abilities { get; set; }
@@ -28,7 +28,7 @@ namespace Slopgame
             + (ClassWeapon == WeaponType.Daggers ? 0.1f + Count(PowerupType.AssassinCrit) * 0.05f : 0f));
         public float DodgeCooldownMultiplier => (1f - 0.1f * Count(PowerupType.DodgeRecovery)) * Permanent.DodgeMultiplier;
         public int Count(PowerupType type) => stacks.TryGetValue(type, out int count) ? count : 0;
-        public bool CanTake(PowerupType type) => Count(type) < PowerupCatalog.Get(type).MaxStacks
+        public bool CanTake(PowerupType type) => !PowerupCatalog.Get(type).Retired && Count(type) < PowerupCatalog.Get(type).MaxStacks
             && (!PowerupCatalog.Get(type).ClassWeapon.HasValue || PowerupCatalog.Get(type).ClassWeapon == ClassWeapon)
             && (PowerupCatalog.Get(type).RequiredAbility == AbilityType.None
                 || (Abilities != null && Abilities.IsLearned(PowerupCatalog.Get(type).RequiredAbility)))
@@ -74,7 +74,11 @@ namespace Slopgame
 
         // ---------------------------------------------------------------- universal expansion talents
 
-        public const float LastStandSpeed = 1.2f, CloseCallCooldown = 5f, ThornsRadius = 1f;
+        public const float LastStandSpeed = 1.2f, LastStandDamage = 1.5f, LastStandThreshold = 0.25f, GlassCannonDamage = 1.5f, CloseCallCooldown = 5f, ThornsRadius = 1f;
+
+        /// <summary>Last Stand holds at or below a quarter of maximum HP, and always on the last hit point.</summary>
+        public static bool IsLastStanding(DungeonPlayer player)
+            => player != null && player.Health > 0 && player.Health <= Mathf.Max(1f, player.MaxHealth * LastStandThreshold);
         public const int RhythmBeat = 4, SpellbladeStrikes = 3, SpellbladeBonus = 2;
         private int rhythmCount, spellbladeStrikes;
         private bool elementalPrimed, inBasicAttack, rhythmBeat, spellbladeActive;
@@ -126,8 +130,9 @@ namespace Slopgame
         public float DamageMultiplier(DungeonPlayer player)
         {
             float multiplier = Permanent.DamageMultiplier;
-            if (Count(PowerupType.GlassCannon) > 0) multiplier *= 1.5f;
-            if (Count(PowerupType.LastStand) > 0 && player.Health == 1) multiplier *= 2f;
+            // Glass Cannon stacks: every stack multiplies damage again.
+            if (Count(PowerupType.GlassCannon) > 0) multiplier *= Mathf.Pow(GlassCannonDamage, Count(PowerupType.GlassCannon));
+            if (Count(PowerupType.LastStand) > 0 && IsLastStanding(player)) multiplier *= LastStandDamage;
             if (Count(PowerupType.Berserker) > 0 && player.MaxHealth > 0)
                 multiplier *= 1f + (player.MaxHealth - Mathf.Max(0, player.Health)) / (float)player.MaxHealth;
             if (inBasicAttack && rhythmBeat) multiplier *= 2f;
@@ -138,9 +143,13 @@ namespace Slopgame
         }
         /// <summary>Flat damage added while a basic attack is being thrown (Spellblade).</summary>
         public int BasicAttackBonus => inBasicAttack && spellbladeActive ? SpellbladeBonus : 0;
-        /// <summary>Glass Cannon and the Ash shop's Infernal Pact scale maximum HP.</summary>
-        public float MaxHealthMultiplier => (Count(PowerupType.GlassCannon) > 0 ? 0.5f : 1f) * Permanent.MaxHealthMultiplier;
-        public float MoveMultiplier(DungeonPlayer player) => Count(PowerupType.LastStand) > 0 && player.Health == 1 ? LastStandSpeed : 1f;
+        /// <summary>Glass Cannon (halved again for every stack) and the Ash shop's Infernal Pact scale maximum HP.</summary>
+        public float MaxHealthMultiplier => Mathf.Pow(0.5f, Count(PowerupType.GlassCannon)) * Permanent.MaxHealthMultiplier;
+        public float MoveMultiplier(DungeonPlayer player) => Count(PowerupType.LastStand) > 0 && IsLastStanding(player) ? LastStandSpeed : 1f;
+
+        /// <summary>Lodestone: how much farther (and faster) crystals and the hero's own pickups are drawn in, and picked up from.</summary>
+        public float PickupReach => 1f + LodestoneReach * Count(PowerupType.Lodestone);
+        public const float LodestoneReach = 0.25f;
 
         /// <summary>
         /// Wraps a basic attack or class skill (left or right click) so Rhythm and Spellblade apply to the damage it
@@ -152,8 +161,11 @@ namespace Slopgame
             spellbladeActive = spellbladeStrikes > 0;
             inBasicAttack = true;
             bool thrown;
-            try { thrown = attack(); }
-            finally { inBasicAttack = false; }
+            using (BeginAttack())
+            {
+                try { thrown = attack(); }
+                finally { inBasicAttack = false; }
+            }
             if (!thrown) return false;
             if (Count(PowerupType.Rhythm) > 0) rhythmCount++;
             if (spellbladeActive) spellbladeStrikes--;
@@ -231,9 +243,56 @@ namespace Slopgame
                     enemy.Stun(DominoStun);
         }
 
-        public const float KillStreakWindow = 1f, KillCooldownCut = 0.5f, PyreRadius = 2f;
-        public const int MassacreKills = 5, MomentumKills = 2;
+        public const float KillStreakWindow = 1f, KillCooldownCut = 0.5f, StillHunterCut = 1f, PyreRadius = 2f, PyreRadiusPerRank = 0.75f;
+        public const int MassacreKills = 3, MomentumKills = 2;
         private readonly Queue<float> recentKills = new Queue<float>();
+
+        /// <summary>Pyre Burst's blast: 2 units, and 0.75 more for each rank after the first.</summary>
+        public float PyreBurstRadius => PyreRadius + PyreRadiusPerRank * Mathf.Max(0, Count(PowerupType.PyreBurst) - 1);
+
+        // ---------------------------------------------------------------- attacks (Massacre)
+
+        // One swing, shot, cast or skill is an "attack": everything it kills is counted together for Massacre, even when
+        // its arrows or sweeps land a moment later. Kills outside any attack (burns, bleeds, late blasts) count together
+        // when they fall in the same frame.
+        private int attackSerial, activeAttack;
+        private readonly Dictionary<int, int> attackKills = new Dictionary<int, int>();
+
+        /// <summary>The attack whose hits are landing right now (0 for none).</summary>
+        public int ActiveAttack => activeAttack;
+
+        /// <summary>Starts a fresh attack, in progress until the returned scope is disposed.</summary>
+        public AttackScope BeginAttack() => new AttackScope(this, ++attackSerial);
+
+        /// <summary>Picks an earlier attack back up while its projectile or sweep lands (0 leaves whatever is in progress).</summary>
+        public AttackScope ResumeAttack(int attack) => new AttackScope(this, attack);
+
+        public readonly struct AttackScope : System.IDisposable
+        {
+            private readonly PlayerPowerups owner;
+            private readonly int previous;
+            public int Id { get; }
+
+            internal AttackScope(PlayerPowerups owner, int id)
+            {
+                this.owner = owner;
+                Id = id;
+                previous = owner != null ? owner.activeAttack : 0;
+                if (owner != null && id != 0) owner.activeAttack = id;
+            }
+
+            public void Dispose() { if (owner != null && Id != 0) owner.activeAttack = previous; }
+        }
+
+        /// <summary>Massacre: counts a kill toward its attack; the third kill of one attack resets the class skill.</summary>
+        private void CountAttackKill(DungeonPlayer player)
+        {
+            int attack = activeAttack != 0 ? activeAttack : -Time.frameCount;
+            if (attackKills.Count > 64) attackKills.Clear();
+            int kills = (attackKills.TryGetValue(attack, out int count) ? count : 0) + 1;
+            attackKills[attack] = kills;
+            if (kills == MassacreKills && Count(PowerupType.Massacre) > 0) player.ResetClassSkill();
+        }
 
         /// <summary>Kill talents, applied only on the killer's machine (<paramref name="enemy"/> is still in place, statuses intact).</summary>
         public void OnKill(DungeonPlayer player, DungeonEnemy enemy)
@@ -243,37 +302,36 @@ namespace Slopgame
                 soulShieldKills = 0;
                 if (ArmorCharges < 3) AddWard();
             }
-            int rank = Count(PowerupType.LifeSteal);
-            if (rank > 0 && ++harvestKills >= 6 - rank) { harvestKills = 0; player.Heal(1); }
-
             while (recentKills.Count > 0 && Time.time - recentKills.Peek() > KillStreakWindow) recentKills.Dequeue();
             recentKills.Enqueue(Time.time);
             // Each streak pays out once, when it reaches its count, rather than on every kill after that.
             if (recentKills.Count == MomentumKills && Count(PowerupType.Momentum) > 0) player.ResetDodge();
-            if (recentKills.Count == MassacreKills && Count(PowerupType.Massacre) > 0) player.ResetClassSkill();
+            CountAttackKill(player);
 
-            // Nerve Snap, Still Hunter and Domino count any immobilized enemy: paralysed, frozen, stunned or rooted.
-            bool held = enemy != null && enemy.IsImmobilized;
+            // Nerve Snap, Still Hunter and Domino count any immobilized enemy: paralysed, frozen, stunned or rooted, and
+            // one killed by the very blow that was paralysing it.
+            bool held = enemy != null && enemy.CountsAsHeld;
+            // A paralysing blow that killed outright still sets off the hold talents (Static Hold's shock goes off around it).
+            if (enemy != null && enemy.HoldPending && !enemy.IsImmobilized) OnImmobilized(player, enemy, 0f);
             if (Count(PowerupType.ElementalKills) > 0) elementalPrimed = true;
             if (held && Count(PowerupType.NerveSnap) > 0) player.ResetClassSkill();
-            float cut = (Count(PowerupType.Bloodrush) > 0 ? KillCooldownCut : 0f) + (held && Count(PowerupType.StillHunter) > 0 ? KillCooldownCut : 0f);
+            float cut = (Count(PowerupType.Bloodrush) > 0 ? KillCooldownCut : 0f) + (held && Count(PowerupType.StillHunter) > 0 ? StillHunterCut : 0f);
             if (cut > 0f) player.ReduceCooldowns(cut);
 
-            if (enemy != null && enemy.IsBurning && Count(PowerupType.PyreBurst) > 0) PyreBurst(player, enemy);
+            if (enemy != null && enemy.IsBurning && Count(PowerupType.PyreBurst) > 0) PyreBurst(player, enemy, PyreBurstRadius);
             if (held && Count(PowerupType.Domino) > 0) Domino(player, enemy);
         }
 
         /// <summary>A burning enemy bursts into flame: fire damage to everything around it, which may light them too.</summary>
-        private static void PyreBurst(DungeonPlayer player, DungeonEnemy dead)
+        private static void PyreBurst(DungeonPlayer player, DungeonEnemy dead, float radius)
         {
             var run = player.Run;
             Vector2 center = dead.transform.position;
-            var color = CombatDamage.ElementColor(DamageElement.Fire);
-            HeroVfx.Pulse(run.ProjectileRoot, center, PyreRadius, color, 0.35f);
-            HeroVfx.Sparks(run.ProjectileRoot, center, color, 14, 5f, 0.4f, null, 360f, 1.2f);
-            CoopFx.Pulse(run, center, PyreRadius, color, 0.35f);
+            PyreBurstVfx.Play(run.ProjectileRoot, center, radius);
+            CoopFx.PyreBurst(run, center, radius);
+            ScreenFx.Shake(0.06f + 0.03f * radius, 0.15f);
             foreach (var enemy in run.Enemies.ToArray())
-                if (enemy != null && enemy != dead && enemy.Health > 0 && Vector2.Distance(center, enemy.transform.position) <= PyreRadius + enemy.HitRadius)
+                if (enemy != null && enemy != dead && enemy.Health > 0 && Vector2.Distance(center, enemy.transform.position) <= radius + enemy.HitRadius)
                     CombatDamage.Apply(player, enemy, player.Damage, DamageElement.Fire, center, 0.6f);
         }
 

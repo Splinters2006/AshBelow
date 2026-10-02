@@ -75,12 +75,52 @@ namespace Slopgame
             }
             Player.Run.Coop?.SupportAllies(transform.position, radius, SupportKind.Bless, blessing,
                 BlessingDuration + Player.Permanent.BlessingDuration + Player.Powerups.Count(PowerupType.PatientFaith));
+            // Shared Shelter (his second passive): an overcharged blessing also hands out wards.
+            if (overcharged && Player.Permanent.HasSecondPassive(WeaponType.Hammer)) ShareWards(radius);
             CombatVfx.Ring(Player.Run.ProjectileRoot, transform.position, radius, AbilityCatalog.Gold, 0.6f);
             HeroVfx.Pulse(Player.Run.ProjectileRoot, transform.position, radius, AbilityCatalog.Gold, 0.55f);
             CoopFx.Ring(Player.Run, transform.position, radius, AbilityCatalog.Gold, 0.6f);
             CoopFx.Pulse(Player.Run, transform.position, radius, AbilityCatalog.Gold, 0.55f);
             readyAt = Time.time + 0.6f * Player.Powerups.AttackIntervalMultiplier;
             return true;
+        }
+
+        /// <summary>Shared Shelter: the wards an overcharged blessing hands out, split between everyone it blessed.</summary>
+        public const int SharedWards = 4;
+
+        /// <summary>
+        /// How many of <see cref="SharedWards"/> wards each blessed hero gets when <paramref name="blessed"/> heroes share them:
+        /// an even split, with what is left over going to the Paladin (3 heroes: 2 for him, 1 each for the others).
+        /// </summary>
+        public static int WardShare(int blessed, bool paladin)
+        {
+            blessed = Mathf.Max(1, blessed);
+            int share = SharedWards / blessed;
+            return paladin ? share + SharedWards % blessed : share;
+        }
+
+        private void ShareWards(float radius)
+        {
+            Vector2 center = transform.position;
+            var local = new List<DungeonPlayer>();
+            foreach (var ally in FindObjectsByType<DungeonPlayer>())
+                if (ally.Run == Player.Run && ally.Health > 0 && ally != Player && Vector2.Distance(center, ally.transform.position) <= radius) local.Add(ally);
+            var remote = new List<RemoteHero>();
+            if (Player.Run.IsNetworked && Player.Run.Coop != null && Player.Run.Coop.Active)
+                foreach (var hero in Player.Run.Coop.RemoteHeroes)
+                    if (hero != null && hero.IsAlive && Vector2.Distance(center, hero.transform.position) <= radius) remote.Add(hero);
+            int blessed = 1 + local.Count + remote.Count;
+            var root = Player.Run.ProjectileRoot;
+            for (int i = 0; i < WardShare(blessed, true); i++) Player.Powerups.AddWard();
+            HeroVfx.Pulse(transform, transform.position, 1f, AbilityCatalog.Ice, 0.35f);
+            int share = WardShare(blessed, false);
+            if (share <= 0) return;
+            foreach (var ally in local)
+            {
+                for (int i = 0; i < share; i++) ally.Powerups.AddWard();
+                HeroVfx.Pulse(root, ally.transform.position, 0.9f, AbilityCatalog.Ice, 0.35f);
+            }
+            foreach (var hero in remote) Player.Run.Coop.SendSupport(hero.Id, SupportKind.Ward, share, 0f);
         }
 
         /// <summary>Calls down a holy sword on each enemy nearby, one after another. Nothing happens without a target.</summary>

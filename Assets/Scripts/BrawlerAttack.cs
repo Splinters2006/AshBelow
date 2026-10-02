@@ -83,6 +83,9 @@ namespace Slopgame
         {
             int count = BarrageCount;
             var root = Player.Run.ProjectileRoot;
+            // The whole barrage is one attack (Massacre counts its kills together).
+            int attack = Player.Powerups.ActiveAttack;
+            bool finished = false;
             float flurryTime = count * 0.07f * Interval + 0.15f;
             flurry = BrawlerVfx.Flurry(root, transform, () => Player.AimDirection, BarrageLength * Size, BarrageHalfWidth * Size, PunchColor, flurryTime);
             CoopFx.Flurry(Player.Run, BarrageLength * Size, BarrageHalfWidth * Size, PunchColor, flurryTime);
@@ -99,7 +102,8 @@ namespace Slopgame
                 // Combo Counter: every punch that landed adds 1 to the finisher. Knockout: the finisher stuns.
                 int combo = finisher && Player.Powerups.Count(PowerupType.ComboCounter) > 0 ? landed : 0;
                 float stun = finisher && Player.Powerups.Count(PowerupType.Knockout) > 0 ? KnockoutStun : 0f;
-                if (Strike(origin, aim, length, halfWidth, finisher ? Player.Damage * 2 + combo : Player.Damage, finisher ? 2f : 0.1f, stun) > 0) landed++;
+                using (Player.Powerups.ResumeAttack(attack))
+                    if (Strike(origin, aim, length, halfWidth, finisher ? Player.Damage * 2 + combo : Player.Damage, finisher ? 2f : 0.1f, stun) > 0) landed++;
                 float fist = finisher ? halfWidth : 0.28f;
                 Vector2 lane = Vector2.Perpendicular(aim) * (finisher ? 0f : Random.Range(-1f, 1f) * (halfWidth - fist));
                 DrawPunch(origin + lane, aim, length, fist, finisher ? Color.Lerp(PunchColor, Color.white, 0.3f) : PunchColor, finisher ? 0.22f : 0.1f);
@@ -108,12 +112,42 @@ namespace Slopgame
                     HeroVfx.Pulse(root, origin + aim * length, halfWidth, PunchColor, 0.3f);
                     HeroVfx.Sparks(root, origin + aim * length, Color.Lerp(PunchColor, Color.white, 0.4f), 14, 5f, 0.35f, aim, 120f, 1.2f);
                     ScreenFx.Shake(0.15f, 0.15f);
+                    finished = true;
                 }
                 yield return new WaitForSeconds(0.07f * Interval);
             }
             StopFlurry();
+            // Final Blow (her second passive): a finished barrage ends in an even bigger, harder punch.
+            if (finished && Player.Permanent.HasSecondPassive(WeaponType.Fists) && Player.Run.IsPlaying && Player.Health > 0 && root == Player.Run.ProjectileRoot)
+            {
+                yield return new WaitForSeconds(FinalBlowDelay * Interval);
+                if (Player.Run.IsPlaying && Player.Health > 0 && root == Player.Run.ProjectileRoot)
+                    using (Player.Powerups.ResumeAttack(attack)) FinalBlow(landed);
+            }
             barrage = null;
             readyAt = Time.time + 0.25f * Interval;
+        }
+
+        /// <summary>Final Blow: how much bigger the closing punch's rectangle is than the barrage's, and its windup.</summary>
+        public const float FinalBlowSize = 1.5f, FinalBlowDelay = 0.12f;
+        public const int FinalBlowDamageMultiplier = 4;
+
+        /// <summary>The punch that closes a barrage under Final Blow: four times her damage (plus Combo Counter's tally) over a far bigger area.</summary>
+        private void FinalBlow(int landed)
+        {
+            var root = Player.Run.ProjectileRoot;
+            Vector2 origin = transform.position, aim = Player.AimDirection;
+            float length = BarrageLength * Size * FinalBlowSize, halfWidth = BarrageHalfWidth * Size * FinalBlowSize;
+            int combo = Player.Powerups.Count(PowerupType.ComboCounter) > 0 ? landed : 0;
+            float stun = Player.Powerups.Count(PowerupType.Knockout) > 0 ? KnockoutStun : 0f;
+            Strike(origin, aim, length, halfWidth, Player.Damage * FinalBlowDamageMultiplier + combo, 3f, stun);
+            Color color = Color.Lerp(PunchColor, Color.white, 0.45f);
+            DrawPunch(origin, aim, length, halfWidth, color, 0.3f);
+            HeroVfx.Pulse(root, origin + aim * length * 0.6f, halfWidth * 1.6f, PunchColor, 0.4f);
+            HeroVfx.Sparks(root, origin + aim * length, Color.Lerp(PunchColor, Color.white, 0.5f), 24, 6.5f, 0.4f, aim, 140f, 1.4f);
+            CombatVfx.Ring(root, origin + aim * length * 0.6f, halfWidth * 1.4f, Color.white, 0.3f);
+            CoopFx.Pulse(Player.Run, origin + aim * length * 0.6f, halfWidth * 1.6f, PunchColor, 0.4f);
+            ScreenFx.Shake(0.3f, 0.25f);
         }
 
         public bool TryHeavyAttack(Vector2 aim)

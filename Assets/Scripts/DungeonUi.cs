@@ -36,6 +36,30 @@ namespace Slopgame
             return new Vector2(screen.x - (Screen.width - Width * scale) / 2f, Screen.height - screen.y - (Screen.height - Height * scale) / 2f) / scale;
         }
 
+        // Anchors for the in-run HUD: each group of HUD elements is pinned to its own corner or edge of the screen, so
+        // it stays out at the edges on wide screens and when the HUD is shrunk (rather than shrinking toward the centre).
+        public static readonly Vector2 TopLeft = new Vector2(0f, 0f), TopCenter = new Vector2(0.5f, 0f), TopRight = new Vector2(1f, 0f),
+            Center = new Vector2(0.5f, 0.5f), BottomCenter = new Vector2(0.5f, 1f);
+
+        /// <summary>
+        /// The canvas fitted to the screen like <see cref="Begin"/>, but with the canvas point at <paramref name="anchor"/>
+        /// (0-1 across and down) pinned to the same point of the screen, then nudged by <paramref name="nudge"/> canvas units.
+        /// The centre anchor with no nudge is exactly <see cref="Begin"/>.
+        /// </summary>
+        public static Matrix4x4 AnchorMatrix(float size, Vector2 anchor, Vector2 nudge = default)
+        {
+            float scale = Mathf.Min(Screen.width / Width, Screen.height / Height) * size;
+            Vector2 offset = new Vector2(anchor.x * Screen.width, anchor.y * Screen.height) - new Vector2(anchor.x * Width, anchor.y * Height) * scale + nudge * scale;
+            return Matrix4x4.TRS(new Vector3(offset.x, offset.y), Quaternion.identity, Vector3.one * scale);
+        }
+
+        /// <summary>Draws what follows in the anchored canvas (see <see cref="AnchorMatrix"/>).</summary>
+        public static void Anchor(float size, Vector2 anchor, Vector2 nudge = default) => GUI.matrix = AnchorMatrix(size, anchor, nudge);
+
+        /// <summary>Converts a screen pixel position (origin bottom-left) to coordinates in an anchored canvas.</summary>
+        public static Vector2 ScreenToCanvas(Vector2 screen, float size, Vector2 anchor, Vector2 nudge = default)
+            => AnchorMatrix(size, anchor, nudge).inverse.MultiplyPoint3x4(new Vector3(screen.x, Screen.height - screen.y, 0f));
+
         private static void Initialize()
         {
             if (rounded != null) return;

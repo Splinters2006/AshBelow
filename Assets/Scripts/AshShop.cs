@@ -12,6 +12,8 @@ namespace Slopgame
     {
         private static string LockedText(PermanentProgress progress, PermanentUpgradeDefinition item)
         {
+            // A second passive waits first on its guardian, then on the hero's first passive.
+            if (item.RequiredGuardian != null && !progress.HasSlain(item.RequiredGuardian)) return $"Defeat {item.RequiredGuardianName} to unlock";
             bool worldLocked = item.RequiredWorld >= 0 && item.RequiredWorld < WorldCatalog.All.Length && !progress.HasClearedWorld(item.RequiredWorld);
             // An R upgrade whose world is already cleared is only waiting on the mechanic it upgrades.
             if (item.RequiredUpgrade != null && !worldLocked) return $"Buy {PermanentUpgradeCatalog.Get(item.RequiredUpgrade)?.Name} first";
@@ -30,8 +32,16 @@ namespace Slopgame
         private string focusId;
         private bool scrollToFocus;
         private readonly List<PermanentUpgradeDefinition> shown = new List<PermanentUpgradeDefinition>();
-        private static readonly string[] Tabs = { "All heroes", "Knight", "Archer", "Wizard", "Assassin", "Paladin", "Brawler", "Demoness", "Gambler", "Augment", "Reaper", "Samurai", "Specimen" };
-        private static readonly WeaponType?[] Weapons = { null, WeaponType.Sword, WeaponType.Bow, WeaponType.Staff, WeaponType.Daggers, WeaponType.Hammer, WeaponType.Fists, WeaponType.Tail, WeaponType.Coins, WeaponType.Beam, WeaponType.Scythe, WeaponType.Katana, WeaponType.Mutation };
+        // "All heroes", then one tab per hero in the roster's order.
+        private static readonly WeaponType?[] Weapons = BuildWeapons();
+        private static readonly string[] Tabs = System.Array.ConvertAll(Weapons, weapon => weapon.HasValue ? HeroRoster.Name(weapon.Value) : "All heroes");
+
+        private static WeaponType?[] BuildWeapons()
+        {
+            var weapons = new WeaponType?[HeroRoster.Order.Length + 1];
+            for (int i = 0; i < HeroRoster.Order.Length; i++) weapons[i + 1] = HeroRoster.Order[i];
+            return weapons;
+        }
 
         // Layout, in the 1280x720 menu space.
         private static readonly Rect ListRect = new Rect(70, 318, 1140, 270);
@@ -135,6 +145,7 @@ namespace Slopgame
             bool available = progress.IsAvailable(item);
             bool mechanic = item.RequiredGuardians > 0;
             bool passive = item.ClassWeapon.HasValue && ClassPassiveCatalog.Get(item.ClassWeapon.Value)?.Id == item.Id;
+            bool secondPassive = item.ClassWeapon.HasValue && ClassPassiveCatalog.GetSecond(item.ClassWeapon.Value)?.Id == item.Id;
             int cost = item.Cost(rank);
             bool pact = item.Id == PermanentUpgradeCatalog.InfernalPactId && rank > 0;
             DungeonUi.Panel(card, DungeonUi.PanelColor);
@@ -153,8 +164,9 @@ namespace Slopgame
                     progress.Switch(item.Id, !on);
             }
             else
-                DungeonUi.Label(new Rect(side.x, side.y + 12, side.width, 20), passive ? "PASSIVE" : item.IsMechanicUpgrade ? "R UPGRADE" : mechanic ? "CLASS MECHANIC" : $"RANK {rank} / {item.MaxRank}", 13,
-                    passive || mechanic || item.IsMechanicUpgrade ? AbilityCatalog.Gold : DungeonUi.Muted, TextAnchor.MiddleRight);
+                DungeonUi.Label(new Rect(side.x, side.y + 12, side.width, 20), passive ? "PASSIVE" : secondPassive ? "SECOND PASSIVE" : item.IsMechanicUpgrade ? "R UPGRADE"
+                    : mechanic ? "CLASS MECHANIC" : $"RANK {rank} / {item.MaxRank}", 13,
+                    passive || secondPassive || mechanic || item.IsMechanicUpgrade ? AbilityCatalog.Gold : DungeonUi.Muted, TextAnchor.MiddleRight);
             var buy = new Rect(side.x, side.y + 46, side.width, 36);
             if (!available)
             {

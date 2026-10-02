@@ -1,9 +1,18 @@
+using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Slopgame
 {
     public sealed class SwordAttack : MonoBehaviour, IPlayerWeapon
     {
+        /// <summary>
+        /// How long the drawn slash lasts (<see cref="HeroVfx.Slash"/>'s default) and how much faster than that its edge
+        /// crosses the cone: the Knight's blade lands on each enemy as the drawn edge reaches it.
+        /// </summary>
+        public const float SlashDuration = 0.2f, SlashSweepRate = 1.8f;
+        /// <summary>Seconds the Knight's blade takes to cross its whole cone.</summary>
+        public const float KnightSweepTime = SlashDuration / SlashSweepRate;
         public const float Reach = 2.3f;
         public const float ConeAngle = 60f;
         /// <summary>The Assassin stabs rather than sweeps, so her hit area is a narrow wedge.</summary>
@@ -121,8 +130,17 @@ namespace Slopgame
                 HeroVfx.Slash(Player.Run.ProjectileRoot, transform.position, aim, reach, cone, SlashColor);
                 CoopFx.Slash(Player.Run, transform.position, aim, reach, cone, SlashColor);
             }
+            // Counterweight: a full slash hurls enemies back and staggers them.
+            bool counterweight = fullSlash && Player.Powerups.Count(PowerupType.Counterweight) > 0;
+            // The Knight's blade follows its drawn slash: each enemy is cut when the edge reaches its body.
+            if (Player.ClassWeapon == WeaponType.Sword)
+            {
+                StartCoroutine(KnightSweep(aim.normalized, damage, reach, cone, counterweight, Player.Powerups.ActiveAttack));
+                return true;
+            }
             for (int i = Player.Run.Enemies.Count - 1; i >= 0; i--)
             {
+                if (i >= Player.Run.Enemies.Count) continue;
                 var enemy = Player.Run.Enemies[i];
                 Vector2 offset = enemy.transform.position - transform.position;
                 // A dagger thrust is narrow, so it is tested against the enemy's whole body rather than its centre point:
@@ -130,13 +148,59 @@ namespace Slopgame
                 bool inside = HitsWholeBody || Player.ClassWeapon == WeaponType.Daggers ? OverlapsCone(offset, aim, reach, cone, enemy.HitRadius) : ContainsTarget(offset, aim, reach, cone);
                 if (inside && Player.Run.HasLineOfSight(transform.position, enemy.transform.position))
                 {
-                    // Counterweight: a full slash hurls enemies back and staggers them.
-                    bool counterweight = fullSlash && Player.Powerups.Count(PowerupType.Counterweight) > 0;
                     CombatDamage.Apply(Player, enemy, damage, DamageElement.Physical, transform.position, counterweight ? 3f : 1f);
                     if (counterweight && enemy != null && enemy.Health > 0) enemy.Stun(0.5f);
                 }
             }
             return true;
+        }
+
+        /// <summary>
+        /// The Knight's slash, in step with what is drawn: the edge sweeps counter-clockwise across the cone on the same
+        /// curve as <see cref="HeroVfx.Slash"/>, from where the swing began, and each enemy is struck the moment the edge
+        /// reaches any part of its body (an enemy the blade visibly passes through is hit, one it never reaches is not).
+        /// Every cut belongs to the swing's attack (Massacre counts them together).
+        /// </summary>
+        private IEnumerator KnightSweep(Vector2 aim, int damage, float reach, float cone, bool counterweight, int attack)
+        {
+            var run = Player.Run;
+            var root = run.ProjectileRoot;
+            Vector2 origin = transform.position;
+            float start = Mathf.Atan2(aim.y, aim.x) * Mathf.Rad2Deg - cone * 0.5f;
+            var struck = new HashSet<DungeonEnemy>();
+            for (float elapsed = 0f; ; elapsed += Time.deltaTime)
+            {
+                if (!run.IsPlaying || root != run.ProjectileRoot || Player.Health <= 0) yield break;
+                // How much of the cone the drawn edge has crossed so far.
+                float swept = Mathf.SmoothStep(0f, 1f, Mathf.Min(1f, elapsed / KnightSweepTime)) * cone;
+                using (Player.Powerups.ResumeAttack(attack))
+                    for (int i = run.Enemies.Count - 1; i >= 0; i--)
+                    {
+                        if (i >= run.Enemies.Count) continue;
+                        var enemy = run.Enemies[i];
+                        if (enemy == null || enemy.Health <= 0 || struck.Contains(enemy)) continue;
+                        Vector2 offset = (Vector2)enemy.transform.position - origin;
+                        if (!OverlapsCone(offset, aim, reach, cone, enemy.HitRadius) || EdgeReach(offset, start, enemy.HitRadius) > swept + 0.01f
+                            || !run.HasLineOfSight(origin, enemy.transform.position)) continue;
+                        struck.Add(enemy);
+                        CombatDamage.Apply(Player, enemy, damage, DamageElement.Physical, origin, counterweight ? 3f : 1f);
+                        if (counterweight && enemy != null && enemy.Health > 0) enemy.Stun(0.5f);
+                    }
+                if (swept >= cone) yield break;
+                yield return null;
+            }
+        }
+
+        /// <summary>
+        /// How many degrees round from the start of a slash (counter-clockwise from <paramref name="start"/>) the edge must
+        /// travel before it touches a body of <paramref name="radius"/> at <paramref name="offset"/>; 0 or less when it already does.
+        /// </summary>
+        public static float EdgeReach(Vector2 offset, float start, float radius)
+        {
+            float distance = offset.magnitude;
+            if (distance <= radius) return 0f;
+            float angle = Mathf.DeltaAngle(start, Mathf.Atan2(offset.y, offset.x) * Mathf.Rad2Deg);
+            return angle - Mathf.Asin(Mathf.Clamp01(radius / distance)) * Mathf.Rad2Deg;
         }
 
         public bool TryHeavyAttack(Vector2 aim)

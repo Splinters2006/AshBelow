@@ -146,7 +146,7 @@ namespace Slopgame
                 case Page.Talents:
                     foreach (var talent in PowerupCatalog.All)
                     {
-                        if (!filterAll && talent.ClassWeapon != heroFilter) continue;
+                        if (talent.Retired || (!filterAll && talent.ClassWeapon != heroFilter)) continue;
                         var tag = new List<string>();
                         // The hero is already picked in the filter (and shown by the card colour), so only the full list names it.
                         if (filterAll) tag.Add(talent.ClassWeapon.HasValue ? HeroName(run, talent.ClassWeapon.Value) : "ANY HERO");

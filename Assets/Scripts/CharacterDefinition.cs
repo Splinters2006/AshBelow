@@ -23,3 +23,44 @@ namespace Slopgame
         public float MoveSpeed => moveSpeed;
     }
 }
+
+namespace Slopgame
+{
+    /// <summary>
+    /// The one order every hero list in the game follows: hero select, the co-op lobby, the Ash shop's tabs, the
+    /// encyclopedia, the autofire settings and the class passives.
+    /// </summary>
+    public static class HeroRoster
+    {
+        public static readonly WeaponType[] Order =
+        {
+            WeaponType.Sword, WeaponType.Bow, WeaponType.Staff, WeaponType.Daggers, WeaponType.Hammer, WeaponType.Fists,
+            WeaponType.Tail, WeaponType.Coins, WeaponType.Beam, WeaponType.Scythe, WeaponType.Katana, WeaponType.Mutation
+        };
+
+        /// <summary>Where a hero sits in <see cref="Order"/> (heroes missing from it go last).</summary>
+        public static int IndexOf(WeaponType weapon)
+        {
+            int index = System.Array.IndexOf(Order, weapon);
+            return index < 0 ? Order.Length : index;
+        }
+
+        /// <summary>Each hero's name, for lists drawn without the character assets to hand (the settings page).</summary>
+        public static string Name(WeaponType weapon) => weapon switch
+        {
+            WeaponType.Sword => "Knight",
+            WeaponType.Bow => "Archer",
+            WeaponType.Staff => "Wizard",
+            WeaponType.Daggers => "Assassin",
+            WeaponType.Hammer => "Paladin",
+            WeaponType.Fists => "Brawler",
+            WeaponType.Tail => "Demoness",
+            WeaponType.Coins => "Gambler",
+            WeaponType.Beam => "Augment",
+            WeaponType.Scythe => "Reaper",
+            WeaponType.Katana => "Samurai",
+            WeaponType.Mutation => "Specimen",
+            _ => weapon.ToString()
+        };
+    }
+}

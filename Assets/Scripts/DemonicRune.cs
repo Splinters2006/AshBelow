@@ -3,14 +3,17 @@ using UnityEngine;
 namespace Slopgame
 {
     /// <summary>
-    /// The Demoness's passive (Demonic Runes): an enemy that dies while immobilized may leave a rune behind. Walking over
-    /// it resets her Tail Sweep cooldown and makes every hit she lands paralyse for <see cref="BuffDuration"/> seconds.
-    /// Each machine drops runes for its own hero.
+    /// The Demoness's passive (Demonic Runes): an enemy that dies while immobilized may leave a rune behind, and so may
+    /// every hit she lands on an immobilized guardian. Walking over it resets her Tail Sweep cooldown and makes every hit
+    /// she lands paralyse for <see cref="BuffDuration"/> seconds. With her second passive (Rune Burst) picking one up also
+    /// paralyses everything within <see cref="BurstRadius"/> units, walls or not. Each machine drops runes for its own hero.
     /// </summary>
     public sealed class DemonicRune : MonoBehaviour
     {
-        public const float DropChance = 0.1f, BuffDuration = 5f;
+        public const float DropChance = 0.25f, GuardianHitChance = 0.25f, BuffDuration = 5f;
         public const float MagnetRadius = 10f, PickupRadius = 0.45f;
+        /// <summary>Rune Burst: how far the paralysing blast reaches.</summary>
+        public const float BurstRadius = 5f;
         private const float HopTime = 0.35f, HopHeight = 0.5f, Size = 0.45f;
         private static Sprite runeSprite;
         private static Sprite RuneSprite => runeSprite != null ? runeSprite : runeSprite = DungeonVisuals.PaletteSprite("Demonic rune", new[]
@@ -31,9 +34,18 @@ namespace Slopgame
         public static void TryDrop(DungeonRun run, DungeonEnemy enemy)
         {
             var player = run != null ? run.Player : null;
-            if (player == null || player.Health <= 0 || !player.Permanent.HasPassive(WeaponType.Tail) || !enemy.IsImmobilized
+            // A paralysing blow that killed counts its victim as held too.
+            if (player == null || player.Health <= 0 || !player.Permanent.HasPassive(WeaponType.Tail) || !enemy.CountsAsHeld
                 || Random.value >= DropChance) return;
             Drop(run, enemy.transform.position);
+        }
+
+        /// <summary>The Demoness hit an immobilized guardian: a rune may shake loose beside it.</summary>
+        public static void TryDropFromGuardian(DungeonPlayer player, DungeonEnemy guardian)
+        {
+            if (player == null || player.Health <= 0 || player.Run == null || player.Permanent == null || !player.Permanent.HasPassive(WeaponType.Tail)
+                || guardian == null || guardian.Boss == null || Random.value >= GuardianHitChance) return;
+            Drop(player.Run, guardian.Boss.Behaviour != null ? guardian.Boss.Behaviour.GroundPosition : (Vector2)guardian.transform.position);
         }
 
         public static DemonicRune Drop(DungeonRun run, Vector2 position)
@@ -65,11 +77,17 @@ namespace Slopgame
             }
             bool alive = player.Health > 0;
             float distance = Vector2.Distance(rest, hero);
-            if (alive && distance <= MagnetRadius) rest = Vector2.MoveTowards(rest, hero, (12f + (MagnetRadius - distance) * 2f) * Time.deltaTime);
+            // Lodestone draws it in from farther, faster, and lets it be picked up from farther away.
+            float reach = player.Powerups.PickupReach, magnet = MagnetRadius * reach;
+            if (alive && distance <= magnet) rest = Vector2.MoveTowards(rest, hero, (12f + (magnet - distance) * 2f) * reach * Time.deltaTime);
             Place(rest, 0.12f + 0.07f * Mathf.Sin(Time.time * 3f + phase));
-            if (!alive || Vector2.Distance(rest, hero) > PickupRadius) return;
+            if (!alive || Vector2.Distance(rest, hero) > PickupRadius * reach) return;
             player.Buffs.Rune(BuffDuration);
-            if (player.Weapon is DemonessAttack tail) tail.ResetSweepCooldown();
+            if (player.Weapon is DemonessAttack tail)
+            {
+                tail.ResetSweepCooldown();
+                if (player.Permanent.HasSecondPassive(WeaponType.Tail)) tail.RuneBurst(BurstRadius);
+            }
             HeroVfx.Motes(run.ProjectileRoot, hero, 0.8f, DemonessAttack.Violet, 14, 0.9f);
             HeroVfx.Pulse(run.ProjectileRoot, hero, 1.2f, DemonessAttack.Violet, 0.35f);
             CoopFx.Pulse(run, hero, 1.2f, DemonessAttack.Violet, 0.35f);

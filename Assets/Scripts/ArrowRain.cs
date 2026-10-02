@@ -28,6 +28,8 @@ namespace Slopgame
         private DungeonPlayer player;
         private Vector2 center;
         private int damage;
+        // The volley's attack: every arrow of it counts together for Massacre.
+        private int attack;
         private DamageElement infusion;
         private Color color;
         private float age, endsAt;
@@ -41,6 +43,7 @@ namespace Slopgame
             rain.player = player;
             rain.center = center;
             rain.damage = damage;
+            rain.attack = player.Powerups.ActiveAttack;
             rain.infusion = player.Mechanic is ElementalQuiver quiver ? quiver.Element : DamageElement.Physical;
             rain.color = rain.infusion != DamageElement.Physical
                 ? Color.Lerp(CombatDamage.ElementColor(rain.infusion), Color.white, 0.25f) : new Color(0.95f, 1f, 0.65f);
@@ -107,7 +110,8 @@ namespace Slopgame
                     int streak = hitsOn.TryGetValue(enemy, out int previous) ? previous : 0;
                     hitsOn[enemy] = streak + 1;
                     int bonus = player.Powerups.Count(PowerupType.StormVolley) > 0 ? streak : 0;
-                    CombatDamage.Apply(player, enemy, damage + bonus, DamageElement.Physical, arrow.Landing + Vector2.up * 0.3f, 0.2f, infusion);
+                    using (player.Powerups.ResumeAttack(attack))
+                        CombatDamage.Apply(player, enemy, damage + bonus, DamageElement.Physical, arrow.Landing + Vector2.up * 0.3f, 0.2f, infusion);
                 }
         }
 

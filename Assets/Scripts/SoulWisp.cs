@@ -46,10 +46,12 @@ namespace Slopgame
             var reaper = player.Weapon as ReaperAttack;
             Vector2 hero = player.transform.position;
             float distance = Vector2.Distance(rest, hero);
-            if (reaper != null && player.Health > 0 && age >= RiseTime && (distance <= MagnetRadius || pulled))
+            // Lodestone: drawn in from farther, faster, and picked up from farther away.
+            float reach = player.Powerups != null ? player.Powerups.PickupReach : 1f, magnet = MagnetRadius * reach;
+            if (reaper != null && player.Health > 0 && age >= RiseTime && (distance <= magnet || pulled))
             {
                 if (!magnetised) { magnetised = true; CombatVfx.Trail(gameObject, FlameMesh.Alpha(ReaperAttack.Soul, 0.6f), 0.12f, 0.16f); }
-                rest = Vector2.MoveTowards(rest, hero, (pulled ? Crystal.PullSpeed : 3f + (MagnetRadius - Mathf.Min(distance, MagnetRadius)) * 2.5f) * Time.deltaTime);
+                rest = Vector2.MoveTowards(rest, hero, (pulled ? Crystal.PullSpeed : (3f + (magnet - Mathf.Min(distance, magnet)) / reach * 2.5f) * reach) * Time.deltaTime);
             }
             // It wavers like a candle flame as it hangs there.
             float rise = Mathf.Clamp01(age / RiseTime);
@@ -57,7 +59,7 @@ namespace Slopgame
             float flicker = 0.9f + 0.1f * Mathf.Sin(Time.time * 9f + phase);
             transform.localScale = new Vector3(Size * flicker, Size * (2f - flicker), 1f) * rise;
             if (body != null) body.color = new Color(1f, 1f, 1f, 0.75f + 0.25f * Mathf.Sin(Time.time * 5f + phase));
-            if (reaper == null || player.Health <= 0 || Vector2.Distance(rest, hero) > PickupRadius) return;
+            if (reaper == null || player.Health <= 0 || Vector2.Distance(rest, hero) > PickupRadius * reach) return;
             reaper.AddSouls(1);
             HeroVfx.Pulse(run.ProjectileRoot, rest, 0.5f, FlameMesh.Alpha(ReaperAttack.Soul, 0.7f), 0.2f);
             HeroVfx.Motes(run.ProjectileRoot, hero, 0.35f, ReaperAttack.Soul, 5, 0.6f);

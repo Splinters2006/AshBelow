@@ -39,6 +39,7 @@ namespace Slopgame
             int damage = KillerInstinct(player, AssassinBonus(player, enemy, ShadowstepDamageForRoll(player, Random.value)));
             bool seize = SeizesTouched(player, enemy);
             enemy.Hit(damage, source);
+            if (enemy.Health <= 0) FadeAway(player);
             if (seize) enemy.Stun(ElementalImmobilizationStun);
             player.Mechanic?.OnBackstab();
             OnBackstab(player, enemy, damage);
@@ -104,8 +105,13 @@ namespace Slopgame
         {
             if (enemy == null || enemy.Health <= 0 || hit <= 0) return;
             float stun = player != null ? BledDryStun[Mathf.Clamp(player.Powerups.Count(PowerupType.BledDry), 0, BledDryStun.Length - 1)] : 0f;
-            enemy.Bleed(hit, DungeonEnemy.BleedDuration, BleedTicksFor(player), stun);
+            // Pinned Wounds: the Samurai's bleeds cut deeper while their victim cannot move.
+            float held = player != null && player.Powerups.Count(PowerupType.PinnedWounds) > 0 ? PinnedWoundsMultiplier : 1f;
+            enemy.Bleed(hit, DungeonEnemy.BleedDuration, BleedTicksFor(player), stun, held);
         }
+
+        /// <summary>Pinned Wounds: how much harder a bleed cuts while its victim is immobilized.</summary>
+        public const float PinnedWoundsMultiplier = 1.5f;
 
         /// <summary>The Samurai's katana: Blood Shall Flow bleeds on every hit and Jagged Blade on one in ten. A hit can open both.</summary>
         private static void KatanaBleeds(DungeonPlayer player, DungeonEnemy enemy, int hit)
@@ -141,7 +147,7 @@ namespace Slopgame
         /// <param name="knockback">Scales how far the hit shoves the enemy (1 = normal).</param>
         /// <param name="infusion">
         /// An element carried by a physical hit (the Archer's Elemental Quiver): it still crits normally, and a critical
-        /// hit also sets off that element's effect.
+        /// hit also sets off that element's effect (only ever the element loaded when the arrow was loosed).
         /// </param>
         /// <param name="guaranteedEffect">An elemental hit skips its effect roll and always sets off its element (Wild Storm, a storm-charged Inferno Orb, a full plasma cannon).</param>
         /// <param name="guaranteedCrit">A physical hit that is always critical (the tip of the Specimen's chain whip).</param>
@@ -149,6 +155,21 @@ namespace Slopgame
             DamageElement infusion = DamageElement.Physical, bool guaranteedEffect = false, bool guaranteedCrit = false)
         {
             if (enemy == null || enemy.Health <= 0) return;
+            // Demonic Runes: every hit the Demoness lands on an immobilized guardian may shake a rune loose.
+            if (enemy.Boss != null && !enemy.IsInvulnerable && enemy.IsImmobilized) DemonicRune.TryDropFromGuardian(player, enemy);
+            // Under a demonic rune (or as the Avatar of Death) every hit paralyses whatever survives it, so a hit that kills
+            // still counts its victim as held (see DungeonEnemy.HoldPending).
+            bool holding = player != null && player.Buffs != null && !enemy.IsInvulnerable
+                && ((player.Buffs.IsRuneEmpowered && player.Weapon is DemonessAttack) || player.Buffs.IsIncarnate);
+            if (!holding) { ApplyHit(player, enemy, damage, element, source, knockback, infusion, guaranteedEffect, guaranteedCrit); return; }
+            enemy.BeginHoldingBlow();
+            try { ApplyHit(player, enemy, damage, element, source, knockback, infusion, guaranteedEffect, guaranteedCrit); }
+            finally { enemy.EndHoldingBlow(); }
+        }
+
+        private static void ApplyHit(DungeonPlayer player, DungeonEnemy enemy, int damage, DamageElement element, Vector2 source, float knockback,
+            DamageElement infusion, bool guaranteedEffect, bool guaranteedCrit)
+        {
             if (enemy.IsInvulnerable) { enemy.Hit(0, source); return; }
             damage = ScaleForTarget(player, enemy, damage);
             int healthBefore = enemy.Health;
@@ -173,10 +194,13 @@ namespace Slopgame
                 enemy.Hit(rolled, source, knockback);
                 if (seize) enemy.Stun(ElementalImmobilizationStun);
                 if (critical && player.Weapon is SpecimenAttack specimen) specimen.OnCritical(enemy, rolled);
+                // Barbed Arrows (the Archer's second passive): her critical strikes open a bleed.
+                if (critical && player.ClassWeapon == WeaponType.Bow && player.Permanent.HasSecondPassive(WeaponType.Bow)) InflictBleed(player, enemy, rolled);
                 if (player.ClassWeapon == WeaponType.Daggers && behind)
                 {
                     if (!ShadowClone.IsStriking) player.Mechanic?.OnBackstab();
                     OnBackstab(player, enemy, rolled);
+                    if (enemy.Health <= 0) FadeAway(player);
                 }
                 CreditBlessing(player);
                 IncarnateFear(player, enemy);
@@ -207,6 +231,22 @@ namespace Slopgame
             // Elemental Kills' charge is spent on the next elemental hit, even one that would have set off anyway.
             bool primed = player.Powerups.ConsumeElementalPrime();
             if (guaranteedEffect || primed || opening || Random.value < player.Powerups.ElementalEffectChance) ApplyEffect(player, enemy, element, damage);
+        }
+
+        public const float FadeAwayTime = 1f;
+
+        /// <summary>Fade Away (the Assassin's second passive): a backstab that kills hides her from enemies for a moment.</summary>
+        private static void FadeAway(DungeonPlayer player)
+        {
+            if (player == null || player.Health <= 0 || player.ClassWeapon != WeaponType.Daggers || player.Permanent == null
+                || !player.Permanent.HasSecondPassive(WeaponType.Daggers)) return;
+            player.Veil(FadeAwayTime);
+            if (player.Run != null && player.Run.ProjectileRoot != null)
+            {
+                var shadow = new Color(0.45f, 0.25f, 0.7f);
+                HeroVfx.Motes(player.Run.ProjectileRoot, player.transform.position, 0.6f, shadow, 12, 0.7f);
+                HeroVfx.Pulse(player.Run.ProjectileRoot, player.transform.position, 0.9f, FlameMesh.Alpha(shadow, 0.6f), 0.3f);
+            }
         }
 
         /// <summary>The Assassin's bonuses to her own physical hits: Ambush (spent) and Poisoner.</summary>

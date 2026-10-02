@@ -5,8 +5,8 @@ using UnityEngine;
 namespace Slopgame
 {
     /// <summary>
-    /// The Knight's timed relic abilities: an unstoppable Shield Rush, Earthshatter's five quake rings,
-    /// and Aegis's bubble.
+    /// The Knight's timed relic abilities: an unstoppable Shield Rush (a ward for every enemy it smashes), Earthshatter's
+    /// five quake rings, and Aegis's bubble.
     /// </summary>
     public sealed class KnightRelics : MonoBehaviour
     {
@@ -32,6 +32,7 @@ namespace Slopgame
             Player.Charge.Cancel();
             Vector2 from = transform.position;
             var hit = new HashSet<DungeonEnemy>();
+            int attack = Player.Powerups.ActiveAttack;
             var shield = DungeonVisuals.Create("Rush shield", root, from, new Vector2(0.2f, 1.15f), AbilityCatalog.Ice, 7);
             var glow = DungeonVisuals.Create("Rush glow", shield.transform, from, new Vector2(2.4f, 1.3f), new Color(0.6f, 0.9f, 1f, 0.35f), 6);
             glow.transform.localPosition = Vector2.zero;
@@ -54,7 +55,11 @@ namespace Slopgame
                     if (enemy == null || hit.Contains(enemy) || enemy.Health <= 0
                         || Vector2.Distance(now + aim * 0.3f, enemy.transform.position) > RushWidth + enemy.HitRadius) continue;
                     hit.Add(enemy);
-                    CombatDamage.Apply(Player, enemy, damage, DamageElement.Physical, now - aim, 2.6f);
+                    using (Player.Powerups.ResumeAttack(attack))
+                        CombatDamage.Apply(Player, enemy, damage, DamageElement.Physical, now - aim, 2.6f);
+                    // Every enemy the rush smashes through hardens his guard: one ward each.
+                    Player.Powerups.AddWard();
+                    HeroVfx.Pulse(transform, transform.position, 0.8f, AbilityCatalog.Ice, 0.2f);
                     if (enemy.Health > 0)
                     {
                         if (Player.Powerups.Count(PowerupType.GlacialRush) > 0) enemy.Freeze(1.5f);
@@ -83,6 +88,7 @@ namespace Slopgame
             var run = Player.Run;
             var root = run.ProjectileRoot;
             var hit = new HashSet<DungeonEnemy>();
+            int attack = Player.Powerups.ActiveAttack;
             QuakeVfx.Play(root, center, radius, QuakeRings, QuakeInterval, color);
             CoopFx.Quake(run, center, radius, QuakeRings, QuakeInterval, color);
             for (int ring = 1; ring <= QuakeRings; ring++)
@@ -102,7 +108,8 @@ namespace Slopgame
                         || Vector2.Distance(center, enemy.transform.position) > r + enemy.HitRadius
                         || !run.HasLineOfSight(center, enemy.transform.position)) continue;
                     hit.Add(enemy);
-                    CombatDamage.Apply(Player, enemy, damage, DamageElement.Physical, center);
+                    using (Player.Powerups.ResumeAttack(attack))
+                        CombatDamage.Apply(Player, enemy, damage, DamageElement.Physical, center);
                     if (enemy.Health > 0 && slow > 0f) enemy.Chill(slow);
                 }
                 yield return new WaitForSeconds(QuakeInterval);

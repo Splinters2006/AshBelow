@@ -164,7 +164,8 @@ namespace Slopgame.Editor
             {
                 Vector2 origin = run.Map.Centers[0];
                 player.transform.position = origin;
-                var offsets = new[] { Vector2.right * 2f, Vector2.left, Vector2.up, Vector2.right * (SwordAttack.Reach + 0.2f) };
+                // The last target stands just past the blade's reach, body and all (the Knight's slash hits any part of a body).
+                var offsets = new[] { Vector2.right * 2f, Vector2.left, Vector2.up, Vector2.right * (SwordAttack.Reach + 0.2f) + Vector2.right * 0.45f };
                 if (run.Enemies.Count < offsets.Length) throw new Exception("Insufficient combat test targets.");
                 foreach (var enemy in run.Enemies)
                 {
@@ -179,6 +180,16 @@ namespace Slopgame.Editor
                 }
                 var sword = player.GetComponent<SwordAttack>();
                 if (!sword.TryAttack(Vector2.right)) throw new Exception("Sword did not attack.");
+                // The Knight's blade lands as its drawn edge sweeps across; wait for the sweep to finish.
+                combatResumeAt = Time.time + SwordAttack.KnightSweepTime + 0.15f;
+                combatStage = 10;
+                return false;
+            }
+            if (combatStage == 10)
+            {
+                if (Time.time < combatResumeAt) return false;
+                Vector2 origin = run.Map.Centers[0];
+                var offsets = new[] { Vector2.right * 2f, Vector2.left, Vector2.up, Vector2.right * (SwordAttack.Reach + 0.2f) + Vector2.right * 0.45f };
                 for (int i = 0; i < offsets.Length; i++)
                     if (i == 0 ? run.Enemies[i].Health != 9 && run.Enemies[i].Health != 8 : run.Enemies[i].Health != 10)
                         throw new Exception("Sword cone hit an invalid target or missed its forward target.");
@@ -239,8 +250,17 @@ namespace Slopgame.Editor
                 run.Enemies[0].Health = run.Enemies[1].Health = 20;
                 if (player.Charge.Damage(-1f) != 1 || player.Charge.Damage(0.5f) != 2 || player.Charge.Damage(10f) != 3)
                     throw new Exception("Charge damage cap failed.");
-                if (!sword.TryAttack(Vector2.right, 1f) || (run.Enemies[0].Health != 17 && run.Enemies[0].Health != 14)
-                    || (run.Enemies[1].Health != 17 && run.Enemies[1].Health != 14))
+                if (!sword.TryAttack(Vector2.right, 1f)) throw new Exception("Charged slash did not swing.");
+                // The Knight's blade lands as its drawn edge sweeps across; wait for the sweep to finish.
+                heavyStarted = Time.time;
+                heavyStage = 4;
+                return false;
+            }
+            if (heavyStage == 4)
+            {
+                if (Time.time - heavyStarted < SwordAttack.KnightSweepTime + 0.15f) return false;
+                Vector2 origin = run.Map.Centers[0];
+                if ((run.Enemies[0].Health != 17 && run.Enemies[0].Health != 14) || (run.Enemies[1].Health != 17 && run.Enemies[1].Health != 14))
                     throw new Exception("Charged slash damage or widened cone failed.");
                 if (!sword.TryHeavyAttack(Vector2.right)) throw new Exception("Shield did not raise.");
                 if (sword.TryAttack(Vector2.right)) throw new Exception("Attacked through raised shield.");
@@ -406,19 +426,18 @@ namespace Slopgame.Editor
             powers.BeginFloor();
             if (powers.ArmorCharges != 3) throw new Exception("Ward did not refresh on descent.");
             while (powers.AbsorbHit()) { }
-            player.Upgrade((int)PowerupType.LifeSteal);
-            // Use a separate fresh player to verify kill healing without the ward hit's immunity timer.
+            // Use a separate fresh player for the checks that follow.
             run.Restart();
             player = run.Player;
             powers = player.Powerups;
             if (powers.Count(PowerupType.Armor) != 0 || Mathf.Abs(powers.CritChance - 0.05f) > 0.001f) throw new Exception("Powerups leaked into a new run.");
+            // Soul Harvest is retired: it can never be taken, and kills never heal.
             player.Upgrade((int)PowerupType.LifeSteal);
+            if (powers.Count(PowerupType.LifeSteal) != 0 || powers.CanTake(PowerupType.LifeSteal)) throw new Exception("The retired Soul Harvest could still be taken.");
             player.Hit();
             health = player.Health;
-            for (int i = 0; i < 4; i++) powers.OnKill(player, null);
-            if (player.Health != health) throw new Exception("Soul Harvest healed early.");
-            powers.OnKill(player, null);
-            if (player.Health != health + 1) throw new Exception("Soul Harvest failed to heal.");
+            for (int i = 0; i < 6; i++) powers.OnKill(player, null);
+            if (player.Health != health) throw new Exception("Kills healed without Soul Harvest.");
             var enemy = run.Enemies[0];
             Vector2 origin = enemy.transform.position;
             var facing = enemy.Facing;
@@ -502,10 +521,10 @@ namespace Slopgame.Editor
 
                     var shop = CrystalShop.Create(run, new GameObject("Test shop").transform);
                     var hone = Array.Find(CrystalShop.Offers, offer => offer.Ware == CrystalShop.Ware.EmberHone);
-                    if (shop.Cost(hone) != 60 || shop.RerollsLeft != 0 || shop.Reroll()) throw new Exception("Shop prices or rerolls changed without boons.");
+                    if (shop.Cost(hone) != hone.BaseCost || shop.RerollsLeft != 0 || shop.Reroll()) throw new Exception("Shop prices or rerolls changed without boons.");
                     player.Upgrade((int)PowerupType.Haggler);
                     player.Upgrade((int)PowerupType.MerchantsFavor);
-                    if (shop.Cost(hone) != 45) throw new Exception("Haggler did not take 25% off shop prices.");
+                    if (shop.Cost(hone) != Mathf.RoundToInt(hone.BaseCost * 0.75f)) throw new Exception("Haggler did not take 25% off shop prices.");
                     if (!shop.Reroll() || shop.RerollsLeft != 0 || shop.Stock.Count != 5) throw new Exception("Merchant's Favor reroll failed.");
                     UnityEngine.Object.Destroy(shop.transform.parent.gameObject);
 

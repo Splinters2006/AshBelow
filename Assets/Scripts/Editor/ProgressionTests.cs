@@ -73,13 +73,36 @@ namespace Slopgame.Editor
                             Require(!new PermanentBonuses(save, other.Weapon).PassiveUnlocked && !bonuses.HasPassive(other.Weapon),
                                 "A passive purchase unlocked another hero's passive.");
 
-                    var poor = new PermanentProgress(Path.Combine(directory, "poor"));
+                    var second = ClassPassiveCatalog.GetSecond(passive.Weapon);
+                    var secondUpgrade = second == null ? null : PermanentUpgradeCatalog.Get(second.Id);
+                    Require(secondUpgrade != null && secondUpgrade.Cost(0) == ClassPassiveCatalog.SecondPassiveCost && secondUpgrade.MaxRank == 1,
+                        "Second passive must cost 5000 Ash and be bought only once: " + passive.Weapon);
+                    save.AwardAsh(ClassPassiveCatalog.SecondPassiveCost);
+                    Require(!save.IsAvailable(secondUpgrade) && !save.TryPurchase(second.Id) && save.Ash == ClassPassiveCatalog.SecondPassiveCost,
+                        "Second passive was sold before the Grand Magister fell.");
+                    save.Discover(Encyclopedia.GuardianId(ClassPassiveCatalog.SecondPassiveGuardian));
+                    Require(save.TryPurchase(second.Id) && save.Ash == 0, "Second passive purchase did not charge exactly 5000 Ash.");
+                    save = new PermanentProgress(directory);
+                    var full = new PermanentBonuses(save, passive.Weapon);
+                    Require(full.HasSecondPassive(passive.Weapon) && full.HasPassive(passive.Weapon),
+                        "Purchased second passive did not survive reload or activate for its hero.");
+                    foreach (var other in ClassPassiveCatalog.All)
+                        if (other.Weapon != passive.Weapon)
+                            Require(!new PermanentBonuses(save, other.Weapon).SecondPassiveUnlocked, "A second passive unlocked another hero's.");
+
+                    var early = new PermanentProgress(Path.Combine(directory, "early"));
+                    early.AwardAsh(ClassPassiveCatalog.SecondPassiveCost);
+                    early.Discover(Encyclopedia.GuardianId(ClassPassiveCatalog.SecondPassiveGuardian));
+                    Require(!early.TryPurchase(second.Id) && early.Ash == ClassPassiveCatalog.SecondPassiveCost,
+                        "Second passive was sold without the first.");
+
+                    var poor =new PermanentProgress(Path.Combine(directory, "poor"));
                     poor.RecordWorldCleared(2);
                     poor.AwardAsh(4999);
                     Require(!poor.TryPurchase(passive.Id) && poor.Ash == 4999 && !ClassPassiveCatalog.IsUnlocked(poor, passive.Weapon),
                         "An unaffordable passive was granted or consumed Ash.");
                 }
-                Debug.Log("PASSIVE_PURCHASES_OK: all heroes, world gate, price, per-hero ownership, reload, single purchase, and descent snapshots");
+                Debug.Log("PASSIVE_PURCHASES_OK: all heroes, world gate, price, per-hero ownership, reload, single purchase, descent snapshots, and second passives");
                 EditorApplication.Exit(0);
             }
             catch (Exception error) { Debug.LogException(error); EditorApplication.Exit(1); }

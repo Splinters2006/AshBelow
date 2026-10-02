@@ -91,48 +91,79 @@ namespace Slopgame
             effect.Redraw();
         }
 
-        /// <summary>A bleeding death unfolds into a crimson flower, reaching the passive's actual damage radius.</summary>
+        /// <summary>
+        /// A bleeding death unfolds into a crimson flower whose petal tips reach the passive's actual damage radius: one
+        /// crisp ring sweeps out to that edge, six smooth petals open and turn into place over a darker inner whorl,
+        /// then the flower fades from the tips in, leaving the edge outlined for a moment.
+        /// </summary>
         public static void CrimsonBloom(Transform root, Vector2 center, float radius)
         {
-            var effect = Spawn<KatanaVfx>(root, 0.65f, 10);
+            var effect = Spawn<KatanaVfx>(root, 0.7f, 10);
             if (effect == null) return;
             effect.style = Style.Bloom;
             effect.origin = center;
             effect.reach = Mathf.Max(0.1f, radius);
+            effect.aim = FlameMesh.Polar(Random.value * Mathf.PI * 2f, 1f);
             effect.Redraw();
         }
 
+        private const int BloomPetals = 6;
+
         private void DrawBloom(float t)
         {
-            float spread = EaseOut(t / 0.42f), fade = (1f - t) * (1f - t);
-            Color blood = FlameMesh.Alpha(SamuraiAttack.Blood, 0.8f * fade);
-            Color pale = FlameMesh.Alpha(new Color(1f, 0.8f, 0.84f), fade);
-            Color clear = FlameMesh.Alpha(SamuraiAttack.Blood, 0f);
-            // A crisp boundary shows the full area, while the petals open inside it.
-            Mesh.Ring(origin, reach * Mathf.Lerp(0.15f, 1f, spread), 0.035f + 0.07f * fade, blood, clear, 64);
-            Mesh.Disc(origin, reach * 0.25f * (1f - t) + 0.05f, pale, clear, 24);
-            for (int petal = 0; petal < 8; petal++)
+            float open = EaseOut(t / 0.42f), fade = t < 0.5f ? 1f : Mathf.SmoothStep(1f, 0f, (t - 0.5f) / 0.5f);
+            float turn = Mathf.Atan2(aim.y, aim.x) + 0.35f * (1f - open);
+            Color blood = SamuraiAttack.Blood, deep = new Color(blood.r * 0.45f, 0.01f, blood.b * 0.35f), pale = new Color(1f, 0.82f, 0.86f);
+            Color clear = FlameMesh.Alpha(blood, 0f);
+            // The edge of the burst: one crisp ring racing out to the radius, then a faint outline that lingers.
+            float wave = EaseOut(t / 0.3f);
+            if (wave < 1f) Mesh.Ring(origin, reach * wave, 0.06f, FlameMesh.Alpha(pale, 0.9f * (1f - wave * 0.5f)), FlameMesh.Alpha(blood, 0.8f * (1f - wave * 0.5f)), 64);
+            Mesh.Ring(origin, reach, 0.035f, FlameMesh.Alpha(blood, 0.55f * open * fade), FlameMesh.Alpha(blood, 0.2f * open * fade), 64);
+            // A darker inner whorl, set between the petals, gives the flower its depth.
+            for (int i = 0; i < BloomPetals; i++)
+                Petal(turn + (i + 0.5f) * Mathf.PI * 2f / BloomPetals - 0.2f * open, reach * 0.55f * open, reach * 0.16f * open,
+                    FlameMesh.Alpha(deep, 0.85f * fade), FlameMesh.Alpha(deep, 0.95f * fade), FlameMesh.Alpha(blood, 0.5f * fade), 0f);
+            // The petals: smooth crimson blades from the heart to the radius, each with a pale vein down its middle.
+            for (int i = 0; i < BloomPetals; i++)
+                Petal(turn + i * Mathf.PI * 2f / BloomPetals, reach * 0.97f * open, reach * 0.24f * open,
+                    FlameMesh.Alpha(blood, 0.9f * fade), FlameMesh.Alpha(deep, fade), FlameMesh.Alpha(pale, 0.75f * fade), t);
+            // The heart: a pale bead that pulses once and shrinks away.
+            float heart = reach * (0.16f + 0.06f * Mathf.Sin(Mathf.Min(1f, t / 0.25f) * Mathf.PI)) * (1f - t);
+            if (heart > 0.01f) Mesh.Disc(origin, heart, FlameMesh.Alpha(pale, fade), FlameMesh.Alpha(blood, 0.6f * fade), 24);
+            Mesh.Disc(origin, reach * 0.06f * fade, FlameMesh.Alpha(Color.white, fade), clear, 16);
+        }
+
+        /// <summary>
+        /// One smooth, pointed petal from the bloom's heart along <paramref name="angle"/>: <paramref name="body"/> down its
+        /// middle shading to <paramref name="edge"/> at its rim, with a <paramref name="vein"/> line along its spine. It
+        /// fades from the tip inward as <paramref name="wither"/> runs past halfway.
+        /// </summary>
+        private void Petal(float angle, float length, float width, Color body, Color edge, Color vein, float wither)
+        {
+            if (length < 0.02f || width < 0.005f) return;
+            const int Segments = 12;
+            Vector2 along = FlameMesh.Polar(angle, 1f), side = Vector2.Perpendicular(along);
+            float cut = wither < 0.5f ? 1f : 1f - (wither - 0.5f) * 1.4f;
+            for (int i = 0; i < Segments; i++)
             {
-                float angle = petal * Mathf.PI / 4f + 0.3f * t;
-                Vector2 tip = origin + FlameMesh.Polar(angle + 0.25f * spread, reach * spread);
-                Vector2 left = origin + FlameMesh.Polar(angle - 0.3f, reach * spread * 0.52f);
-                Vector2 right = origin + FlameMesh.Polar(angle + 0.5f, reach * spread * 0.62f);
-                Mesh.Quad(origin, left, tip, right, pale, blood, clear, blood);
-                // Bright curved veins bend into each petal and fade at its point.
-                Vector2 previous = origin;
-                for (int segment = 1; segment <= 6; segment++)
+                float u0 = i / (float)Segments, u1 = (i + 1) / (float)Segments;
+                // Swells from a narrow neck to its widest a third of the way out, then tapers to a sharp tip.
+                float w0 = width * PetalWidth(u0), w1 = width * PetalWidth(u1);
+                float a0 = Mathf.Clamp01((cut - u0) * 4f), a1 = Mathf.Clamp01((cut - u1) * 4f);
+                Vector2 p0 = origin + along * length * u0, p1 = origin + along * length * u1;
+                Color b0 = FlameMesh.Alpha(body, a0), b1 = FlameMesh.Alpha(body, a1), e0 = FlameMesh.Alpha(edge, a0), e1 = FlameMesh.Alpha(edge, a1);
+                Mesh.Quad(p0, p0 + side * w0, p1 + side * w1, p1, b0, e0, e1, b1);
+                Mesh.Quad(p0, p0 - side * w0, p1 - side * w1, p1, b0, e0, e1, b1);
+                if (u0 > 0.08f && u1 < 0.85f)
                 {
-                    float u = segment / 6f;
-                    Vector2 next = origin + FlameMesh.Polar(angle + 0.25f * spread * u * u, reach * spread * u);
-                    Mesh.Bar(previous, (next - previous).normalized, Vector2.Distance(previous, next),
-                        0.035f * (1f - u) + 0.006f, FlameMesh.Alpha(pale, fade * (1f - u)), clear);
-                    previous = next;
+                    float v0 = width * 0.07f * (1f - u0), v1 = width * 0.07f * (1f - u1);
+                    Color c0 = FlameMesh.Alpha(vein, a0), c1 = FlameMesh.Alpha(vein, a1);
+                    Mesh.Quad(p0 - side * v0, p0 + side * v0, p1 + side * v1, p1 - side * v1, c0, c0, c1, c1);
                 }
-                // Small red fragments drift outward after the flower has opened.
-                Vector2 mote = origin + FlameMesh.Polar(angle + 0.2f, reach * Mathf.Lerp(0.2f, 1.12f, EaseOut(t)));
-                Mesh.Diamond(mote, reach * 0.025f * (1f - t), blood);
             }
         }
+
+        private static float PetalWidth(float u) => Mathf.Sin(Mathf.PI * Mathf.Pow(Mathf.Clamp01(u), 0.65f));
 
         protected override void Draw(float t)
         {

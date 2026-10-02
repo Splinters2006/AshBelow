@@ -145,7 +145,8 @@ namespace Slopgame.Editor
                 {
                     if (talent.Type <= PowerupType.ExtendedBattery) continue;
                     // Hybrids also need their ability learned, which a bare talent sheet never has.
-                    bool eligible = (!talent.ClassWeapon.HasValue || talent.ClassWeapon == weapon) && talent.RequiredAbility == AbilityType.None;
+                    // Retired talents (Vanish) can never be taken.
+                    bool eligible = !talent.Retired && (!talent.ClassWeapon.HasValue || talent.ClassWeapon == weapon) && talent.RequiredAbility == AbilityType.None;
                     Require(powers.CanTake(talent.Type) == eligible, "Class gate: " + talent.Name);
                     if (!eligible) { Require(!powers.Add(talent.Type), "Wrong class acquired talent"); continue; }
                     for (int rank = 0; rank < talent.MaxStacks; rank++) Require(powers.Add(talent.Type), "Missing rank: " + talent.Name);

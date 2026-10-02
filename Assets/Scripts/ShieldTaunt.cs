@@ -3,9 +3,9 @@ using UnityEngine;
 namespace Slopgame
 {
     /// <summary>
-    /// The Knight's class mechanic: for 2.25 seconds he turns red with rage and stops bolts from every side. He can walk
-    /// but do nothing else. It does not reflect, but every bolt he stops grants a ward. In co-op, enemies target him
-    /// first for a few seconds. With its R upgrade (Retribution, from the Ash shop), the rage bursts out when the taunt
+    /// The Knight's class mechanic: for 2.25 seconds he turns red with rage and nothing can hurt him: bolts are stopped
+    /// from every side (each grants a ward) and blows, slams and guardian attacks glance off him. He can walk but do
+    /// nothing else. It does not reflect. In co-op, enemies target him first for a few seconds. With its R upgrade (Retribution, from the Ash shop), the rage bursts out when the taunt
     /// ends: every nearby enemy takes his damage once for each hit he stopped or took while it lasted.
     /// </summary>
     public sealed class ShieldTaunt : ClassMechanic
@@ -94,15 +94,38 @@ namespace Slopgame
             }
         }
 
-        /// <summary>Stops a bolt at <paramref name="position"/> heading in from any side within reach; each block adds a ward.</summary>
+        /// <summary>
+        /// Stops a bolt at <paramref name="position"/> heading in from any side within reach; each block adds a ward. A
+        /// bolt close enough to strike him is stopped whatever its heading (one grazing past or spawned on top of him),
+        /// so nothing slips through the taunt.
+        /// </summary>
         public bool TryBlock(Vector2 position, Vector2 incoming)
         {
             Vector2 offset = position - (Vector2)transform.position;
-            if (!IsTaunting || offset.sqrMagnitude > Reach * Reach || Vector2.Dot(incoming, offset) >= 0f) return false;
+            if (!IsTaunting || offset.sqrMagnitude > Reach * Reach) return false;
+            float strike = Player.HitRadius + StrikeMargin;
+            if (Vector2.Dot(incoming, offset) >= 0f && offset.sqrMagnitude > strike * strike) return false;
             Player.Powerups.AddWard();
             Soak();
             HeroVfx.Sparks(Player.Run.ProjectileRoot, position, ShieldColor, 8, 3.5f, 0.25f, -incoming, 100f);
             if (vfx != null) vfx.Block(offset);
+            return true;
+        }
+
+        /// <summary>A bolt this much beyond his body still counts as striking him (it is stopped whichever way it flies).</summary>
+        private const float StrikeMargin = 0.1f;
+
+        /// <summary>
+        /// A blow that would have landed on him while he rages (a touch, a slam, a guardian's attack) glances off instead:
+        /// it costs nothing and counts toward Retribution.
+        /// </summary>
+        public bool TryShrugOff()
+        {
+            if (!IsTaunting) return false;
+            Soak();
+            if (Player.Run.ProjectileRoot != null)
+                HeroVfx.Sparks(Player.Run.ProjectileRoot, transform.position, HeroBuffs.TauntColor, 10, 4f, 0.3f);
+            if (vfx != null) vfx.Block(Random.insideUnitCircle);
             return true;
         }
     }

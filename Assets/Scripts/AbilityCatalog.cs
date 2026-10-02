@@ -48,7 +48,7 @@ namespace Slopgame
         public static readonly Color Green = new Color(0.57f, 0.93f, 0.55f);
         public static readonly AbilityDefinition[] All =
         {
-            new AbilityDefinition(AbilityType.ShieldRush, WeaponType.Sword, "Shield Rush", "Brace behind your shield and charge forward, smashing through enemies in your path. Unstoppable and invulnerable while charging.", ">>", 8f, Ice),
+            new AbilityDefinition(AbilityType.ShieldRush, WeaponType.Sword, "Shield Rush", "Brace behind your shield and charge forward, smashing through enemies in your path. Every enemy you smash gives you a ward. Unstoppable and invulnerable while charging.", ">>", 8f, Ice),
             new AbilityDefinition(AbilityType.Earthshatter, WeaponType.Sword, "Earthshatter", "Stomp the ground: five quake rings crack the earth and ripple outward, damaging and slowing enemies.", "X", 10f, Gold),
             new AbilityDefinition(AbilityType.Aegis, WeaponType.Sword, "Aegis", "A shimmering bubble makes you invulnerable for 2 seconds. Ranks extend protection.", "O", 14f, Ice),
             new AbilityDefinition(AbilityType.Volley, WeaponType.Bow, "Arrow Volley", "Call down a rain of 16 arrows from the sky onto the area around your cursor.", "///", 8f, Green),
@@ -97,7 +97,7 @@ namespace Slopgame
             new AbilityDefinition(AbilityType.Suplex, WeaponType.Fists, "Suplex", "Grab the nearest enemy and slam it down a short way toward your cursor, hurting everything where it lands. Guardians are too heavy. Ranks add damage.", "U", 10f, new Color(0.85f, 0.7f, 0.5f), true),
             new AbilityDefinition(AbilityType.WingDash, WeaponType.Tail, "Wing Dash", "Beat your demon wings to dash, paralysing every enemy you pass through for 2 seconds. Ranks dash farther.", ">>", 8f, DemonessAttack.Violet),
             new AbilityDefinition(AbilityType.SoulSiphon, WeaponType.Tail, "Soul Siphon", "For 5 seconds, drain immobilized enemies nearby (paralysed, frozen, stunned or rooted): each takes demonic damage and heals you 1 HP every second. Ranks lengthen it.", "~", 14f, DemonessAttack.Violet),
-            new AbilityDefinition(AbilityType.NightmareSnap, WeaponType.Tail, "Nightmare Snap", "Snap every hold (paralysis, freeze, stun or root) on every enemy nearby: each takes demonic damage that grows with how long it still had to be held. Ranks add damage.", "*", 10f, DemonessAttack.Pale, true),
+            new AbilityDefinition(AbilityType.NightmareSnap, WeaponType.Tail, "Nightmare Snap", "Snap every hold (paralysis, freeze, stun or root) on every enemy within 4 units, even through walls: each takes demonic damage equal to your damage times the seconds it still had to be held, times this ability's rank.", "*", 10f, DemonessAttack.Pale, true),
             new AbilityDefinition(AbilityType.CardToss, WeaponType.Coins, "Card Toss", "Throw 3 cards in a spread. Each card's suit decides its trick: hearts burn, diamonds freeze, clubs shock and spades paralyse. Ranks add damage.", "<>", 7f, new Color(0.95f, 0.95f, 0.95f)),
             new AbilityDefinition(AbilityType.DiceBomb, WeaponType.Coins, "Dice Bomb", "Toss a pair of dice at the cursor. Each explodes for your damage times the face it rolls. Ranks add damage.", ":", 10f, new Color(0.97f, 0.95f, 0.9f)),
             new AbilityDefinition(AbilityType.Insurance, WeaponType.Coins, "Insurance", "For 6 seconds, every hit costs you 5 coins instead of HP (while you can pay). Ranks lengthen the policy.", "$!", 18f, new Color(0.35f, 0.9f, 0.5f), true),

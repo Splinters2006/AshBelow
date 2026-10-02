@@ -5,8 +5,9 @@ namespace Slopgame
 {
     /// <summary>
     /// The Demoness's pointed tail. Tapping stabs the nearest enemy in a narrow lane; a full charge strikes its vitals
-    /// and paralyses it. RMB sweeps the tail through a half circle, hitting immobilized enemies (paralysed, frozen,
-    /// stunned or rooted, whoever held them) twice as hard; under Archdemon's Technique it sweeps twice and curses. Her boss
+    /// and paralyses it. Her stabs deal three quarters of a normal charged hit: the tail sweep is where her damage is.
+    /// RMB sweeps the tail through a half circle, hitting immobilized enemies (paralysed, frozen, stunned or rooted,
+    /// whoever held them) three times as hard; under Archdemon's Technique it sweeps twice and curses. Her boss
     /// artifacts (Archdemon's Technique, HEEEELP and Demon Curse) are cast from here.
     /// </summary>
     public sealed partial class DemonessAttack : MonoBehaviour, IPlayerWeapon
@@ -15,7 +16,10 @@ namespace Slopgame
         public const float StabReach = 1.9f, VitalReach = 2.4f, StabHalfWidth = 0.3f;
         public const float VitalParalysis = 1.5f;
         public const float SweepRadius = 2.8f, SweepCone = 180f, SweepCooldown = 5f;
-        public const int SweepDamage = 2, SweepParalyzedMultiplier = 2;
+        public const int SweepDamage = 2, SweepParalyzedMultiplier = 3;
+        /// <summary>Her tail stabs (tapped or vital) deal this share of a normal charged hit, rounded half up (never below 1).</summary>
+        public const float StabDamageShare = 0.75f;
+        public static int StabDamage(int damage) => Mathf.Max(1, Mathf.FloorToInt(damage * StabDamageShare + 0.5f));
         /// <summary>Archdemon's Technique: a fully charged tail whip strikes a small cone.</summary>
         public const float WhipRadius = 2.8f, WhipCone = 70f;
         public const float AscendDuration = 8f;
@@ -85,6 +89,7 @@ namespace Slopgame
         /// <summary>Stabs the nearest enemy in the lane ahead; a vital stab (<paramref name="paralysis"/> above 0) also paralyses it.</summary>
         private void Stab(Vector2 aim, float reach, int damage, float paralysis)
         {
+            damage = StabDamage(damage);
             Vector2 origin = transform.position;
             DungeonEnemy victim = null;
             float nearest = float.MaxValue;
@@ -106,9 +111,12 @@ namespace Slopgame
             CoopFx.TailStab(Player.Run, origin, aim, length, color, twin);
             if (victim == null) return;
             Vector2 hitPoint = victim.transform.position;
-            CombatDamage.Apply(Player, victim, WithPressurePoints(victim, damage), DamageElement.Physical, origin, vital ? 0.2f : 0.5f);
-            if (!vital || victim == null) return;
-            ParalyzeCounted(victim, paralysis);
+            if (!vital)
+            {
+                CombatDamage.Apply(Player, victim, WithPressurePoints(victim, damage), DamageElement.Physical, origin, 0.5f);
+                return;
+            }
+            ParalysingBlow(victim, WithPressurePoints(victim, damage), DamageElement.Physical, origin, 0.2f, paralysis);
             var root = Player.Run.ProjectileRoot;
             HeroVfx.Sparks(root, hitPoint, Pale, 10, 4f, 0.3f, aim, 80f, 0.9f);
             HeroVfx.Pulse(root, hitPoint, 0.6f, Violet, 0.3f);
@@ -130,8 +138,7 @@ namespace Slopgame
             foreach (var enemy in Player.Run.Enemies.ToArray())
             {
                 if (!InCone(enemy, origin, aim, WhipRadius, WhipCone)) continue;
-                CombatDamage.Apply(Player, enemy, WithPressurePoints(enemy, damage), DamageElement.Physical, origin, 1.2f);
-                ParalyzeCounted(enemy, VitalParalysis);
+                ParalysingBlow(enemy, WithPressurePoints(enemy, damage), DamageElement.Physical, origin, 1.2f, VitalParalysis);
                 // Infernal Technique: the whips set enemies burning.
                 if (enemy != null && enemy.Health > 0 && Player.Powerups.Count(PowerupType.InfernalTechnique) > 0)
                     enemy.Burn(CombatDamage.BurnTicks, CombatDamage.BurnTickDamage(damage));
@@ -140,8 +147,8 @@ namespace Slopgame
         }
 
         /// <summary>
-        /// RMB: the tail sweeps a half circle ahead. Immobilized enemies take double damage. Under Archdemon's Technique
-        /// it sweeps twice, and both sweeps paralyse and curse.
+        /// RMB: the tail sweeps a half circle ahead. Immobilized enemies take triple damage. Under Archdemon's Technique
+        /// it sweeps twice, and both sweeps paralyse and curse. The cooldown starts the moment the tail swings.
         /// </summary>
         public bool TryHeavyAttack(Vector2 aim)
         {
@@ -160,9 +167,11 @@ namespace Slopgame
         {
             var run = Player.Run;
             var root = run.ProjectileRoot;
+            // Both sweeps are one skill (Massacre counts their kills together).
+            int attack = Player.Powerups.ActiveAttack;
             yield return new WaitForSeconds(TwinSweepDelay);
             if (!run.IsPlaying || root != run.ProjectileRoot || Player.Health <= 0) yield break;
-            Sweep(aim, true);
+            using (Player.Powerups.ResumeAttack(attack)) Sweep(aim, true);
         }
 
         /// <summary>One sweep of the tail; a <paramref name="cursing"/> one paralyses everything it hits and leaves a lesser Demon Curse on it.</summary>
@@ -183,9 +192,12 @@ namespace Slopgame
                     HeroVfx.Slash(root, enemy.transform.position, aim, 0.8f, 90f, Pale, 0.18f);
                     HeroVfx.Sparks(root, enemy.transform.position, Violet, 10, 4.5f, 0.35f);
                 }
-                CombatDamage.Apply(Player, enemy, WithPressurePoints(enemy, damage), DamageElement.Physical, origin, paralyzed ? 0.3f : 1f);
-                if (!cursing || enemy == null) continue;
-                ParalyzeCounted(enemy, VitalParalysis);
+                if (!cursing)
+                {
+                    CombatDamage.Apply(Player, enemy, WithPressurePoints(enemy, damage), DamageElement.Physical, origin, paralyzed ? 0.3f : 1f);
+                    continue;
+                }
+                ParalysingBlow(enemy, WithPressurePoints(enemy, damage), DamageElement.Physical, origin, paralyzed ? 0.3f : 1f, VitalParalysis);
                 if (enemy.Health > 0)
                     enemy.Curse(SweepCurseDuration, Player.Powerups.Count(PowerupType.HexMastery), DungeonEnemy.LesserCurseDamageBonus);
             }
@@ -203,6 +215,42 @@ namespace Slopgame
 
         /// <summary>A hit landed under a demonic rune: it paralyses like a vital stab.</summary>
         public void RuneParalyze(DungeonEnemy enemy) => ParalyzeCounted(enemy, VitalParalysis);
+
+        /// <summary>
+        /// Rune Burst (her second passive): the rune she picks up erupts, paralysing every enemy within
+        /// <paramref name="radius"/> units like a vital stab, walls or not.
+        /// </summary>
+        public void RuneBurst(float radius)
+        {
+            var run = Player.Run;
+            Vector2 center = transform.position;
+            var root = run.ProjectileRoot;
+            PentagramVfx.Play(root, center, radius, 0.05f);
+            CoopFx.Pentagram(run, center, radius, 0.05f);
+            HeroVfx.Pulse(root, center, radius, FlameMesh.Alpha(Violet, 0.7f), 0.45f);
+            CombatVfx.Ring(root, center, radius, Pale, 0.4f);
+            CoopFx.Ring(run, center, radius, Pale, 0.4f);
+            ScreenFx.Shake(0.15f, 0.2f);
+            foreach (var enemy in run.Enemies.ToArray())
+            {
+                if (enemy == null || enemy.Health <= 0 || Vector2.Distance(center, enemy.transform.position) > radius + enemy.HitRadius) continue;
+                ParalyzeCounted(enemy, VitalParalysis);
+                HeroVfx.Sparks(root, enemy.transform.position, Pale, 6, 3f, 0.3f);
+            }
+        }
+
+        /// <summary>
+        /// A blow that paralyses its victim: the hit lands, then the paralysis takes hold. If the hit kills outright, the
+        /// victim still counts as held (see <see cref="DungeonEnemy.HoldPending"/>), so the "on paralysis" talents and the
+        /// ones for killing an immobilized enemy go off as if the paralysis had landed first.
+        /// </summary>
+        private void ParalysingBlow(DungeonEnemy enemy, int damage, DamageElement element, Vector2 source, float knockback, float paralysis)
+        {
+            enemy.BeginHoldingBlow();
+            try { CombatDamage.Apply(Player, enemy, damage, element, source, knockback); }
+            finally { enemy.EndHoldingBlow(); }
+            ParalyzeCounted(enemy, paralysis);
+        }
 
         /// <summary>Her tail and paw hits: Pressure Points on an immobilized enemy, and Torment's growing tally on a paralysed one.</summary>
         private int WithPressurePoints(DungeonEnemy enemy, int damage) => (enemy.IsImmobilized ? damage + ParalyzedBonusDamage : damage) + TormentBonus(enemy);
@@ -292,6 +340,7 @@ namespace Slopgame
         {
             var run = Player.Run;
             var root = run.ProjectileRoot;
+            int attack = Player.Powerups.ActiveAttack;
             float radius = PawSlamRadius(rank);
             Vector2 center = target.transform.position;
             var paw = DemonPawVfx.Play(root, center, radius, PortalWindup);
@@ -312,13 +361,13 @@ namespace Slopgame
             HeroVfx.Pulse(root, center, radius * 1.2f, Violet, 0.4f);
             HeroVfx.Sparks(root, center, new Color(0.55f, 0.5f, 0.6f), 22, 5.5f, 0.45f);
             CoopFx.Ring(run, center, radius, Pale, 0.4f);
-            foreach (var enemy in run.Enemies.ToArray())
-            {
-                if (enemy == null || enemy.Health <= 0 || Vector2.Distance(center, enemy.transform.position) > radius + enemy.HitRadius
-                    || !run.HasLineOfSight(center, enemy.transform.position)) continue;
-                CombatDamage.Apply(Player, enemy, WithPressurePoints(enemy, damage), DamageElement.Physical, center + Vector2.up, 1.5f);
-                ParalyzeCounted(enemy, PawStun);
-            }
+            using (Player.Powerups.ResumeAttack(attack))
+                foreach (var enemy in run.Enemies.ToArray())
+                {
+                    if (enemy == null || enemy.Health <= 0 || Vector2.Distance(center, enemy.transform.position) > radius + enemy.HitRadius
+                        || !run.HasLineOfSight(center, enemy.transform.position)) continue;
+                    ParalysingBlow(enemy, WithPressurePoints(enemy, damage), DamageElement.Physical, center + Vector2.up, 1.5f, PawStun);
+                }
             // Cursed Paw: where the paw lands, a Demon Curse is branded.
             if (Player.Powerups.Count(PowerupType.CursedPaw) > 0) StartCoroutine(CurseMark(center, 1));
         }

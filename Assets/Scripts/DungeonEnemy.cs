@@ -48,8 +48,30 @@ namespace Slopgame
         public bool IsStunned => Time.time < stunnedUntil;
         /// <summary>Rooted (Net Shot, Bear Trap): cannot move, but still turns, shoots and swings.</summary>
         public bool IsRooted => Time.time < rootedUntil;
+        /// <summary>Seconds the longest of this enemy's holds (paralysis, freeze, stun or root) still has to run.</summary>
+        public float HoldRemaining => Mathf.Max(0f, Mathf.Max(Mathf.Max(paralyzedUntil, frozenUntil), Mathf.Max(stunnedUntil, rootedUntil)) - Time.time);
         /// <summary>Held or rooted: what talents mean by an immobilized enemy (paralysed, frozen, stunned or rooted).</summary>
         public bool IsImmobilized => IsHeld || IsRooted;
+        /// <summary>
+        /// True while a blow that paralyses its victim is landing (a vital stab, a paralysing sweep, a hit under a demonic
+        /// rune). If that blow kills, the enemy still counts as held for the "on paralysis" and "killing an immobilized
+        /// enemy" talents, as if the paralysis had taken hold first.
+        /// </summary>
+        public bool HoldPending => holdingBlow || (Health <= 0 && Time.time < holdingBlowLingers);
+        /// <summary>Immobilized, or killed by a blow that was paralysing it: what kill talents count as a held enemy.</summary>
+        public bool CountsAsHeld => IsImmobilized || HoldPending;
+        private bool holdingBlow;
+        private float holdingBlowLingers;
+
+        /// <summary>A paralysing blow is about to land (see <see cref="HoldPending"/>); pair with <see cref="EndHoldingBlow"/>.</summary>
+        public void BeginHoldingBlow() => holdingBlow = true;
+
+        public void EndHoldingBlow()
+        {
+            holdingBlow = false;
+            // A co-op guest only learns of the kill when the host confirms it, so the mark lingers for that long.
+            if (Health <= 0 && Run != null && Run.IsGuest) holdingBlowLingers = Time.time + 1f;
+        }
         public bool IsBleeding => wounds.Count > 0 || netBleeding;
         public bool IsPoisoned => poisonTicks > 0 || netPoisoned;
         /// <summary>Suffering any damage over time: burning, bleeding or poisoned.</summary>
@@ -62,6 +84,8 @@ namespace Slopgame
         public static readonly Color StunnedTint = new Color(1f, 0.95f, 0.55f), RootedTint = new Color(0.7f, 0.6f, 0.4f);
         public static readonly Color BleedColor = new Color(0.85f, 0.08f, 0.12f), PoisonColor = new Color(0.45f, 0.95f, 0.3f);
         private float stunnedUntil, stunImmuneUntil, rootedUntil, nextPoison;
+        /// <summary>Guests: when the host's longest hold on this enemy ends, as of its last snapshot.</summary>
+        private float netHoldUntil;
         private int poisonTicks, poisonDamage, peakHealth;
         private bool netBleeding, netPoisoned;
         /// <summary>
@@ -96,15 +120,62 @@ namespace Slopgame
 
         /// <summary>Hunter's Mark: takes +1 damage from every hit.</summary>
         public bool IsMarked => Time.time < markedUntil;
-        private float markedUntil;
+        private float markedUntil, markedAt;
+        public static readonly Color MarkColor = new Color(1f, 0.28f, 0.24f);
+        private SpriteRenderer markIndicator;
 
         public void Mark(float duration)
         {
             if (IsInvulnerable || duration <= 0f) return;
             if (Run.IsGuest) { Run.Coop.ReportDamage(this, CoopDamageKind.Mark, 0, transform.position, 0, duration); }
-            if (!IsMarked && Run.ProjectileRoot != null) CombatVfx.Ring(Run.ProjectileRoot, transform.position, 0.6f, new Color(1f, 0.3f, 0.3f), 0.4f);
+            if (!IsMarked)
+            {
+                markedAt = Time.time;
+                if (Run.ProjectileRoot != null)
+                {
+                    CombatVfx.Ring(Run.ProjectileRoot, transform.position, 0.6f, MarkColor, 0.4f);
+                    HeroVfx.Sparks(Run.ProjectileRoot, transform.position, MarkColor, 8, 3f, 0.3f);
+                }
+            }
             markedUntil = Mathf.Max(markedUntil, Time.time + duration);
         }
+
+        private const float MarkSize = 0.5f;
+
+        /// <summary>
+        /// Hunter's Mark: a red reticle locks onto the marked enemy, snapping in from large, then turning slowly around
+        /// it and blinking faster as the mark runs out.
+        /// </summary>
+        private void UpdateMarkIndicator()
+        {
+            bool marked = IsMarked && Health > 0;
+            if (markIndicator == null)
+            {
+                if (!marked) return;
+                markIndicator = DungeonVisuals.Create("Hunter's mark", transform, transform.position, Vector2.one * MarkSize, MarkColor, 10);
+                markIndicator.sprite = MarkSprite;
+            }
+            markIndicator.gameObject.SetActive(marked);
+            if (!marked) return;
+            float lockOn = 1f - Mathf.Clamp01((Time.time - markedAt) / 0.25f);
+            float left = markedUntil - Time.time;
+            // The reticle hugs the body (bigger for brutes and guardians), and ignores the enemy's own scale.
+            float size = (HitRadius * 2f + 0.3f) * (1f + 1.5f * lockOn * lockOn);
+            Vector3 parent = transform.lossyScale;
+            markIndicator.transform.localScale = new Vector3(size / Mathf.Max(0.001f, parent.x), size / Mathf.Max(0.001f, parent.y), 1f);
+            markIndicator.transform.localPosition = Vector3.zero;
+            markIndicator.transform.rotation = Quaternion.Euler(0f, 0f, Time.time * 45f);
+            float blink = left < 1f ? (Mathf.Repeat(Time.time * 8f, 1f) < 0.5f ? 0.35f : 1f) : 0.75f + 0.25f * Mathf.Sin(Time.time * 6f);
+            markIndicator.color = FlameMesh.Alpha(MarkColor, blink);
+        }
+
+        private static Sprite markSprite;
+        /// <summary>A crosshair reticle: four corner brackets and a dot in the middle.</summary>
+        private static Sprite MarkSprite => markSprite != null ? markSprite : markSprite = DungeonVisuals.PaletteSprite("Hunter's mark", new[]
+        {
+            "WWW.....WWW", "W.........W", "W.........W", "...........", ".....W.....", "....WWW....", ".....W.....",
+            "...........", "W.........W", "W.........W", "WWW.....WWW"
+        }, key => key == 'W' ? Color.white : Color.clear);
         /// <summary>Paralysed enemies cannot move, turn or attack (the Demoness's vital stabs and curses).</summary>
         public bool IsParalyzed => Time.time < paralyzedUntil;
         /// <summary>Cursed enemies take more damage from every hit: <see cref="CurseDamageBonus"/> under the Demon Curse ability, <see cref="LesserCurseDamageBonus"/> under a lesser curse.</summary>
@@ -228,11 +299,14 @@ namespace Slopgame
             ActionTime += Time.deltaTime * ActionSpeedMultiplier * DreadFactor() * Tempo;
             if (terrorPending && !IsParalyzed) { terrorPending = false; terrorUntil = Time.time + TerrorTime; }
             UpdateCurseIndicator();
+            UpdateMarkIndicator();
             if (burnTicks > 0 && Time.time >= nextBurn)
             {
                 burnTicks--;
                 nextBurn = Time.time + 1f;
-                Hit(burnDamage);
+                dotTick = true;
+                try { Hit(burnDamage); }
+                finally { dotTick = false; }
                 if (Health <= 0) return;
                 CombatVfx.Ring(Run.ProjectileRoot, transform.position, 0.4f, burnColor, 0.2f);
             }
@@ -242,7 +316,9 @@ namespace Slopgame
             if (bled > 0)
             {
                 HeroVfx.Sparks(Run.ProjectileRoot, transform.position, BleedColor, 5, 2f, 0.3f, Vector2.down, 90f, 0.8f);
-                Hit(bled, transform.position, 0f);
+                dotTick = true;
+                try { Hit(bled, transform.position, 0f); }
+                finally { dotTick = false; }
                 if (Health <= 0) return;
             }
             if (poisonTicks > 0 && Time.time >= nextPoison)
@@ -250,7 +326,9 @@ namespace Slopgame
                 poisonTicks--;
                 nextPoison = Time.time + 1f;
                 HeroVfx.Sparks(Run.ProjectileRoot, transform.position, PoisonColor, 4, 1.4f, 0.4f, Vector2.up, 60f, 0.8f);
-                Hit(poisonDamage, transform.position, 0f);
+                dotTick = true;
+                try { Hit(poisonDamage, transform.position, 0f); }
+                finally { dotTick = false; }
                 if (Health <= 0) return;
             }
             UpdateBleedIndicator();
@@ -312,6 +390,7 @@ namespace Slopgame
         {
             ActionTime += Time.deltaTime * ActionSpeedMultiplier * Tempo;
             UpdateCurseIndicator();
+            UpdateMarkIndicator();
             // The host deals the bleeding; here the wounds only count down, so this hero knows what is left of them.
             TickWounds();
             if (hasSnapshot)
@@ -360,6 +439,7 @@ namespace Slopgame
             frozenUntil = (snapshot.MoreFlags & EnemySnapshot.Frozen) != 0 ? Time.time + 0.25f : Mathf.Min(frozenUntil, Time.time);
             stunnedUntil = (snapshot.MoreFlags & EnemySnapshot.Stunned) != 0 ? Time.time + 0.25f : Mathf.Min(stunnedUntil, Time.time);
             rootedUntil = (snapshot.MoreFlags & EnemySnapshot.Rooted) != 0 ? Time.time + 0.25f : Mathf.Min(rootedUntil, Time.time);
+            netHoldUntil = (snapshot.MoreFlags & EnemySnapshot.HoldBits) != 0 ? Time.time + snapshot.HoldLeft : Time.time;
             netBleeding = (snapshot.MoreFlags & EnemySnapshot.Bleeding) != 0;
             netPoisoned = (snapshot.MoreFlags & EnemySnapshot.Poisoned) != 0;
             bool charging = (snapshot.Flags & EnemySnapshot.Charging) != 0;
@@ -394,6 +474,18 @@ namespace Slopgame
             if (IsInvulnerable) { Boss.Deflect(source); return; }
             peakHealth = Mathf.Max(peakHealth, Health);
             if (IsMarked && damage > 0 && !Run.IsGuest) damage++;
+            // Brittle Ice (the Wizard's second passive): the first blow after a freeze shatters for double. Burn, bleed and
+            // poison ticks leave the ice alone.
+            if (IsBrittle && damage > 0 && !dotTick)
+            {
+                brittle = false;
+                damage *= 2;
+                if (Run.ProjectileRoot != null)
+                {
+                    HeroVfx.Sparks(Run.ProjectileRoot, transform.position, Color.Lerp(AbilityCatalog.Ice, Color.white, 0.5f), 14, 4.5f, 0.35f);
+                    CombatVfx.Ring(Run.ProjectileRoot, transform.position, HitRadius + 0.5f, Color.white, 0.25f);
+                }
+            }
             if (DebugMode.Enabled) damage = Mathf.Max(damage, Health);
             LastHitRegion = Facing.RegionFrom(source);
             HitReceived?.Invoke(LastHitRegion);
@@ -471,8 +563,9 @@ namespace Slopgame
             if (localKill) ScrapPickup.TryDrop(Run, this);
             // The Reaper takes the souls of the soul-bound, and fear he has sown spreads from the fallen.
             if (Run.Player != null && Run.Player.Weapon is ReaperAttack reaper) reaper.OnEnemyDied(this, localKill);
-            // Crimson Bloom (the Samurai's passive): whoever dies bleeding bursts with the blood it had left to lose.
-            if (Run.Player != null && Run.Player.Weapon is SamuraiAttack samurai) samurai.OnEnemyDied(this);
+            // Crimson Bloom (the Samurai's passive): whoever dies bleeding bursts with the blood it had left to lose; her
+            // own kills of the bleeding feed Trail of Blood.
+            if (Run.Player != null && Run.Player.Weapon is SamuraiAttack samurai) samurai.OnEnemyDied(this, localKill);
             // The Specimen's chains pass a binding on (Shackles), and kills stretch an upgraded Overdrive.
             if (Run.Player != null && Run.Player.Weapon is SpecimenAttack specimen) specimen.OnEnemyDied(this, localKill);
             // Every fallen enemy leaves crystals for the shop before the next boss. In co-op they are shared: every machine
@@ -540,7 +633,7 @@ namespace Slopgame
             TouchWithElement();
             bool fresh = !IsImmobilized;
             duration = HoldTime(duration);
-            if (Run.IsGuest) { Run.Coop.ReportDamage(this, CoopDamageKind.Freeze, 0, transform.position, 0, duration); Held(fresh, duration); Seized(); return; }
+            if (Run.IsGuest) { Run.Coop.ReportDamage(this, CoopDamageKind.Freeze, 0, transform.position, 0, duration); Held(fresh, duration); Seized(); MakeBrittle(); return; }
             if (Boss != null)
             {
                 if (Time.time < freezeImmuneUntil) return;
@@ -548,6 +641,7 @@ namespace Slopgame
             }
             frozenUntil = Mathf.Max(frozenUntil, Time.time + duration);
             if (Boss != null) freezeImmuneUntil = frozenUntil + BossParalysisImmunity;
+            MakeBrittle();
             if (Run.ProjectileRoot != null)
                 HeroVfx.Sparks(Run.ProjectileRoot, transform.position, Color.Lerp(AbilityCatalog.Ice, Color.white, 0.5f), 8, 2.6f, 0.3f);
             Held(fresh, duration);
@@ -607,9 +701,15 @@ namespace Slopgame
         /// </summary>
         public float ConsumeHolds()
         {
-            float until = Mathf.Max(Mathf.Max(paralyzedUntil, frozenUntil), Mathf.Max(stunnedUntil, rootedUntil));
-            float remaining = Mathf.Max(0f, until - Time.time);
-            if (Run.IsGuest) { Run.Coop.ReportDamage(this, CoopDamageKind.ClearHolds, 0, transform.position, 0, 0f); return remaining; }
+            float remaining = HoldRemaining;
+            if (Run.IsGuest)
+            {
+                // A guest only mirrors the host's holds a moment at a time; the host's own count comes with each snapshot.
+                remaining = Mathf.Max(remaining, netHoldUntil - Time.time);
+                netHoldUntil = Time.time;
+                Run.Coop.ReportDamage(this, CoopDamageKind.ClearHolds, 0, transform.position, 0, 0f);
+                return remaining;
+            }
             paralyzedUntil = Mathf.Min(paralyzedUntil, Time.time);
             frozenUntil = Mathf.Min(frozenUntil, Time.time);
             stunnedUntil = Mathf.Min(stunnedUntil, Time.time);
@@ -652,6 +752,17 @@ namespace Slopgame
         /// </summary>
         private void Seized() { if (FromLocalHero) Run.Player.Mechanic?.OnImmobilized(); }
 
+        /// <summary>Brittle Ice (the Wizard's second passive): the next blow this enemy takes deals double damage.</summary>
+        public bool IsBrittle => brittle && Health > 0;
+        private bool brittle, dotTick;
+
+        /// <summary>A freeze from the local Wizard with Brittle Ice leaves the enemy brittle (each machine marks its own hero's freezes).</summary>
+        private void MakeBrittle()
+        {
+            if (FromLocalHero && Run.Player.ClassWeapon == WeaponType.Staff && Run.Player.Permanent != null && Run.Player.Permanent.HasSecondPassive(WeaponType.Staff))
+                brittle = true;
+        }
+
         /// <summary>Breaks the enemy out of its ice at once (Shatter).</summary>
         public void Thaw() { if (!Run.IsGuest) frozenUntil = Mathf.Min(frozenUntil, Time.time); }
 
@@ -692,10 +803,13 @@ namespace Slopgame
         public const float BleedDuration = 5f, BleedTickShare = 0.1f;
         public const int BleedTicks = 10;
 
-        /// <summary>One bleed: every tick deals <see cref="PerTick"/>, and the fractions add up in <see cref="bleedCarry"/>.</summary>
+        /// <summary>
+        /// One bleed: every tick deals <see cref="PerTick"/> (times <see cref="HeldMultiplier"/> while the enemy is
+        /// immobilized), and the fractions add up in <see cref="bleedCarry"/>.
+        /// </summary>
         private sealed class Wound
         {
-            public float PerTick, Interval, NextAt;
+            public float PerTick, Interval, NextAt, HeldMultiplier = 1f;
             public int Ticks, TicksLeft;
         }
         private readonly System.Collections.Generic.List<Wound> wounds = new System.Collections.Generic.List<Wound>();
@@ -707,7 +821,7 @@ namespace Slopgame
             get
             {
                 float total = bleedCarry;
-                foreach (var wound in wounds) total += wound.PerTick * wound.TicksLeft;
+                foreach (var wound in wounds) total += wound.PerTick * wound.TicksLeft * (IsImmobilized ? wound.HeldMultiplier : 1f);
                 return wounds.Count > 0 ? total : 0f;
             }
         }
@@ -717,14 +831,18 @@ namespace Slopgame
         /// <paramref name="hit"/> that opened the wound. Wounds stack: every bleed runs on its own, and one hit can open several.
         /// With a <paramref name="stun"/> (Bled Dry), the enemy is stunned that long once its last wound closes.
         /// </summary>
-        public void Bleed(int hit, float duration = BleedDuration, int ticks = BleedTicks, float stun = 0f)
+        /// <param name="heldMultiplier">Pinned Wounds: how much harder the wound cuts while the enemy is immobilized.</param>
+        public void Bleed(int hit, float duration = BleedDuration, int ticks = BleedTicks, float stun = 0f, float heldMultiplier = 1f)
         {
             if (IsInvulnerable || hit <= 0 || ticks <= 0 || duration <= 0f || Health <= 0) return;
-            if (Run.IsGuest) Run.Coop.ReportDamage(this, CoopDamageKind.Bleed, hit, transform.position, ticks, duration);
+            heldMultiplier = Mathf.Max(1f, heldMultiplier);
+            // The held multiplier crosses the wire in the message's (otherwise unused) knockback.
+            if (Run.IsGuest) Run.Coop.ReportDamage(this, CoopDamageKind.Bleed, hit, transform.position, ticks, duration, knockback: heldMultiplier);
             // The stun stays on the machine that opened the wound: a guest reports it to the host when its own count runs out.
             bleedStun = Mathf.Max(bleedStun, stun);
             float interval = duration / ticks;
-            wounds.Add(new Wound { PerTick = hit * BleedTickShare, Interval = interval, NextAt = Time.time + interval, Ticks = ticks, TicksLeft = ticks });
+            wounds.Add(new Wound { PerTick = hit * BleedTickShare, Interval = interval, NextAt = Time.time + interval, Ticks = ticks, TicksLeft = ticks,
+                HeldMultiplier = heldMultiplier });
         }
 
         /// <summary>Runs every wound's clock and returns the whole damage that came due (fractions wait for the next tick).</summary>
@@ -738,7 +856,7 @@ namespace Slopgame
                 {
                     wound.TicksLeft--;
                     wound.NextAt += wound.Interval;
-                    bleedCarry += wound.PerTick;
+                    bleedCarry += wound.PerTick * (IsImmobilized ? wound.HeldMultiplier : 1f);
                 }
                 if (wound.TicksLeft <= 0) wounds.RemoveAt(i);
             }

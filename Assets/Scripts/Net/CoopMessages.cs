@@ -32,7 +32,7 @@ namespace Slopgame
     public enum FxKind : byte { Arrow, Spell, Slash, Bolt, GlowBolt, Ring, Pulse, Punch, RearHit, Knife, PiercingShot, Aegis, Holy, Sanctuary,
         Windstep, Shadowstep, Stab, Quake, HolySword, Venom, HeavyPunch, Flurry, SanctuaryEnd, TailStab, TailSweep, Pentagram, DemonPaw, Coin, DemonHead, Sharpen, CoinFlip, CoinRain, Angel, Jackpot,
         PlasmaRay, PlasmaOrb, SentryTurret, MicroMissile, IceWall, Wings, SoulSiphon, Ricochet, Net, ShadowClone, DeathMark, RocketBoost, OrbitalLaser, Grapple, BrawlerMove, Insurance, InsuranceClaim, Card, Dice,
-        Shield, Whirlwind, WarBanner, Consecration, Heal, Lance, Intervention, BallLightning, IceBreak, NightmareSnap, SnapTether, InterventionSaved, AvatarOfDeath, DemonicPower, SuperAngry, ShieldTaunt, Retribution, RockCover, HallowedGround, KatanaCrescent, KatanaThrust, KatanaSlice, KatanaSheathe, SliceDiceChunk, Bloodpop, PrimalRage, Bloodscent, CrimsonBloom }
+        Shield, Whirlwind, WarBanner, Consecration, Heal, Lance, Intervention, BallLightning, IceBreak, NightmareSnap, SnapTether, InterventionSaved, AvatarOfDeath, DemonicPower, SuperAngry, ShieldTaunt, Retribution, RockCover, HallowedGround, KatanaCrescent, KatanaThrust, KatanaSlice, KatanaSheathe, SliceDiceChunk, Bloodpop, PrimalRage, Bloodscent, CrimsonBloom, PyreBurst }
 
     public struct PlayerStateMessage
     {
@@ -97,17 +97,23 @@ namespace Slopgame
         public const int BossStateShift = 4;
         /// <summary>Bits of <see cref="MoreFlags"/>.</summary>
         public const byte Paralyzed = 1, Cursed = 2, Frozen = 4, HasMaxHealth = 8, Stunned = 16, Rooted = 32, Bleeding = 64, Poisoned = 128;
+        /// <summary>Any hold (paralysis, freeze, stun or root): snapshots with one also carry <see cref="HoldLeft"/>.</summary>
+        public const byte HoldBits = Paralyzed | Frozen | Stunned | Rooted;
         public ushort Id;
         public Vector2 Position, Facing;
         public int Health;
         /// <summary>A guardian's maximum health on the host (sent only with <see cref="HasMaxHealth"/>), so every health bar agrees.</summary>
         public int MaxHealth;
         public byte Flags, MoreFlags;
+        /// <summary>Seconds the enemy's longest hold still has to run on the host (sent only with a hold flag), so a guest's
+        /// Nightmare Snap deals what the host would.</summary>
+        public float HoldLeft;
 
         public void Write(FastBufferWriter w)
         {
             w.WriteValueSafe(Id); w.WriteValueSafe(Position); w.WriteValueSafe(Facing); w.WriteValueSafe(Health); w.WriteValueSafe(Flags); w.WriteValueSafe(MoreFlags);
             if ((MoreFlags & HasMaxHealth) != 0) w.WriteValueSafe(MaxHealth);
+            if ((MoreFlags & HoldBits) != 0) w.WriteValueSafe((ushort)Mathf.Clamp(Mathf.RoundToInt(HoldLeft * 100f), 0, ushort.MaxValue));
         }
 
         public static EnemySnapshot Read(FastBufferReader r)
@@ -116,6 +122,7 @@ namespace Slopgame
             r.ReadValueSafe(out m.Id); r.ReadValueSafe(out m.Position); r.ReadValueSafe(out m.Facing); r.ReadValueSafe(out m.Health); r.ReadValueSafe(out m.Flags);
             r.ReadValueSafe(out m.MoreFlags);
             if ((m.MoreFlags & HasMaxHealth) != 0) r.ReadValueSafe(out m.MaxHealth);
+            if ((m.MoreFlags & HoldBits) != 0) { r.ReadValueSafe(out ushort hold); m.HoldLeft = hold / 100f; }
             return m;
         }
     }

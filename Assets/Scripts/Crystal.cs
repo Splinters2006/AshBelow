@@ -66,15 +66,17 @@ namespace Slopgame
             }
             float distance = Vector2.Distance(rest, hero);
             bool alive = pouch != null && player.Health > 0;
-            if (alive && (distance <= MagnetRadius || pulled))
+            // Lodestone: drawn in from farther, faster, and picked up from farther away.
+            float reach = player.Powerups != null ? player.Powerups.PickupReach : 1f;
+            if (alive && (distance <= MagnetRadius * reach || pulled))
             {
                 if (!magnetised) { magnetised = true; CombatVfx.Trail(gameObject, new Color(0.8f, 0.55f, 1f, 0.7f), 0.1f, 0.12f); }
-                rest = Vector2.MoveTowards(rest, hero, (pulled ? PullSpeed : 7f - distance * 2f) * Time.deltaTime);
+                rest = Vector2.MoveTowards(rest, hero, (pulled ? PullSpeed : (7f - distance / reach * 2f) * reach) * Time.deltaTime);
             }
             Place(rest, 0.12f + 0.07f * Mathf.Sin(Time.time * 3f + phase));
             // A soft shimmer pulses through the facets.
             body.color = Color.Lerp(new Color(0.82f, 0.78f, 0.9f), Color.white, 0.5f + 0.5f * Mathf.Sin(Time.time * 5f + phase));
-            if (!alive || Vector2.Distance(rest, hero) > PickupRadius) return;
+            if (!alive || Vector2.Distance(rest, hero) > PickupRadius * reach) return;
             pouch.Add(Value);
             if (netKey != 0 && run.IsNetworked) run.Coop.ReportPickup(netKey);
             var root = run.ProjectileRoot;

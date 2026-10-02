@@ -18,12 +18,18 @@ namespace Slopgame
         public int RequiredWorld { get; }
         /// <summary>Another upgrade that must be owned first (a class mechanic, for its R upgrade); null for none.</summary>
         public string RequiredUpgrade { get; }
+        /// <summary>The title of a guardian that must have been slain once (by any hero) before this is sold; null for none.</summary>
+        public string RequiredGuardian { get; }
+        /// <summary>How the shop names <see cref="RequiredGuardian"/> while it is locked.</summary>
+        public string RequiredGuardianName { get; }
         /// <summary>True for the upgrade to a class mechanic (see <see cref="PermanentUpgradeCatalog.MechanicUpgradeId"/>).</summary>
-        public bool IsMechanicUpgrade => RequiredUpgrade != null;
+        public bool IsMechanicUpgrade => RequiredUpgrade != null && !ClassPassiveCatalog.IsPassive(Id);
         public PermanentUpgradeDefinition(string id, string name, string description, int maxRank, int cost, int step, WeaponType? weapon = null,
-            int requiredGuardians = 0, int requiredWorld = -1, string requiredUpgrade = null)
+            int requiredGuardians = 0, int requiredWorld = -1, string requiredUpgrade = null, string requiredGuardian = null, string requiredGuardianName = null)
         {
             RequiredUpgrade = requiredUpgrade;
+            RequiredGuardian = requiredGuardian;
+            RequiredGuardianName = requiredGuardianName ?? requiredGuardian;
             Id = id; Name = name; Description = description; MaxRank = maxRank; BaseCost = cost; CostStep = step; ClassWeapon = weapon;
             RequiredGuardians = requiredGuardians; RequiredWorld = requiredWorld;
         }
@@ -121,6 +127,12 @@ namespace Slopgame
             foreach (var passive in ClassPassiveCatalog.All)
                 upgrades.Add(new PermanentUpgradeDefinition(passive.Id, passive.Name, passive.Description, 1,
                     ClassPassiveCatalog.PassiveCost, 0, passive.Weapon, requiredWorld: passive.RequiredWorld));
+            // Second passives: sold to heroes who own their first, once Aurelion has been slain.
+            foreach (var passive in ClassPassiveCatalog.Second)
+                upgrades.Add(new PermanentUpgradeDefinition(passive.Id, passive.Name, passive.Description, 1,
+                    ClassPassiveCatalog.SecondPassiveCost, 0, passive.Weapon, requiredWorld: passive.RequiredWorld,
+                    requiredUpgrade: ClassPassiveCatalog.Get(passive.Weapon)?.Id, requiredGuardian: ClassPassiveCatalog.SecondPassiveGuardian,
+                    requiredGuardianName: ClassPassiveCatalog.SecondPassiveGuardianName));
             return upgrades.ToArray();
         }
 

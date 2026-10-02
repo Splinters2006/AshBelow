@@ -541,7 +541,6 @@ namespace Slopgame
                 if (enemy.Health <= 0 || (position - closest).sqrMagnitude > radius * radius) continue;
                 HeroVfx.Slash(Player.Run.ProjectileRoot, position - travel.normalized * 0.4f, travel, 0.7f, 70f, color, 0.18f);
                 CombatDamage.ApplyShadowstep(Player, enemy);
-                if (enemy.Health <= 0 && Player.Powerups.Count(PowerupType.Vanish) > 0) Player.Veil(1f);
             }
             return true;
         }

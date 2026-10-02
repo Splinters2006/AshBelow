@@ -51,8 +51,9 @@ namespace Slopgame
                 wasAutofired = false;
             }
             else if (!held && IsCharging) Release();
-            // Autofire lets an overcharge finish first.
-            else if (held && IsCharging && fullPinged && GameSettings.Autofire && Time.time - fullAt >= GameSettings.AutofireDelay && (!CanOvercharge || Overcharge >= 1f))
+            // Autofire (switched on per hero): the attack goes the moment it is fully charged, and charging starts again
+            // while the button stays down. A Paladin who can overcharge waits for the overcharge to finish first.
+            else if (held && IsCharging && fullPinged && GameSettings.AutofireFor(Player.ClassWeapon) && (!CanOvercharge || Overcharge >= 1f))
             {
                 Release();
                 wasAutofired = true;
@@ -64,6 +65,12 @@ namespace Slopgame
                 fullPinged = true;
                 fullAt = Time.time;
                 HeroVfx.Pulse(Player.transform, Player.transform.position, 0.85f, AbilityCatalog.Gold, 0.3f);
+                // Autofire: a charge that just filled goes straight away rather than a frame later.
+                if (held && allowed && GameSettings.AutofireFor(Player.ClassWeapon) && !CanOvercharge)
+                {
+                    Release();
+                    wasAutofired = true;
+                }
             }
             if (IsCharging && !overPinged && Overcharge >= 1f)
             {

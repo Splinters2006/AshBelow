@@ -34,9 +34,13 @@ namespace Slopgame
         public bool MechanicUpgraded { get; }
         /// <summary>The class passive (see <see cref="ClassPassiveCatalog"/>), active once purchased in the Ash shop.</summary>
         public bool PassiveUnlocked { get; }
+        /// <summary>The class's second passive (see <see cref="ClassPassiveCatalog.Second"/>), active once purchased alongside the first.</summary>
+        public bool SecondPassiveUnlocked { get; }
         private readonly WeaponType weapon;
         /// <summary>True when this hero is the given class and its passive is unlocked.</summary>
         public bool HasPassive(WeaponType passive) => PassiveUnlocked && weapon == passive;
+        /// <summary>True when this hero is the given class and its second passive is unlocked.</summary>
+        public bool HasSecondPassive(WeaponType passive) => SecondPassiveUnlocked && weapon == passive;
         /// <summary>Scales all damage (the Ash shop's Infernal Pact).</summary>
         public float DamageMultiplier { get; } = 1f;
         /// <summary>Scales maximum HP (the Ash shop's Infernal Pact).</summary>
@@ -53,6 +57,7 @@ namespace Slopgame
             MechanicUnlocked = progress.Rank(PermanentUpgradeCatalog.MechanicId(weapon)) > 0;
             MechanicUpgraded = MechanicUnlocked && progress.Rank(PermanentUpgradeCatalog.MechanicUpgradeId(weapon)) > 0;
             PassiveUnlocked = ClassPassiveCatalog.IsUnlocked(progress, weapon);
+            SecondPassiveUnlocked = ClassPassiveCatalog.IsSecondUnlocked(progress, weapon);
             Health = progress.Rank("health");
             Damage = progress.Rank("damage");
             Speed = progress.Rank("speed") * 0.2f;

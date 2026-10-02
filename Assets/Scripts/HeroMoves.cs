@@ -46,7 +46,7 @@ namespace Slopgame
             WeaponType.Daggers => "Step through the shadows toward the cursor, cutting every enemy you pass through. Strike from behind for a backstab.",
             WeaponType.Hammer => "Holy swords fall from the sky onto every enemy near you, one after another, slowing whatever they strike.",
             WeaponType.Fists => "Empower yourself: for 5 seconds you hit harder, faster and wider.",
-            WeaponType.Tail => "Sweep your tail across a half circle. Immobilized enemies take double damage.",
+            WeaponType.Tail => "Sweep your tail across a half circle. Immobilized enemies take triple damage.",
             WeaponType.Coins => "Throw one coin for every coin you carry across a 90-degree cone, without spending any.",
             WeaponType.Beam => "Hold to charge the arm cannon and release to fire an orb that bursts in flame.",
             WeaponType.Scythe => "Spend souls on homing skulls: tap for one, hold for a fearsome one, and hold to the full for three.",

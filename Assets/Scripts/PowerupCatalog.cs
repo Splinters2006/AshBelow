@@ -54,7 +54,13 @@ namespace Slopgame
         DeepWounds, BloodInTheWater, JaggedBlade, FineDicing, BledDry,
         // The Specimen's Edge talents, then his hybrids.
         RazorTip, LongChain, WeightedTip, ReelIn, Featherweight, BleedingEdge, LightOnHisFeet,
-        FreightTrain, RubbleWall, Hardened, Zipline, LowBlow, Shackles
+        FreightTrain, RubbleWall, Hardened, Zipline, LowBlow, Shackles,
+        // Universal: pickups home in harder.
+        Lodestone,
+        // Reaper.
+        SoulBurst, SoulHoard, GrimHarvest,
+        // Samurai.
+        PinnedWounds
     }
 
     public sealed class PowerupDefinition
@@ -65,11 +71,18 @@ namespace Slopgame
         public int MaxStacks { get; }
         public WeaponType? ClassWeapon { get; }
         public AbilityType RequiredAbility { get; }
-        public PowerupDefinition(PowerupType type, string name, string description, int maxStacks, WeaponType? classWeapon = null, AbilityType requiredAbility = AbilityType.None)
+        /// <summary>
+        /// A talent taken out of the game: it keeps its slot (talent numbers are their IDs) but is never offered, sold or
+        /// listed, and cannot be taken.
+        /// </summary>
+        public bool Retired { get; }
+        public PowerupDefinition(PowerupType type, string name, string description, int maxStacks, WeaponType? classWeapon = null, AbilityType requiredAbility = AbilityType.None,
+            bool retired = false)
         {
             Type = type; Name = name; Description = description; MaxStacks = maxStacks;
             ClassWeapon = classWeapon;
             RequiredAbility = requiredAbility;
+            Retired = retired;
         }
     }
 
@@ -83,7 +96,8 @@ namespace Slopgame
             new PowerupDefinition(PowerupType.AttackSpeed, "Quick Hands", "+20% base attack and charge speed", 5),
             new PowerupDefinition(PowerupType.CriticalHits, "Precision", "+10% physical crit / elemental effect chance", 5),
             new PowerupDefinition(PowerupType.Armor, "Ward", "Block one extra hit each floor; refill on descent", 3),
-            new PowerupDefinition(PowerupType.LifeSteal, "Soul Harvest", "Heal 1 HP every 5 / 4 / 3 kills by rank", 3),
+            // Soul Harvest is retired: its slot stays so later talents keep their numbers.
+            new PowerupDefinition(PowerupType.LifeSteal, "Soul Harvest", "Retired", 3, retired: true),
             new PowerupDefinition(PowerupType.DodgeRecovery, "Second Wind", "10% shorter dodge cooldown per rank", 3),
             new PowerupDefinition(PowerupType.SweepingEdge, "Knight: Sweeping Edge", "+15 degrees to fully charged slash cone", 2, WeaponType.Sword),
             new PowerupDefinition(PowerupType.Riposte, "Knight: Riposte", "+1 damage to reflected bolts", 3, WeaponType.Sword),
@@ -132,12 +146,12 @@ namespace Slopgame
             new PowerupDefinition(PowerupType.HighRoller, "High Roller", "+2 seconds of Jackpot buffs", 3, WeaponType.Coins, AbilityType.Jackpot),
             // Universal boons: any class can find them as room rewards or buy them as crystal shop relics.
             new PowerupDefinition(PowerupType.NerveSnap, "Nerve Snap", "Killing an immobilized enemy (paralysed, frozen, stunned or rooted) resets your class skill", 1),
-            new PowerupDefinition(PowerupType.PyreBurst, "Pyre Burst", "Burning enemies explode when they die, hurting everything nearby", 1),
+            new PowerupDefinition(PowerupType.PyreBurst, "Pyre Burst", "Burning enemies explode when they die, hurting everything nearby. Each rank widens the blast (2 / 2.75 / 3.5 units)", 3),
             new PowerupDefinition(PowerupType.Kindling, "Kindling", "Every elemental effect you set off also sets the enemy burning", 1),
-            new PowerupDefinition(PowerupType.Massacre, "Massacre", "Killing 5 enemies within 1 second resets your class skill", 1),
+            new PowerupDefinition(PowerupType.Massacre, "Massacre", "Killing 3 enemies with one attack or skill resets your class skill", 1),
             new PowerupDefinition(PowerupType.Momentum, "Momentum", "Killing 2 enemies within 1 second resets your dodge", 1),
             new PowerupDefinition(PowerupType.Bloodrush, "Bloodrush", "Every kill takes 0.5 seconds off all your cooldowns", 1),
-            new PowerupDefinition(PowerupType.StillHunter, "Still Hunter", "Killing an immobilized enemy (paralysed, frozen, stunned or rooted) takes 0.5 seconds off all your cooldowns", 1),
+            new PowerupDefinition(PowerupType.StillHunter, "Still Hunter", "Killing an immobilized enemy (paralysed, frozen, stunned or rooted) takes 1 second off all your cooldowns", 1),
             new PowerupDefinition(PowerupType.Prospector, "Prospector", "Kills have a 50% / 100% chance by rank to drop extra crystals", 2),
             new PowerupDefinition(PowerupType.Haggler, "Haggler", "Crystal shop prices 25% / 50% lower by rank", 2),
             new PowerupDefinition(PowerupType.MerchantsFavor, "Merchant's Favor", "One free reroll of every crystal shop's wares", 1),
@@ -174,8 +188,8 @@ namespace Slopgame
             new PowerupDefinition(PowerupType.Immovable, "Bulk: Immovable", "Guarding slows you 25% less", 2, WeaponType.Mutation),
             new PowerupDefinition(PowerupType.RootedStance, "Bulk: Rooted Stance", "Enemies that touch you no longer hurt you", 1, WeaponType.Mutation),
             // Universal talents built on conditions and trade-offs rather than flat stat bumps.
-            new PowerupDefinition(PowerupType.GlassCannon, "Glass Cannon", "Deal 1.5x damage, but your maximum HP is halved (later max HP gains are halved too)", 1),
-            new PowerupDefinition(PowerupType.LastStand, "Last Stand", "While at 1 HP, deal double damage and move 20% faster", 1),
+            new PowerupDefinition(PowerupType.GlassCannon, "Glass Cannon", "Deal 1.5x damage, but your maximum HP is halved (later max HP gains are halved too). Stacks up to 3 times", 3),
+            new PowerupDefinition(PowerupType.LastStand, "Last Stand", "While at or below 25% HP (or at 1 HP), deal 1.5x damage and move 20% faster", 1),
             new PowerupDefinition(PowerupType.Berserker, "Berserker", "+1% damage for every 1% of your HP that is missing", 1),
             new PowerupDefinition(PowerupType.OpeningStrike, "Opening Strike", "Your first hit on an unhurt enemy is always a critical hit (or sets off its element)", 1),
             new PowerupDefinition(PowerupType.Executioner, "Executioner", "+50% damage to enemies below 25% health", 1),
@@ -205,7 +219,8 @@ namespace Slopgame
             new PowerupDefinition(PowerupType.StormChargedOrb, "Storm-Charged Orb", "Hold Inferno Orb's key to charge it; at full charge its blast burns and shocks everything it hits", 1, WeaponType.Staff, AbilityType.Fireball),
             new PowerupDefinition(PowerupType.Frostblink, "Frostblink", "Arcane Blink leaves a Frost Nova where you started", 1, WeaponType.Staff, AbilityType.Blink),
             new PowerupDefinition(PowerupType.Bleed, "Assassin: Bleed", "Backstabs make the target bleed: 10 ticks over 5 seconds, each for 10% of the backstab", 1, WeaponType.Daggers),
-            new PowerupDefinition(PowerupType.Vanish, "Assassin: Vanish", "A kill with Shadowstep hides you from enemies for 1 second", 1, WeaponType.Daggers),
+            // Vanish is retired: its slot stays so later talents keep their numbers.
+            new PowerupDefinition(PowerupType.Vanish, "Assassin: Vanish", "Retired", 1, WeaponType.Daggers, retired: true),
             new PowerupDefinition(PowerupType.Ambush, "Assassin: Ambush", "Your first hit after being hidden deals double damage", 1, WeaponType.Daggers),
             new PowerupDefinition(PowerupType.Poisoner, "Assassin: Poisoner", "Enemies suffering damage over time (burning, bleeding, poisoned) take +1 from your stabs", 1, WeaponType.Daggers),
             new PowerupDefinition(PowerupType.BloodTrail, "Assassin: Blood Trail", "Every 10 critical hits heal 1 HP", 1, WeaponType.Daggers),
@@ -268,7 +283,12 @@ namespace Slopgame
             new PowerupDefinition(PowerupType.Hardened, "Hardened", "Every hit Iron Skin absorbs is also stored as Force", 1, WeaponType.Mutation, AbilityType.IronSkin),
             new PowerupDefinition(PowerupType.Zipline, "Zipline", "Swing Line is ready again at once when its kick kills", 1, WeaponType.Mutation, AbilityType.SwingLine),
             new PowerupDefinition(PowerupType.LowBlow, "Low Blow", "Enemies tripped by Ankle Wrap take a critical hit from every blow until they get up", 1, WeaponType.Mutation, AbilityType.AnkleWrap),
-            new PowerupDefinition(PowerupType.Shackles, "Shackles", "When a bound enemy dies, your chain leaps to the nearest enemy and binds it for the time it had left", 1, WeaponType.Mutation, AbilityType.Bind)
+            new PowerupDefinition(PowerupType.Shackles, "Shackles", "When a bound enemy dies, your chain leaps to the nearest enemy and binds it for the time it had left", 1, WeaponType.Mutation, AbilityType.Bind),
+            new PowerupDefinition(PowerupType.Lodestone, "Lodestone", "Crystals (and your hero's own pickups: souls, coins, scrap and runes) are drawn in from 25% / 50% farther, faster, and picked up from farther away", 2),
+            new PowerupDefinition(PowerupType.SoulBurst, "Reaper: Soul Burst", "Killing an enemy that would leave a soul when it dies also makes it explode, hurting everything around it", 1, WeaponType.Scythe),
+            new PowerupDefinition(PowerupType.SoulHoard, "Reaper: Soul Hoard", "You can hold 25 / 50 / 100 more souls by rank", 3, WeaponType.Scythe),
+            new PowerupDefinition(PowerupType.GrimHarvest, "Grim Harvest", "Reaper's Technique's swings harvest a soul from every enemy they hit", 1, WeaponType.Scythe, AbilityType.ReapersTechnique),
+            new PowerupDefinition(PowerupType.PinnedWounds, "Samurai: Pinned Wounds", "Bleeding you inflict deals 1.5x damage while its victim is immobilized (paralysed, frozen, stunned or rooted)", 1, WeaponType.Katana)
         };
 
         private static readonly Dictionary<PowerupType, PowerupDefinition> byType = BuildLookup();

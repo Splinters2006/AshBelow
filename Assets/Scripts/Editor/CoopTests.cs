@@ -108,10 +108,10 @@ namespace Slopgame.Editor
                 && skeletonBack.Flip == skeleton.Flip && skeletonBack.Color.Equals(skeleton.Color), "Skeleton snapshot did not round-trip.");
 
             var enemy = new EnemySnapshot { Id = 12, Position = new Vector2(20f, 9f), Facing = Vector2.left, Health = 31, Flags = EnemySnapshot.Burning | EnemySnapshot.Charging,
-                MoreFlags = EnemySnapshot.Paralyzed | EnemySnapshot.Cursed };
+                MoreFlags = EnemySnapshot.Paralyzed | EnemySnapshot.Cursed, HoldLeft = 2.5f };
             var enemyBack = RoundTrip(enemy, (m, w) => m.Write(w), EnemySnapshot.Read);
             Require(enemyBack.Id == 12 && enemyBack.Position == enemy.Position && enemyBack.Facing == Vector2.left && enemyBack.Health == 31
-                && enemyBack.Flags == enemy.Flags && enemyBack.MoreFlags == enemy.MoreFlags, "Enemy snapshot did not round-trip.");
+                && enemyBack.Flags == enemy.Flags && enemyBack.MoreFlags == enemy.MoreFlags && Mathf.Abs(enemyBack.HoldLeft - 2.5f) < 0.01f, "Enemy snapshot did not round-trip.");
 
             var damage = new DamageMessage { Floor = 2, Enemy = 5, Kind = CoopDamageKind.Burn, Amount = 3, Ticks = 4, Duration = 1.5f, Knockback = 0.1f, Source = Vector2.one, Color = new Color32(1, 2, 3, 4) };
             var damageBack = RoundTrip(damage, (m, w) => m.Write(w), DamageMessage.Read);

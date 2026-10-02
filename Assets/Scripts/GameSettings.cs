@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Slopgame
@@ -11,11 +12,11 @@ namespace Slopgame
         public const float MinScale = 0.6f, MaxScale = 1f;
         /// <summary>The faintest the in-run HUD can be made; it never fades out entirely.</summary>
         public const float MinOpacity = 0.2f;
-        /// <summary>How long autofire holds a fully charged attack before releasing it.</summary>
-        public const float AutofireDelay = 1f;
-        private const string MenuKey = "ui.menuScale", HudKey = "ui.hudScale", HudOpacityKey = "ui.hudOpacity", AutofireKey = "gameplay.autofire";
+        // The old single autofire switch is kept only as the starting value of every hero's own switch.
+        private const string MenuKey = "ui.menuScale", HudKey = "ui.hudScale", HudOpacityKey = "ui.hudOpacity", AutofireKey = "gameplay.autofire",
+            HeroAutofirePrefix = "gameplay.autofire.";
         private static float? menuScale, hudScale, hudOpacity;
-        private static bool? autofire;
+        private static readonly Dictionary<WeaponType, bool> autofire = new Dictionary<WeaponType, bool>();
 
         /// <summary>Size of the main menu and its pages.</summary>
         public static float MenuScale
@@ -38,16 +39,24 @@ namespace Slopgame
             set => hudOpacity = Save(HudOpacityKey, value, MinOpacity);
         }
 
-        /// <summary>Releases a fully charged attack after <see cref="AutofireDelay"/> and starts charging again while the button is held.</summary>
-        public static bool Autofire
+        /// <summary>
+        /// Autofire, switched on or off for each hero: while the attack button is held, a fully charged attack is released
+        /// the moment it is ready and the next one starts charging straight away.
+        /// </summary>
+        public static bool AutofireFor(WeaponType weapon)
         {
-            get => autofire ??= PlayerPrefs.GetInt(AutofireKey, 0) != 0;
-            set
-            {
-                autofire = value;
-                PlayerPrefs.SetInt(AutofireKey, value ? 1 : 0);
-                PlayerPrefs.Save();
-            }
+            if (autofire.TryGetValue(weapon, out bool on)) return on;
+            // Never set for this hero: start from the old switch every hero used to share.
+            on = PlayerPrefs.GetInt(HeroAutofirePrefix + weapon, PlayerPrefs.GetInt(AutofireKey, 0)) != 0;
+            autofire[weapon] = on;
+            return on;
+        }
+
+        public static void SetAutofire(WeaponType weapon, bool on)
+        {
+            autofire[weapon] = on;
+            PlayerPrefs.SetInt(HeroAutofirePrefix + weapon, on ? 1 : 0);
+            PlayerPrefs.Save();
         }
 
         public static void ResetToDefaults()
@@ -55,7 +64,9 @@ namespace Slopgame
             MenuScale = MaxScale;
             HudScale = MaxScale;
             HudOpacity = 1f;
-            Autofire = false;
+            foreach (var weapon in HeroRoster.Order) SetAutofire(weapon, false);
+            PlayerPrefs.SetInt(AutofireKey, 0);
+            PlayerPrefs.Save();
         }
 
         private static float Load(string key, float min = MinScale) => Mathf.Clamp(PlayerPrefs.GetFloat(key, MaxScale), min, MaxScale);

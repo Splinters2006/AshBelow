@@ -7,9 +7,9 @@ namespace Slopgame
     /// The crystal shop visited before each boss: a warm, lantern-lit room with a hooded merchant behind a counter.
     /// Talking to him opens his wares, paid for in the crystals enemies drop: healing, boons for the guardian's arena
     /// and relics that last the rest of the descent. Each shop stocks a random few of them (in a co-op run every hero
-    /// is shown a stock of their own), and each ware costs half as much again every time it is bought in the same shop.
-    /// Damage upgrade price increases last the whole descent. Haggler
-    /// lowers his prices, and Merchant's Favor lets a hero have him lay out fresh wares.
+    /// is shown a stock of their own), and each ware costs half as much again every time the hero has bought it in this
+    /// descent: prices never reset when a new shop opens. Haggler lowers his prices, and Merchant's Favor lets a hero
+    /// have him lay out fresh wares.
     /// </summary>
     public sealed class CrystalShop : MonoBehaviour
     {
@@ -50,15 +50,14 @@ namespace Slopgame
             new Offer(Ware.QuickfingerGloves, Category.Relic, "Quickfinger Gloves", "+20% attack and charge speed", 50, new Color(1f, 0.62f, 0.3f), PowerupType.AttackSpeed),
             new Offer(Ware.HawkeyeLens, Category.Relic, "Hawkeye Lens", "+10% crit and elemental effect chance", 50, new Color(0.55f, 0.8f, 1f), PowerupType.CriticalHits),
             new Offer(Ware.WardingSigil, Category.Relic, "Warding Sigil", "Block one extra hit on every floor", 55, AbilityCatalog.Ice, PowerupType.Armor),
-            new Offer(Ware.VampireFang, Category.Relic, "Vampire Fang", "Heal 1 HP every few kills (Soul Harvest)", 50, HealColor, PowerupType.LifeSteal),
             new Offer(Ware.PhoenixFeather, Category.Relic, "Phoenix Feather", "10% shorter dodge cooldown", 35, new Color(1f, 0.45f, 0.25f), PowerupType.DodgeRecovery),
             new Offer(Ware.NerveNeedle, Category.Relic, "Nerve Needle", "Killing an immobilized enemy resets your class skill", 45, DemonessAttack.Violet, PowerupType.NerveSnap),
-            new Offer(Ware.PyreUrn, Category.Relic, "Pyre Urn", "Burning enemies explode when they die", 50, new Color(1f, 0.5f, 0.15f), PowerupType.PyreBurst),
+            new Offer(Ware.PyreUrn, Category.Relic, "Pyre Urn", "Burning enemies explode when they die; ranks widen the blast", 50, new Color(1f, 0.5f, 0.15f), PowerupType.PyreBurst),
             new Offer(Ware.KindlingFlint, Category.Relic, "Kindling Flint", "Elemental effects also set enemies burning", 45, new Color(1f, 0.62f, 0.3f), PowerupType.Kindling),
-            new Offer(Ware.ReapersSigil, Category.Relic, "Reaper's Sigil", "5 kills within 1 second reset your class skill", 40, new Color(0.9f, 0.3f, 0.35f), PowerupType.Massacre),
+            new Offer(Ware.ReapersSigil, Category.Relic, "Reaper's Sigil", "3 kills with one attack or skill reset your class skill", 40, new Color(0.9f, 0.3f, 0.35f), PowerupType.Massacre),
             new Offer(Ware.RunnersBand, Category.Relic, "Runner's Band", "2 kills within 1 second reset your dodge", 40, DungeonUi.Teal, PowerupType.Momentum),
             new Offer(Ware.BloodChalice, Category.Relic, "Blood Chalice", "Every kill takes 0.5s off all your cooldowns", 60, HealColor, PowerupType.Bloodrush),
-            new Offer(Ware.StillwaterCharm, Category.Relic, "Stillwater Charm", "Immobilized kills take 0.5s off all cooldowns", 45, AbilityCatalog.Ice, PowerupType.StillHunter),
+            new Offer(Ware.StillwaterCharm, Category.Relic, "Stillwater Charm", "Immobilized kills take 1s off all cooldowns", 45, AbilityCatalog.Ice, PowerupType.StillHunter),
             new Offer(Ware.DowsingRod, Category.Relic, "Dowsing Rod", "50% chance per rank for kills to drop extra crystals", 35, CrystalPouch.CrystalColor, PowerupType.Prospector),
             new Offer(Ware.SilverTongue, Category.Relic, "Silver Tongue", "Shop prices 25% lower per rank", 35, AbilityCatalog.Gold, PowerupType.Haggler),
             new Offer(Ware.MerchantsToken, Category.Relic, "Merchant's Token", "One free reroll of every shop's wares", 25, new Color(0.85f, 0.7f, 1f), PowerupType.MerchantsFavor),
@@ -69,7 +68,6 @@ namespace Slopgame
 
         public const float TalkRange = 1.9f;
         public const int StoneskinWards = 2;
-        private readonly Dictionary<Ware, int> bought = new Dictionary<Ware, int>();
         private readonly List<Offer> stock = new List<Offer>();
         private readonly List<SpriteRenderer> glows = new List<SpriteRenderer>();
         private readonly List<float> glowAlpha = new List<float>();
@@ -93,16 +91,15 @@ namespace Slopgame
 
         public int Cost(Offer offer)
         {
-            int purchases = IsDamageUpgrade(offer.Ware) && run != null && run.Player != null
-                ? run.Player.Crystals.DamagePurchases(offer.Ware) : Bought(offer.Ware);
+            int purchases = Bought(offer.Ware);
             int cost = offer.BaseCost + offer.BaseCost * purchases / 2;
             return run != null && run.Player != null ? Mathf.Max(1, Mathf.RoundToInt(cost * run.Player.Powerups.ShopPriceMultiplier)) : cost;
         }
 
         /// <summary>Merchant's Favor rerolls the hero has left in this shop.</summary>
         public int RerollsLeft => run != null && run.Player != null ? Mathf.Max(0, run.Player.Powerups.ShopRerolls - rerolls) : 0;
-        public int Bought(Ware ware) => bought.TryGetValue(ware, out int count) ? count : 0;
-        private static bool IsDamageUpgrade(Ware ware) => ware == Ware.EmberHone || ware == Ware.Whetstone;
+        /// <summary>How many of a ware the hero has bought in this descent, in any shop (what its price climbs with).</summary>
+        public int Bought(Ware ware) => run != null && run.Player != null && run.Player.Crystals != null ? run.Player.Crystals.Purchases(ware) : 0;
 
         public void Toggle()
         {
@@ -171,8 +168,7 @@ namespace Slopgame
             if (!CanBuy(offer)) return false;
             var player = run.Player;
             player.Crystals.Spend(Cost(offer));
-            bought[offer.Ware] = Bought(offer.Ware) + 1;
-            if (IsDamageUpgrade(offer.Ware)) player.Crystals.RecordDamagePurchase(offer.Ware);
+            player.Crystals.RecordPurchase(offer.Ware);
             // The shop sits on the floor before the guardian's, so boons wait for the next floor.
             int arena = run.Floor + 1;
             var root = run.ProjectileRoot;

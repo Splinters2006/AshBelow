@@ -7,7 +7,8 @@ namespace Slopgame
     /// treads, stomps out shockwaves up close, and shells everything but the ground right around itself, so the
     /// party has to get under its guns (where its hull swipe waits). Between volleys Bastion stamps the ground: an
     /// earthquake cracks open a band of the arena (two when enraged) and seals it off for a few seconds, squeezing the
-    /// heroes into what is left while the guns keep firing.
+    /// heroes into what is left while the guns keep firing. Its attacks that lock ground away (earthquakes, cluster mines
+    /// and the siege perimeter) never overlap, and the whole arena stays open for a while between them.
     /// </summary>
     public sealed class SiegeEngineBoss : NeonBossBehaviour
     {
@@ -46,16 +47,29 @@ namespace Slopgame
         /// <summary>How long a sealed band stays deadly, in real seconds (longer while enraged).</summary>
         public const float QuakeHold = 4f, EnragedQuakeHold = 5f;
         /// <summary>Attack-clock seconds from one quake to the next, and the first one's delay into the fight.</summary>
-        public const float QuakeInterval = 10f, FirstQuake = 5f;
-        /// <summary>Real seconds the whole arena stays open between one quake's end and the next quake's warning.</summary>
-        public const float QuakeGap = 1.5f;
+        public const float QuakeInterval = 16f, FirstQuake = 8f;
+        /// <summary>
+        /// Real seconds the whole arena stays open between one area lockdown ending (a quake, cluster mines or the siege
+        /// perimeter) and the next one starting.
+        /// </summary>
+        public const float QuakeGap = 4f;
+        /// <summary>The area-denial attacks among its volleys: cluster mines and the siege perimeter.</summary>
+        private const int MinesAttack = 1, PerimeterAttack = 5;
+        /// <summary>Cluster mines' warning and how long they burn, in real seconds.</summary>
+        private const float MinesTelegraph = 1.3f, MinesDuration = 2.5f;
         /// <summary>
         /// Co-op guests get four bits of state: attacks use 0-6 and the court 14-15, so an attack state plus a quake
         /// warning goes out as this offset plus the state (7-13).
         /// </summary>
         private const byte QuakeOffset = 7;
-        private float nextQuake, quakeWarningUntil, quakeClearAt;
+        private float nextQuake, quakeWarningUntil, quakeClearAt, lockdownClearAt;
         private int quakes;
+
+        /// <summary>True until the last area lockdown (quake, mines or perimeter) has ended and the arena has stayed open for <see cref="QuakeGap"/>.</summary>
+        private bool AreaLocked => Time.time < Mathf.Max(quakeClearAt, lockdownClearAt) + QuakeGap;
+
+        /// <summary>Mines and the perimeter wait while a quake (or another lockdown) holds ground, and for the gap after it.</summary>
+        protected override bool CanUseAttack(int index) => (index != MinesAttack && index != PerimeterAttack) || !AreaLocked;
 
         public bool IsQuakeWarning => Time.time < quakeWarningUntil;
         public override byte NetState => IsQuakeWarning && state < QuakeOffset ? (byte)(state + QuakeOffset) : state;
@@ -70,8 +84,8 @@ namespace Slopgame
         public override void HostTick(Vector2 toHero)
         {
             base.HostTick(toHero);
-            // The next quake waits for the attack clock and for the last sealed band to reopen, so bands never stack up.
-            if (Enemy.ActionTime < nextQuake || Time.time < quakeClearAt + QuakeGap || !Run.IsPlaying) return;
+            // The next quake waits for the attack clock and for every lockdown to have lifted (and the gap after it), so they never stack up.
+            if (Enemy.ActionTime < nextQuake || AreaLocked || !Run.IsPlaying) return;
             Quake();
             nextQuake = Enemy.ActionTime + QuakeInterval;
         }
@@ -130,11 +144,12 @@ namespace Slopgame
                         for (int i = 0; i < (IsEnraged ? 5 : 4); i++)
                             Hazard(HazardShape.Pool, hero + aim * (i - 1) * MissileSpacing, aim, MissileRadius, 0f, 1f + i * 0.4f, 0.6f);
                     return 3.5f;
-                case 1:
+                case MinesAttack:
                 {
                     Vector2 target = Run.NearestHero(center);
                     for (int i = 0; i < 6; i++)
-                        Hazard(HazardShape.Pool, target + FlameMesh.Polar(i * Mathf.PI / 3f, 3.5f), aim, IsEnraged ? 1.5f : 1.2f, 0f, 1.3f, 2.5f);
+                        Hazard(HazardShape.Pool, target + FlameMesh.Polar(i * Mathf.PI / 3f, 3.5f), aim, IsEnraged ? 1.5f : 1.2f, 0f, MinesTelegraph, MinesDuration);
+                    lockdownClearAt = Mathf.Max(lockdownClearAt, Time.time + MinesTelegraph + MinesDuration);
                     return 4.2f;
                 }
                 case 2:
@@ -156,6 +171,7 @@ namespace Slopgame
                 default:
                     // Shells rain on everything but a circle around the tank itself.
                     Hazard(HazardShape.Inferno, center, Vector2.up, PerimeterRadius, 0f, PerimeterTelegraph, PerimeterDuration);
+                    lockdownClearAt = Mathf.Max(lockdownClearAt, Time.time + PerimeterTelegraph + PerimeterDuration);
                     return PerimeterTelegraph + PerimeterDuration + 0.3f;
             }
         }

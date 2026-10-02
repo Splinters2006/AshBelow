@@ -26,6 +26,8 @@ namespace Slopgame
         private SpriteRenderer glow;
         private TrailRenderer trail;
         private readonly HashSet<DungeonEnemy> struck = new HashSet<DungeonEnemy>();
+        // The shot's attack: every enemy it bounces through counts together for Massacre.
+        private int attack;
 
         public static void Fire(DungeonPlayer player, Vector2 aim, int damage, int bonusPerBounce)
         {
@@ -34,6 +36,7 @@ namespace Slopgame
             arrow.player = player;
             arrow.damage = damage;
             arrow.bonusPerBounce = bonusPerBounce;
+            arrow.attack = player.Powerups.ActiveAttack;
             CoopFx.Ricochet(player.Run, player.transform.position, aim, infusion);
         }
 
@@ -87,7 +90,7 @@ namespace Slopgame
                 {
                     if (enemy == null || enemy.Health <= 0 || struck.Contains(enemy) || Vector2.Distance(next, enemy.transform.position) > enemy.HitRadius) continue;
                     struck.Add(enemy);
-                    if (!ghost) CombatDamage.Apply(player, enemy, damage + bonusPerBounce * ricochets, DamageElement.Physical, next - direction, 0.8f, infusion);
+                    if (!ghost) using (player.Powerups.ResumeAttack(attack)) CombatDamage.Apply(player, enemy, damage + bonusPerBounce * ricochets, DamageElement.Physical, next - direction, 0.8f, infusion);
                     if (ricochets >= MaxRicochets || !Ricochet(next)) { Spend(next); return; }
                     break;
                 }

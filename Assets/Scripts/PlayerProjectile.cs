@@ -20,6 +20,8 @@ namespace Slopgame
         public bool FullyCharged { get; set; }
         private bool ghost;
         private float travelled;
+        // The throw or shot this arrow (or coin) belongs to: everything one volley kills counts together for Massacre.
+        private int attack;
 
         /// <summary>The local hero's shot. The Archer's arrows take the element loaded in her Elemental Quiver.</summary>
         public static PlayerProjectile Spawn(DungeonRun run, Vector2 position, Vector2 direction, int damage, float range = MaxRange,
@@ -30,6 +32,7 @@ namespace Slopgame
             if (style == ProjectileStyle.Coin) CoopFx.Coin(run, position, direction, range);
             else CoopFx.Arrow(run, position, direction, range, infusion);
             var shot = Create(run, position, direction, damage, range, style, infusion);
+            if (run.Player != null && run.Player.Powerups != null) shot.attack = run.Player.Powerups.ActiveAttack;
             return shot;
         }
 
@@ -144,7 +147,7 @@ namespace Slopgame
             // Heads or Tails: every coin hit is a flip for double or half.
             if (IsCoin && player.Powerups.Count(PowerupType.HeadsOrTails) > 0) dealt = Random.value < 0.5f ? dealt * 2 : Mathf.Max(1, dealt / 2);
             bool pointBlank = arrow && FullyCharged && travelled <= PointBlankRange && player.Powerups.Count(PowerupType.PointBlank) > 0;
-            CombatDamage.Apply(player, enemy, dealt, DamageElement.Physical, at - Direction, pointBlank ? 3f : 1f, infusion);
+            using (player.Powerups.ResumeAttack(attack)) CombatDamage.Apply(player, enemy, dealt, DamageElement.Physical, at - Direction, pointBlank ? 3f : 1f, infusion);
             if (enemy == null || enemy.Health <= 0) return;
             if (pointBlank) enemy.Stun(0.5f);
             if (arrow && FullyCharged && player.Powerups.Count(PowerupType.HuntersMark) > 0) enemy.Mark(HuntersMarkTime);

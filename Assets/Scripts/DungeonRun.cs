@@ -67,8 +67,11 @@ namespace Slopgame
         private DungeonHud hud;
         public FloorMinimap Minimap { get; private set; }
         public bool IsPointerOverHud => hud != null && hud.BlocksPointer(PlayerInput.CursorPosition);
-        /// <summary>True while the HUD's settings page is open: the hero ignores the keys (they may be getting rebound).</summary>
-        public bool HudCapturesInput => hud != null && hud.SettingsOpen;
+        /// <summary>
+        /// True while the HUD's settings page (the keys may be getting rebound) or its leave-the-descent confirmation is
+        /// open: the hero ignores the keys.
+        /// </summary>
+        public bool HudCapturesInput => hud != null && hud.CapturesInput;
         private Transform level;
         private Camera view;
         private Vector2 exit;
@@ -123,7 +126,12 @@ namespace Slopgame
             Minimap = gameObject.AddComponent<FloorMinimap>();
             Minimap.Run = this;
             characters = Resources.LoadAll<CharacterDefinition>("Characters");
-            System.Array.Sort(characters, (a, b) => string.CompareOrdinal(a.DisplayName, b.DisplayName));
+            // Every hero list follows the roster's order (ties, such as a hero missing from it, fall back to the name).
+            System.Array.Sort(characters, (a, b) =>
+            {
+                int order = HeroRoster.IndexOf(a.Weapon).CompareTo(HeroRoster.IndexOf(b.Weapon));
+                return order != 0 ? order : string.CompareOrdinal(a.DisplayName, b.DisplayName);
+            });
             if (characters.Length == 0)
             {
                 Debug.LogError("No character assets found in Resources/Characters.");

@@ -342,10 +342,15 @@ namespace Slopgame
         /// <summary>How far a bleeding enemy's death bursts: 2.5 units, wider the more maximum health it had.</summary>
         public static float BloomRadiusFor(int maxHealth) => Mathf.Min(BloomMaxRadius, BloomRadius + Mathf.Max(0, maxHealth) * BloomRadiusPerHealth);
 
-        /// <summary>An enemy died on this machine: with Crimson Bloom, one that died bleeding bursts with the bleed damage it had left.</summary>
-        public void OnEnemyDied(DungeonEnemy enemy)
+        /// <summary>
+        /// An enemy died on this machine: with Crimson Bloom, one that died bleeding bursts with the bleed damage it had
+        /// left; with Trail of Blood, killing a bleeding enemy (<paramref name="localKill"/>) adds a stack of damage.
+        /// </summary>
+        public void OnEnemyDied(DungeonEnemy enemy, bool localKill = false)
         {
-            if (Player == null || Player.Permanent == null || !Player.Permanent.HasPassive(WeaponType.Katana)) return;
+            if (Player == null || Player.Permanent == null) return;
+            if (localKill && enemy.IsBleeding && Player.Health > 0 && Player.Permanent.HasSecondPassive(WeaponType.Katana)) AddTrailStack(enemy.transform.position);
+            if (!Player.Permanent.HasPassive(WeaponType.Katana)) return;
             int damage = Mathf.CeilToInt(enemy.BleedRemaining - 0.0001f);
             if (damage <= 0) return;
             StartCoroutine(Bloom(enemy.transform.position, BloomRadiusFor(enemy.PeakHealth), damage));
@@ -363,6 +368,30 @@ namespace Slopgame
             foreach (var enemy in run.Enemies.ToArray())
                 if (enemy != null && enemy.Health > 0 && Vector2.Distance(center, enemy.transform.position) <= radius + enemy.HitRadius)
                     enemy.Hit(damage, center, 0.6f);
+        }
+
+        // ---------------------------------------------------------------- Trail of Blood (second passive)
+
+        public const float TrailOfBloodTime = 5f;
+        // When each stack runs out; a kill adds a stack of its own and never refreshes the others.
+        private readonly List<float> trail = new List<float>();
+
+        /// <summary>Trail of Blood: +1 base damage for every stack still running.</summary>
+        public int TrailOfBloodDamage
+        {
+            get
+            {
+                trail.RemoveAll(until => Time.time >= until);
+                return trail.Count;
+            }
+        }
+
+        private void AddTrailStack(Vector2 at)
+        {
+            trail.Add(Time.time + TrailOfBloodTime);
+            var root = Player.Run.ProjectileRoot;
+            HeroVfx.Sparks(root, at, Blood, 6, 3f, 0.3f, (Vector2)transform.position - at, 40f, 0.8f);
+            HeroVfx.Pulse(transform, transform.position, 0.7f, FlameMesh.Alpha(Blood, 0.6f), 0.25f);
         }
 
         // ---------------------------------------------------------------- previews

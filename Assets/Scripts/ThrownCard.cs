@@ -20,6 +20,10 @@ namespace Slopgame
         private int damage;
         private float remaining = Range, age, spinSpeed;
         private bool ghost;
+        // A card from the Gambler's deck (Card Shark) only cuts: its suit is for show.
+        private bool plain;
+        // The throw this card belongs to (Massacre counts its kills together).
+        private int attack;
         private Transform face;
         private SpriteRenderer glow;
 
@@ -92,6 +96,7 @@ namespace Slopgame
                 var card = Create(run, origin, direction, suit);
                 card.player = player;
                 card.damage = damage;
+                card.attack = player.Powerups.ActiveAttack;
                 CoopFx.Card(run, origin, direction, (int)suit);
             }
             // A flick of the wrist: the fan of cards snaps out in a spray of glitter.
@@ -99,6 +104,19 @@ namespace Slopgame
         }
 
         public static void SpawnGhost(DungeonRun run, Vector2 origin, Vector2 direction, Suit suit) => Create(run, origin, direction, suit).ghost = true;
+
+        /// <summary>Card Shark: one card from the Gambler's deck, thrown with a coin. It deals damage only (no suit effect).</summary>
+        public static void Deal(DungeonPlayer player, Vector2 origin, Vector2 direction, int damage)
+        {
+            var run = player.Run;
+            var suit = (Suit)Random.Range(0, 4);
+            var card = Create(run, origin, direction, suit);
+            card.player = player;
+            card.damage = damage;
+            card.plain = true;
+            card.attack = player.Powerups.ActiveAttack;
+            CoopFx.Card(run, origin, direction, (int)suit);
+        }
 
         private static ThrownCard Create(DungeonRun run, Vector2 origin, Vector2 direction, Suit suit)
         {
@@ -172,8 +190,8 @@ namespace Slopgame
 
         private void Strike(DungeonEnemy enemy, Vector2 at)
         {
-            CombatDamage.Apply(player, enemy, damage, DamageElement.Physical, at - direction, 0.6f);
-            if (enemy == null || enemy.Health <= 0) return;
+            using (player.Powerups.ResumeAttack(attack)) CombatDamage.Apply(player, enemy, damage, DamageElement.Physical, at - direction, 0.6f);
+            if (plain || enemy == null || enemy.Health <= 0) return;
             switch (suit)
             {
                 case Suit.Hearts: enemy.Burn(CombatDamage.BurnTicks, CombatDamage.BurnTickDamage(damage)); break;

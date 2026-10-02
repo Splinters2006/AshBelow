@@ -47,6 +47,23 @@ namespace Slopgame
         private int coinsThrown;
         private float nextInterest;
 
+        /// <summary>Card Shark (his second passive): cards left in the deck bought from his purse.</summary>
+        public int Cards { get; private set; }
+        public void AddCards(int amount) { if (amount > 0) Cards = (int)System.Math.Min(int.MaxValue, (long)Cards + amount); }
+        /// <summary>A card thrown alongside a coin deals this share of the coin's damage (never below 1).</summary>
+        public const float CardDamageShare = 0.5f;
+        /// <summary>How far the card's flight is turned off the coin's, so the two never hide each other.</summary>
+        public const float CardOffset = 6f;
+
+        /// <summary>Every coin he throws takes a card from the deck along with it, for half its damage.</summary>
+        private void ThrowCard(Vector2 direction, int coinDamage)
+        {
+            if (Cards <= 0) return;
+            Cards--;
+            ThrownCard.Deal(Player, transform.position, Quaternion.Euler(0, 0, Random.value < 0.5f ? CardOffset : -CardOffset) * direction,
+                Mathf.Max(1, Mathf.FloorToInt(coinDamage * CardDamageShare)));
+        }
+
         // Compound Interest: the purse grows by a tenth every half minute of play.
         private void Update()
         {
@@ -82,6 +99,7 @@ namespace Slopgame
                 HeroVfx.Sparks(Player.Run.ProjectileRoot, transform.position, Gold, 16, 4f, 0.35f, aim, 60f, 1.3f);
             }
             PlayerProjectile.Spawn(Player.Run, transform.position, aim.normalized, damage, ThrowRange, ProjectileStyle.Coin);
+            ThrowCard(aim.normalized, damage);
             readyAt = Time.time + 0.4f * Player.Powerups.AttackIntervalMultiplier;
             return true;
         }
@@ -95,7 +113,9 @@ namespace Slopgame
             for (int i = 0; i < count; i++)
             {
                 float angle = count == 1 ? 0f : -VolleyCone * 0.5f + VolleyCone * i / (count - 1);
-                PlayerProjectile.Spawn(Player.Run, transform.position, Quaternion.Euler(0, 0, angle) * aim, Player.Damage, VolleyReach, ProjectileStyle.Coin);
+                Vector2 direction = Quaternion.Euler(0, 0, angle) * aim;
+                PlayerProjectile.Spawn(Player.Run, transform.position, direction, Player.Damage, VolleyReach, ProjectileStyle.Coin);
+                ThrowCard(direction, Player.Damage);
             }
             HeroVfx.Sparks(Player.Run.ProjectileRoot, transform.position, Gold, 10, 3.5f, 0.3f, aim, VolleyCone);
             volleyReadyAt = Time.time + VolleyCooldown * Player.Powerups.SkillCooldownMultiplier;

@@ -19,8 +19,24 @@ namespace Slopgame
         public int BaseDamage { get; private set; } = 1;
         public int Damage => Mathf.Max(1, Mathf.RoundToInt((BaseDamage * (ClassWeapon == WeaponType.Scythe ? ReaperAttack.BaseDamageMultiplier : 1f) + (Blessing != null ? Blessing.BonusDamage : 0)
             + (Mechanic != null ? Mechanic.BonusDamage : 0) + (Buffs != null ? Buffs.JackpotDamage : 0) + (Crystals != null ? Crystals.BonusDamage : 0)
-            + (Powerups != null ? Powerups.BasicAttackBonus : 0) + WarBanner.BonusAt(transform.position))
+            + (Powerups != null ? Powerups.BasicAttackBonus : 0) + WarBanner.BonusAt(transform.position) + SecondPassiveDamage)
             * (Buffs != null ? Buffs.DamageMultiplier : 1f) * (Powerups != null ? Powerups.DamageMultiplier(this) : 1f)));
+
+        /// <summary>
+        /// Flat damage from second passives: the Knight's Bulwark (+1 for every HP and ward he has) and the Samurai's
+        /// Trail of Blood (+1 for every stack still running).
+        /// </summary>
+        public int SecondPassiveDamage
+        {
+            get
+            {
+                if (Permanent == null || !Permanent.SecondPassiveUnlocked) return 0;
+                if (ClassWeapon == WeaponType.Sword && Permanent.HasSecondPassive(WeaponType.Sword))
+                    return Mathf.Max(0, Health) + (Powerups != null ? Powerups.ArmorCharges : 0);
+                if (Weapon is SamuraiAttack samurai && Permanent.HasSecondPassive(WeaponType.Katana)) return samurai.TrailOfBloodDamage;
+                return 0;
+            }
+        }
         /// <summary>The class mechanic on R, or null if this hero has not bought it.</summary>
         public ClassMechanic Mechanic { get; private set; }
         /// <summary>Shield Taunt (and the Specimen's Apex Mutation roar): enemies go for this hero first.</summary>
@@ -53,6 +69,8 @@ namespace Slopgame
         private int igniteTicks;
         private float nextIgniteAt, nextIgniteFlame;
         public bool IsInvulnerable => Time.time < invulnerableUntil || IsRolling;
+        /// <summary>After Shield Taunt shrugs a blow off, the next one is ignored for this long.</summary>
+        public const float TauntShrugGrace = 0.35f;
         /// <summary>Shadow Veil: enemies cannot see this hero, so they neither chase nor turn toward them.</summary>
         /// <summary>Unscaled time the hero last fell, so the HUD can let the death animation play first.</summary>
         public float FellAt { get; private set; } = float.NegativeInfinity;
@@ -246,15 +264,21 @@ namespace Slopgame
             // (Venom Vial, Judgment, Shadowstep, Blink...) stop at the cursor when it is within their range.
             Vector2 toCursor = aim.sqrMagnitude > 0.001f ? aim : AimDirection;
             if (holdingShield) { Charge.Cancel(); return; }
-            bool usedAbility = PlayerInput.ActiveQ && Abilities.TryUse(0, toCursor);
-            if (!usedAbility && PlayerInput.ActiveE) usedAbility = Abilities.TryUse(1, toCursor);
-            if (!usedAbility && Mechanic != null && PlayerInput.Mechanic) usedAbility = Mechanic.TryActivate(toCursor);
+            // Each cast is its own attack (Massacre counts the kills it makes together).
+            bool usedAbility = PlayerInput.ActiveQ && AsAttack(() => Abilities.TryUse(0, toCursor));
+            if (!usedAbility && PlayerInput.ActiveE) usedAbility = AsAttack(() => Abilities.TryUse(1, toCursor));
+            if (!usedAbility && Mechanic != null && PlayerInput.Mechanic) usedAbility = AsAttack(() => Mechanic.TryActivate(toCursor));
             if (IsBusy) { Charge.Cancel(); return; }
             if (!usedAbility && !Run.IsPointerOverHud && PlayerInput.HeavyAttack && !IsRolling && Powerups.BasicAttack(() => Weapon.TryHeavyAttack(toCursor)))
                 Breakable.SmashInArc(this, toCursor, Breakable.HeavyReach);
             // Brawler mid-roll: the charge is left alone, then keeps building (or fires, if released) once the roll ends.
             if (IsRolling && Weapon is BrawlerAttack) return;
             Charge.Tick(PlayerInput.Attack, !Run.IsPointerOverHud && !usedAbility && !IsRolling && !Weapon.IsHeavyAttacking && !PlayerInput.HeavyAttack);
+        }
+
+        private bool AsAttack(System.Func<bool> act)
+        {
+            using (Powerups.BeginAttack()) return act();
         }
 
         /// <summary>
@@ -423,6 +447,13 @@ namespace Slopgame
             if (Run.IsPlaying && IsInvulnerable && Health > 0) Deflected?.Invoke();
             if (!Run.IsPlaying || IsInvulnerable || Health <= 0) return false;
             if (DebugMode.Enabled) { Health = MaxHealth; return false; }
+            // Shield Taunt: every blow glances off the raging Knight (only the arena's own killing blows, such as
+            // Annihilation, still get through). A short grace keeps lingering hazards from counting every frame.
+            if (!lethal && Mechanic is ShieldTaunt taunt && taunt.TryShrugOff())
+            {
+                invulnerableUntil = Mathf.Max(invulnerableUntil, Time.time + TauntShrugGrace);
+                return false;
+            }
             // Insurance: while the policy holds, the Gambler pays in coins instead of blood.
             bool claiming = Time.time < insuredUntil && Weapon is GamblerAttack;
             bool insured = claiming && ((GamblerAttack)Weapon).Spend(InsurancePremium);

@@ -8,6 +8,9 @@ namespace Slopgame
     public sealed partial class DemonessAttack
     {
         public const float WingDashDistance = 4.5f, WingDashParalysis = 2f, SiphonRadius = 5f, SiphonTime = 5f, SnapRadius = 4f;
+
+        /// <summary>Nightmare Snap's damage: rank × seconds of hold left × her damage, rounded (never below 1).</summary>
+        public static int SnapDamage(int damage, int rank, float secondsLeft) => Mathf.Max(1, Mathf.RoundToInt(damage * Mathf.Max(1, rank) * Mathf.Max(0f, secondsLeft)));
         /// <summary>How much remaining hold makes Nightmare Snap's tether flare at full width.</summary>
         private const float SnapTetherFullAt = 1f;
         private readonly Dictionary<DungeonEnemy, int> torment = new Dictionary<DungeonEnemy, int>();
@@ -46,6 +49,7 @@ namespace Slopgame
             float flight = distance / Speed + 0.1f;
             WingFlapVfx.Play(run.ProjectileRoot, transform, flight, aim);
             CoopFx.Wings(run, flight, aim);
+            int attack = Player.Powerups.ActiveAttack;
             for (float travelled = 0f; travelled < distance; )
             {
                 if (!run.IsPlaying || Player.Health <= 0) yield break;
@@ -58,8 +62,8 @@ namespace Slopgame
                 {
                     if (enemy == null || enemy.Health <= 0 || struck.Contains(enemy) || Vector2.Distance(transform.position, enemy.transform.position) > enemy.HitRadius + 0.7f) continue;
                     struck.Add(enemy);
-                    CombatDamage.Apply(Player, enemy, Player.Damage, DamageElement.Demonic, transform.position, 0.3f);
-                    ParalyzeCounted(enemy, WingDashParalysis);
+                    using (Player.Powerups.ResumeAttack(attack))
+                        ParalysingBlow(enemy, Player.Damage, DamageElement.Demonic, transform.position, 0.3f, WingDashParalysis);
                 }
                 if (step < 0.01f) break;
                 yield return null;
@@ -93,7 +97,8 @@ namespace Slopgame
 
         /// <summary>
         /// Nightmare Snap (Imp Summon, reworked): every hold on every enemy nearby (paralysis, freeze, stun or root) snaps at
-        /// once; each takes demonic damage that grows with how long it still had to be held. Nothing happens if no one nearby is immobilized.
+        /// once, walls or not; each takes demonic damage of her damage times the seconds it still had to be held times the
+        /// ability's rank. Nothing happens if no one nearby is immobilized.
         /// </summary>
         private bool NightmareSnap(int rank)
         {
@@ -110,7 +115,7 @@ namespace Slopgame
             foreach (var enemy in victims)
             {
                 float remaining = enemy.ConsumeHolds();
-                int damage = Player.Damage * (2 + rank - 1 + Mathf.CeilToInt(remaining * 3f));
+                int damage = SnapDamage(Player.Damage, rank, remaining);
                 // Each victim's shackle snaps; the longer it had left to be held, the wider the nightmare's eye.
                 float strength = remaining / SnapTetherFullAt;
                 NightmareSnapVfx.Tether(run.ProjectileRoot, at, enemy.transform.position, strength);

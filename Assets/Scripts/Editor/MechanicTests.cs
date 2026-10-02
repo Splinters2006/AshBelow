@@ -374,6 +374,8 @@ namespace Slopgame.Editor
             var burning = enemies[1];
             var plain = enemies[2];
             Require(shield != null && frozen.IsHeld && burning.IsBurning && !plain.IsHeld && !plain.IsBurning, "Universal boon test set-up is wrong.");
+            // Each kill below is its own attack, so Massacre (three kills with one attack) only fires where it is tested.
+            void Kill(DungeonEnemy enemy) { using (powers.BeginAttack()) powers.OnKill(player, enemy); }
 
             // Any hero can find them as room rewards, and the crystal merchant sells each one as a relic.
             foreach (var type in UniversalBoons)
@@ -387,42 +389,45 @@ namespace Slopgame.Editor
             // Momentum: the second kill within a second resets the dodge (kills 1-2 of the streak).
             powers.Add(PowerupType.Momentum);
             RollReady.SetValue(player, Time.time + DungeonPlayer.RollCooldown);
-            powers.OnKill(player, plain);
+            Kill(plain);
             Require(player.DodgeCooldownRemaining > 1f, "Momentum reset the dodge after a single kill.");
-            powers.OnKill(player, plain);
+            Kill(plain);
             Require(player.DodgeCooldownRemaining == 0f, "Momentum did not reset the dodge after two quick kills.");
 
-            // Massacre: the fifth kill within a second resets the class skill (kills 3-5).
+            // Massacre: three kills with one attack reset the class skill; kills split between attacks do not.
             powers.Add(PowerupType.Massacre);
             Require(shield.Raise(aim) && player.Weapon.HeavyCooldownRemaining > 0f, "Could not raise the shield for Massacre.");
-            powers.OnKill(player, plain);
-            powers.OnKill(player, plain);
-            Require(player.Weapon.HeavyCooldownRemaining > 0f, "Massacre reset the class skill before the fifth kill.");
-            powers.OnKill(player, plain);
-            Require(player.Weapon.HeavyCooldownRemaining == 0f, "Massacre did not reset the class skill on the fifth quick kill.");
+            using (powers.BeginAttack()) { powers.OnKill(player, plain); powers.OnKill(player, plain); }
+            using (powers.BeginAttack()) powers.OnKill(player, plain);
+            Require(player.Weapon.HeavyCooldownRemaining > 0f, "Massacre reset the class skill on kills from different attacks.");
+            using (powers.BeginAttack()) { powers.OnKill(player, plain); powers.OnKill(player, plain); powers.OnKill(player, plain); }
+            Require(player.Weapon.HeavyCooldownRemaining == 0f, "Massacre did not reset the class skill on three kills with one attack.");
 
             // Nerve Snap: killing a frozen or paralysed enemy resets the class skill; an ordinary kill does not.
             powers.Add(PowerupType.NerveSnap);
             Require(shield.Raise(aim), "Could not raise the shield for Nerve Snap.");
-            powers.OnKill(player, plain);
+            Kill(plain);
             Require(player.Weapon.HeavyCooldownRemaining > 0f, "Nerve Snap reset the class skill on an ordinary kill.");
-            powers.OnKill(player, frozen);
+            Kill(frozen);
             Require(player.Weapon.HeavyCooldownRemaining == 0f, "Nerve Snap did not reset the class skill on a frozen kill.");
 
-            // Still Hunter: a frozen or paralysed kill takes 0.5 s off every cooldown. Bloodrush: every kill does, and they stack.
+            // Still Hunter: a frozen or paralysed kill takes 1 s off every cooldown. Bloodrush: every kill takes 0.5 s, and they stack.
             powers.Add(PowerupType.StillHunter);
             RollReady.SetValue(player, Time.time + DungeonPlayer.RollCooldown);
-            powers.OnKill(player, plain);
+            Kill(plain);
             Near(player.DodgeCooldownRemaining, DungeonPlayer.RollCooldown, "Still Hunter cut cooldowns on an ordinary kill.");
-            powers.OnKill(player, frozen);
-            Near(player.DodgeCooldownRemaining, DungeonPlayer.RollCooldown - 0.5f, "Still Hunter did not take 0.5 s off the dodge.");
+            Kill(frozen);
+            Near(player.DodgeCooldownRemaining, DungeonPlayer.RollCooldown - PlayerPowerups.StillHunterCut, "Still Hunter did not take 1 s off the dodge.");
             powers.Add(PowerupType.Bloodrush);
-            powers.OnKill(player, plain);
-            Near(player.DodgeCooldownRemaining, DungeonPlayer.RollCooldown - 1f, "Bloodrush did not take 0.5 s off the dodge.");
+            RollReady.SetValue(player, Time.time + DungeonPlayer.RollCooldown);
+            Kill(plain);
+            Near(player.DodgeCooldownRemaining, DungeonPlayer.RollCooldown - 0.5f, "Bloodrush did not take 0.5 s off the dodge.");
             Require(shield.Raise(aim), "Could not raise the shield for Bloodrush.");
             float skill = player.Weapon.HeavyCooldownRemaining;
-            powers.OnKill(player, plain);
+            Kill(plain);
             Near(player.Weapon.HeavyCooldownRemaining, skill - 0.5f, "Bloodrush did not shorten the class skill.");
+            // 0.4 s of dodge left: one more half-second cut must finish it without going below zero.
+            Kill(plain);
             Require(player.DodgeCooldownRemaining == 0f, "A cooldown cut left the dodge below zero or did not finish it.");
 
             // Kindling: a freeze (or shock) sets the enemy burning as well.
@@ -433,7 +438,7 @@ namespace Slopgame.Editor
             // Pyre Burst: a burning enemy bursts when it dies, hurting the enemy beside it.
             powers.Add(PowerupType.PyreBurst);
             int before = frozen.Health;
-            powers.OnKill(player, burning);
+            Kill(burning);
             Require(frozen.Health < before, "Pyre Burst did not hurt the enemy next to the burning one.");
 
             // Prospector (always at rank 2), Haggler (25% / 50% off) and Merchant's Favor (one reroll).

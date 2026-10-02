@@ -12,7 +12,22 @@ namespace Slopgame
         private readonly SettingsMenu settingsMenu = new SettingsMenu();
         private bool showSettings, pausedForSettings;
         public bool SettingsOpen => showSettings;
+        /// <summary>True while the settings page or the leave-the-descent confirmation is up: the hero ignores the keys.</summary>
+        public bool CapturesInput => showSettings || confirmingMenu;
+        // Going back to the main menu (or leaving the party) mid-descent asks first; a solo descent waits while it does.
+        private bool confirmingMenu, pausedForConfirm;
         private static readonly Rect CogRect = new Rect(1216, 24, 40, 40);
+        // Each group of the HUD over the floor is pinned to its own edge of the screen and pushed out toward it, so
+        // the middle of the screen stays clear (see DungeonUi.AnchorMatrix).
+        private static readonly Vector2 TopLeftNudge = new Vector2(-12f, -12f), TopNudge = new Vector2(0f, -12f),
+            TopRightNudge = new Vector2(12f, -12f), BottomNudge = new Vector2(0f, 14f);
+        private static void Pin(Vector2 anchor, Vector2 nudge = default) => DungeonUi.Anchor(GameSettings.HudScale, anchor, nudge);
+        private static void PinTopLeft() => Pin(DungeonUi.TopLeft, TopLeftNudge);
+        private static void PinTop() => Pin(DungeonUi.TopCenter, TopNudge);
+        private static void PinTopRight() => Pin(DungeonUi.TopRight, TopRightNudge);
+        private static void PinBottom() => Pin(DungeonUi.BottomCenter, BottomNudge);
+        private static void PinCenter() => Pin(DungeonUi.Center);
+        private static readonly Rect CornerButtonsRect = new Rect(1020, 24, 236, 40), TalentsRect = new Rect(922, 82, 334, 470);
         private Vector2 talentScroll, abilityScroll;
         // Co-op restart asks for a second click so a stray press does not throw away the party's run.
         private float restartConfirmUntil;
@@ -24,8 +39,12 @@ namespace Slopgame
         private AbilityType pendingAbility = AbilityType.None;
         private static readonly Rect RestartRect = new Rect(896, 24, 112, 40);
         private static readonly Rect PurseRect = new Rect(900, 262, 356, 260);
-        /// <summary>The purse panel, taller when it holds the safe.</summary>
-        private static Rect PurseArea(GamblerPurse purse) => purse.HasSafe ? new Rect(PurseRect.x, PurseRect.y, PurseRect.width, PurseRect.height + 64) : PurseRect;
+        /// <summary>The purse panel, taller when it holds the safe or sells more wares (Card Shark's deck).</summary>
+        private static Rect PurseArea(GamblerPurse purse)
+            => new Rect(PurseRect.x, PurseRect.y, PurseRect.width, PurseRect.height + (purse.HasSafe ? 64 : 0)
+                + 58 * Mathf.Max(0, purse.OnSale.Count - BasePurseWares));
+        /// <summary>How many wares the purse panel's base height fits.</summary>
+        private const int BasePurseWares = 3;
         private static readonly Rect ShopRect = new Rect(836, 84, 420, 476);
         private bool ShopOpen => Run.Shop != null && Run.Shop.IsOpen;
         /// <summary>The run just ended with the hero's fall still playing: the game-over screen waits for it.</summary>
@@ -35,10 +54,11 @@ namespace Slopgame
 
         public bool BlocksPointer(Vector2 screenPosition)
         {
-            Vector2 point = DungeonUi.ScreenToCanvas(screenPosition, GameSettings.HudScale);
-            return !Run.IsPlaying || showSettings || new Rect(1020, 24, 236, 40).Contains(point)
+            // Everything clickable over the floor sits in the top-right group.
+            Vector2 point = DungeonUi.ScreenToCanvas(screenPosition, GameSettings.HudScale, DungeonUi.TopRight, TopRightNudge);
+            return !Run.IsPlaying || showSettings || confirmingMenu || CornerButtonsRect.Contains(point)
                 || ((Run.CanSkipRoom || CanRestartCoop) && RestartRect.Contains(point))
-                || (showTalents && new Rect(922, 82, 334, 470).Contains(point))
+                || (showTalents && TalentsRect.Contains(point))
                 || (ShopOpen && ShopPanelRect(Run.Shop).Contains(point))
                 || (!ShopOpen && Run.Player != null && Run.Player.Mechanic is GamblerPurse purse && purse.IsOpen && PurseArea(purse).Contains(point));
         }
@@ -46,6 +66,7 @@ namespace Slopgame
         private void Update()
         {
             if (showSettings && (Run.IsInMainMenu || Run.Player == null)) { showSettings = false; settingsMenu.Cancel(); }
+            if (confirmingMenu && (Run.IsInMainMenu || Run.Player == null)) { confirmingMenu = false; pausedForConfirm = false; }
             if (Run.Player == null) return;
             float smooth = 1f - Mathf.Exp(-9f * Time.unscaledDeltaTime);
             displayedHealth = Mathf.Lerp(displayedHealth, Run.Player.Health / (float)Run.Player.MaxHealth, smooth);
@@ -60,14 +81,15 @@ namespace Slopgame
         private void OnGUI()
         {
             if (Run == null || Run.IsInMainMenu || Run.Player == null) return;
-            Matrix4x4 previous = DungeonUi.Begin(GameSettings.HudScale);
+            Matrix4x4 previous = GUI.matrix;
             Color previousColor = GUI.color;
             try
             {
+                PinCenter();
                 // The settings page covers everything else, so nothing under it can be clicked.
                 if (showSettings) { DrawSettings(); return; }
                 var flash = ScreenFx.FlashColor;
-                if (flash.a > 0f) DungeonUi.Panel(new Rect(0, 0, 1280, 720), flash);
+                if (flash.a > 0f) DungeonUi.Panel(new Rect(-2000, -2000, 6000, 6000), flash);
                 // The HUD over the floor is drawn at the player's opacity; the settings page and the screens below stay solid.
                 GUI.color = new Color(1f, 1f, 1f, GameSettings.HudOpacity);
                 DrawStatus();
@@ -75,16 +97,25 @@ namespace Slopgame
                 if (Run.IsNetworked) DrawTeam();
                 DrawHotbar();
                 var mechanic = Run.Player.Mechanic;
-                // The crystal shop takes the right-hand side while it is open.
-                if (Run.IsPlaying && ShopOpen) DrawShop(Run.Shop);
-                else if (Run.IsPlaying && mechanic is GamblerPurse purse && purse.IsOpen) DrawPurse(purse);
-                if (!ShopOpen && showTalents && Run.IsPlaying) DrawTalents();
+                PinTopRight();
+                // The crystal shop takes the right-hand side while it is open. Nothing under the menu confirmation can be clicked.
+                if (Run.IsPlaying && ShopOpen && !confirmingMenu) DrawShop(Run.Shop);
+                else if (Run.IsPlaying && mechanic is GamblerPurse purse && purse.IsOpen && !confirmingMenu) DrawPurse(purse);
+                if (!ShopOpen && showTalents && Run.IsPlaying && !confirmingMenu) DrawTalents();
                 else if (!ShopOpen && Run.IsPlaying && Run.Minimap != null) Run.Minimap.Draw(new Rect(1026, 84, 224, 159));
-                if (Run.IsPlaying || DeathPending) { DrawCog(); return; }
+                if (Run.IsPlaying || DeathPending)
+                {
+                    if (confirmingMenu) DrawMenuConfirm();
+                    else DrawCog();
+                    return;
+                }
                 GUI.color = previousColor;
-                DungeonUi.Panel(new Rect(0, 0, 1280, 720), new Color(0.01f, 0.018f, 0.035f, 0.88f * modalFade));
+                PinCenter();
+                DungeonUi.Panel(new Rect(-2000, -2000, 6000, 6000), new Color(0.01f, 0.018f, 0.035f, 0.88f * modalFade));
+                if (confirmingMenu) { DrawMenuConfirm(); return; }
                 // Drawn over the dimmed floor, so the cog is there on every pick, world-cleared and game-over screen too.
                 DrawCog();
+                PinCenter();
                 if (Run.ChoosingArtifact) DrawArtifacts();
                 else if (Run.ChoosingUpgrade) DrawUpgrades();
                 else if (Run.WorldComplete) DrawWorldComplete();
@@ -93,8 +124,40 @@ namespace Slopgame
             finally { GUI.color = previousColor; GUI.matrix = previous; }
         }
 
+        /// <summary>Asks before a descent in progress is left for the main menu (solo, it waits while asked).</summary>
+        private void AskToLeave()
+        {
+            confirmingMenu = true;
+            pausedForConfirm = Run.IsPlaying && !Run.IsNetworked && Time.timeScale > 0f;
+            if (pausedForConfirm) Time.timeScale = 0f;
+        }
+
+        private void CloseMenuConfirm()
+        {
+            confirmingMenu = false;
+            if (pausedForConfirm && Run.IsPlaying) Time.timeScale = 1f;
+            pausedForConfirm = false;
+        }
+
+        /// <summary>The leave-the-descent confirmation, over everything else.</summary>
+        private void DrawMenuConfirm()
+        {
+            PinCenter();
+            GUI.color = Color.white;
+            bool party = Run.IsNetworked;
+            string question = party ? "Leave the party?" : "Return to the main menu?";
+            string detail = party
+                ? "You leave the descent and the party goes on without you. The Ash you earned is kept."
+                : Run.WorldComplete ? "This descent ends here. The Ash you earned is kept."
+                : "This descent ends here: your talents, abilities and crystals are lost. The Ash you earned is kept.";
+            var answer = ConfirmPick(question, detail, AbilityCatalog.Gold, party ? "Leave party" : "Main menu");
+            if (answer == true) { CloseMenuConfirm(); Run.ShowMainMenu(); }
+            else if (answer == false) CloseMenuConfirm();
+        }
+
         private void DrawCog()
         {
+            PinTopRight();
             if (!DungeonUi.CogButton("hudCog", CogRect)) return;
             showSettings = true;
             // A solo descent stands still while the settings are open; a co-op one cannot.
@@ -116,10 +179,11 @@ namespace Slopgame
             DungeonUi.Panel(new Rect(-2000, -2000, 6000, 6000), DungeonUi.Background);
             DungeonUi.Label(new Rect(70, 52, 700, 25), pausedForSettings ? "THE DESCENT IS PAUSED" : Run.IsNetworked && Run.IsPlaying ? "THE DESCENT GOES ON AROUND YOU" : "THE DESCENT WAITS", 14, AbilityCatalog.Gold);
             DungeonUi.Label(new Rect(65, 80, 1100, 56), "SETTINGS", 40);
-            DungeonUi.Label(new Rect(70, 138, 1100, 30), "Resize the menus and HUD, fade the HUD, toggle autofire and rebind every action. Changes save instantly.", 17, DungeonUi.Muted);
+            DungeonUi.Label(new Rect(70, 138, 1100, 30), "Resize the menus and HUD, fade the HUD, switch autofire on or off for each hero and rebind every action. Changes save instantly.", 17, DungeonUi.Muted);
             settingsMenu.Draw();
             if (DungeonUi.Button("hudSettingsBack", new Rect(70, 598, 268, 48), "Back", DungeonUi.Muted)) CloseSettings();
             if (DungeonUi.Button("hudSettingsReset", new Rect(860, 598, 350, 48), "Reset to defaults", DungeonUi.Teal)) settingsMenu.ResetToDefaults();
+            PinTopRight();
             if (DungeonUi.CogButton("hudCogClose", CogRect, true)) CloseSettings();
         }
 
@@ -131,6 +195,7 @@ namespace Slopgame
             var reaper = player.Weapon as ReaperAttack;
             var specimen = player.Weapon as SpecimenAttack;
             float coinRow = gambler != null || reaper != null || specimen != null ? 26f : 0f;
+            PinTopLeft();
             DungeonUi.Panel(new Rect(24, 24, 292, 100 + coinRow), DungeonUi.PanelColor);
             DungeonUi.Label(new Rect(42, 37, 250, 28), Run.SelectedCharacter.DisplayName.ToUpperInvariant(), 22, Run.SelectedCharacter.Color);
             DungeonUi.Label(new Rect(176, 41, 122, 22), $"{player.Crystals.Crystals} CRYSTALS", 14, CrystalPouch.CrystalColor, TextAnchor.UpperRight);
@@ -139,7 +204,7 @@ namespace Slopgame
             if (gambler != null)
             {
                 GUI.DrawTexture(new Rect(42, 101, 18, 18), DungeonVisuals.CoinSprite.texture);
-                DungeonUi.Label(new Rect(66, 99, 232, 24), $"{gambler.Coins:N0} {(gambler.Coins == 1 ? "COIN" : "COINS")}", 16, GamblerAttack.Gold);
+                DungeonUi.Label(new Rect(66, 99, 232, 24), $"{gambler.Coins:N0} {(gambler.Coins == 1 ? "COIN" : "COINS")}" + (gambler.Cards > 0 ? $"  /  {gambler.Cards} CARDS" : ""), 16, GamblerAttack.Gold);
             }
             if (player.Weapon is CyborgAttack augment && player.Permanent.HasPassive(WeaponType.Beam))
             {
@@ -161,6 +226,7 @@ namespace Slopgame
             if (!string.IsNullOrEmpty(Run.Progress.LastError))
                 DungeonUi.Label(new Rect(24, 165 + coinRow, 310, 70), Run.Progress.LastError, 14, AbilityCatalog.Gold);
             DungeonUi.Bar(new Rect(42, 103 + coinRow, 256, 6), displayedHealth, Run.SelectedCharacter.Color);
+            PinTop();
             if (DebugMode.Enabled)
                 DungeonUi.Label(new Rect(365, 4, 550, 22), "DEBUG ADMIN MODE  /  INVINCIBLE  ONE-HIT KILLS  NO COOLDOWNS  2X SPEED  /  F1", 12, DebugColor, TextAnchor.MiddleCenter);
             // Wave worlds count waves (1-15) rather than floors.
@@ -193,6 +259,9 @@ namespace Slopgame
                 DungeonUi.Bar(new Rect(512, 122, 256, 4), displayedBossHealth, untouchable ? AbilityCatalog.Gold : new Color(0.94f, 0.3f, 0.38f));
                 DungeonUi.Label(new Rect(440, 138, 400, 16), Run.Boss.Tell, 11, untouchable || Run.Boss.IsCharging ? AbilityCatalog.Gold : DungeonUi.Muted, TextAnchor.MiddleCenter);
             }
+            PinTopRight();
+            // Nothing up here can be clicked while the menu confirmation is open.
+            if (confirmingMenu) return;
             if (Run.CanSkipRoom && DungeonUi.Button("skipRoom", RestartRect, "Skip room", DebugColor)) Run.DebugSkipRoom();
             if (CanRestartCoop)
             {
@@ -209,11 +278,12 @@ namespace Slopgame
             }
             // Build and Menu share the corner with the settings cog (see DrawCog).
             if (DungeonUi.Button("talents", new Rect(1020, 24, 92, 40), "Build", DungeonUi.Teal)) showTalents = !showTalents;
-            if (DungeonUi.Button("menu", new Rect(1118, 24, 92, 40), Run.IsNetworked ? "Leave" : "Menu", DungeonUi.Muted)) Run.ShowMainMenu();
+            if (DungeonUi.Button("menu", new Rect(1118, 24, 92, 40), Run.IsNetworked ? "Leave" : "Menu", DungeonUi.Muted)) AskToLeave();
         }
 
         private void DrawHotbar()
         {
+            PinBottom();
             var player = Run.Player;
             // Every class has a class mechanic slot, locked until it is bought in the Ash shop.
             const bool mechanicSlot = true;
@@ -294,7 +364,7 @@ namespace Slopgame
                 DungeonUi.Bar(new Rect(500, 568, 280, 5), specimen.GuardRemaining / Mathf.Max(0.01f, specimen.GuardDuration), SpecimenCatalog.Amber);
             }
             string attack = KeyBindings.Label(GameAction.Attack), interact = KeyBindings.Label(GameAction.Interact);
-            DungeonUi.Label(new Rect(250, 690, 780, 22), player.ClassWeapon == WeaponType.Hammer
+            DungeonUi.Label(new Rect(250, 686, 780, 20), player.ClassWeapon == WeaponType.Hammer
                 ? $"{attack}  weak swipe     HOLD / RELEASE {attack}  bless allies     {interact}  interact"
                 : player.ClassWeapon == WeaponType.Fists
                 ? $"{attack}  jab     HOLD / RELEASE {attack}  punch barrage     {KeyBindings.Label(GameAction.Special)}  empower     {interact}  interact"
@@ -453,10 +523,13 @@ namespace Slopgame
             var rect = PurseArea(purse);
             DungeonUi.Panel(rect, DungeonUi.Background);
             DungeonUi.Label(new Rect(rect.x + 20, rect.y + 14, 220, 28), "THE PURSE", 22, GamblerAttack.Gold);
-            DungeonUi.Label(new Rect(rect.x + 190, rect.y + 18, 146, 24), $"{purse.Coins?.Coins ?? 1:N0} COINS", 16, GamblerAttack.Gold, TextAnchor.UpperRight);
-            for (int i = 0; i < GamblerPurse.Offers.Length; i++)
+            int cards = purse.Coins?.Cards ?? 0;
+            DungeonUi.Label(new Rect(rect.x + 150, rect.y + 18, 186, 24), cards > 0 ? $"{purse.Coins?.Coins ?? 1:N0} COINS  /  {cards} CARDS" : $"{purse.Coins?.Coins ?? 1:N0} COINS",
+                cards > 0 ? 14 : 16, GamblerAttack.Gold, TextAnchor.UpperRight);
+            var wares = purse.OnSale;
+            for (int i = 0; i < wares.Count; i++)
             {
-                var offer = GamblerPurse.Offers[i];
+                var offer = wares[i];
                 var row = new Rect(rect.x + 16, rect.y + 52 + i * 58, rect.width - 32, 52);
                 bool affordable = purse.CanBuy(offer);
                 if (DungeonUi.Button("purse" + i, new Rect(row.x, row.y, row.width, 32), $"{offer.Name}  /  {offer.Cost}c", GamblerAttack.Gold, affordable)) purse.Buy(offer);
@@ -465,7 +538,7 @@ namespace Slopgame
             if (purse.HasSafe)
             {
                 // The safe: ten coins in per click, exactly half out per click, and interest from every guardian.
-                float top = rect.y + 52 + GamblerPurse.Offers.Length * 58, half = (rect.width - 40) / 2f;
+                float top = rect.y + 52 + wares.Count * 58, half = (rect.width - 40) / 2f;
                 DungeonUi.Label(new Rect(rect.x + 22, top, rect.width - 44, 18), $"THE SAFE  /  {purse.Safe:N0} COINS  /  x{purse.Interest:0.0#} PER GUARDIAN", 12, GamblerAttack.Gold);
                 if (DungeonUi.Button("safeDeposit", new Rect(rect.x + 16, top + 22, half, 32), $"Deposit {GamblerPurse.SafeDeposit}c", GamblerAttack.Gold, purse.CanDeposit)) purse.Deposit();
                 if (DungeonUi.Button("safeWithdraw", new Rect(rect.x + 24 + half, top + 22, half, 32), $"Withdraw 50%  /  {purse.SafeWithdrawal:N0}c", GamblerAttack.Gold, purse.CanWithdraw)) purse.Withdraw();
@@ -635,6 +708,7 @@ namespace Slopgame
         private void DrawTeam()
         {
             var team = Run.Coop.RemoteHeroes;
+            PinTopLeft();
             for (int i = 0; i < team.Count; i++)
             {
                 var hero = team[i];
@@ -645,12 +719,19 @@ namespace Slopgame
                 DungeonUi.Label(new Rect(row.x + 170, row.y + 4, 108, 20), hero.IsAlive ? $"{hero.Health} / {hero.MaxHealth} HP" : "FALLEN", 13,
                     hero.IsAlive ? DungeonUi.Muted : new Color(1f, 0.4f, 0.4f), TextAnchor.UpperRight);
                 DungeonUi.Bar(new Rect(row.x + 14, row.y + 27, row.width - 28, 4), hero.IsAlive ? hero.Health / (float)hero.MaxHealth : 0f, hero.Character.Color);
-                if (!hero.IsAlive || Run.View == null) continue;
+            }
+            // Name tags float over teammates in the world, so they use the plain centred canvas.
+            PinCenter();
+            for (int i = 0; i < team.Count; i++)
+            {
+                var hero = team[i];
+                if (hero == null || !hero.IsAlive || Run.View == null) continue;
                 Vector3 screen = Run.View.WorldToScreenPoint(hero.transform.position + Vector3.up * 0.75f);
                 if (screen.z < 0f) continue;
                 Vector2 point = DungeonUi.ScreenToCanvas(screen, GameSettings.HudScale);
                 DungeonUi.Label(new Rect(point.x - 90, point.y - 24, 180, 20), hero.PlayerName, 13, hero.Character.Color, TextAnchor.MiddleCenter);
             }
+            PinTop();
             if (Run.Player.Health <= 0 && Run.IsPlaying)
             {
                 var watched = Run.Coop.SpectateTarget;
@@ -660,7 +741,7 @@ namespace Slopgame
                 if (watched != null)
                 {
                     // Whom the camera follows; with more than one teammate standing, the arrows (or arrow keys) switch between them.
-                    bool choice = Run.Coop.SpectateCount > 1;
+                    bool choice = Run.Coop.SpectateCount > 1 && !confirmingMenu;
                     DungeonUi.Label(new Rect(450, 168, 380, 30), "WATCHING  " + watched.PlayerName.ToUpperInvariant(), 15, watched.Character.Color, TextAnchor.MiddleCenter);
                     if (choice && DungeonUi.Button("spectatePrev", new Rect(404, 168, 40, 30), "<", DungeonUi.Teal)) Run.Coop.CycleSpectate(-1);
                     if (choice && DungeonUi.Button("spectateNext", new Rect(836, 168, 40, 30), ">", DungeonUi.Teal)) Run.Coop.CycleSpectate(1);
@@ -719,7 +800,7 @@ namespace Slopgame
         /// </summary>
         private static bool? ConfirmPick(string question, string description, Color color, string confirmText)
         {
-            DungeonUi.Panel(new Rect(0, 0, 1280, 720), new Color(0.01f, 0.018f, 0.035f, 0.7f));
+            DungeonUi.Panel(new Rect(-2000, -2000, 6000, 6000), new Color(0.01f, 0.018f, 0.035f, 0.7f));
             var panel = new Rect(390, 250, 500, 250);
             DungeonUi.Panel(panel, DungeonUi.Background);
             DungeonUi.Panel(new Rect(panel.x, panel.y, panel.width, 4), color);
@@ -807,10 +888,10 @@ namespace Slopgame
                         showTravelMap = true;
                     }
                 }
-                if (DungeonUi.Button("worldLeave", new Rect(450, 520, 380, 44), "Leave party", DungeonUi.Muted)) Run.ShowMainMenu();
+                if (DungeonUi.Button("worldLeave", new Rect(450, 520, 380, 44), "Leave party", DungeonUi.Muted)) AskToLeave();
                 return;
             }
-            if (DungeonUi.Button("worldMenu", new Rect(450, 450, 380, 50), "Main menu", DungeonUi.Muted)) Run.ShowMainMenu();
+            if (DungeonUi.Button("worldMenu", new Rect(450, 450, 380, 50), "Main menu", DungeonUi.Muted)) AskToLeave();
         }
 
         /// <summary>

@@ -23,7 +23,9 @@ namespace Slopgame
         private int Souls => DebugMode.Enabled ? SoulCost : Reaper != null ? Reaper.Souls : 0;
         /// <summary>What a skeleton costs him (one soul less with Death's Bargain, his passive).</summary>
         private int SkeletonCost => Reaper != null ? Reaper.Cost(SoulCost) : SoulCost;
-        private int IncarnationCost => IncarnationSouls;
+        /// <summary>Death's Discount (his second passive) halves the price again.</summary>
+        public const int DiscountedIncarnationSouls = 25;
+        private int IncarnationCost => Player.Permanent != null && Player.Permanent.HasSecondPassive(WeaponType.Scythe) ? DiscountedIncarnationSouls : IncarnationSouls;
         public bool IsIncarnate => Player.Buffs != null && Player.Buffs.IsIncarnate;
         /// <summary>
         /// True with the Avatar of Death upgrade and enough souls to become the incarnation of death (and not already it).

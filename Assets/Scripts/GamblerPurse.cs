@@ -11,7 +11,7 @@ namespace Slopgame
     /// </summary>
     public sealed class GamblerPurse : ClassMechanic
     {
-        public enum Ware { Draught, Charm, Dice }
+        public enum Ware { Draught, Charm, Dice, CardDeck }
 
         public sealed class Offer
         {
@@ -27,7 +27,25 @@ namespace Slopgame
             new Offer(Ware.Draught, "Healing Draught", "Restore 2 HP", 40),
             new Offer(Ware.Charm, "Lucky Charm", "+1 ward for this floor", 50),
             new Offer(Ware.Dice, "Loaded Dice", "+1 damage until the next floor", 80),
+            // Card Shark (his second passive) puts a deck on the counter.
+            new Offer(Ware.CardDeck, "Deck of Cards", "52 cards: every coin you throw also throws a card for half its damage", CardDeckCost),
         };
+
+        public const int CardDeckCost = 52, CardDeckSize = 52;
+
+        /// <summary>Whether this purse sells <paramref name="offer"/> at all (the deck needs Card Shark, his second passive).</summary>
+        public bool Sells(Offer offer) => offer.Ware != Ware.CardDeck || (Player.Permanent != null && Player.Permanent.HasSecondPassive(WeaponType.Coins));
+
+        /// <summary>The wares on the purse's counter, in order.</summary>
+        public System.Collections.Generic.List<Offer> OnSale
+        {
+            get
+            {
+                var wares = new System.Collections.Generic.List<Offer>();
+                foreach (var offer in Offers) if (Sells(offer)) wares.Add(offer);
+                return wares;
+            }
+        }
 
         public const int SafeDeposit = 10;
         public const float SafeInterest = 1.1f, PassiveSafeInterest = 1.25f;
@@ -97,7 +115,7 @@ namespace Slopgame
         public bool CanBuy(Offer offer)
         {
             var coins = Coins;
-            if (coins == null || !Player.Run.IsPlaying || Player.Health <= 0) return false;
+            if (coins == null || !Player.Run.IsPlaying || Player.Health <= 0 || !Sells(offer)) return false;
             if (offer.Ware == Ware.Draught && Player.Health >= Player.MaxHealth) return false;
             return coins.Coins >= offer.Cost;
         }
@@ -127,6 +145,12 @@ namespace Slopgame
                     diceFloor = Player.Run.Floor;
                     dice++;
                     LastResult = $"Loaded. +{dice} damage this floor.";
+                    break;
+                case Ware.CardDeck:
+                    coins.Spend(offer.Cost);
+                    coins.AddCards(CardDeckSize);
+                    HeroVfx.Sparks(root, transform.position, Color.white, 12, 3f, 0.3f, Vector2.up, 120f, 0.8f);
+                    LastResult = $"A fresh deck. {coins.Cards} cards up your sleeve.";
                     break;
             }
             return true;

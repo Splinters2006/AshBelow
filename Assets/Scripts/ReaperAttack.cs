@@ -7,7 +7,7 @@ namespace Slopgame
     /// The Reaper's scythe. Left click is a slow, wide sweep; a fully charged sweep harvests a soul from every enemy it
     /// cuts. Right click spends souls on skulls that hunt their prey down: a tap throws one, half a charge throws one
     /// that strikes fear into its victim, and a full charge looses three. Souls also pay for his artifacts and for the
-    /// skeletons of his <see cref="ArmyOfTheDead"/>. He can hold up to 100 souls.
+    /// skeletons of his <see cref="ArmyOfTheDead"/>. He can hold up to 100 souls (more with Soul Hoard).
     /// </summary>
     public sealed class ReaperAttack : MonoBehaviour, IPlayerWeapon
     {
@@ -16,6 +16,11 @@ namespace Slopgame
         public static readonly Color Soul = new Color(0.55f, 1f, 0.8f), Bone = new Color(0.93f, 0.92f, 0.84f), Shade = new Color(0.2f, 0.45f, 0.4f);
         public DungeonPlayer Player { get; set; }
         public const int MaxSouls = 100;
+        /// <summary>Soul Hoard: extra souls he can hold, by rank.</summary>
+        public static readonly int[] SoulHoardBonus = { 0, 25, 50, 100 };
+        /// <summary>The most souls he can hold: 100, plus Soul Hoard.</summary>
+        public int SoulCap => MaxSouls + (Player != null && Player.Powerups != null
+            ? SoulHoardBonus[Mathf.Clamp(Player.Powerups.Count(PowerupType.SoulHoard), 0, SoulHoardBonus.Length - 1)] : 0);
         public const float BaseDamageMultiplier = 0.5f;
         public int Souls { get; private set; }
         private float readyAt, skullReadyAt, skullStartedAt, nextMote;
@@ -39,7 +44,7 @@ namespace Slopgame
             float echo = Player != null && Player.Permanent != null ? Player.Permanent.ExtraSoulChance : 0f;
             int extra = 0;
             if (echo > 0f) for (int i = 0; i < amount; i++) if (Random.value < echo) extra++;
-            Souls = (int)System.Math.Min(MaxSouls, (long)Souls + amount + extra);
+            Souls = (int)System.Math.Min(SoulCap, (long)Souls + amount + extra);
         }
 
         /// <summary>Death's Bargain (his passive): everything that costs souls costs this many less.</summary>
@@ -346,23 +351,25 @@ namespace Slopgame
             Vector2 origin = transform.position;
             int damage = Player.Charge.Damage(charge);
             float interval = 0.45f;
+            // Grim Harvest: every swing of the Technique pulls a soul from whatever it cuts.
+            bool harvest = Player.Powerups.Count(PowerupType.GrimHarvest) > 0;
             if (comboStep == 0)
             {
-                Sweep(aim, Mathf.RoundToInt(damage * 1.5f), Reach, 170f, false, 1f);
+                Sweep(aim, Mathf.RoundToInt(damage * 1.5f), Reach, 170f, harvest, 1f);
                 ScytheSwingVfx.Play(root, transform, aim, 170f, Reach, 0.22f, Soul);
                 HeroVfx.Slash(root, origin, aim, Reach, 170f, FlameMesh.Alpha(Soul, 0.55f), 0.18f);
                 CoopFx.Slash(run, origin, aim, Reach, 170f, Soul);
             }
             else if (comboStep == 1)
             {
-                Sweep(aim, Mathf.RoundToInt(damage * 1.5f), Reach + 0.3f, 170f, false, 1.2f);
+                Sweep(aim, Mathf.RoundToInt(damage * 1.5f), Reach + 0.3f, 170f, harvest, 1.2f);
                 ScytheSwingVfx.Play(root, transform, aim, 170f, Reach + 0.3f, 0.22f, Bone, true);
                 HeroVfx.Slash(root, origin, aim, Reach + 0.3f, 170f, FlameMesh.Alpha(Bone, 0.55f), 0.18f);
                 CoopFx.Slash(run, origin, aim, Reach + 0.3f, 170f, Bone);
             }
             else
             {
-                Sweep(aim, Mathf.RoundToInt(damage * 2.5f), Reach + 0.4f, 360f, false, 2f);
+                Sweep(aim, Mathf.RoundToInt(damage * 2.5f), Reach + 0.4f, 360f, harvest, 2f);
                 ScytheSwingVfx.Play(root, transform, aim, 360f, Reach + 0.4f, 0.36f, Soul);
                 HeroVfx.Slash(root, origin, aim, Reach + 0.4f, 360f, FlameMesh.Alpha(Soul, 0.55f), 0.22f);
                 CoopFx.Slash(run, origin, aim, Reach + 0.4f, 360f, Soul);
@@ -380,10 +387,34 @@ namespace Slopgame
         /// <param name="localKill">True when this machine's hero dealt the killing blow.</param>
         public void OnEnemyDied(DungeonEnemy enemy, bool localKill)
         {
+            bool tithe = localKill && enemy.CountsAsHeld && Player.Health > 0 && Player.Powerups.Count(PowerupType.GraveTithe) > 0;
             if (enemy.SoulBound) SoulWisp.Drop(Player.Run, enemy.transform.position);
-            if (localKill && enemy.IsImmobilized && Player.Health > 0 && Player.Powerups.Count(PowerupType.GraveTithe) > 0)
-                SoulWisp.Drop(Player.Run, enemy.transform.position);
+            if (tithe) SoulWisp.Drop(Player.Run, enemy.transform.position);
+            // Soul Burst: an enemy he kills that leaves a soul behind also bursts.
+            if (localKill && (enemy.SoulBound || tithe) && Player.Health > 0 && Player.Powerups.Count(PowerupType.SoulBurst) > 0) SoulBurst(enemy);
             if (enemy.SownFear > 0f && enemy.IsFeared) SpreadSow(enemy, enemy.SownFear);
+        }
+
+        public const float SoulBurstRadius = 2.2f;
+        public const int SoulBurstDamageMultiplier = 2;
+
+        /// <summary>Soul Burst: the soul tears out of the body in a blast that hurts every other enemy close by.</summary>
+        private void SoulBurst(DungeonEnemy dead)
+        {
+            var run = Player.Run;
+            var root = run.ProjectileRoot;
+            Vector2 center = dead.transform.position;
+            HeroVfx.Pulse(root, center, SoulBurstRadius, FlameMesh.Alpha(Soul, 0.75f), 0.4f);
+            CombatVfx.Ring(root, center, SoulBurstRadius, Bone, 0.35f);
+            HeroVfx.Sparks(root, center, Soul, 16, 5f, 0.4f);
+            HeroVfx.Motes(root, center, 0.6f, Shade, 10, 0.7f);
+            CoopFx.Pulse(run, center, SoulBurstRadius, FlameMesh.Alpha(Soul, 0.75f), 0.4f);
+            CoopFx.Ring(run, center, SoulBurstRadius, Bone, 0.35f);
+            ScreenFx.Shake(0.1f, 0.15f);
+            int damage = Player.Damage * SoulBurstDamageMultiplier;
+            foreach (var enemy in run.Enemies.ToArray())
+                if (enemy != null && enemy != dead && enemy.Health > 0 && Vector2.Distance(center, enemy.transform.position) <= SoulBurstRadius + enemy.HitRadius)
+                    CombatDamage.Apply(Player, enemy, damage, DamageElement.Demonic, center, 0.8f);
         }
 
         // ---------------------------------------------------------------- previews

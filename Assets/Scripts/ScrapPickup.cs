@@ -3,12 +3,13 @@ using UnityEngine;
 namespace Slopgame
 {
     /// <summary>
-    /// The Augment's passive (Salvage): an enemy he lands the final hit on may drop a piece of scrap. Every
-    /// <see cref="PerHeal"/> pieces he gathers repair <see cref="HealAmount"/> HP (see <see cref="CyborgAttack.CollectScrap"/>).
+    /// The Augment's passive (Salvage): an enemy he lands the final hit on may drop a piece of scrap (twice as often
+    /// with his second passive, Scavenger). Every <see cref="PerHeal"/> pieces he gathers repair <see cref="HealAmount"/>
+    /// HP (see <see cref="CyborgAttack.CollectScrap"/>).
     /// </summary>
     public sealed class ScrapPickup : MonoBehaviour
     {
-        public const float DropChance = 0.05f;
+        public const float DropChance = 0.05f, ScavengerDropChance = 0.1f;
         public const int PerHeal = 3, HealAmount = 1;
         public const float MagnetRadius = 1.5f, PickupRadius = 0.45f;
         private const float HopTime = 0.35f, HopHeight = 0.5f, Size = 0.4f;
@@ -34,7 +35,9 @@ namespace Slopgame
         public static void TryDrop(DungeonRun run, DungeonEnemy enemy)
         {
             var player = run != null ? run.Player : null;
-            if (player == null || player.Health <= 0 || !player.Permanent.HasPassive(WeaponType.Beam) || Random.value >= DropChance) return;
+            if (player == null || player.Health <= 0 || !player.Permanent.HasPassive(WeaponType.Beam)) return;
+            float chance = player.Permanent.HasSecondPassive(WeaponType.Beam) ? ScavengerDropChance : DropChance;
+            if (Random.value >= chance) return;
             Drop(run, enemy.transform.position);
         }
 
@@ -67,9 +70,11 @@ namespace Slopgame
             }
             bool alive = player.Health > 0;
             float distance = Vector2.Distance(rest, hero);
-            if (alive && distance <= MagnetRadius) rest = Vector2.MoveTowards(rest, hero, (6f - distance * 2f) * Time.deltaTime);
+            // Lodestone: drawn in from farther, faster, and picked up from farther away.
+            float reach = player.Powerups != null ? player.Powerups.PickupReach : 1f;
+            if (alive && distance <= MagnetRadius * reach) rest = Vector2.MoveTowards(rest, hero, (6f - distance / reach * 2f) * reach * Time.deltaTime);
             Place(rest, 0.12f + 0.07f * Mathf.Sin(Time.time * 3f + phase));
-            if (!alive || Vector2.Distance(rest, hero) > PickupRadius || !(player.Weapon is CyborgAttack augment)) return;
+            if (!alive || Vector2.Distance(rest, hero) > PickupRadius * reach || !(player.Weapon is CyborgAttack augment)) return;
             augment.CollectScrap();
             HeroVfx.Sparks(run.ProjectileRoot, hero, Metal, 6, 2.5f, 0.25f);
             Destroy(gameObject);

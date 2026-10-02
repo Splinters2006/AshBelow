@@ -21,6 +21,8 @@ namespace Slopgame
         private Color color;
         private bool ghost;
         private readonly HashSet<DungeonEnemy> hits = new HashSet<DungeonEnemy>();
+        // The shot's attack: everything it pierces counts together for Massacre.
+        private int attack;
         public bool IsSpent { get; private set; }
         public int HitCount => hits.Count;
 
@@ -34,6 +36,7 @@ namespace Slopgame
             var arrow = Create(run, origin, direction, infusion);
             arrow.shooter = shooter;
             arrow.damage = damage;
+            arrow.attack = shooter.Powerups.ActiveAttack;
             // Recoil: the shot shoves the Archer back a step.
             shooter.transform.position = run.Map.Move(shooter.transform.position, -direction * 0.35f);
             ScreenFx.Shake(0.14f, 0.18f);
@@ -101,7 +104,7 @@ namespace Slopgame
                     hits.Add(enemy);
                     HeroVfx.Sparks(run.ProjectileRoot, next, Core, 12, 5.5f, 0.3f, direction, 80f, 1.3f);
                     CombatVfx.Ring(run.ProjectileRoot, next, 0.5f, color, 0.25f);
-                    if (!ghost) CombatDamage.Apply(shooter, enemy, damage, DamageElement.Physical, next - direction, 1.6f, infusion);
+                    if (!ghost) using (shooter.Powerups.ResumeAttack(attack)) CombatDamage.Apply(shooter, enemy, damage, DamageElement.Physical, next - direction, 1.6f, infusion);
                     // Splitting Shot: past the first enemy, two more arrows peel off to the sides.
                     if (!ghost && hits.Count == 1 && shooter.Powerups.Count(PowerupType.SplittingShot) > 0)
                         for (int side = -1; side <= 1; side += 2)

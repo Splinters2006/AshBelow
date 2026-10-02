@@ -157,7 +157,14 @@ namespace Slopgame
         public bool IsAvailable(PermanentUpgradeDefinition upgrade) => upgrade != null && (DebugMode.Enabled
             || (upgrade.ClassWeapon.HasValue ? GuardiansDefeatedAs(upgrade.ClassWeapon.Value) : data.guardians) >= upgrade.RequiredGuardians
             && (upgrade.RequiredWorld < 0 || HasClearedWorld(upgrade.RequiredWorld))
+            && (upgrade.RequiredGuardian == null || HasSlain(upgrade.RequiredGuardian))
             && (upgrade.RequiredUpgrade == null || Rank(upgrade.RequiredUpgrade) > 0));
+
+        /// <summary>
+        /// True once the guardian with this title has been slain in any descent (by any hero). Guardians enter the
+        /// encyclopedia as they fall, so kills from before this was asked still count.
+        /// </summary>
+        public bool HasSlain(string guardianTitle) => !string.IsNullOrEmpty(guardianTitle) && IsDiscovered(Encyclopedia.GuardianId(guardianTitle));
 
         /// <summary>
         /// True once this world or any later one has been cleared: getting past a world counts, so worlds skipped on

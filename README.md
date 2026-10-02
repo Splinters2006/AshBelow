@@ -26,6 +26,8 @@ The game starts in a resizable 1280×720 window.
 
 You can rebind every action under **Controls** in the main menu. Each action gets a main and an alternate key or mouse button. The HUD always shows your current keys.
 
+**Autofire** is set per hero: switch it on from the hero page (**Autofire** button) or under **Settings → Autofire**. With it on, holding left click releases each attack the moment it's fully charged and starts charging the next one straight away.
+
 ## How a run works
 
 - **Clear the floor.** Defeat every enemy, then find the gold stairs and press **F** to descend.
@@ -34,15 +36,15 @@ You can rebind every action under **Controls** in the main menu. Each action get
 - **Visit the crystal shop.** Before every guardian you reach a lantern-lit shop. The merchant glows when you can talk to him. Press **F** at his counter to spend crystals. Each shop stocks a random five wares:
   - **One healing ware:** a Healing Draught (+2 HP) or a Grand Elixir (full HP).
   - **Two boss-fight boons,** which last only for the next guardian: Stoneskin Tonic (+2 wards), Whetstone (+1 damage) or Quicksilver (+20% move speed).
-  - **Two relics,** which last the rest of the run: Heart Crystal (+1 max HP), Ember Hone (+1 damage), Windrunner Boots (+0.7 speed), Quickfinger Gloves (+20% attack speed), Hawkeye Lens (+10% crit chance), Warding Sigil (+1 ward every floor), Vampire Fang (a rank of Soul Harvest) or Phoenix Feather (shorter dodge cooldown). Relics add ranks to the matching boon and stop selling once it's maxed.
+  - **Two relics,** which last the rest of the run: Heart Crystal (+1 max HP), Ember Hone (+1 damage), Windrunner Boots (+0.7 speed), Quickfinger Gloves (+20% attack speed), Hawkeye Lens (+10% crit chance), Warding Sigil (+1 ward every floor) or Phoenix Feather (shorter dodge cooldown). Relics add ranks to the matching boon and stop selling once it's maxed.
 
-  Each ware costs 50% more every time you buy it in the same shop. In co-op, everyone sees the same stock. The shop's stairs lead to the guardian.
+  Each ware costs 50% more every time you buy it, and the higher price carries over to every later shop for the rest of the run. In co-op, everyone sees the same stock. The shop's stairs lead to the guardian.
 - **Beat the guardians.** Every fifth floor is a boss arena. Each world has three guardians. They are aggressive: they close in fast, attack quickly, and get more dangerous below half health:
   - **The Rime Warden**, a frost caster who fills the arena with icicle fans, frost novas, blizzard spirals, hailstorms, closing rings of ice, lancing frost beams, sweeping walls of frost and hailstones that shatter into icicles.
   - **The Steel Duelist**, a fast, fragile swordsman who dashes, throws blade fans, teleports behind you and cuts crosses of blade light.
   - **Malphas, the Hellfire Archdemon**. Watch for **Cataclysm**: the floor turns red, then everything except one golden circle erupts in fire. A gold arrow at your feet points to the circle.
   - **Grid Overseer** (Neon Arcology, floor 20): cyan scan grids, target traces and sequential firewalls. Step between the lanes.
-  - **Bastion, the Siege Engine** (floor 25): amber missile walks, cluster mines and twin rail broadsides. Clear the reticles or shelter between the rails. Between volleys he stamps the ground: an earthquake cracks open a band of the arena (two when he's enraged) and seals it off for a few seconds. Get off the cracking ground before it breaks.
+  - **Bastion, the Siege Engine** (floor 25): amber missile walks, cluster mines and twin rail broadsides. Clear the reticles or shelter between the rails. Between volleys he stamps the ground: an earthquake cracks open a band of the arena (two when he's enraged) and seals it off for a few seconds. Get off the cracking ground before it breaks. He never stamps while his mines or broadsides are still closing off the arena, so the area-denial attacks come one at a time.
   - **Null, the Singularity Core** (floor 30): violet spiral streams, satellite crossfire and repeated orbital pulse waves. Weave between bolts and dodge each wave.
   - **The Hex Matriarch** (Infernal Court, floor 35): rings of hex bolts, a burning pentagram around you (leave the star), and a blink behind you followed by a fan of bolts.
   - **Gorgoth, the Brimstone Hound** (floor 40): lane charges that leave burning pawprints, a sweeping fan of molten breath, and eruptions of shockwaves and falling brimstone.
@@ -50,6 +52,7 @@ You can rebind every action under **Controls** in the main menu. Each action get
   The Arcology guardians vent between attacks, giving you time to punish them. The Infernal Court's guardians tire the same way, summon imps, hellhounds and cultists every few attacks (their minions dissolve when they fall), and their brimstone and hex bolts set you alight: you keep burning until the flames gutter out or you dodge-roll to put them out.
 - **Claim an artifact.** A beaten guardian drops an artifact that offers three abilities from your hero's pool (four with Sanctified Relics). Pick one to learn, or raise one you already know (up to rank 3). The abilities page then lists every ability you've learned this run so you can choose which sit on **Q** and **E**; it's also the **Abilities** tab of the **Build** panel, so you can swap any time (cooldowns stay with each ability). You can also leave an artifact for 40 crystals.
 - **Death ends the run.** Boons and abilities reset, but your **Ash** and Ash shop upgrades are kept.
+- **Leaving a run** from the HUD's **Menu** button (or **Leave** in co-op) asks you to confirm first. A solo run pauses while you decide.
 
 Enemies get tougher every floor. **The Infernal Court (world 3) is much deadlier than the worlds before it:** its enemies have 60% more health, move and attack faster, bring an extra fighter into every room and field their specialists more often, and its guardians are tougher too. The **minimap** in the top-right corner fills in as you explore.
 
@@ -70,7 +73,7 @@ Enemies get tougher every floor. **The Infernal Court (world 3) is much deadlier
 | **Assassin** | Charged dagger stab / Shadowstep blink that backstabs everything it passes | Fan of Knives, Venom Vial, Shadow Veil, Smoke Bomb, Death Mark*, Shadow Clone* |
 | **Paladin** | Quick sword swipe (hold to bless nearby allies with bonus damage) / Holy Sword strikes | Healing Light, Judgment, Sanctuary, Holy Lance, Consecration, Divine Intervention* |
 | **Brawler** | Fast jab (charge for a punch barrage) / Empower | Knuckle Sandwich, Wild Leap, Primal Rage, Thunder Clap, Haymaker Dash, Suplex* |
-| **Demoness** | Tail stab (charge to strike the vitals and paralyse) / tail sweep that hits paralysed foes twice as hard | Archdemon's Technique, HEEEELP, Demon Curse, Wing Dash, Soul Siphon, Nightmare Snap* |
+| **Demoness** | Tail stab (charge to strike the vitals and paralyse) / tail sweep that hits paralysed foes three times as hard | Archdemon's Technique, HEEEELP, Demon Curse, Wing Dash, Soul Siphon, Nightmare Snap* |
 | **Gambler** | Throw a coin / a volley of one coin per coin you carry across a 90° cone | Windfall, All In, Jackpot, Card Toss, Dice Bomb, Insurance* |
 | **Augment** | Plasma ray that pierces every enemy in a line (charge it for a longer, wider, stronger ray) / hold to charge the arm cannon, release to fire a plasma orb that bursts in flame | Micro-Missiles, Rocket Boost, Sentry Turret, EMP Pulse, Grapple Arm, Orbital Laser* |
 | **Specimen** | Changes with his form (see below): palm strike / Flinch Guard while frail, heavy hands and kicks / Arm Guard as the Behemoth, chain whip / Hook as the Edge | Heartbeat, Fight or Flight; Behemoth: Bulldoze, Boulder Toss, Iron Skin, Giant Swing\*; Edge: Swing Line, Ankle Wrap, Bind, Round-Up\* |
@@ -120,8 +123,8 @@ Once you have beaten the third guardian (floor 15) in a single descent, the Ash 
 
 | Hero | Mechanic |
 | --- | --- |
-| **Knight** | **Shield Taunt:** turn red with rage for 2.25 s (you can walk, but nothing else). It blocks bolts from every side within 2 units and gives a ward for each one, and enemies go for you first. |
-| **Archer** | **Elemental Quiver:** cycle between fire, freeze and shock arrows. Arrows still crit, and a critical hit also sets off the arrow's element. |
+| **Knight** | **Shield Taunt:** turn red with rage for 2.25 s (you can walk, but nothing else). While it lasts you can't be hurt: melee blows glance off and bolts from every side are blocked, each giving a ward, and enemies go for you first. |
+| **Archer** | **Elemental Quiver:** cycle between fire, freeze and shock arrows. Arrows still crit, and a critical hit also sets off the arrow's element (only the element selected when the arrow was loosed). |
 | **Wizard** | **Wild Storm:** after 8 elemental effects, summon a storm over you that takes turns hurling fireballs, lightning and ice bolts for 10 s. Every storm strike is sure to burn, shock or freeze. |
 | **Assassin** | **Sharpened Dagger:** +1 damage for 7.5 s. Every hit on an enemy's back adds +1 more and refreshes it. |
 | **Paladin** | **Heavenly Host:** after your blessings add 50 bonus damage (more in co-op), angels revive the ally who has been down longest with half health, or heal the weakest ally to full. |
@@ -135,6 +138,22 @@ Once you have beaten the third guardian (floor 15) in a single descent, the Ash 
 You earn **Ash** from every kill (1 Ash), every cleared floor (10 Ash) and every guardian (50 Ash). Spend it in the **Ash shop** on the main menu on permanent upgrades such as health, damage, speed, attack speed and dodge. There are also class-specific upgrades for every hero, and some of each hero's abilities are unlocked here. New purchases apply from your next run.
 
 The shop lists upgrades two to a row, with the ones you can buy first, locked ones after and maxed ones last (**Hide maxed** tucks those away). A gold dot on a hero's tab means something there is affordable right now.
+
+**Second passives:** once **Aurelion, the Grand Magister** has fallen (with any hero), every hero who owns their class passive can buy a second one for 5,000 Ash:
+
+| Hero | Second passive |
+| --- | --- |
+| **Knight** | **Bulwark:** +1 damage for every HP and every ward you currently have |
+| **Archer** | **Barbed Arrows:** critical hits make the target bleed |
+| **Wizard** | **Brittle Ice:** frozen enemies turn brittle, and the next hit on them deals double damage |
+| **Assassin** | **Fade Away:** a backstab kill briefly hides you from enemies |
+| **Paladin** | **Shared Shelter:** an overcharged blessing also hands out 4 wards, split evenly between everyone blessed; you keep the remainder |
+| **Brawler** | **Final Blow:** every barrage ends in a stronger punch over a bigger area |
+| **Demoness** | **Rune Burst:** picking up a demonic rune paralyses everything within 5 units, even through walls |
+| **Gambler** | **Card Shark:** the purse sells a 52-card deck for 52 coins; every coin you throw also throws a card for half its damage |
+| **Augment** | **Scavenger:** Salvage drops scrap 10% of the time |
+| **Reaper** | **Death's Discount:** Avatar of Death costs 25 souls |
+| **Samurai** | **Trail of Blood:** killing a bleeding enemy gives +1 base damage for 5 s; every kill adds its own stack |
 
 Clearing a world for the first time (with any hero) adds two rewards to the shop:
 
