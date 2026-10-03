@@ -146,7 +146,7 @@ namespace Slopgame
             new PowerupDefinition(PowerupType.HighRoller, "High Roller", "+2 seconds of Jackpot buffs", 3, WeaponType.Coins, AbilityType.Jackpot),
             // Universal boons: any class can find them as room rewards or buy them as crystal shop relics.
             new PowerupDefinition(PowerupType.NerveSnap, "Nerve Snap", "Killing an immobilized enemy (paralysed, frozen, stunned or rooted) resets your class skill", 1),
-            new PowerupDefinition(PowerupType.PyreBurst, "Pyre Burst", "Burning enemies explode when they die, hurting everything nearby. Each rank widens the blast (2 / 2.75 / 3.5 units)", 3),
+            new PowerupDefinition(PowerupType.PyreBurst, "Pyre Burst", "Burning enemies explode when they die, hurting everything nearby. Each rank widens the blast (1.5 / 2.25 / 3 units)", 3),
             new PowerupDefinition(PowerupType.Kindling, "Kindling", "Every elemental effect you set off also sets the enemy burning", 1),
             new PowerupDefinition(PowerupType.Massacre, "Massacre", "Killing 3 enemies with one attack or skill resets your class skill", 1),
             new PowerupDefinition(PowerupType.Momentum, "Momentum", "Killing 2 enemies within 1 second resets your dodge", 1),

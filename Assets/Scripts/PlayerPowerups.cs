@@ -260,7 +260,7 @@ namespace Slopgame
                     enemy.Stun(DominoStun);
         }
 
-        public const float KillStreakWindow = 1f, KillCooldownCut = 0.5f, StillHunterCut = 1f, PyreRadius = 2f, PyreRadiusPerRank = 0.75f;
+        public const float KillStreakWindow = 1f, KillCooldownCut = 0.5f, StillHunterCut = 1f, PyreRadius = 1.5f, PyreRadiusPerRank = 0.75f;
         public const int MassacreKills = 3, MomentumKills = 2;
         private readonly Queue<float> recentKills = new Queue<float>();
 

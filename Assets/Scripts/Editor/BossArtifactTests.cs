@@ -426,18 +426,18 @@ namespace Slopgame.Editor
             husk.Configure(huskEnemy);
             Require(huskEnemy.Health == health + 2 && Crystal.ValueFor(huskEnemy) == 2, "The cinder husk's health or crystals are wrong.");
 
-            // Killing the husk leaves a fuse; the burst then hurts nearby enemies but spares the hero.
+            // Killing the husk leaves a fuse; the burst then hurts the hero but spares nearby enemies.
             Vector2 at = player.transform.position;
             huskEnemy.transform.position = at + Vector2.right * 0.8f;
             skitterEnemy.transform.position = at + Vector2.right * 1.6f;
             Require(!player.IsInvulnerable, "The hero was still protected before the cinder burst test.");
-            int hearts = player.Health, wards = player.Powerups.ArmorCharges;
+            int hearts = player.Health, wards = player.Powerups.ArmorCharges, skitterHealth = skitterEnemy.Health;
             huskEnemy.Hit(100000);
             var fuses = run.GetComponentsInChildren<CinderBurst>();
             Require(fuses.Length == 1 && player.Health == hearts && run.Enemies.Contains(skitterEnemy), "The cinder husk burst without a fuse.");
             fuses[0].Detonate();
-            Require(player.Health == hearts && player.Powerups.ArmorCharges == wards, "The cinder burst hurt the hero.");
-            Require(!run.Enemies.Contains(skitterEnemy), "The cinder burst did not hurt a nearby enemy.");
+            Require(player.Health < hearts || player.Powerups.ArmorCharges < wards, "The cinder burst did not hurt the hero.");
+            Require(run.Enemies.Contains(skitterEnemy) && skitterEnemy.Health == skitterHealth, "The cinder burst hurt a nearby enemy.");
         }
 
         private static void TestShop(DungeonRun run)

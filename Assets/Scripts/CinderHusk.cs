@@ -4,13 +4,13 @@ namespace Slopgame
 {
     /// <summary>
     /// A slow, hardy husk with a burning core. When it dies the core flares for a moment and then bursts,
-    /// hurting other enemies caught nearby (never the heroes), so it is worth killing in a crowd.
+    /// hurting heroes caught nearby (never other enemies), so step back or roll out once it falls.
     /// In the Neon Arcology it is a volatile core bot whose reactor blows the same way.
     /// </summary>
     public sealed class CinderHusk : EnemyVariant
     {
         public const float BurstRadius = 1.6f, FuseSeconds = 0.75f;
-        public const int BurstEnemyDamage = 3;
+        public const int BurstDamage = 1;
         public static readonly Color Ember = new Color(1f, 0.42f, 0.12f);
         private static Sprite sprite;
         private SpriteRenderer body;
@@ -91,12 +91,11 @@ namespace Slopgame
             var root = run.ProjectileRoot;
             HeroVfx.Pulse(root, center, CinderHusk.BurstRadius, new Color(1f, 0.5f, 0.15f, 0.55f), 0.35f);
             HeroVfx.Sparks(root, center, CinderHusk.Ember, 18, 5f, 0.45f);
-            // Only the host damages other enemies; guests learn of it from the host's snapshots.
-            if (run.IsGuest) return;
-            foreach (var enemy in run.Enemies.ToArray())
-                if (enemy != null && enemy.Health > 0 && enemy.Boss == null
-                    && Vector2.Distance(enemy.transform.position, center) <= CinderHusk.BurstRadius + enemy.HitRadius)
-                    enemy.Hit(CinderHusk.BurstEnemyDamage, center);
+            // Every machine bursts its own copy and judges only its own hero; a roll slips through it.
+            var hero = run.Player;
+            if (hero != null && hero.Health > 0 && !hero.IsInvulnerable
+                && Vector2.Distance(hero.transform.position, center) <= CinderHusk.BurstRadius + hero.HitRadius)
+                hero.Hit(CinderHusk.BurstDamage);
         }
     }
 }

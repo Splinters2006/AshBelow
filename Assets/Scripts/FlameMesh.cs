@@ -325,7 +325,8 @@ namespace Slopgame
             {
                 // A short flame's last row can overshoot its tip; unclamped, the taper below turns NaN and the whole mesh vanishes.
                 float u = Mathf.Min(1f, (i + 0.5f) * step / Mathf.Max(step, height));
-                float thick = Mathf.Max(Pixel, width * (u < 0.22f ? 0.78f + u : Mathf.Pow(1f - (u - 0.22f) / 0.78f, 0.8f)));
+                // Mono works the taper out in double precision, so at the tip it lands a hair below zero; Pow of that is NaN too.
+                float thick = Mathf.Max(Pixel, width * (u < 0.22f ? 0.78f + u : Mathf.Pow(Mathf.Max(0f, 1f - (u - 0.22f) / 0.78f), 0.8f)));
                 Vector2 mid = root + up * (i + 0.5f) * step + sway * u * u + across * Mathf.Sin(ripple - u * 4.5f) * width * 0.16f * u;
                 Cell(mid, up, thick, step, color);
             }
