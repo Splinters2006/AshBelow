@@ -4,14 +4,16 @@ using UnityEngine;
 namespace Slopgame
 {
     /// <summary>
-    /// An urn (or, in high-tech worlds, a supply crate) standing in a room. Any hero attack, projectile or dodge roll
-    /// smashes it. Most hold a crystal or two and a rare few hold a heart. Pots and their loot are seeded from the floor,
+    /// An urn (or, in high-tech worlds, a supply crate) standing in a room. A hero attack smashes it wherever that attack
+    /// actually reaches (each weapon tests its own cone, lane or blast here), as do projectiles and dodge rolls. Most hold a crystal or two and a rare few hold a heart. Pots and their loot are seeded from the floor,
     /// so every co-op machine sees the same ones, and they are shared: an urn one hero smashes breaks for the whole
     /// party, and so does the loot it spills (see <see cref="ISharedPickup"/>).
     /// </summary>
     public sealed class Breakable : MonoBehaviour
     {
-        public const float HitRadius = 0.4f, SwingReach = 1.7f, HeavyReach = 2.3f;
+        public const float HitRadius = 0.4f;
+        /// <summary>How far a basic or heavy attack chips Ice Wall blocks.</summary>
+        public const float SwingReach = 1.7f, HeavyReach = 2.3f;
         public const double CrystalChance = 0.55, HeartChance = 0.07;
         public const int PerRoomMin = 1, PerRoomMax = 3;
         private static readonly List<Breakable> active = new List<Breakable>();
@@ -68,28 +70,40 @@ namespace Slopgame
             return breakable;
         }
 
-        /// <summary>A melee swing or class skill: smashes urns within <paramref name="reach"/> in front of the hero, or right beside them.</summary>
-        public static void SmashInArc(DungeonPlayer player, Vector2 aim, float reach)
+        /// <summary>
+        /// Smashes every urn a cone-shaped attack reaches: any part of it inside the cone of <paramref name="reach"/> and
+        /// <paramref name="cone"/> degrees from <paramref name="origin"/>, with no wall in between (the enemy test of
+        /// <see cref="SwordAttack.OverlapsCone"/>).
+        /// </summary>
+        public static void SmashInCone(DungeonRun run, Vector2 origin, Vector2 aim, float reach, float cone)
         {
-            if (player == null || player.Health <= 0) return;
-            Vector2 origin = player.transform.position;
-            Vector2 facing = aim.sqrMagnitude > 0.0001f ? aim.normalized : Vector2.right;
-            // The same swing chips any Ice Wall block in reach.
-            IceWall.HitInArc(player.Run, origin, facing, reach);
+            if (run == null || aim.sqrMagnitude < 0.0001f) return;
             for (int i = active.Count - 1; i >= 0; i--)
             {
                 var target = active[i];
-                if (target == null || target.run != player.Run) continue;
-                Vector2 offset = (Vector2)target.transform.position - origin;
-                float distance = offset.magnitude;
-                if (distance > reach + HitRadius) continue;
-                if (distance > 0.9f && Vector2.Dot(offset / distance, facing) < 0.35f) continue;
-                if (!player.Run.HasLineOfSight(origin, target.transform.position)) continue;
-                target.Smash(origin);
+                if (target == null || target.run != run) continue;
+                Vector2 at = target.transform.position;
+                if (SwordAttack.OverlapsCone(at - origin, aim, reach, cone, HitRadius) && run.HasLineOfSight(origin, at)) target.Smash(origin);
             }
         }
 
-        /// <summary>Smashes every urn a projectile or rolling hero touches at <paramref name="point"/>.</summary>
+        /// <summary>
+        /// Smashes every urn a straight attack (a punch, thrust or ray) reaches: any part of it inside the
+        /// <paramref name="length"/> by 2 x <paramref name="halfWidth"/> lane from <paramref name="origin"/>, with no wall in between.
+        /// </summary>
+        public static void SmashInLane(DungeonRun run, Vector2 origin, Vector2 aim, float length, float halfWidth)
+        {
+            if (run == null || aim.sqrMagnitude < 0.0001f) return;
+            for (int i = active.Count - 1; i >= 0; i--)
+            {
+                var target = active[i];
+                if (target == null || target.run != run) continue;
+                Vector2 at = target.transform.position;
+                if (BrawlerAttack.InRectangle(at - origin, aim, length, halfWidth, HitRadius) && run.HasLineOfSight(origin, at)) target.Smash(origin);
+            }
+        }
+
+        /// <summary>Smashes every urn a projectile, rolling hero or blast touches at <paramref name="point"/>.</summary>
         public static bool SmashAt(DungeonRun run, Vector2 point, float radius)
         {
             bool smashed = false;

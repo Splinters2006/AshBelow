@@ -3,7 +3,8 @@ using UnityEngine;
 namespace Slopgame
 {
     /// <summary>
-    /// A straw training dummy in the crystal shop, there to try a build on. It is an enemy every attack can reach, but it
+    /// A straw training dummy in the crystal shop, there to try a build on. In co-op each machine has its own, which the
+    /// party never syncs: every hero only sees the hits they land themselves. It is an enemy every attack can reach, but it
     /// never moves, fights back or dies, keeps the stairs open, and shows each hit it takes as a number. Left alone for a
     /// few seconds, it patches itself back to full health.
     /// </summary>
@@ -22,10 +23,10 @@ namespace Slopgame
         private Vector2 home;
         private float lastHitAt = float.NegativeInfinity;
 
-        /// <summary>Stands the shop's dummies in a row along its front wall. Solo descents only: co-op does not sync them.</summary>
+        /// <summary>Stands the shop's dummies in a row along its front wall.</summary>
         public static void PlaceIn(DungeonRun run, Transform level)
         {
-            if (run == null || run.IsNetworked) return;
+            if (run == null) return;
             var room = DungeonMap.ShopRoom;
             float middle = (room.xMin + room.xMax - 1) / 2f, y = room.yMin + 0.9f;
             for (int i = 0; i < Count; i++)

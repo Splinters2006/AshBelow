@@ -619,7 +619,8 @@ namespace Slopgame
             IsPlaying = true;
             if (IsNetworked)
             {
-                var all = new List<DungeonEnemy>(Enemies);
+                // The shop's training dummies are each machine's own, so they get no ids.
+                var all = Enemies.FindAll(enemy => !enemy.IsTrainingDummy);
                 foreach (var wave in waveReserves) all.AddRange(wave);
                 Coop.RegisterFloor(all);
             }

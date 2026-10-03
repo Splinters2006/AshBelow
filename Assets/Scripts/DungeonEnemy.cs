@@ -71,7 +71,7 @@ namespace Slopgame
         {
             holdingBlows = Mathf.Max(0, holdingBlows - 1);
             // A co-op guest only learns of the kill when the host confirms it, so the mark lingers for that long.
-            if (Health <= 0 && Run != null && Run.IsGuest) holdingBlowLingers = Time.time + 1f;
+            if (Health <= 0 && Run != null && Guest) holdingBlowLingers = Time.time + 1f;
         }
 
         /// <summary>
@@ -107,7 +107,7 @@ namespace Slopgame
         public void EndBleedingBlow(float bleed)
         {
             // A co-op guest only learns of the kill when the host confirms it, so the mark lingers for that long.
-            if (Health <= 0 && Run != null && Run.IsGuest && pendingBleed > 0f)
+            if (Health <= 0 && Run != null && Guest && pendingBleed > 0f)
             { lingeringBleed = pendingBleed; lingeringBleedStun = pendingBleedStun; bleedingBlowLingers = Time.time + 1f; }
             bleedingBlows = Mathf.Max(0, bleedingBlows - 1);
             pendingBleed = bleedingBlows > 0 ? Mathf.Max(0f, pendingBleed - Mathf.Max(0f, bleed)) : 0f;
@@ -131,7 +131,7 @@ namespace Slopgame
         {
             burningBlows = Mathf.Max(0, burningBlows - 1);
             // A co-op guest only learns of the kill when the host confirms it, so the mark lingers for that long.
-            if (Health <= 0 && Run != null && Run.IsGuest) burningBlowLingers = Time.time + 1f;
+            if (Health <= 0 && Run != null && Guest) burningBlowLingers = Time.time + 1f;
         }
         public bool IsBleeding => wounds.Count > 0 || netBleeding;
         public bool IsPoisoned => poisonTicks > 0 || netPoisoned;
@@ -161,7 +161,7 @@ namespace Slopgame
         public void DeathMark(float delay)
         {
             if (IsInvulnerable || delay <= 0f) return;
-            if (Run.IsGuest) { Run.Coop.ReportDamage(this, CoopDamageKind.DeathMark, 0, transform.position, 0, delay); return; }
+            if (Guest) { Run.Coop.ReportDamage(this, CoopDamageKind.DeathMark, 0, transform.position, 0, delay); return; }
             deathMarkDue = Time.time + delay;
             deathMarkStored = 0;
         }
@@ -188,7 +188,7 @@ namespace Slopgame
         public void Mark(float duration)
         {
             if (IsInvulnerable || duration <= 0f) return;
-            if (Run.IsGuest) { Run.Coop.ReportDamage(this, CoopDamageKind.Mark, 0, transform.position, 0, duration); }
+            if (Guest) { Run.Coop.ReportDamage(this, CoopDamageKind.Mark, 0, transform.position, 0, duration); }
             if (!IsMarked)
             {
                 markedAt = Time.time;
@@ -287,6 +287,11 @@ namespace Slopgame
         /// <summary>One of the crystal shop's training dummies: it stands still, never fights back and never dies.</summary>
         public bool IsTrainingDummy => dummy != null;
         private TrainingDummy dummy;
+        /// <summary>
+        /// True when the host drives this enemy and blows on it are reported rather than dealt. Training dummies are each
+        /// machine's own (never synced), so even a guest strikes its dummies directly.
+        /// </summary>
+        private bool Guest => Run.IsGuest && !IsTrainingDummy;
         /// <summary>A training dummy at rest is drawn a touch dim, so the white flash of a hit shows on it.</summary>
         private static readonly Color DummyTint = new Color(0.82f, 0.82f, 0.82f);
 
@@ -366,7 +371,7 @@ namespace Slopgame
         private void Update()
         {
             if (!Run.IsPlaying || Health <= 0) return;
-            if (Run.IsGuest) { GuestUpdate(); return; }
+            if (Guest) { GuestUpdate(); return; }
             ActionTime += Time.deltaTime * ActionSpeedMultiplier * DreadFactor() * Tempo;
             if (terrorPending && !IsParalyzed) { terrorPending = false; terrorUntil = Time.time + TerrorTime; }
             UpdateCurseIndicator();
@@ -544,7 +549,7 @@ namespace Slopgame
             if (Health <= 0) return;
             if (IsInvulnerable) { Boss.Deflect(source); return; }
             peakHealth = Mathf.Max(peakHealth, Health);
-            if (IsMarked && damage > 0 && !Run.IsGuest) damage++;
+            if (IsMarked && damage > 0 && !Guest) damage++;
             // Brittle Ice (the Wizard's second passive): the first blow after a freeze shatters for double. Burn, bleed and
             // poison ticks leave the ice alone.
             if (IsBrittle && damage > 0 && !dotTick)
@@ -567,7 +572,7 @@ namespace Slopgame
                 hitUntil = Time.time + 0.15f;
                 return;
             }
-            if (Run.IsGuest)
+            if (Guest)
             {
                 // Show the hit now; the host applies it (and any curse) and confirms any kill.
                 Run.Coop.ReportDamage(this, CoopDamageKind.Hit, damage, source, knockback: knockback);
@@ -622,7 +627,7 @@ namespace Slopgame
         public void Die(bool localKill)
         {
             Health = Mathf.Min(Health, 0);
-            if (!Run.IsGuest && deathMarkDue > 0f) DeathMarkBurst();
+            if (!Guest && deathMarkDue > 0f) DeathMarkBurst();
             Run.EnemyDefeated(this);
             if (localKill && Run.Player.Health > 0) Run.Player.Powerups.OnKill(Run.Player, this);
             Boss?.Defeated();
@@ -664,7 +669,7 @@ namespace Slopgame
         {
             if (IsInvulnerable) return;
             TouchWithElement();
-            if (Run.IsGuest) { Run.Coop.ReportDamage(this, CoopDamageKind.Chill, 0, transform.position, 0, duration); return; }
+            if (Guest) { Run.Coop.ReportDamage(this, CoopDamageKind.Chill, 0, transform.position, 0, duration); return; }
             chilledUntil = Mathf.Max(chilledUntil, Time.time + duration * (Boss != null ? BossCrowdControlDuration : 1f));
         }
 
@@ -683,7 +688,7 @@ namespace Slopgame
             if (IsInvulnerable || duration <= 0f || Health <= 0) return false;
             bool fresh = !IsImmobilized;
             duration = HoldTime(duration);
-            if (Run.IsGuest) { Run.Coop.ReportDamage(this, CoopDamageKind.Paralyze, 0, transform.position, lingering ? 1 : 0, duration); Held(fresh, duration, harmless); return true; }
+            if (Guest) { Run.Coop.ReportDamage(this, CoopDamageKind.Paralyze, 0, transform.position, lingering ? 1 : 0, duration); Held(fresh, duration, harmless); return true; }
             // Lingering Terror: once this paralysis wears off, the enemy stays slowed for a while.
             if (lingering) terrorPending = true;
             if (Boss != null)
@@ -705,7 +710,7 @@ namespace Slopgame
             TouchWithElement();
             bool fresh = !IsImmobilized;
             duration = HoldTime(duration);
-            if (Run.IsGuest) { Run.Coop.ReportDamage(this, CoopDamageKind.Freeze, 0, transform.position, 0, duration); Held(fresh, duration); Seized(); MakeBrittle(); return; }
+            if (Guest) { Run.Coop.ReportDamage(this, CoopDamageKind.Freeze, 0, transform.position, 0, duration); Held(fresh, duration); Seized(); MakeBrittle(); return; }
             if (Boss != null)
             {
                 if (Time.time < freezeImmuneUntil) return;
@@ -728,7 +733,7 @@ namespace Slopgame
         public bool Fear(Vector2 from, float duration, bool harmless = false)
         {
             if (IsInvulnerable || duration <= 0f || Health <= 0) return false;
-            if (Run.IsGuest)
+            if (Guest)
             {
                 bool fresh = !IsImmobilized;
                 duration = HoldTime(duration);
@@ -774,7 +779,7 @@ namespace Slopgame
         public float ConsumeHolds()
         {
             float remaining = HoldRemaining;
-            if (Run.IsGuest)
+            if (Guest)
             {
                 // A guest only mirrors the host's holds a moment at a time; the host's own count comes with each snapshot.
                 remaining = Mathf.Max(remaining, netHoldUntil - Time.time);
@@ -793,7 +798,7 @@ namespace Slopgame
         public float ConsumeParalysis()
         {
             float remaining = Mathf.Max(0f, paralyzedUntil - Time.time);
-            if (Run.IsGuest) { Run.Coop.ReportDamage(this, CoopDamageKind.ClearParalysis, 0, transform.position, 0, 0f); return remaining; }
+            if (Guest) { Run.Coop.ReportDamage(this, CoopDamageKind.ClearParalysis, 0, transform.position, 0, 0f); return remaining; }
             paralyzedUntil = Mathf.Min(paralyzedUntil, Time.time);
             return remaining;
         }
@@ -836,7 +841,7 @@ namespace Slopgame
         }
 
         /// <summary>Breaks the enemy out of its ice at once (Shatter).</summary>
-        public void Thaw() { if (!Run.IsGuest) frozenUntil = Mathf.Min(frozenUntil, Time.time); }
+        public void Thaw() { if (!Guest) frozenUntil = Mathf.Min(frozenUntil, Time.time); }
 
         /// <summary>Stuns the enemy: held like paralysis. Guardians shake stuns off far faster and then resist for a while.</summary>
         public bool Stun(float duration)
@@ -844,7 +849,7 @@ namespace Slopgame
             if (IsInvulnerable || duration <= 0f || Health <= 0) return false;
             bool fresh = !IsImmobilized;
             duration = HoldTime(duration);
-            if (Run.IsGuest) { Run.Coop.ReportDamage(this, CoopDamageKind.Stun, 0, transform.position, 0, duration); Held(fresh, duration); Seized(); return true; }
+            if (Guest) { Run.Coop.ReportDamage(this, CoopDamageKind.Stun, 0, transform.position, 0, duration); Held(fresh, duration); Seized(); return true; }
             if (Boss != null)
             {
                 if (Time.time < stunImmuneUntil) return false;
@@ -864,7 +869,7 @@ namespace Slopgame
             if (IsInvulnerable || duration <= 0f || Health <= 0 || Boss != null) return false;
             bool fresh = !IsImmobilized;
             duration = HoldTime(duration);
-            if (Run.IsGuest) { Run.Coop.ReportDamage(this, CoopDamageKind.Root, 0, transform.position, 0, duration); Held(fresh, duration); Seized(); return true; }
+            if (Guest) { Run.Coop.ReportDamage(this, CoopDamageKind.Root, 0, transform.position, 0, duration); Held(fresh, duration); Seized(); return true; }
             rootedUntil = Mathf.Max(rootedUntil, Time.time + duration);
             Held(fresh, duration);
             Seized();
@@ -909,7 +914,7 @@ namespace Slopgame
             if (IsInvulnerable || hit <= 0 || ticks <= 0 || duration <= 0f || Health <= 0) return;
             heldMultiplier = Mathf.Max(1f, heldMultiplier);
             // The held multiplier crosses the wire in the message's (otherwise unused) knockback.
-            if (Run.IsGuest) Run.Coop.ReportDamage(this, CoopDamageKind.Bleed, hit, transform.position, ticks, duration, knockback: heldMultiplier);
+            if (Guest) Run.Coop.ReportDamage(this, CoopDamageKind.Bleed, hit, transform.position, ticks, duration, knockback: heldMultiplier);
             // The stun stays on the machine that opened the wound: a guest reports it to the host when its own count runs out.
             bleedStun = Mathf.Max(bleedStun, stun);
             float interval = duration / ticks;
@@ -956,7 +961,7 @@ namespace Slopgame
             wounds.Clear();
             bleedCarry = 0f;
             if (bleeding) BledDry();
-            if (Run.IsGuest) Run.Coop.ReportDamage(this, CoopDamageKind.ClearBleed, 0, transform.position, 0, 0f);
+            if (Guest) Run.Coop.ReportDamage(this, CoopDamageKind.ClearBleed, 0, transform.position, 0, 0f);
             return remaining;
         }
 
@@ -965,7 +970,7 @@ namespace Slopgame
         {
             if (scale <= 0f || Health <= 0) return;
             // A guest only knows its own wounds; the host restarts everyone's.
-            if (Run.IsGuest) Run.Coop.ReportDamage(this, CoopDamageKind.RefreshBleed, 0, transform.position, 0, scale);
+            if (Guest) Run.Coop.ReportDamage(this, CoopDamageKind.RefreshBleed, 0, transform.position, 0, scale);
             foreach (var wound in wounds)
             {
                 wound.TicksLeft = Mathf.Max(wound.TicksLeft, Mathf.RoundToInt(wound.Ticks * scale));
@@ -977,7 +982,7 @@ namespace Slopgame
         public void Poison(int ticks, int damage)
         {
             if (IsInvulnerable || ticks <= 0) return;
-            if (Run.IsGuest) { Run.Coop.ReportDamage(this, CoopDamageKind.Poison, damage, transform.position, ticks, 0f); return; }
+            if (Guest) { Run.Coop.ReportDamage(this, CoopDamageKind.Poison, damage, transform.position, ticks, 0f); return; }
             if (poisonTicks == 0) nextPoison = Time.time + 1f;
             poisonDamage = Mathf.Max(poisonTicks > 0 ? poisonDamage : 0, damage);
             poisonTicks = Mathf.Max(poisonTicks, ticks);
@@ -991,7 +996,7 @@ namespace Slopgame
             curseMastery = IsCursed ? Mathf.Max(curseMastery, mastery) : mastery;
             curseBonus = IsCursed ? Mathf.Max(curseBonus, bonus) : bonus;
             // The bonus crosses the wire as a whole percentage in the message's amount.
-            if (Run.IsGuest) { Run.Coop.ReportDamage(this, CoopDamageKind.Curse, Mathf.RoundToInt(bonus * 100f), transform.position, mastery, duration); return; }
+            if (Guest) { Run.Coop.ReportDamage(this, CoopDamageKind.Curse, Mathf.RoundToInt(bonus * 100f), transform.position, mastery, duration); return; }
             cursedUntil = Mathf.Max(cursedUntil, Time.time + duration);
         }
 
@@ -999,7 +1004,7 @@ namespace Slopgame
         {
             if (IsInvulnerable) return;
             TouchWithElement();
-            if (Run.IsGuest) { Run.Coop.ReportDamage(this, CoopDamageKind.Burn, damage, transform.position, ticks, 0f, color); return; }
+            if (Guest) { Run.Coop.ReportDamage(this, CoopDamageKind.Burn, damage, transform.position, ticks, 0f, color); return; }
             if (burnTicks == 0)
             {
                 nextBurn = Time.time + 1f;

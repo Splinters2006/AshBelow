@@ -112,6 +112,7 @@ namespace Slopgame
             var run = Player.Run;
             Vector2 origin = transform.position;
             int cut = 0;
+            Breakable.SmashInCone(run, origin, aim, reach, cone);
             for (int i = run.Enemies.Count - 1; i >= 0; i--)
             {
                 if (i >= run.Enemies.Count) continue;

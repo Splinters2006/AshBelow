@@ -174,9 +174,15 @@ namespace Slopgame.Editor
             int crystals = run.ProjectileRoot.GetComponentsInChildren<Crystal>().Length;
             var loaded = Breakable.Create(run, run.ProjectileRoot, hero + Vector2.right, run.World, 2, true);
             var behind = Breakable.Create(run, run.ProjectileRoot, hero + Vector2.left * 1.5f, run.World, 0, false);
-            Breakable.SmashInArc(run.Player, Vector2.right, Breakable.SwingReach);
+            var far = Breakable.Create(run, run.ProjectileRoot, hero + Vector2.right * 2.8f, run.World, 0, false);
+            var lane = Breakable.Create(run, run.ProjectileRoot, hero + Vector2.down * 2.6f, run.World, 0, false);
+            Breakable.SmashInCone(run, hero, Vector2.right, 2f, 120f);
             Require(!Breakable.Active.Contains(loaded), "Swing did not smash the urn in front");
             Require(Breakable.Active.Contains(behind), "Swing smashed an urn behind the hero");
+            Require(Breakable.Active.Contains(far), "Swing smashed an urn beyond its reach");
+            Breakable.SmashInLane(run, hero, Vector2.down, 2.6f, 0.2f);
+            Require(!Breakable.Active.Contains(lane), "A long lane attack did not smash the urn at its end");
+            Breakable.SmashAt(run, far.transform.position, 0.1f);
             Require(run.ProjectileRoot.GetComponentsInChildren<Crystal>().Length == crystals + 1, "Urn dropped no crystals");
             Require(run.ProjectileRoot.GetComponentsInChildren<HealthPickup>().Length > 0, "Urn dropped no heart");
             Require(Breakable.SmashAt(run, behind.transform.position, 0.1f) && !Breakable.Active.Contains(behind), "Touch did not smash the urn");

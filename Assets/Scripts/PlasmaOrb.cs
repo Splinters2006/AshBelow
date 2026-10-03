@@ -67,6 +67,7 @@ namespace Slopgame
                 Vector2 previous = transform.position, next = previous + direction * (distance / steps);
                 if (!run.Map.CanStand(next, 0.08f) || HolyBubble.Blocks(previous, next)) { Burst(previous); return; }
                 transform.position = next;
+                if (!ghost) Breakable.SmashAt(run, next, size * 0.5f);
                 foreach (var enemy in run.Enemies)
                     if (enemy != null && enemy.Health > 0 && Vector2.Distance(next, enemy.transform.position) <= enemy.HitRadius + size * 0.5f)
                     { Burst(next); return; }
@@ -88,6 +89,7 @@ namespace Slopgame
             if (!ghost)
             {
                 ScreenFx.Shake(0.1f + 0.05f * radius, 0.18f);
+                Breakable.SmashAt(run, center, radius);
                 foreach (var enemy in run.Enemies.ToArray())
                     if (enemy != null && enemy.Health > 0 && Vector2.Distance(center, enemy.transform.position) <= radius + enemy.HitRadius
                         && run.HasLineOfSight(center, enemy.transform.position))

@@ -88,7 +88,8 @@ namespace Slopgame
             bool thrown;
             try { thrown = Player.Powerups.BasicAttack(() => Player.Weapon.TryAttack(Player.AimDirection, charge)); }
             finally { IsStriking = false; ReleasedOvercharged = false; }
-            if (thrown) Breakable.SmashInArc(Player, Player.AimDirection, Breakable.SwingReach);
+            // Urns break where the attack itself reaches (see Breakable); the swing still chips Ice Wall blocks.
+            if (thrown) IceWall.HitInArc(Player.Run, Player.transform.position, Player.AimDirection.normalized, Breakable.SwingReach);
         }
 
         public int Damage(float charge)

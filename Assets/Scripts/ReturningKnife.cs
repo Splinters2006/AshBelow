@@ -115,6 +115,7 @@ namespace Slopgame
 
         private void Strike(Vector2 point, Vector2 heading, HashSet<DungeonEnemy> alreadyHit)
         {
+            if (!ghost) Breakable.SmashAt(run, point, 0.1f);
             for (int j = run.Enemies.Count - 1; j >= 0; j--)
             {
                 var enemy = run.Enemies[j];

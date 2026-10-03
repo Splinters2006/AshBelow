@@ -78,6 +78,7 @@ namespace Slopgame
         {
             var run = Player.Run;
             int hits = 0;
+            Breakable.SmashInCone(run, origin, aim, reach, cone);
             foreach (var enemy in run.Enemies.ToArray())
             {
                 if (enemy == null || enemy.Health <= 0) continue;
@@ -135,6 +136,7 @@ namespace Slopgame
             for (int i = 0; i < steps; i++)
             {
                 transform.position = run.Map.Move(transform.position, aim * (distance / steps));
+                Breakable.SmashAt(run, transform.position, DashHalfWidth * Size);
                 foreach (var enemy in run.Enemies)
                     if (enemy != null && enemy.Health > 0 && !cut.Contains(enemy)
                         && Vector2.Distance(transform.position, enemy.transform.position) <= DashHalfWidth * Size + enemy.HitRadius) cut.Add(enemy);
@@ -275,6 +277,7 @@ namespace Slopgame
             Vector2 origin = transform.position;
             float length = ThrustReach * Size, halfWidth = ThrustHalfWidth * Size;
             int damage = Mathf.Max(1, Mathf.RoundToInt(Player.Damage * TechniqueMultiplier * ThrustMultiplier));
+            Breakable.SmashInLane(run, origin, aim, length, halfWidth);
             foreach (var enemy in run.Enemies.ToArray())
             {
                 if (enemy == null || enemy.Health <= 0

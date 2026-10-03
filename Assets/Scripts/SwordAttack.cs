@@ -130,6 +130,7 @@ namespace Slopgame
                 HeroVfx.Slash(Player.Run.ProjectileRoot, transform.position, aim, reach, cone, SlashColor);
                 CoopFx.Slash(Player.Run, transform.position, aim, reach, cone, SlashColor);
             }
+            Breakable.SmashInCone(Player.Run, transform.position, aim, reach, cone);
             // Counterweight: a full slash hurls enemies back and staggers them.
             bool counterweight = fullSlash && Player.Powerups.Count(PowerupType.Counterweight) > 0;
             // The Knight's blade follows its drawn slash: each enemy is cut when the edge reaches its body.

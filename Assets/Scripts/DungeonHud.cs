@@ -170,7 +170,10 @@ namespace Slopgame
         private void DrawCog()
         {
             PinTopRight();
-            if (!DungeonUi.CogButton("hudCog", CogRect)) return;
+            // Escape opens the settings too, unless a talent or ability confirmation is about to take it as Back.
+            bool escape = EscapePressed() && pendingUpgrade < 0 && pendingAbility == AbilityType.None;
+            if (escape) Event.current.Use();
+            if (!DungeonUi.CogButton("hudCog", CogRect) && !escape) return;
             showSettings = true;
             // A solo descent stands still while the settings are open; a co-op one cannot.
             pausedForSettings = Run.IsPlaying && !Run.IsNetworked && !Run.IsInLobby;
@@ -185,6 +188,8 @@ namespace Slopgame
             pausedForSettings = false;
         }
 
+        private static bool EscapePressed() => Event.current.type == EventType.KeyDown && Event.current.keyCode == KeyCode.Escape;
+
         /// <summary>The same settings page as the main menu's, over the descent.</summary>
         private void DrawSettings()
         {
@@ -194,6 +199,8 @@ namespace Slopgame
             DungeonUi.Label(new Rect(65, 80, 1100, 56), "SETTINGS", 40);
             DungeonUi.Label(new Rect(70, 138, 1100, 30), "Resize the menus and HUD, fade the HUD, switch autofire for each hero, rebind every action and pick your name colour. Changes save instantly.", 17, DungeonUi.Muted);
             settingsMenu.Draw();
+            // Escape closes the page (one that was rebinding a key was already taken as cancel by the controls).
+            if (EscapePressed()) { Event.current.Use(); CloseSettings(); return; }
             if (DungeonUi.Button("hudSettingsBack", new Rect(70, 598, 268, 48), "Back", DungeonUi.Muted)) CloseSettings();
             if (DungeonUi.Button("hudSettingsReset", new Rect(860, 598, 350, 48), "Reset to defaults", DungeonUi.Teal)) settingsMenu.ResetToDefaults();
             PinTopRight();

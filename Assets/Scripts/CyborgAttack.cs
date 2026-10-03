@@ -180,6 +180,7 @@ namespace Slopgame
             direction = direction.sqrMagnitude > 0.0001f ? direction.normalized : Vector2.right;
             Vector2 end = RayEnd(run, origin, direction, range);
             float length = Vector2.Distance(origin, end);
+            Breakable.SmashInLane(run, origin, direction, length, width * 0.5f);
             int hits = 0;
             bool targeting = shooter.Powerups.Count(PowerupType.TargetingArray) > 0, overheat = shooter.Powerups.Count(PowerupType.Overheat) > 0;
             foreach (var enemy in run.Enemies.ToArray())

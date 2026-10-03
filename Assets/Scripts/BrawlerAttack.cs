@@ -343,6 +343,7 @@ namespace Slopgame
             HeroVfx.Sparks(root, center, new Color(0.75f, 0.68f, 0.58f), 20, 5f, 0.45f);
             CoopFx.Ring(Player.Run, center, radius, color, 0.5f);
             CoopFx.Pulse(Player.Run, center, radius, color, 0.45f);
+            Breakable.SmashAt(Player.Run, center, radius);
             foreach (var enemy in Player.Run.Enemies.ToArray())
             {
                 if (enemy == null || enemy.Health <= 0 || Vector2.Distance(center, enemy.transform.position) > radius + enemy.HitRadius
@@ -361,6 +362,7 @@ namespace Slopgame
         private int Strike(Vector2 origin, Vector2 aim, float length, float halfWidth, int damage, float knockback, float stun = 0f)
         {
             int struck = 0;
+            Breakable.SmashInLane(Player.Run, origin, aim, length, halfWidth);
             foreach (var enemy in Player.Run.Enemies.ToArray())
             {
                 if (enemy == null || enemy.Health <= 0

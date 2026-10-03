@@ -8,8 +8,8 @@ namespace Slopgame
     /// </summary>
     public static class PartyHallHud
     {
-        public static readonly Rect PanelRect = new Rect(976, 84, 280, 306);
-        private const float RowTop = 108, RowStep = 34;
+        public static readonly Rect PanelRect = new Rect(876, 84, 380, 372);
+        private const float RowTop = 128, RowStep = 42;
         // The guest whose "..." menu the host has open, and until when its Kick waits for a confirming second click.
         private static ulong? menuFor;
         private static float kickConfirmUntil;
@@ -20,26 +20,26 @@ namespace Slopgame
             var session = run.Coop.Session;
             var rect = PanelRect;
             DungeonUi.Panel(rect, DungeonUi.PanelColor);
-            float left = rect.x + 16, width = rect.width - 32;
+            float left = rect.x + 20, width = rect.width - 40;
             int ready = 0;
             foreach (var peer in session.Peers) if (peer.Ready) ready++;
-            DungeonUi.Label(new Rect(left, rect.y + 12, width, 20), $"PARTY  {session.Peers.Count} / {NetSession.MaxPlayers}", 13, DungeonUi.Muted);
+            DungeonUi.Label(new Rect(left, rect.y + 14, width, 22), $"PARTY  {session.Peers.Count} / {NetSession.MaxPlayers}", 15, DungeonUi.Muted);
             float countdown = run.Coop.CountdownLeft;
-            DungeonUi.Label(new Rect(left, rect.y + 12, width, 20), countdown >= 0f ? $"STARTING IN {Mathf.CeilToInt(countdown)}" : $"{ready} READY", 13,
+            DungeonUi.Label(new Rect(left, rect.y + 14, width, 22), countdown >= 0f ? $"STARTING IN {Mathf.CeilToInt(countdown)}" : $"{ready} READY", 15,
                 ready == session.Peers.Count ? AbilityCatalog.Gold : DungeonUi.Muted, TextAnchor.UpperRight);
-            DrawShare(session, new Rect(left, rect.y + 38, width, 52));
+            DrawShare(session, new Rect(left, rect.y + 44, width, 64));
             DungeonUi.Divider(new Rect(left, rect.y + RowTop - 8, width, 1));
             for (int i = 0; i < session.Peers.Count; i++)
             {
                 var peer = session.Peers[i];
                 var hero = run.Characters[Mathf.Clamp(peer.ClassIndex, 0, run.Characters.Count - 1)];
                 float y = rect.y + RowTop + i * RowStep;
-                NameTag.Draw(new Rect(left, y, 116, 22), peer.Name + (peer.Id == session.LocalId ? " (you)" : ""), peer.NameColor, peer.Badge, 14, titleBelow: false);
-                DungeonUi.Label(new Rect(left + 116, y + 1, 64, 22), hero.DisplayName, 14, hero.Color, TextAnchor.UpperRight);
-                DungeonUi.Label(new Rect(left + 182, y + 1, 40, 22), peer.Ready ? "READY" : "—", 12, peer.Ready ? AbilityCatalog.Gold : DungeonUi.Muted, TextAnchor.UpperRight);
+                NameTag.Draw(new Rect(left, y, 176, 26), peer.Name + (peer.Id == session.LocalId ? " (you)" : ""), peer.NameColor, peer.Badge, 17, titleBelow: false);
+                DungeonUi.Label(new Rect(left + 176, y + 1, 80, 26), hero.DisplayName, 17, hero.Color, TextAnchor.UpperRight);
+                DungeonUi.Label(new Rect(left + 258, y + 3, 50, 26), peer.Ready ? "READY" : "—", 14, peer.Ready ? AbilityCatalog.Gold : DungeonUi.Muted, TextAnchor.UpperRight);
                 // The host's menu for each guest, with Kick in it.
                 if (session.IsHost && peer.Id != session.LocalId
-                    && DungeonUi.Button("hallPeerMenu" + peer.Id, new Rect(left + 226, y - 1, 22, 24), "...", menuFor == peer.Id ? AbilityCatalog.Gold : DungeonUi.Muted, true, 13))
+                    && DungeonUi.Button("hallPeerMenu" + peer.Id, new Rect(left + 314, y - 1, 26, 28), "...", menuFor == peer.Id ? AbilityCatalog.Gold : DungeonUi.Muted, true, 15))
                 {
                     menuFor = menuFor == peer.Id ? null : peer.Id;
                     kickConfirmUntil = 0f;
@@ -47,12 +47,12 @@ namespace Slopgame
             }
             DrawPeerMenu(session, left, rect.y);
             bool localReady = session.LocalReady;
-            if (DungeonUi.Button("hallReady", new Rect(left, rect.yMax - 56, width, 42), localReady ? "Cancel ready" : "Ready up",
+            if (DungeonUi.Button("hallReady", new Rect(left, rect.yMax - 64, width, 48), localReady ? "Cancel ready" : "Ready up",
                 localReady ? DungeonUi.Teal : AbilityCatalog.Gold))
                 session.SetLocalReady(!localReady);
             // A direct host's router result is long, so it sits under the panel.
             if (session.IsHost && session.IsDirect && !string.IsNullOrEmpty(session.PortStatus))
-                DungeonUi.Label(new Rect(rect.x, rect.yMax + 8, rect.width, 90), session.PortStatus, 12, DungeonUi.Muted);
+                DungeonUi.Label(new Rect(rect.x, rect.yMax + 8, rect.width, 90), session.PortStatus, 14, DungeonUi.Muted);
         }
 
         /// <summary>
@@ -65,10 +65,10 @@ namespace Slopgame
             int row = -1;
             for (int i = 0; i < session.Peers.Count; i++) if (session.Peers[i].Id == menuFor) row = i;
             if (row < 0 || !session.IsHost) { menuFor = null; return; }
-            var area = new Rect(left + 112, top + RowTop + row * RowStep - 3, 112, 28);
+            var area = new Rect(left + 172, top + RowTop + row * RowStep - 3, 136, 32);
             DungeonUi.Panel(new Rect(area.x - 2, area.y - 2, area.width + 4, area.height + 4), DungeonUi.Background);
             bool confirming = Time.unscaledTime < kickConfirmUntil;
-            if (DungeonUi.Button("hallKick", area, confirming ? "Confirm?" : "Kick", new Color(1f, 0.4f, 0.4f), true, 14))
+            if (DungeonUi.Button("hallKick", area, confirming ? "Confirm?" : "Kick", new Color(1f, 0.4f, 0.4f), true, 16))
             {
                 if (!confirming) { kickConfirmUntil = Time.unscaledTime + 3f; return; }
                 session.Kick(menuFor.Value);
@@ -88,13 +88,13 @@ namespace Slopgame
             }
             else
             {
-                DungeonUi.Label(new Rect(area.x, area.y, area.width, 20), "P2P PARTY", 12, DungeonUi.Muted);
-                DungeonUi.Label(new Rect(area.x, area.y + 20, area.width, 24), "Connected directly to the host.", 14, DungeonUi.Text);
+                DungeonUi.Label(new Rect(area.x, area.y, area.width, 22), "P2P PARTY", 14, DungeonUi.Muted);
+                DungeonUi.Label(new Rect(area.x, area.y + 22, area.width, 28), "Connected directly to the host.", 17, DungeonUi.Text);
                 return;
             }
-            DungeonUi.Label(new Rect(area.x, area.y, area.width, 20), caption, 12, DungeonUi.Muted);
-            DungeonUi.Label(new Rect(area.x, area.y + 18, area.width - 76, 32), shared ?? "Finding your address…", shared != null && shared.Length <= 10 ? 26 : 16, AbilityCatalog.Gold);
-            if (shared != null && DungeonUi.Button("hallCopy", new Rect(area.xMax - 68, area.y + 16, 68, 32), "Copy", DungeonUi.Teal, true, 14))
+            DungeonUi.Label(new Rect(area.x, area.y, area.width, 22), caption, 14, DungeonUi.Muted);
+            DungeonUi.Label(new Rect(area.x, area.y + 22, area.width - 90, 40), shared ?? "Finding your address…", shared != null && shared.Length <= 10 ? 32 : 19, AbilityCatalog.Gold);
+            if (shared != null && DungeonUi.Button("hallCopy", new Rect(area.xMax - 82, area.y + 22, 82, 38), "Copy", DungeonUi.Teal, true, 17))
                 GUIUtility.systemCopyBuffer = shared;
         }
 

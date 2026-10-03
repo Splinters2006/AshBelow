@@ -199,7 +199,7 @@ namespace Slopgame
                 {
                     // The crystal shop before the boss: the stairs only work once the whole party stands at them.
                     yield return Wait("the crystal shop", () => run.InShop && run.IsPlaying);
-                    Require(run.Floor == floor && run.Enemies.Count == 0 && run.Shop != null, "The crystal shop was not built for everyone.");
+                    Require(run.Floor == floor && run.HostileCount == 0 && run.Shop != null, "The crystal shop was not built for everyone.");
                     if (seat == 1)
                     {
                         run.Coop.RequestInteract(CoopChoice.Upgrade);

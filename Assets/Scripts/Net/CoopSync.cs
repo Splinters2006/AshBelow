@@ -324,9 +324,11 @@ namespace Slopgame
         {
             using var writer = NetSession.Writer(1024);
             writer.WriteValueSafe(Run.Floor);
-            writer.WriteValueSafe((ushort)Run.Enemies.Count);
+            // Training dummies are each machine's own and never sent.
+            writer.WriteValueSafe((ushort)Run.HostileCount);
             foreach (var enemy in Run.Enemies)
             {
+                if (enemy.IsTrainingDummy) continue;
                 byte flags = 0;
                 if (enemy.IsFlashing) flags |= EnemySnapshot.Flashing;
                 if (enemy.IsChilled) flags |= EnemySnapshot.Chilled;
@@ -761,7 +763,7 @@ namespace Slopgame
 
         private void HostInteract(CoopChoice choice)
         {
-            if (!Run.IsPlaying || openChoice.HasValue || Run.Enemies.Count != 0) return;
+            if (!Run.IsPlaying || openChoice.HasValue || Run.HostileCount != 0) return;
             if (choice == CoopChoice.Artifact && Run.Artifact == null) return;
             // The monolith opens no pick: the host just tells every machine to release the first wave.
             if (choice == CoopChoice.Waves)

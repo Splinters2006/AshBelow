@@ -395,6 +395,7 @@ namespace Slopgame
             var run = Player.Run;
             Vector2 origin = transform.position;
             int hit = 0;
+            Breakable.SmashInCone(run, origin, aim, reach, cone);
             foreach (var enemy in run.Enemies.ToArray())
             {
                 if (enemy == null || enemy.Health <= 0) continue;
@@ -516,6 +517,7 @@ namespace Slopgame
             {
                 // Stomp Kick: launches the nearest enemy in front of him.
                 var target = NearestInCone(aim, StompReach * rs, StompCone);
+                Breakable.SmashInCone(run, origin, aim, StompReach * rs, StompCone);
                 if (target != null) HitAndShove(target, Mathf.CeilToInt(damage * 1.5f), origin, 4f, true);
                 Vector2 tip = origin + aim * StompReach * rs;
                 CombatVfx.Bolt(Root, origin + aim * 0.3f, tip, SpecimenCatalog.Stone, 0.16f, 0.18f);
@@ -552,6 +554,7 @@ namespace Slopgame
         {
             var run = Player.Run;
             Vector2 center = transform.position;
+            Breakable.SmashInCone(run, center, Vector2.right, radius, 360f);
             foreach (var enemy in run.Enemies.ToArray())
             {
                 if (enemy == null || enemy.Health <= 0) continue;
@@ -576,6 +579,7 @@ namespace Slopgame
             // The crack stops at the first wall.
             length = Mathf.Max(0.5f, Vector2.Distance(origin, PlayerAbilities.FindGroundLanding(run.Map, origin, aim, length)));
             int damage = Player.Charge.Damage(1f);
+            Breakable.SmashInLane(run, origin, aim, length, AxeWidth * 0.5f);
             foreach (var enemy in run.Enemies.ToArray())
             {
                 if (enemy == null || enemy.Health <= 0) continue;
@@ -761,6 +765,7 @@ namespace Slopgame
             float reach = Mathf.Max(0.8f, Vector2.Distance(origin, PlayerAbilities.FindGroundLanding(run.Map, origin, aim, LashReachNow)));
             float sweet = SweetSpotNow;
             bool forced = !echo && ConsumeRollCrit();
+            Breakable.SmashInCone(run, origin, aim, reach, LashCone);
             foreach (var enemy in run.Enemies.ToArray())
             {
                 if (enemy == null || enemy.Health <= 0) continue;
@@ -782,6 +787,7 @@ namespace Slopgame
         {
             var run = Player.Run;
             const float radius = 1f;
+            Breakable.SmashAt(run, at, radius);
             foreach (var enemy in run.Enemies.ToArray())
                 if (enemy != null && enemy.Health > 0 && Vector2.Distance(at, enemy.transform.position) <= radius + enemy.HitRadius)
                     CombatDamage.Apply(Player, enemy, Player.Damage, DamageElement.Physical, at, 0.6f);
@@ -797,6 +803,7 @@ namespace Slopgame
             float reach = LashReachNow, sweet = SweetSpotNow;
             int damage = Player.Charge.Damage(1f);
             bool forced = ConsumeRollCrit();
+            Breakable.SmashInCone(run, origin, aim, reach, 360f);
             foreach (var enemy in run.Enemies.ToArray())
             {
                 if (enemy == null || enemy.Health <= 0) continue;

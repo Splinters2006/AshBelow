@@ -61,6 +61,7 @@ namespace Slopgame
                 Vector2 previous = transform.position, next = previous + direction * (distance / steps);
                 if (!run.Map.CanStand(next, 0.05f)) { Burst(previous); return; }
                 transform.position = next;
+                Breakable.SmashAt(run, next, 0.1f);
                 foreach (var enemy in run.Enemies)
                 {
                     if (enemy == null || enemy.Health <= 0 || Vector2.Distance(next, enemy.transform.position) > enemy.HitRadius + 0.18f) continue;

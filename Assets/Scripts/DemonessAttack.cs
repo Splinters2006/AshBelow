@@ -106,6 +106,7 @@ namespace Slopgame
             Color color = vital ? Color.Lerp(TailColor, Pale, 0.25f) : TailColor;
             // The tail stops in the victim rather than passing through it.
             float length = victim != null ? Mathf.Clamp(nearest, 0.6f, reach) : reach;
+            Breakable.SmashInLane(Player.Run, origin, aim, length, StabHalfWidth);
             bool twin = HasTwinTails;
             TailVfx.Stab(Player.Run.ProjectileRoot, origin, aim, length, color, twin);
             CoopFx.TailStab(Player.Run, origin, aim, length, color, twin);
@@ -135,6 +136,7 @@ namespace Slopgame
             CoopFx.TailSweep(Player.Run, origin, aim, WhipRadius, WhipCone, color);
             HeroVfx.Pulse(root, origin + aim * WhipRadius * 0.6f, 1.2f, color, 0.35f);
             ScreenFx.Shake(0.2f, 0.2f);
+            Breakable.SmashInCone(Player.Run, origin, aim, WhipRadius, WhipCone);
             foreach (var enemy in Player.Run.Enemies.ToArray())
             {
                 if (!InCone(enemy, origin, aim, WhipRadius, WhipCone)) continue;
@@ -182,6 +184,7 @@ namespace Slopgame
             var root = Player.Run.ProjectileRoot;
             TailVfx.Sweep(root, origin, aim, reach, cone, TailColor);
             CoopFx.TailSweep(Player.Run, origin, aim, reach, cone, TailColor);
+            Breakable.SmashInCone(Player.Run, origin, aim, reach, cone);
             foreach (var enemy in Player.Run.Enemies.ToArray())
             {
                 if (!InCone(enemy, origin, aim, reach, cone)) continue;

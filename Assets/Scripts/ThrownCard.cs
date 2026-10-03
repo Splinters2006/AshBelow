@@ -160,6 +160,7 @@ namespace Slopgame
                     return;
                 }
                 transform.position = next;
+                if (!ghost) Breakable.SmashAt(run, next, 0.1f);
                 foreach (var enemy in run.Enemies.ToArray())
                 {
                     if (enemy == null || enemy.Health <= 0 || Vector2.Distance(next, enemy.transform.position) > enemy.HitRadius) continue;
