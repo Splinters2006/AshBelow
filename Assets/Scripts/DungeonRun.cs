@@ -88,6 +88,15 @@ namespace Slopgame
         public PermanentProgress Progress { get; private set; }
         public PlayerAccount Account { get; private set; }
         public CloudProgressSync CloudSync { get; private set; }
+        /// <summary>The signed-in account's saved solo descent, continued from the main menu.</summary>
+        public CloudRunSave RunSave { get; private set; }
+        /// <summary>The descent as it stood when this floor began; saved when a signed-in player leaves for the menu.</summary>
+        private RunSnapshot checkpoint;
+        /// <summary>
+        /// Ash this floor's kills have earned, and the most they have ever paid. A resumed floor is fought again, and only
+        /// what goes past the earlier attempt's ash is paid.
+        /// </summary>
+        private int floorAshEarned, floorAshPaid, resumeAshPaid;
         public int RunAshEarned { get; private set; }
         public CoopSync Coop { get; private set; }
         /// <summary>True during a co-op descent; the local hero is still <see cref="Player"/>.</summary>
@@ -123,6 +132,10 @@ namespace Slopgame
             CloudSync = gameObject.AddComponent<CloudProgressSync>();
             CloudSync.Run = this;
             CloudSync.Account = Account;
+            RunSave = gameObject.AddComponent<CloudRunSave>();
+            RunSave.Run = this;
+            RunSave.Account = Account;
+            RunSave.Directory = saveDirectory;
             view = Camera.main;
             if (view == null) view = new GameObject("Dungeon Camera", typeof(Camera)).GetComponent<Camera>();
             view.orthographic = true;
@@ -172,7 +185,9 @@ namespace Slopgame
         public void ShowMainMenu(bool disconnected)
         {
             if (Coop != null && Coop.Session.State != NetState.Offline && !disconnected) Coop.Session.Leave();
-            if (!IsInMainMenu) StashCrystals();
+            // A signed-in player's descent waits to be continued; otherwise it ends here.
+            if (CanSuspend) SuspendRun();
+            else if (!IsInMainMenu) StashCrystals();
             ClearRun();
             menu.ResetPage(disconnected);
         }
@@ -194,6 +209,7 @@ namespace Slopgame
             Artifact = null;
             InShop = false;
             Shop = null;
+            checkpoint = null;
             Time.timeScale = 1f;
             ScreenFx.Clear();
             IsInMainMenu = true;
@@ -222,7 +238,6 @@ namespace Slopgame
         {
             if (SelectedCharacter == null || IsCharacterLocked(SelectedCharacter)) return;
             IsInMainMenu = false;
-            if (Player != null) { Player.gameObject.SetActive(false); Destroy(Player.gameObject); }
             Seed = seed;
             PartySize = Mathf.Max(1, partySize);
             // NextFloor below steps onto the world's first floor (floor 1 for the Ash Below).
@@ -232,12 +247,7 @@ namespace Slopgame
             Kills = 0;
             RunAshEarned = 0;
             guardiansThisRun = 0;
-            Player = DungeonVisuals.Create(SelectedCharacter.DisplayName, transform, Vector2.zero, Vector2.one * 0.65f,
-                SelectedCharacter.Color, 4).gameObject.AddComponent<DungeonPlayer>();
-            Player.Run = this;
-            Player.Initialize(SelectedCharacter);
-            Progress.Discover(Encyclopedia.HeroId(SelectedCharacter.Weapon));
-            crystalsStashed = false;
+            CreatePlayer();
             // Smuggler's Stash used to carry crystals over; any still put aside in an old save come along one last time.
             Player.Crystals.Add(Progress.TakeStash());
             // Ember Heart: the descent begins with one random talent.
@@ -248,6 +258,86 @@ namespace Slopgame
                 if (pool.Count > 0) Player.GrantPowerup(pool[UnityEngine.Random.Range(0, pool.Count)].Type);
             }
             NextFloor();
+        }
+
+        private void CreatePlayer()
+        {
+            if (Player != null) { Player.gameObject.SetActive(false); Destroy(Player.gameObject); }
+            Player = DungeonVisuals.Create(SelectedCharacter.DisplayName, transform, Vector2.zero, Vector2.one * 0.65f,
+                SelectedCharacter.Color, 4).gameObject.AddComponent<DungeonPlayer>();
+            Player.Run = this;
+            Player.Initialize(SelectedCharacter);
+            Progress.Discover(Encyclopedia.HeroId(SelectedCharacter.Weapon));
+            crystalsStashed = false;
+        }
+
+        // ---------------------------------------------------------------- saved descents
+
+        /// <summary>The hero of the account's saved descent, or null when there is none to continue.</summary>
+        public CharacterDefinition SavedRunHero
+        {
+            get
+            {
+                var weapon = RunSave != null && RunSave.Saved != null ? RunSave.Saved.Weapon : null;
+                return weapon.HasValue ? System.Array.Find(characters, character => character.Weapon == weapon.Value) : null;
+            }
+        }
+
+        /// <summary>True when leaving now keeps the descent to continue later: solo, signed in, and the hero still standing.</summary>
+        public bool CanSuspend => checkpoint != null && !IsInMainMenu && !IsNetworked && Account.IsSignedIn && Player != null && Player.Health > 0;
+
+        /// <summary>Takes the floor-start checkpoint (solo and signed in only) and saves it to the account.</summary>
+        private void Checkpoint(int floor, bool inShop)
+        {
+            checkpoint = null;
+            if (IsNetworked || !Account.IsSignedIn || Player == null || Player.Health <= 0) return;
+            checkpoint = new RunSnapshot
+            {
+                weapon = SelectedCharacter.Weapon.ToString(),
+                seed = Seed,
+                floor = floor,
+                inShop = inShop,
+                kills = Kills,
+                runAsh = RunAshEarned,
+                guardians = guardiansThisRun,
+                rerolledThisWorld = rerolledThisWorld,
+                floorAshPaid = floorAshPaid,
+                hero = Player.CaptureRun(),
+            };
+            RunSave.Store(checkpoint);
+        }
+
+        /// <summary>Saves the descent to continue later: the floor starts over then, but its ash is not paid twice.</summary>
+        private void SuspendRun()
+        {
+            checkpoint.floorAshPaid = floorAshPaid;
+            RunSave.Store(checkpoint);
+        }
+
+        /// <summary>Continues the account's saved descent from the start of the floor it was left on.</summary>
+        public bool ResumeRun()
+        {
+            var save = RunSave.Saved;
+            var hero = SavedRunHero;
+            if (!IsInMainMenu || IsNetworked || save == null || hero == null) return false;
+            // The Specimen's lock only guards starting with him; a descent he is already on can always go on.
+            SelectedCharacter = hero;
+            IsInMainMenu = false;
+            Seed = save.seed;
+            PartySize = 1;
+            // NextFloor steps onto the saved floor: up from the floor before it, or into the shop from the floor it shares.
+            Floor = save.inShop ? save.floor : save.floor - 1;
+            InShop = !save.inShop;
+            WorldBannerUntil = 0f;
+            Kills = save.kills;
+            RunAshEarned = save.runAsh;
+            guardiansThisRun = save.guardians;
+            rerolledThisWorld = save.rerolledThisWorld;
+            CreatePlayer();
+            Player.RestoreRun(save.hero);
+            resumeAshPaid = save.floorAshPaid;
+            NextFloor();
+            return true;
         }
 
         private bool crystalsStashed, rerolledThisWorld;
@@ -308,6 +398,9 @@ namespace Slopgame
             if (!InShop) Floor++;
             Progress.Discover(Encyclopedia.WorldId(World.Index));
             floorRewardGranted = false;
+            floorAshEarned = 0;
+            floorAshPaid = resumeAshPaid;
+            resumeAshPaid = 0;
             // Wave worlds fight every wave in the open arena the guardians use.
             Map = InShop ? DungeonMap.Shop() : new DungeonMap(Seed + Floor * 7919, IsBossFloor || IsWaveFloor, World.Layout, World.HasLava && !IsBossFloor);
             waveClearedAt = -1f;
@@ -380,6 +473,7 @@ namespace Slopgame
             }
             view.transform.position = new Vector3(Player.transform.position.x, Player.transform.position.y, -10);
             UpdatePaths();
+            Checkpoint(Floor, InShop);
         }
 
         /// <summary>
@@ -747,16 +841,27 @@ namespace Slopgame
             if (Enemies.Count == 0 && !floorRewardGranted)
             { reward += 10; floorRewardGranted = true; }
             RunAshEarned += reward;
-            Progress.AwardAsh(reward);
+            floorAshEarned += reward;
+            // A resumed floor only pays what goes past the ash its earlier attempt paid.
+            int paid = floorAshEarned - Mathf.Max(floorAshPaid, floorAshEarned - reward);
+            floorAshPaid = Mathf.Max(floorAshPaid, floorAshEarned);
+            if (paid > 0) Progress.AwardAsh(paid);
         }
 
         public bool TryBuyUpgrade(string id) => IsInMainMenu && Progress.TryPurchase(id);
-        private void OnApplicationQuit() { Progress?.Save(); }
+        private void OnApplicationQuit()
+        {
+            // Closing the game mid-descent keeps it like leaving for the menu (the upload is best effort).
+            if (CanSuspend) SuspendRun();
+            Progress?.Save();
+        }
         private void OnApplicationFocus(bool focused) { if (!focused) Progress?.Save(); }
 
         public static int EnemyHealthForFloor(int floor) => 2 + Mathf.Max(0, floor - 3);
         public void EndRun()
         {
+            if (!IsNetworked) RunSave.End();
+            checkpoint = null;
             StashCrystals();
             IsPlaying = false;
             ChoosingUpgrade = false;
@@ -994,6 +1099,9 @@ namespace Slopgame
             if (Progress.Rank(PermanentUpgradeCatalog.WildGrowthId) > 0) Player.RaiseMaxHealth(1);
             Player.Weapon?.Hide();
             Player.Charge.Cancel();
+            // Left from here, the descent goes on in the next world (or the next floor, past the last world).
+            floorAshPaid = floorAshEarned = 0;
+            Checkpoint(Floor + 1, false);
             if (!IsNetworked) Time.timeScale = 0f;
         }
 

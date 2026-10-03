@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace Slopgame
 {
-    public sealed class PlayerPowerups : MonoBehaviour
+    public sealed class PlayerPowerups : MonoBehaviour, IRunPersistent
     {
         private readonly Dictionary<PowerupType, int> stacks = new Dictionary<PowerupType, int>();
         private int soulShieldKills;
@@ -40,6 +40,23 @@ namespace Slopgame
             stacks[type] = Count(type) + 1;
             if (type == PowerupType.Armor || type == PowerupType.PaladinWard) ArmorCharges++;
             return true;
+        }
+
+        public void SaveRun(HeroSnapshot hero)
+        {
+            foreach (var pair in stacks) if (pair.Value > 0) hero.talents.Add(new SavedCount(pair.Key.ToString(), pair.Value));
+            hero.mutationPath = MutationPath.ToString();
+            hero.cheatDeathSpent = CheatDeathSpent;
+        }
+
+        /// <summary>Puts the saved talents back as they were, without the stat changes taking them made (those are saved with the hero).</summary>
+        public void LoadRun(HeroSnapshot hero)
+        {
+            stacks.Clear();
+            foreach (var talent in hero.talents)
+                if (talent.value > 0 && RunSnapshot.TryParse(talent.id, out PowerupType type)) stacks[type] = talent.value;
+            MutationPath = RunSnapshot.TryParse(hero.mutationPath, out SpecimenPath path) ? path : SpecimenPath.None;
+            CheatDeathSpent = hero.cheatDeathSpent;
         }
 
         public float CriticalMultiplier => 2f + Count(PowerupType.DeadlyPrecision) * 0.25f;

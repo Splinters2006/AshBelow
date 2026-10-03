@@ -64,13 +64,16 @@ namespace Slopgame
     }
 
     /// <summary>A mechanic that fills from combat events and empties when used.</summary>
-    public abstract class ChargedMechanic : ClassMechanic
+    public abstract class ChargedMechanic : ClassMechanic, IRunPersistent
     {
         public int Charge { get; private set; }
         public abstract int Required { get; }
         public bool IsCharged => DebugMode.Enabled || Charge >= Required;
         public override float Readiness => IsCharged ? 1f : Charge / (float)Required;
         public override string Status => IsCharged ? "READY" : $"{Charge} / {Required}";
+
+        public void SaveRun(HeroSnapshot hero) => hero.SetExtra("mechanicCharge", Charge);
+        public void LoadRun(HeroSnapshot hero) => Charge = Mathf.Clamp(hero.Extra("mechanicCharge", Charge), 0, Required);
 
         protected void AddCharge(int amount) { if (amount > 0) Charge = Mathf.Min(Required, Charge + amount); }
 

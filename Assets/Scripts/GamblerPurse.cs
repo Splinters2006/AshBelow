@@ -9,7 +9,7 @@ namespace Slopgame
     /// With its R upgrade (The Safe, from the Ash shop) the purse holds a safe: coins go in ten at a time, every
     /// guardian that falls multiplies what is inside by 1.1 (1.25 with his passive, Compound Interest), and each withdrawal takes out exactly half of it.
     /// </summary>
-    public sealed class GamblerPurse : ClassMechanic
+    public sealed class GamblerPurse : ClassMechanic, IRunPersistent
     {
         public enum Ware { Draught, Charm, Dice, CardDeck }
 
@@ -59,6 +59,20 @@ namespace Slopgame
         public int SafeWithdrawal => (Safe + 1) / 2;
         public bool CanDeposit => HasSafe && Coins != null && Player.Run.IsPlaying && Player.Health > 0 && Coins.Coins >= SafeDeposit && Safe < GamblerAttack.MaxCoins;
         public bool CanWithdraw => HasSafe && Coins != null && Player.Run.IsPlaying && Player.Health > 0 && Safe > 0;
+
+        public void SaveRun(HeroSnapshot hero)
+        {
+            hero.SetExtra("safe", Safe);
+            hero.SetExtra("dice", dice);
+            hero.SetExtra("diceFloor", diceFloor);
+        }
+
+        public void LoadRun(HeroSnapshot hero)
+        {
+            Safe = Mathf.Clamp(hero.Extra("safe", Safe), 0, GamblerAttack.MaxCoins);
+            dice = Mathf.Max(0, hero.Extra("dice", dice));
+            diceFloor = hero.Extra("diceFloor", diceFloor);
+        }
 
         public bool Deposit()
         {

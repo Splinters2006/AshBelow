@@ -17,7 +17,7 @@ namespace Slopgame
     /// </list>
     /// His boss artifacts are cast by <see cref="SpecimenArts"/> and his R mechanic is <see cref="BreakingPoint"/>.
     /// </summary>
-    public sealed class SpecimenAttack : MonoBehaviour, IPlayerWeapon
+    public sealed class SpecimenAttack : MonoBehaviour, IPlayerWeapon, IRunPersistent
     {
         public const float FrailChargeTime = 0.9f, BehemothChargeTime = 1.1f, EdgeChargeTime = 1f;
         // Frail.
@@ -247,6 +247,14 @@ namespace Slopgame
             => enemy != null && marks.TryGetValue(enemy, out float until) && Time.time < until;
 
         // ---------------------------------------------------------------- transforming
+
+        public void SaveRun(HeroSnapshot hero) => hero.SetExtra("grown", IsGrown ? 1 : 0);
+
+        /// <summary>
+        /// Loaded before <see cref="Start"/>: with his path and growth back, its first look at his talents changes nothing
+        /// (his stats already include every change of body).
+        /// </summary>
+        public void LoadRun(HeroSnapshot hero) => IsGrown = hero.Extra("grown", IsGrown ? 1 : 0) == 1 && LockedPath != SpecimenPath.None;
 
         /// <summary>A talent was taken: the first path to three picks claims him, and six grow him.</summary>
         public void OnTalentTaken(PowerupType type) => Evaluate();

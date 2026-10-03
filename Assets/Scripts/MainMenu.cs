@@ -27,6 +27,7 @@ namespace Slopgame
         private CharacterDefinition lockedCharacter;
         private string specimenPin = "";
         private bool incorrectPin;
+        private float beginConfirmUntil;
 
         public void RequestUnlock(CharacterDefinition character)
         {
@@ -183,7 +184,7 @@ namespace Slopgame
             DungeonUi.Label(compact ? new Rect(70, 138, 1100, 30) : new Rect(70, 188, 1100, 42), settings ? "Resize the menus and HUD, fade the HUD, switch autofire on or off for each hero and rebind every action. Changes save instantly."
                 : shopping ? "Spend the ash you carry home. Grow stronger with every descent."
                 : codex ? "Everything you have met in the ash. Unfound entries stay hidden until a descent turns them up."
-                : account ? "Sign in to carry your ash, upgrades and unlocks to any PC."
+                : account ? "Sign in to carry your ash, upgrades, unlocks and saved descents to any PC."
                 : coop ? "Descend with up to three friends. Fallen heroes rise again on the next floor."
                 : selecting ? "Choose your hero. Shape your build. Claim the relics below." : "Twelve heroes. Two relic abilities. One life in the ash.", compact ? 17 : 20, DungeonUi.Muted);
 
@@ -203,10 +204,15 @@ namespace Slopgame
 
         private void DrawLanding()
         {
-            DungeonUi.Panel(new Rect(70, 262, 610, 190), DungeonUi.PanelColor);
-            DungeonUi.Panel(new Rect(70, 262, 4, 190), DungeonUi.Teal);
-            DungeonUi.Label(new Rect(102, 286, 530, 40), "POWER HAS A PRICE", 27, DungeonUi.Teal);
-            DungeonUi.Label(new Rect(102, 336, 550, 110), "Charge your attacks. Read the enemy.\nEvery fifth floor, face an arena guardian.\nTake its artifact and choose your own power.", 20, DungeonUi.Muted);
+            var savedHero = Run.SavedRunHero;
+            if (savedHero != null) DrawSavedRun(savedHero, Run.RunSave.Saved);
+            else
+            {
+                DungeonUi.Panel(new Rect(70, 262, 610, 190), DungeonUi.PanelColor);
+                DungeonUi.Panel(new Rect(70, 262, 4, 190), DungeonUi.Teal);
+                DungeonUi.Label(new Rect(102, 286, 530, 40), "POWER HAS A PRICE", 27, DungeonUi.Teal);
+                DungeonUi.Label(new Rect(102, 336, 550, 110), "Charge your attacks. Read the enemy.\nEvery fifth floor, face an arena guardian.\nTake its artifact and choose your own power.", 20, DungeonUi.Muted);
+            }
             DrawHeroParade(new Rect(70, 470, 610, 116));
 
             DungeonUi.Label(new Rect(755, 244, 420, 20), "MENU", 12, DungeonUi.Muted);
@@ -227,6 +233,21 @@ namespace Slopgame
             if (DungeonUi.Button("debugMode", new Rect(755, 548, 420, 38),
                 DebugMode.Enabled ? "Debug admin mode: ON  (F1)" : "Debug admin mode: OFF  (F1)",
                 DebugMode.Enabled ? DungeonHud.DebugColor : DungeonUi.Muted)) DebugMode.Toggle();
+        }
+
+        /// <summary>The account's saved descent, in place of the landing blurb: where it was left, and a button to go on.</summary>
+        private void DrawSavedRun(CharacterDefinition hero, RunSnapshot save)
+        {
+            DungeonUi.Panel(new Rect(70, 262, 610, 190), DungeonUi.PanelColor);
+            DungeonUi.Panel(new Rect(70, 262, 4, 190), hero.Color);
+            DungeonUi.Label(new Rect(102, 278, 530, 20), "YOUR DESCENT AWAITS", 13, AbilityCatalog.Gold);
+            var world = WorldCatalog.ForFloor(save.floor);
+            string where = save.inShop ? $"the crystal shop before floor {save.floor + 1}" : $"floor {save.floor}";
+            DungeonUi.Label(new Rect(102, 300, 550, 40), $"{hero.DisplayName}  /  {world.Name}", 27, hero.Color);
+            string saved = new System.DateTime(save.savedAt, System.DateTimeKind.Utc).ToLocalTime().ToString("d MMM, HH:mm");
+            DungeonUi.Label(new Rect(102, 342, 550, 44), $"Left on {where}, which starts over when you return.  /  Saved {saved}", 15, DungeonUi.Muted);
+            if (DungeonUi.Button("continueRun", new Rect(102, 392, 280, 46), "Continue descent", AbilityCatalog.Gold)) Run.ResumeRun();
+            DungeonUi.Label(new Rect(398, 392, 260, 46), "A new descent replaces it.", 13, DungeonUi.Muted, TextAnchor.MiddleLeft);
         }
 
         /// <summary>The landing button shows who is signed in, shortened to fit.</summary>
@@ -328,7 +349,15 @@ namespace Slopgame
             bool autofire = GameSettings.AutofireFor(character.Weapon);
             if (DungeonUi.Button("heroAutofire", new Rect(560, 598, 280, 48), autofire ? "Autofire: ON" : "Autofire: OFF", autofire ? AbilityCatalog.Gold : DungeonUi.Muted, size: 17))
                 GameSettings.SetAutofire(character.Weapon, !autofire);
-            if (DungeonUi.Button("begin", new Rect(860, 598, 350, 48), "Begin descent", character.Color)) Run.Restart();
+            // A saved descent is replaced by the new one, so the first click asks.
+            bool replacing = Run.SavedRunHero != null;
+            bool confirming = replacing && Time.unscaledTime < beginConfirmUntil;
+            if (DungeonUi.Button("begin", new Rect(860, 598, 350, 48), confirming ? "Replace your saved descent?" : "Begin descent",
+                confirming ? AbilityCatalog.Gold : character.Color, size: confirming ? 16 : 18))
+            {
+                if (replacing && !confirming) beginConfirmUntil = Time.unscaledTime + 3f;
+                else { beginConfirmUntil = 0f; Run.Restart(); }
+            }
         }
 
         /// <summary>One chip in the hero's rows of moves: hovering it puts that move on the demo stage. True when it is clicked.</summary>

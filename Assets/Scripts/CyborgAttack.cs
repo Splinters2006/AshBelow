@@ -9,7 +9,7 @@ namespace Slopgame
     /// hold to charge and release (or wait, and it fires itself) to launch a plasma orb that bursts into a fiery blast.
     /// A full charge is sure to set the blast's victims burning.
     /// </summary>
-    public sealed class CyborgAttack : MonoBehaviour, IPlayerWeapon
+    public sealed class CyborgAttack : MonoBehaviour, IPlayerWeapon, IRunPersistent
     {
         public const float ChargeDuration = 1f, RayInterval = 0.45f;
         public const float RayRange = 5.5f, ChargedRayRange = 8f, RayWidth = 0.12f, ChargedRayWidth = 0.34f, RayKnockback = 0.35f;
@@ -25,6 +25,9 @@ namespace Slopgame
 
         /// <summary>Salvage (his passive): scrap gathered and not yet spent on repairs.</summary>
         public int Scrap { get; private set; }
+        public void SaveRun(HeroSnapshot hero) => hero.SetExtra("scrap", Scrap);
+        public void LoadRun(HeroSnapshot hero) => Scrap = Mathf.Max(0, hero.Extra("scrap", Scrap));
+
         public void CollectScrap() { Scrap++; SpendScrap(); }
 
         /// <summary>Every three pieces repair 1 HP; at full health they are kept until he is hurt.</summary>

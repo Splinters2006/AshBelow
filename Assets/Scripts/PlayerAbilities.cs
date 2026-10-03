@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace Slopgame
 {
-    public sealed class PlayerAbilities : MonoBehaviour
+    public sealed class PlayerAbilities : MonoBehaviour, IRunPersistent
     {
         public DungeonPlayer Player { get; set; }
         public const int SlotCount = 2;
@@ -43,6 +43,26 @@ namespace Slopgame
         public float CooldownRemaining(AbilityType type) => type == AbilityType.None ? 0f
             : DebugMode.Cooldown(Mathf.Min(Mathf.Max(0f, (readyAt.TryGetValue(type, out float ready) ? ready : 0f) - Time.time),
                 AbilityCatalog.Get(type)?.Cooldown ?? float.MaxValue));
+        public void SaveRun(HeroSnapshot hero)
+        {
+            foreach (var pair in ranks) hero.abilities.Add(new SavedCount(pair.Key.ToString(), pair.Value));
+            hero.abilityQ = equipped[0].ToString();
+            hero.abilityE = equipped[1].ToString();
+        }
+
+        /// <summary>Learned abilities, their ranks and keys come back; every cooldown starts ready.</summary>
+        public void LoadRun(HeroSnapshot hero)
+        {
+            ranks.Clear();
+            readyAt.Clear();
+            foreach (var ability in hero.abilities)
+                if (RunSnapshot.TryParse(ability.id, out AbilityType type) && type != AbilityType.None) ranks[type] = Mathf.Clamp(ability.value, 1, MaxRank);
+            equipped[0] = SavedSlot(hero.abilityQ);
+            equipped[1] = SavedSlot(hero.abilityE);
+        }
+
+        private AbilityType SavedSlot(string name) => RunSnapshot.TryParse(name, out AbilityType type) && IsLearned(type) ? type : AbilityType.None;
+
         public int EmptySlot => equipped[0] == AbilityType.None ? 0 : equipped[1] == AbilityType.None ? 1 : -1;
 
         /// <summary>

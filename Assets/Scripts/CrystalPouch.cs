@@ -8,7 +8,7 @@ namespace Slopgame
     /// and the boss boons bought there. Boons last for the next floor only: the guardian's arena.
     /// Each machine tracks its own hero's crystals, like the Gambler's coins.
     /// </summary>
-    public sealed class CrystalPouch : MonoBehaviour
+    public sealed class CrystalPouch : MonoBehaviour, IRunPersistent
     {
         public static readonly Color CrystalColor = new Color(0.78f, 0.5f, 1f);
         public const float SwiftnessPerBoon = 0.2f;
@@ -34,6 +34,28 @@ namespace Slopgame
         public int PendingDamage => BoonsPending ? damage : 0;
         public int PendingWards => BoonsPending ? wards : 0;
         public int PendingSwiftness => BoonsPending ? swiftness : 0;
+
+        public void SaveRun(HeroSnapshot hero)
+        {
+            hero.crystals = Crystals;
+            foreach (var pair in purchases) hero.purchases.Add(new SavedCount(pair.Key.ToString(), pair.Value));
+            hero.boonFloor = boonFloor;
+            hero.boonDamage = damage;
+            hero.boonWards = wards;
+            hero.boonSwiftness = swiftness;
+        }
+
+        public void LoadRun(HeroSnapshot hero)
+        {
+            Crystals = Mathf.Max(0, hero.crystals);
+            purchases.Clear();
+            foreach (var purchase in hero.purchases)
+                if (RunSnapshot.TryParse(purchase.id, out CrystalShop.Ware ware)) purchases[ware] = purchase.value;
+            boonFloor = hero.boonFloor;
+            damage = hero.boonDamage;
+            wards = hero.boonWards;
+            swiftness = hero.boonSwiftness;
+        }
 
         public void Add(int amount) { if (amount > 0) Crystals += amount; }
 

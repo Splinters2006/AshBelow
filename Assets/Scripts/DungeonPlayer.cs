@@ -146,6 +146,31 @@ namespace Slopgame
             afterimage.Tint = Color.Lerp(characterColor, new Color(0.4f, 0.65f, 1f), 0.55f);
         }
 
+        /// <summary>A saved descent's hero, waiting for the class weapon (added in <see cref="Start"/>) to take its part.</summary>
+        private HeroSnapshot restoring;
+
+        /// <summary>Everything about this hero that lasts the descent, for <see cref="RunSnapshot"/>.</summary>
+        public HeroSnapshot CaptureRun()
+        {
+            var hero = new HeroSnapshot { health = Health, maxHealth = rawMaxHealth, damage = BaseDamage, speed = Speed };
+            // Before Start the class weapon is not here yet; it keeps what was restored for it.
+            if (restoring != null) hero.extras.AddRange(restoring.extras);
+            foreach (var part in GetComponents<IRunPersistent>()) part.SaveRun(hero);
+            return hero;
+        }
+
+        /// <summary>Puts a saved hero back; called right after <see cref="Initialize"/>, before the first floor is built.</summary>
+        public void RestoreRun(HeroSnapshot hero)
+        {
+            // The saved stats already hold every talent's, shop's and body's change, so nothing is granted again.
+            rawMaxHealth = Mathf.Max(1, hero.maxHealth);
+            BaseDamage = Mathf.Max(1, hero.damage);
+            Speed = Mathf.Max(1f, hero.speed);
+            foreach (var part in GetComponents<IRunPersistent>()) part.LoadRun(hero);
+            Health = Mathf.Clamp(hero.health, 1, MaxHealth);
+            restoring = hero;
+        }
+
         private void Start()
         {
             body = GetComponent<SpriteRenderer>();
@@ -215,6 +240,11 @@ namespace Slopgame
                     paladin.Initialize(this, sword);
                     Weapon = paladin;
                 }
+            }
+            if (restoring != null)
+            {
+                (Weapon as IRunPersistent)?.LoadRun(restoring);
+                restoring = null;
             }
         }
 

@@ -7,7 +7,7 @@ namespace Slopgame
     /// dies drops a gold coin to pick up, and the magical purse gives one back whenever he runs dry. Right click throws
     /// a volley with one coin per coin he carries across a 90-degree cone, also without spending any.
     /// </summary>
-    public sealed class GamblerAttack : MonoBehaviour, IPlayerWeapon
+    public sealed class GamblerAttack : MonoBehaviour, IPlayerWeapon, IRunPersistent
     {
         public const float CoinRange = 6f, VolleyRange = 5.5f, VolleyCone = 90f, VolleyCooldown = 6f;
         public const int MaxVolley = 40;
@@ -49,6 +49,18 @@ namespace Slopgame
 
         /// <summary>Card Shark (his second passive): cards left in the deck bought from his purse.</summary>
         public int Cards { get; private set; }
+        public void SaveRun(HeroSnapshot hero)
+        {
+            hero.SetExtra("coins", coins);
+            hero.SetExtra("cards", Cards);
+        }
+
+        public void LoadRun(HeroSnapshot hero)
+        {
+            coins = Mathf.Clamp(hero.Extra("coins", coins), 0, MaxCoins);
+            Cards = Mathf.Max(0, hero.Extra("cards", Cards));
+        }
+
         public void AddCards(int amount) { if (amount > 0) Cards = (int)System.Math.Min(int.MaxValue, (long)Cards + amount); }
         /// <summary>A card thrown alongside a coin deals this share of the coin's damage (never below 1).</summary>
         public const float CardDamageShare = 0.5f;

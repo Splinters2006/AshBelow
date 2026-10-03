@@ -9,7 +9,7 @@ namespace Slopgame
     /// that strikes fear into its victim, and a full charge looses three. Souls also pay for his artifacts and for the
     /// skeletons of his <see cref="ArmyOfTheDead"/>. He can hold up to 100 souls (more with Soul Hoard).
     /// </summary>
-    public sealed class ReaperAttack : MonoBehaviour, IPlayerWeapon
+    public sealed class ReaperAttack : MonoBehaviour, IPlayerWeapon, IRunPersistent
     {
         public const float Reach = 2.9f, TapCone = 110f, ChargedCone = 150f, ChargeDuration = 1.1f, SwingInterval = 0.75f;
         public const float SkullChargeTime = 0.9f, SkullCooldown = 1.5f, SkullRange = 13f, SkullFear = 1f, SkullSpread = 18f;
@@ -38,6 +38,9 @@ namespace Slopgame
         public bool CanAttack => Player.Run.IsPlaying && !Player.IsRolling && !Player.IsBusy && !skullCharging && Time.time >= readyAt;
 
         /// <summary>Gains souls; Soul Echo gives each of them a chance to bring an extra one (which cannot echo again).</summary>
+        public void SaveRun(HeroSnapshot hero) => hero.SetExtra("souls", Souls);
+        public void LoadRun(HeroSnapshot hero) => Souls = Mathf.Clamp(hero.Extra("souls", Souls), 0, SoulCap);
+
         public void AddSouls(int amount)
         {
             if (amount <= 0) return;

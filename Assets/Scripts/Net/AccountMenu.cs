@@ -19,6 +19,7 @@ namespace Slopgame
         {
             password = currentPassword = newPassword = "";
             deleteConfirmUntil = 0f;
+            DungeonUi.HidePasswords();
         }
 
         public void Draw(DungeonRun run)
@@ -53,8 +54,9 @@ namespace Slopgame
 
             DungeonUi.Panel(new Rect(650, 250, 560, 336), DungeonUi.PanelColor);
             DungeonUi.Label(new Rect(680, 270, 500, 24), "WHY SIGN IN", 14, DungeonUi.Teal);
-            DungeonUi.Label(new Rect(680, 302, 500, 150),
-                "Your ash, upgrades, unlocks and encyclopedia are saved to your account and follow you to any PC.\n\n"
+            DungeonUi.Label(new Rect(680, 302, 500, 160),
+                "Your ash, upgrades, unlocks and encyclopedia follow you to any PC.\n\n"
+                + "Leave a solo descent and continue it later, on any PC.\n\n"
                 + "Your display name goes with you into co-op parties.\n\n"
                 + "No account? Nothing changes: progress stays on this PC.", 16, DungeonUi.Muted);
             DungeonUi.Label(new Rect(680, 470, 500, 20), "RULES", 12, DungeonUi.Muted);

@@ -11,12 +11,13 @@ namespace Slopgame
         public static readonly Color Muted = new Color(0.57f, 0.64f, 0.73f);
         public static readonly Color Text = new Color(0.91f, 0.93f, 0.98f);
         public static readonly Color Teal = new Color(0.42f, 0.88f, 0.79f);
-        private static Texture2D rounded, cog;
+        private static Texture2D rounded, cog, eyeOpen, eyeShut;
         private static GUIStyle panel, invisible;
         private static readonly Dictionary<int, GUIStyle> labels = new Dictionary<int, GUIStyle>();
         private static readonly Dictionary<string, float> hovers = new Dictionary<string, float>();
         private static readonly Dictionary<int, GUIStyle> fields = new Dictionary<int, GUIStyle>();
         private static readonly Dictionary<string, Vector2> scrolls = new Dictionary<string, Vector2>();
+        private static readonly HashSet<string> revealed = new HashSet<string>();
 
         private static readonly Dictionary<string, float> drags = new Dictionary<string, float>();
 
@@ -239,21 +240,82 @@ namespace Slopgame
         public static string TextField(string id, Rect rect, string value, int maxLength, int size = 20) =>
             GUI.TextField(rect, value ?? "", maxLength, FieldStyle(id, rect, size));
 
-        /// <summary>A text box in the menu style that shows dots instead of what is typed.</summary>
-        public static string PasswordField(string id, Rect rect, string value, int maxLength, int size = 20) =>
-            GUI.PasswordField(rect, value ?? "", '*', maxLength, FieldStyle(id, rect, size));
+        /// <summary>
+        /// A text box in the menu style that shows dots instead of what is typed, with an eye at its end that shows the
+        /// typing while it is open.
+        /// </summary>
+        public static string PasswordField(string id, Rect rect, string value, int maxLength, int size = 20)
+        {
+            var style = FieldStyle(id, rect, size);
+            // The text stops short of the eye, so clicks on the eye never land in the box.
+            var eyeRect = new Rect(rect.xMax - rect.height, rect.y, rect.height, rect.height);
+            var textRect = new Rect(rect.x, rect.y, rect.width - eyeRect.width, rect.height);
+            bool shown = revealed.Contains(id);
+            value = shown ? GUI.TextField(textRect, value ?? "", maxLength, style) : GUI.PasswordField(textRect, value ?? "", '*', maxLength, style);
+            if (EyeButton(id + "Eye", eyeRect, shown) && !revealed.Remove(id)) revealed.Add(id);
+            return value;
+        }
+
+        /// <summary>Forgets which password boxes were showing their typing, so they are hidden again next time.</summary>
+        public static void HidePasswords() => revealed.Clear();
+
+        private static bool EyeButton(string id, Rect rect, bool open)
+        {
+            Initialize();
+            bool hovered = rect.Contains(Event.current.mousePosition);
+            if (Event.current.type == EventType.Repaint)
+            {
+                float size = rect.height * 0.6f;
+                Color previous = GUI.color;
+                GUI.color = FlameMesh.Alpha(open ? Teal : hovered ? Text : Muted, previous.a);
+                GUI.DrawTexture(new Rect(rect.center.x - size / 2f, rect.center.y - size / 2f, size, size), EyeTexture(open));
+                GUI.color = previous;
+            }
+            return GUI.Button(rect, new GUIContent("", open ? "Hide password" : "Show password"), invisible);
+        }
+
+        /// <summary>An outlined eye with its pupil; the shut one is crossed out.</summary>
+        private static Texture2D EyeTexture(bool open)
+        {
+            var cached = open ? eyeOpen : eyeShut;
+            if (cached != null) return cached;
+            const int size = 64;
+            const float center = (size - 1) / 2f;
+            // The lids are two arcs of circles above and below the eye: 44 pixels wide, 24 tall.
+            const float halfWidth = 22f, halfHeight = 12f;
+            const float offset = (halfWidth * halfWidth - halfHeight * halfHeight) / (2f * halfHeight), radius = offset + halfHeight;
+            var texture = new Texture2D(size, size, TextureFormat.RGBA32, false) { filterMode = FilterMode.Bilinear, hideFlags = HideFlags.HideAndDontSave };
+            for (int y = 0; y < size; y++)
+                for (int x = 0; x < size; x++)
+                {
+                    float dx = x - center, dy = y - center;
+                    float lids = Mathf.Max(Mathf.Sqrt(dx * dx + (dy + offset) * (dy + offset)), Mathf.Sqrt(dx * dx + (dy - offset) * (dy - offset))) - radius;
+                    float alpha = Mathf.Max(Mathf.Clamp01(3f - Mathf.Abs(lids)), Mathf.Clamp01(7.5f - Mathf.Sqrt(dx * dx + dy * dy)));
+                    if (!open && Mathf.Abs(dx) <= 24f) alpha = Mathf.Max(alpha, Mathf.Clamp01(3.5f - Mathf.Abs(dx + dy) * 0.7071f));
+                    texture.SetPixel(x, y, new Color(1f, 1f, 1f, alpha));
+                }
+            texture.Apply();
+            if (open) eyeOpen = texture;
+            else eyeShut = texture;
+            return texture;
+        }
 
         private static GUIStyle FieldStyle(string id, Rect rect, int size)
         {
             Initialize();
             Panel(rect, PanelColor);
             Panel(new Rect(rect.x, rect.y + rect.height - 2, rect.width, 2), Muted * 0.6f);
-            if (!fields.TryGetValue(size, out var style))
+            // Keyed by box height too: the padding centres one line of text in the box. (Middle alignment centres the text
+            // but leaves the cursor near the top.)
+            int key = size * 1000 + Mathf.RoundToInt(rect.height);
+            if (!fields.TryGetValue(key, out var style))
             {
-                style = new GUIStyle(GUI.skin.textField) { fontSize = size, alignment = TextAnchor.MiddleLeft, padding = new RectOffset(14, 14, 0, 0) };
+                style = new GUIStyle(GUI.skin.textField) { fontSize = size, alignment = TextAnchor.UpperLeft, padding = new RectOffset(14, 14, 0, 0) };
                 style.normal.background = style.focused.background = style.hover.background = null;
                 style.normal.textColor = style.focused.textColor = style.hover.textColor = Text;
-                fields.Add(size, style);
+                int top = Mathf.Max(0, Mathf.FloorToInt((rect.height - style.CalcHeight(new GUIContent("Ag"), 1000f)) / 2f));
+                style.padding = new RectOffset(14, 14, top, 0);
+                fields.Add(key, style);
             }
             GUI.SetNextControlName(id);
             return style;

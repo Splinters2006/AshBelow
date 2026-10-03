@@ -146,12 +146,15 @@ namespace Slopgame
             PinCenter();
             GUI.color = Color.white;
             bool party = Run.IsNetworked;
+            bool saved = Run.CanSuspend;
             string question = party ? "Leave the party?" : "Return to the main menu?";
             string detail = party
                 ? "You leave the descent and the party goes on without you. The Ash you earned is kept."
-                : Run.WorldComplete ? "This descent ends here. The Ash you earned is kept."
-                : "This descent ends here: your talents, abilities and crystals are lost. The Ash you earned is kept.";
-            var answer = ConfirmPick(question, detail, AbilityCatalog.Gold, party ? "Leave party" : "Main menu");
+                : saved && Run.WorldComplete ? "Your descent is saved to your account. Continue it from the main menu, on this PC or another, in the next world."
+                : saved ? "Your descent is saved to your account. Continue it from the main menu, on this PC or another: this floor starts over."
+                : Run.WorldComplete ? "This descent ends here. The Ash you earned is kept. Sign in to an account to save descents instead."
+                : "This descent ends here: your talents, abilities and crystals are lost. The Ash you earned is kept. Sign in to an account to save descents instead.";
+            var answer = ConfirmPick(question, detail, AbilityCatalog.Gold, party ? "Leave party" : saved ? "Save and leave" : "Main menu");
             if (answer == true) { CloseMenuConfirm(); Run.ShowMainMenu(); }
             else if (answer == false) CloseMenuConfirm();
         }
