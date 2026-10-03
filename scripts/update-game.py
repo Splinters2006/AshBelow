@@ -8,6 +8,7 @@ import os
 from pathlib import Path, PurePosixPath
 import re
 import shutil
+import ssl
 import stat
 import subprocess
 import sys
@@ -62,10 +63,40 @@ def backup_saves(save_directory):
     return destination
 
 
+def prime_windows_certificates(url):
+    # Python only trusts root certificates already in the Windows store, but a fresh Windows install downloads most
+    # roots on demand the first time Windows itself visits a site. One HEAD request through PowerShell does that.
+    script = ("[Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12; "
+              "try { Invoke-WebRequest -UseBasicParsing -Method Head -Uri $env:ASHBELOW_PRIME_URL | Out-Null } catch {}")
+    try:
+        subprocess.run(["powershell", "-NoProfile", "-NonInteractive", "-Command", script], env={**os.environ, "ASHBELOW_PRIME_URL": url},
+                       capture_output=True, timeout=60, check=False)
+    except (OSError, subprocess.TimeoutExpired):
+        pass
+
+
+def open_url(request, timeout):
+    """urlopen that, on Windows, lets Windows fetch a missing root certificate and retries once. Verification stays on."""
+    try:
+        return urllib.request.urlopen(request, timeout=timeout)
+    except urllib.error.URLError as error:
+        if sys.platform != "win32" or not isinstance(error.reason, ssl.SSLCertVerificationError):
+            raise
+    print("Windows does not have this site's certificate yet; asking Windows to fetch it...")
+    prime_windows_certificates(request.full_url)
+    try:
+        return urllib.request.urlopen(request, timeout=timeout)
+    except urllib.error.URLError as error:
+        if not isinstance(error.reason, ssl.SSLCertVerificationError):
+            raise
+        raise RuntimeError("Windows could not verify GitHub's certificate. Open https://github.com once in Edge or run Windows Update, "
+                           "then run the updater again. No installed files were changed.") from error
+
+
 def request_json(url):
     request = urllib.request.Request(url, headers={"User-Agent": "AshBelow-Updater", "Accept": "application/vnd.github+json"})
     try:
-        with urllib.request.urlopen(request, timeout=30) as response:
+        with open_url(request, timeout=30) as response:
             return json.load(response)
     except urllib.error.HTTPError as error:
         if error.code == 404:
@@ -96,7 +127,7 @@ def download_asset(asset, destination):
     request = urllib.request.Request(url, headers={"User-Agent": "AshBelow-Updater"})
     total = 0
     digest = hashlib.sha256()
-    with urllib.request.urlopen(request, timeout=60) as response, destination.open("wb") as output:
+    with open_url(request, timeout=60) as response, destination.open("wb") as output:
         while True:
             chunk = response.read(1024 * 1024)
             if not chunk:

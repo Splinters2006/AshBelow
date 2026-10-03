@@ -163,6 +163,27 @@ class UpdaterTests(unittest.TestCase):
             with self.assertRaises(RuntimeError):
                 updater.download_asset(self.asset, self.root / "bad-download")
 
+    def test_windows_fetches_missing_root_certificate_and_retries(self):
+        untrusted = updater.urllib.error.URLError(updater.ssl.SSLCertVerificationError("unable to get local issuer certificate"))
+        request = updater.urllib.request.Request("https://api.github.com/repos/a/b/releases/latest")
+        with mock.patch.object(updater.sys, "platform", "win32"), \
+                mock.patch.object(updater.urllib.request, "urlopen", side_effect=[untrusted, io.BytesIO(b"{}")]) as urlopen, \
+                mock.patch.object(updater.subprocess, "run") as run:
+            self.assertEqual(updater.open_url(request, 30).read(), b"{}")
+        self.assertEqual(urlopen.call_count, 2)
+        self.assertEqual(run.call_args.kwargs["env"]["ASHBELOW_PRIME_URL"], request.full_url)
+        with mock.patch.object(updater.sys, "platform", "win32"), \
+                mock.patch.object(updater.urllib.request, "urlopen", side_effect=[untrusted, untrusted]), \
+                mock.patch.object(updater.subprocess, "run"):
+            with self.assertRaises(RuntimeError):
+                updater.open_url(request, 30)
+        with mock.patch.object(updater.sys, "platform", "linux"), \
+                mock.patch.object(updater.urllib.request, "urlopen", side_effect=untrusted), \
+                mock.patch.object(updater.subprocess, "run") as run:
+            with self.assertRaises(updater.urllib.error.URLError):
+                updater.open_url(request, 30)
+        run.assert_not_called()
+
     def test_requires_unambiguous_release_asset(self):
         self.assertEqual(updater.select_asset(self.release), self.asset)
         self.release["assets"].append(dict(self.asset, id=43, name="AshBelow-other.zip"))
