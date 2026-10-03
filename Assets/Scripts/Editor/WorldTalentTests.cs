@@ -392,6 +392,25 @@ namespace Slopgame.Editor
             Near(powers.HotStreakChargeMultiplier, 1f, "Hot Streak outlasted the attack it quickened");
             Vector2 center = run.Map.Centers[1];
             var target = run.Enemies[1];
+            // Blood Debt (a Samurai talent, so the hero briefly wields the katana): every tenth bleeding kill heals 1 HP;
+            // kills of enemies that weren't bleeding don't count.
+            var heroWeapon = powers.ClassWeapon;
+            powers.ClassWeapon = WeaponType.Katana;
+            target.Health = 1000;
+            CombatDamage.InflictBleed(player, target, 10);
+            var healthProperty = typeof(DungeonPlayer).GetProperty(nameof(DungeonPlayer.Health));
+            int startHealth = player.Health;
+            healthProperty.SetValue(player, player.MaxHealth - 2);
+            Require(powers.Add(PowerupType.BloodDebt), "The Samurai could not take Blood Debt");
+            for (int i = 0; i < PlayerPowerups.BloodDebtKills - 1; i++) powers.OnKill(player, target);
+            powers.OnKill(player, null);
+            Require(player.Health == player.MaxHealth - 2, "Blood Debt healed early (or counted a kill that wasn't bleeding)");
+            powers.OnKill(player, target);
+            Require(player.Health == player.MaxHealth - 1, "Blood Debt did not heal on the tenth bleeding kill");
+            powers.Remove(PowerupType.BloodDebt);
+            powers.ClassWeapon = heroWeapon;
+            healthProperty.SetValue(player, startHealth);
+            target.ConsumeBleed();
             // Cold Blooded: opening a bleed freezes the victim for the hero's freeze time. The wound is closed again afterwards.
             target.Health = 1000;
             typeof(DungeonEnemy).GetField("frozenUntil", PrivateInstance).SetValue(target, 0f);

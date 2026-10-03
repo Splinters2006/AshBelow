@@ -232,13 +232,13 @@ namespace Slopgame
                     // Hellfire flashes orange; other styles flash their own colour (a whiteout icy blue).
                     ScreenFx.Flash(spec.Style == HazardStyle.Hellfire || spec.Style == HazardStyle.Brimstone ? new Color(1f, 0.25f, 0.05f, 0.55f)
                         : FlameMesh.Alpha(colors.Main, 0.55f), 0.6f);
-                    HeroVfx.Pulse(root, spec.Center, spec.Radius + 0.4f, AbilityCatalog.Gold, 0.6f);
+                    Pulse(root, spec.Center, spec.Radius + 0.4f, AbilityCatalog.Gold, 0.6f);
                     break;
                 case HazardShape.Pool:
                     ScreenFx.Shake(0.3f, 0.35f);
-                    HeroVfx.Pulse(root, spec.Center, spec.Radius * 1.6f, colors.Bright, 0.45f);
-                    HeroVfx.Sparks(root, spec.Center, colors.Main, 22, 7f, 0.55f, null, 360f, 1.6f);
-                    CombatVfx.Ring(root, spec.Center, spec.Radius * 1.2f, colors.Core, 0.3f);
+                    Pulse(root, spec.Center, spec.Radius * 1.6f, colors.Bright, 0.45f);
+                    Sparks(root, spec.Center, colors.Main, 22, 7f, 0.55f, null, 360f, 1.6f);
+                    Ring(root, spec.Center, spec.Radius * 1.2f, colors.Core, 0.3f);
                     break;
                 case HazardShape.Beam:
                     // A lockdown slams shut across whole sectors at once.
@@ -249,22 +249,41 @@ namespace Slopgame
                         break;
                     }
                     ScreenFx.Shake(0.2f, 0.3f);
-                    HeroVfx.Sparks(root, spec.Center + spec.Direction * spec.Radius * 0.5f, colors.Main, 16, 5f, 0.45f,
+                    Sparks(root, spec.Center + spec.Direction * spec.Radius * 0.5f, colors.Main, 16, 5f, 0.45f,
                         Vector2.Perpendicular(spec.Direction), 60f, 1.3f);
                     // A quake throws dust and embers up along the whole length of the fissure.
                     if (spec.Style == HazardStyle.Quake)
                         for (float d = 2f; d < spec.Radius; d += 4f)
                         {
                             Vector2 spot = spec.Center + spec.Direction * d;
-                            HeroVfx.Sparks(root, spot, QuakeDust, 10, 4f, 0.7f, Vector2.up, 100f, 1.6f);
-                            HeroVfx.Sparks(root, spot, colors.Bright, 6, 6f, 0.5f, Vector2.up, 70f, 1.2f);
+                            Sparks(root, spot, QuakeDust, 10, 4f, 0.7f, Vector2.up, 100f, 1.6f);
+                            Sparks(root, spot, colors.Bright, 6, 6f, 0.5f, Vector2.up, 70f, 1.2f);
                         }
                     break;
                 case HazardShape.Ring:
                     ScreenFx.Shake(0.22f, 0.4f);
-                    HeroVfx.Pulse(root, spec.Center, 1.6f, colors.Bright, 0.3f);
+                    Pulse(root, spec.Center, 1.6f, colors.Bright, 0.3f);
                     break;
             }
+        }
+
+        // The pixel styles (fire, brimstone, ice) strike in pixel art to match their flames; the rest stay smooth.
+        private void Pulse(Transform root, Vector2 at, float radius, Color color, float duration)
+        {
+            if (flames.Pixelated) PixelBurstVfx.Pulse(root, at, radius, color, duration);
+            else HeroVfx.Pulse(root, at, radius, color, duration);
+        }
+
+        private void Sparks(Transform root, Vector2 at, Color color, int count, float speed, float duration, Vector2? spray, float spread, float size)
+        {
+            if (flames.Pixelated) PixelBurstVfx.Sparks(root, at, color, count, speed, duration, spray, spread, size);
+            else HeroVfx.Sparks(root, at, color, count, speed, duration, spray, spread, size);
+        }
+
+        private void Ring(Transform root, Vector2 at, float radius, Color color, float duration)
+        {
+            if (flames.Pixelated) PixelBurstVfx.Ring(root, at, radius, color, duration);
+            else CombatVfx.Ring(root, at, radius, color, duration);
         }
 
         // ---------------------------------------------------------------- drawing

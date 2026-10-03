@@ -181,6 +181,30 @@ namespace Slopgame
         }
 
         /// <summary>
+        /// A flickering tongue of fire in three colours of the caller's choosing, from its outer <paramref name="edge"/>
+        /// through its <paramref name="body"/> to a hot <paramref name="core"/> (dark blood-fire, for instance).
+        /// </summary>
+        public void Tongue(Vector2 root, Vector2 up, float width, float height, float seed, Color edge, Color body, Color core)
+        {
+            if (height <= 0.01f) return;
+            float time = Pixelated ? Mathf.Floor(Time.time * 12f) / 12f : Time.time;
+            height *= 0.8f + 0.2f * Mathf.Sin(time * (8f + seed % 5f) + seed * 30f) + 0.1f * Mathf.Sin(time * 21f + seed * 11f);
+            Vector2 across = Vector2.Perpendicular(up), sway = across * Mathf.Sin(time * 5f + seed * 17f) * width * 0.45f;
+            if (Pixelated)
+            {
+                float ripple = time * 9f + seed * 30f;
+                FlameLayer(root, up, sway, width * 1.2f, height, 8, ripple, edge);
+                FlameLayer(root, up, sway * 0.8f, width * 0.8f, height * 0.75f, 6, ripple, body);
+                FlameLayer(root, up, sway * 0.5f, width * 0.4f, height * 0.4f, 3, ripple, core);
+                return;
+            }
+            Vector2 side = across * width * 0.5f, tip = root + up * height + sway;
+            Triangle(root - side * 1.2f, tip + sway * 0.3f, root + side * 1.2f, edge, Alpha(edge, 0f), edge);
+            Triangle(root - side * 0.8f, root + up * height * 0.75f + sway * 0.8f, root + side * 0.8f, body, Alpha(body, 0f), body);
+            Triangle(root - side * 0.4f, root + up * height * 0.4f + sway * 0.5f, root + side * 0.4f, core, Alpha(core, 0.2f), core);
+        }
+
+        /// <summary>
         /// A faceted ice shard jutting from <paramref name="root"/> along <paramref name="up"/>: a lit facet and a shaded
         /// one either side of a bright ridge, a pale tip, and a glint that twinkles now and then.
         /// </summary>

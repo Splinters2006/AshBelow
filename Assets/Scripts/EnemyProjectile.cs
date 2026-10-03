@@ -47,7 +47,8 @@ namespace Slopgame
             if (kind == BoltKind.Blade) CombatVfx.Trail(projectile.gameObject, new Color(0.45f, 0.95f, 1f, 0.6f), 0.07f, 0.12f);
             else if (kind == BoltKind.Frost) CombatVfx.Trail(projectile.gameObject, new Color(0.7f, 0.92f, 1f, 0.55f), 0.08f, 0.14f);
             else if (kind == BoltKind.Plasma) CombatVfx.Trail(projectile.gameObject, new Color(1f, 0.35f, 0.9f, 0.55f), 0.08f, 0.14f);
-            else if (kind == BoltKind.Hex) CombatVfx.Trail(projectile.gameObject, new Color(0.75f, 0.3f, 1f, 0.55f), 0.08f, 0.14f);
+            // Hex bolts are pixel art, like the Infernal Court's pixel hellfire, and trail pixel embers of their own.
+            else if (kind == BoltKind.Hex) projectile.gameObject.AddComponent<PixelHexBolt>();
             else if (kind == BoltKind.Arcane) CombatVfx.Trail(projectile.gameObject, new Color(0.5f, 0.7f, 1f, 0.55f), 0.08f, 0.14f);
             else if (kind == BoltKind.Venom) CombatVfx.Trail(projectile.gameObject, new Color(0.5f, 1f, 0.3f, 0.5f), 0.1f, 0.16f);
             if (announce && run.IsNetworked && run.Coop.IsHost) run.Coop.AnnounceBolt(projectile, position, projectile.direction);

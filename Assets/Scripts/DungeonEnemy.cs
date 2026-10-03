@@ -43,6 +43,8 @@ namespace Slopgame
         public bool IsChilled => Time.time < chilledUntil;
         /// <summary>Frozen solid by ice: like paralysis, a frozen enemy cannot move, turn or attack.</summary>
         public bool IsFrozen => Time.time < frozenUntil;
+        /// <summary>Seconds the freeze still has to run (a co-op guest only ever sees the next snapshot's worth).</summary>
+        public float FreezeRemaining => Mathf.Max(0f, frozenUntil - Time.time);
         /// <summary>True while paralysis or ice holds the enemy completely still.</summary>
         public bool IsHeld => IsParalyzed || IsFrozen || IsStunned;
         /// <summary>Stunned (Holy Lance, Thunder Clap, EMP Pulse...): held like paralysis, but not the Demoness's paralysis.</summary>
@@ -361,6 +363,8 @@ namespace Slopgame
             curseIndicator.sprite = DungeonVisuals.SkullSprite;
             curseIndicator.transform.localPosition = new Vector2(0, CurseSkullHeight);
             curseIndicator.gameObject.SetActive(false);
+            gameObject.AddComponent<FrozenEncasement>();
+            gameObject.AddComponent<ScorchbloodAura>();
         }
 
         /// <summary>Over a hero's body (4) and its details (5), under a hero's shield and the combat effects.</summary>
@@ -390,12 +394,12 @@ namespace Slopgame
                 bleedIndicator.transform.localScale = (Vector3)(BleedDropSize * Mathf.Lerp(0.5f, 1f, Mathf.Clamp01(drip / 0.5f))) + Vector3.forward;
                 bleedIndicator.color = FlameMesh.Alpha(BleedColor, 1f - fall * fall);
             }
-            // Blood keeps running off the body between the cuts, on every machine; scorchblooded, it boils off as embers.
-            if (Time.time < nextBleedDrip || Run.ProjectileRoot == null) return;
+            // Blood keeps running off the body between the cuts, on every machine; scorchblooded, the aura's pixel embers
+            // boil off it instead.
+            if (scorched || Time.time < nextBleedDrip || Run.ProjectileRoot == null) return;
             nextBleedDrip = Time.time + Random.Range(0.12f, 0.22f);
             Vector2 wound = (Vector2)transform.position + Random.insideUnitCircle * HitRadius * 0.7f;
-            if (scorched) HeroVfx.Sparks(Run.ProjectileRoot, wound, Random.value < 0.5f ? ScorchColor : FlameMesh.Yellow, 2, 1.8f, 0.4f, Vector2.up, 50f, 0.8f);
-            else HeroVfx.Sparks(Run.ProjectileRoot, wound, BleedColor, 2, 1.6f, 0.35f, Vector2.down, 50f, 0.8f);
+            HeroVfx.Sparks(Run.ProjectileRoot, wound, BleedColor, 2, 1.6f, 0.35f, Vector2.down, 50f, 0.8f);
         }
         private float nextBleedDrip;
 
@@ -455,14 +459,17 @@ namespace Slopgame
                 try { Hit(scorched ? Mathf.CeilToInt(burnDamage * ScorchbloodMultiplier) : burnDamage); }
                 finally { dotTick = false; }
                 if (Health <= 0) return;
-                CombatVfx.Ring(Run.ProjectileRoot, transform.position, scorched ? 0.55f : 0.4f, scorched ? ScorchColor : burnColor, 0.2f);
+                // Scorchblood's ring is pixel art, like the rest of its look.
+                if (scorched) PixelBurstVfx.Ring(Run.ProjectileRoot, transform.position, 0.55f, ScorchColor, 0.2f);
+                else CombatVfx.Ring(Run.ProjectileRoot, transform.position, 0.4f, burnColor, 0.2f);
             }
             SettleDeathMark();
             if (Health <= 0) return;
             int bled = TickWounds();
             if (bled > 0)
             {
-                HeroVfx.Sparks(Run.ProjectileRoot, transform.position, IsScorchblooded ? ScorchColor : BleedColor, 5, 2f, 0.3f, Vector2.down, 90f, 0.8f);
+                if (IsScorchblooded) PixelBurstVfx.Sparks(Run.ProjectileRoot, transform.position, ScorchColor, 5, 2f, 0.3f, Vector2.down, 90f, 0.8f);
+                else HeroVfx.Sparks(Run.ProjectileRoot, transform.position, BleedColor, 5, 2f, 0.3f, Vector2.down, 90f, 0.8f);
                 dotTick = true;
                 try { Hit(bled, transform.position, 0f); }
                 finally { dotTick = false; }
@@ -520,10 +527,10 @@ namespace Slopgame
         private void UpdateColor()
         {
             body.color = IsFlashing || netFlashing || (((IsRanged && shooter.IsCharging) || (Variant != null && Variant.IsWindingUp)) && !IsHeld) ? Color.white
+                : IsFrozen ? FrozenTint
                 : IsParalyzed ? DemonessAttack.ParalyzedTint(Time.time)
                 : IsStunned ? Color.Lerp(StunnedTint, Color.white, 0.5f + 0.5f * Mathf.Sin(Time.time * 14f))
                 : IsRooted ? RootedTint
-                : IsFrozen ? FrozenTint
                 : IsChilled ? AbilityCatalog.Ice : Variant != null ? Variant.Tint
                 : IsTrainingDummy ? DummyTint : IsTank ? Run.World.BruteTint : IsRanged ? Run.World.CasterTint : Run.World.BasicTint;
         }

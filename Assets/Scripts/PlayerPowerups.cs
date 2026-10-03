@@ -7,6 +7,9 @@ namespace Slopgame
     {
         private readonly Dictionary<PowerupType, int> stacks = new Dictionary<PowerupType, int>();
         private int soulShieldKills;
+        /// <summary>Blood Debt: how many bleeding enemies have to die for each HP it heals.</summary>
+        public const int BloodDebtKills = 10;
+        private int bloodDebtKills;
         public WeaponType ClassWeapon { get; set; }
         public PermanentBonuses Permanent { get; set; } = new PermanentBonuses(null, WeaponType.Sword);
         public PlayerAbilities Abilities { get; set; }
@@ -350,6 +353,11 @@ namespace Slopgame
             if (enemy != null && enemy.HoldPending && !enemy.IsImmobilized) OnImmobilized(player, enemy, 0f);
             if (Count(PowerupType.ElementalKills) > 0) elementalPrimed = true;
             if (Count(PowerupType.HotStreak) > 0) HotStreakPrimed = true;
+            if (enemy != null && enemy.CountsAsBleeding && Count(PowerupType.BloodDebt) > 0 && ++bloodDebtKills >= BloodDebtKills)
+            {
+                bloodDebtKills = 0;
+                player.Heal(1);
+            }
             if (held && Count(PowerupType.NerveSnap) > 0) player.ResetClassSkill();
             float cut = (Count(PowerupType.Bloodrush) > 0 ? KillCooldownCut : 0f) + (held && Count(PowerupType.StillHunter) > 0 ? StillHunterCut : 0f);
             if (cut > 0f) player.ReduceCooldowns(cut);

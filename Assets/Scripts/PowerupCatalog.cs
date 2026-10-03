@@ -68,7 +68,9 @@ namespace Slopgame
         // Universal: shocks freeze the enemies they arc into.
         FlashFreeze,
         // Universal: burning and bleeding combine.
-        Scorchblood
+        Scorchblood,
+        // Samurai.
+        BloodDebt
     }
 
     public sealed class PowerupDefinition
@@ -300,7 +302,8 @@ namespace Slopgame
             new PowerupDefinition(PowerupType.HotStreak, "Hot Streak", "After a kill, your next attack charges 50% faster (doesn't stack)", 1),
             new PowerupDefinition(PowerupType.ColdBlooded, "Cold Blooded", "Making an enemy bleed freezes it", 1),
             new PowerupDefinition(PowerupType.FlashFreeze, "Flash Freeze", "Enemies a shock arcs into (not the one it started from) are frozen", 1),
-            new PowerupDefinition(PowerupType.Scorchblood, "Scorchblood", "Enemies both burning and bleeding are scorchblooded: both tick 50% harder and the fire won't go out while they bleed. Pyre Burst, Crimson Bloom and Elemental Clash from a scorchblooded enemy spread scorchblood", 1)
+            new PowerupDefinition(PowerupType.Scorchblood, "Scorchblood", "Enemies both burning and bleeding are scorchblooded: both tick 50% harder and the fire won't go out while they bleed. Pyre Burst, Crimson Bloom and Elemental Clash from a scorchblooded enemy spread scorchblood", 1),
+            new PowerupDefinition(PowerupType.BloodDebt, "Samurai: Blood Debt", "Every 10 bleeding enemies you kill heal you for 1 HP", 1, WeaponType.Katana)
         };
 
         private static readonly Dictionary<PowerupType, PowerupDefinition> byType = BuildLookup();
