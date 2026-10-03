@@ -427,7 +427,7 @@ namespace Slopgame
         /// <summary>Standing in burning ground: one tick of damage per second, however many fires overlap.</summary>
         public void Burn(int damage = 1)
         {
-            if (Time.time >= nextBurnAt && Hit(damage)) nextBurnAt = Time.time + BurnInterval;
+            if (Time.time >= nextBurnAt && Strike(false, damage, true)) nextBurnAt = Time.time + BurnInterval;
         }
 
         /// <summary>
@@ -442,14 +442,14 @@ namespace Slopgame
         /// </summary>
         public bool Slay() => Strike(true, 1);
 
-        private bool Strike(bool lethal, int damage)
+        private bool Strike(bool lethal, int damage, bool burning = false)
         {
             if (Run.IsPlaying && IsInvulnerable && Health > 0) Deflected?.Invoke();
             if (!Run.IsPlaying || IsInvulnerable || Health <= 0) return false;
             if (DebugMode.Enabled) { Health = MaxHealth; return false; }
             // Shield Taunt: every blow glances off the raging Knight (only the arena's own killing blows, such as
             // Annihilation, still get through). A short grace keeps lingering hazards from counting every frame.
-            if (!lethal && Mechanic is ShieldTaunt taunt && taunt.TryShrugOff())
+            if (!lethal && Mechanic is ShieldTaunt taunt && taunt.TryShrugOff(!burning))
             {
                 invulnerableUntil = Mathf.Max(invulnerableUntil, Time.time + TauntShrugGrace);
                 return false;

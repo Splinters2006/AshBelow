@@ -4,7 +4,7 @@ namespace Slopgame
 {
     /// <summary>
     /// The Knight's class mechanic: for 2.25 seconds he turns red with rage and nothing can hurt him: bolts are stopped
-    /// from every side (each grants a ward) and blows, slams and guardian attacks glance off him. He can walk but do
+    /// from every side and blows, slams and guardian attacks glance off him (each grants a ward). He can walk but do
     /// nothing else. It does not reflect. In co-op, enemies target him first for a few seconds. With its R upgrade (Retribution, from the Ash shop), the rage bursts out when the taunt
     /// ends: every nearby enemy takes his damage once for each hit he stopped or took while it lasted.
     /// </summary>
@@ -117,11 +117,13 @@ namespace Slopgame
 
         /// <summary>
         /// A blow that would have landed on him while he rages (a touch, a slam, a guardian's attack) glances off instead:
-        /// it costs nothing and counts toward Retribution.
+        /// it costs nothing, adds a ward like a stopped bolt and counts toward Retribution. Burning ground only glances
+        /// off (<paramref name="ward"/> false), so standing in fire can't farm wards.
         /// </summary>
-        public bool TryShrugOff()
+        public bool TryShrugOff(bool ward = true)
         {
             if (!IsTaunting) return false;
+            if (ward) Player.Powerups.AddWard();
             Soak();
             if (Player.Run.ProjectileRoot != null)
                 HeroVfx.Sparks(Player.Run.ProjectileRoot, transform.position, HeroBuffs.TauntColor, 10, 4f, 0.3f);
