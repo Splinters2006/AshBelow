@@ -76,7 +76,7 @@ namespace Slopgame.Editor
             {
                 if (hero < 0)
                 {
-                    Require(run.UnlockSpecimen("1234"), "Could not unlock Specimen for the mechanic checks.");
+                    run.GrantDeveloperAccessForTests();
                     Require(ContainsGambler(run), "The Gambler is missing from the hero list.");
                     run.Progress.AwardAsh(PermanentUpgradeCatalog.MechanicCost * Classes.Length);
                     foreach (var weapon in Classes) run.Progress.RecordGuardian(PermanentUpgradeCatalog.MechanicGuardians, weapon);

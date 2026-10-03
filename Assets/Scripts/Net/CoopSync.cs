@@ -116,7 +116,7 @@ namespace Slopgame
             {
                 if (peer.Id == LocalId) continue;
                 var character = Run.Characters[Mathf.Clamp(peer.ClassIndex, 0, Run.Characters.Count - 1)];
-                remoteHeroes.Add(RemoteHero.Create(Run, peer.Id, peer.Name, character, Run.Player.transform.position));
+                remoteHeroes.Add(RemoteHero.Create(Run, peer.Id, peer.Name, peer.NameColor, peer.Badge, character, Run.Player.transform.position));
             }
         }
 

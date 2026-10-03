@@ -5,10 +5,11 @@ namespace Slopgame
     /// <summary>The co-op page of the main menu: host or join a party, pick a hero, and begin the descent together.</summary>
     public sealed class CoopMenu
     {
-        private const string NameKey = "AshBelow.CoopName", AddressKey = "AshBelow.CoopAddress";
+        private const string NameKey = "AshBelow.CoopName", AddressKey = "AshBelow.CoopAddress", ColorKey = "AshBelow.CoopColor";
         private string code = "", address, playerName;
         // The account display name last taken over, so signing in (or renaming on the account page) names you here too.
         private string accountName;
+        private int nameColor = -1;
         private Vector2 heroScroll;
 
         public void Draw(DungeonRun run)
@@ -19,7 +20,12 @@ namespace Slopgame
                 playerName = Load(NameKey, "Player");
                 address = Load(AddressKey, "127.0.0.1");
                 session.RenameLocal(playerName);
+                int.TryParse(Load(ColorKey, "0"), out nameColor);
+                nameColor = NameTag.ClampColor(nameColor);
             }
+            // Signing in to (or out of) a developer account changes how the name is drawn for the whole party.
+            if (session.LocalNameColor != nameColor || session.LocalBadge != run.Account.DeveloperBadge)
+                session.RestyleLocal(nameColor, run.Account.DeveloperBadge);
             if (run.Account.DisplayName != accountName)
             {
                 accountName = run.Account.DisplayName;
@@ -37,8 +43,9 @@ namespace Slopgame
             SyncClass(run, session);
             DungeonUi.Panel(new Rect(70, 250, 540, 336), DungeonUi.PanelColor);
             DungeonUi.Label(new Rect(100, 270, 480, 24), "YOUR NAME", 14, DungeonUi.Muted);
-            string renamed = DungeonUi.TextField("coopName", new Rect(100, 298, 480, 46), playerName, 16);
+            string renamed = DungeonUi.TextField("coopName", new Rect(100, 298, 252, 46), playerName, 16);
             if (renamed != playerName) { playerName = renamed; Save(NameKey, playerName); session.RenameLocal(playerName); }
+            DrawColorPicker(new Rect(364, 298, 216, 46));
             DungeonUi.Label(new Rect(100, 364, 480, 24), "ONLINE  /  UP TO 4 PLAYERS, NO PORT FORWARDING", 14, AbilityCatalog.Gold);
             if (DungeonUi.Button("coopHost", new Rect(100, 394, 480, 52), "Host a party", AbilityCatalog.Gold)) session.HostOnline();
             code = DungeonUi.TextField("coopCode", new Rect(100, 468, 300, 52), code, 12, 24).ToUpperInvariant();
@@ -84,26 +91,29 @@ namespace Slopgame
             {
                 var peer = session.Peers[i];
                 var hero = run.Characters[Mathf.Clamp(peer.ClassIndex, 0, run.Characters.Count - 1)];
-                string tags = (i == 0 ? "  /  HOST" : "") + (peer.Id == session.LocalId ? "  /  YOU" : "");
-                DungeonUi.Label(new Rect(100, 390 + i * 46, 300, 40), peer.Name + tags + (peer.Ready ? "  /  READY" : ""), 14, DungeonUi.Text);
+                string tags = (i == 0 ? "  /  HOST" : "") + (peer.Id == session.LocalId ? "  /  YOU" : "") + (peer.Ready ? "  /  READY" : "");
+                float named = NameTag.Draw(new Rect(100, 386 + i * 46, 300, 40), peer.Name, peer.NameColor, peer.Badge, 16);
+                DungeonUi.Label(new Rect(100 + named, 389 + i * 46, 300 - named, 20), tags, 13, DungeonUi.Muted);
                 DungeonUi.Label(new Rect(400, 390 + i * 46, 180, 40), hero.DisplayName, 18, hero.Color, TextAnchor.UpperRight);
             }
 
             DungeonUi.Panel(new Rect(650, 250, 560, 336), DungeonUi.PanelColor);
             DungeonUi.Label(new Rect(680, 268, 500, 24), "YOUR HERO", 14, DungeonUi.Muted);
             // Two columns that scroll once there are more heroes than fit above the note.
-            int rows = (run.Characters.Count + 1) / 2;
+            int rows = (run.AvailableCharacters.Count + 1) / 2;
             heroScroll = GUI.BeginScrollView(new Rect(680, 300, 522, 176), heroScroll, new Rect(0, 0, 500, Mathf.Max(176, rows * 58 - 10)));
-            for (int i = 0; i < run.Characters.Count; i++)
+            for (int i = 0, slot = 0; i < run.Characters.Count; i++)
             {
                 var hero = run.Characters[i];
+                // Heroes this account cannot play (the developers' Specimen) are left out of the list.
+                if (run.IsCharacterLocked(hero)) continue;
                 bool selected = i == session.LocalClassIndex;
-                if (DungeonUi.Button("coopClass" + i, new Rect(i % 2 * 256, i / 2 * 58, 244, 48),
-                    hero.DisplayName + (run.IsCharacterLocked(hero) ? " / LOCKED" : ""), selected ? hero.Color : DungeonUi.Muted))
+                if (DungeonUi.Button("coopClass" + i, new Rect(slot % 2 * 256, slot / 2 * 58, 244, 48), hero.DisplayName, selected ? hero.Color : DungeonUi.Muted))
                 {
                     run.SelectCharacter(hero);
                     if (run.SelectedCharacter == hero) session.SetLocalClass(i);
                 }
+                slot++;
             }
             GUI.EndScrollView();
             DungeonUi.Label(new Rect(680, 486, 500, 60), "The descent starts when everyone is ready. Enemies scale with the party; each hero keeps their own Ash.", 15, DungeonUi.Muted);
@@ -126,6 +136,24 @@ namespace Slopgame
             // Below the panels, where the status line would go (a lobby host has no status).
             if (!string.IsNullOrEmpty(session.PortStatus) && string.IsNullOrEmpty(session.Status))
                 DungeonUi.Label(new Rect(70, 596, 770, 50), session.PortStatus, 14, DungeonUi.Muted);
+        }
+
+        /// <summary>Swatches for the name colour everyone in the party sees; the chosen one is outlined.</summary>
+        private void DrawColorPicker(Rect area)
+        {
+            const int columns = 4;
+            float width = (area.width - (columns - 1) * 4f) / columns, height = (area.height - 4f) / 2f;
+            for (int i = 0; i < NameTag.Colors.Length; i++)
+            {
+                Rect swatch = new Rect(area.x + i % columns * (width + 4f), area.y + i / columns * (height + 4f), width, height);
+                if (i == nameColor) DungeonUi.Panel(new Rect(swatch.x - 2, swatch.y - 2, swatch.width + 4, swatch.height + 4), DungeonUi.Text);
+                DungeonUi.Panel(swatch, NameTag.Colors[i]);
+                if (GUI.Button(swatch, GUIContent.none, GUIStyle.none) && i != nameColor)
+                {
+                    nameColor = i;
+                    Save(ColorKey, i.ToString());
+                }
+            }
         }
 
         /// <summary>Starts the party with the hero last picked on the solo screen.</summary>

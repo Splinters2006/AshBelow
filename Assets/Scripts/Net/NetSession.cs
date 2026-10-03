@@ -19,6 +19,8 @@ namespace Slopgame
         public string Name;
         public int ClassIndex;
         public bool Ready;
+        /// <summary>The picked name colour (<see cref="NameTag.Colors"/>) and developer badge (<see cref="Developers"/>).</summary>
+        public int NameColor, Badge;
     }
 
     public enum NetState { Offline, Connecting, Lobby, InRun }
@@ -48,6 +50,8 @@ namespace Slopgame
         public bool IsDirect => State != NetState.Offline && session == null;
         public IReadOnlyList<CoopPeer> Peers => peers;
         public string LocalName { get; set; } = "Player";
+        public int LocalNameColor { get; private set; }
+        public int LocalBadge { get; private set; }
         public int LocalClassIndex { get; private set; }
         public bool LocalReady => Peer(LocalId)?.Ready == true;
         public bool AllReady => State == NetState.Lobby && peers.Count > 0 && peers.TrueForAll(peer => peer.Ready);
@@ -97,7 +101,7 @@ namespace Slopgame
             if (manager.IsHost)
             {
                 peers.Clear();
-                peers.Add(new CoopPeer { Id = manager.LocalClientId, Name = LocalName, ClassIndex = LocalClassIndex });
+                peers.Add(new CoopPeer { Id = manager.LocalClientId, Name = LocalName, ClassIndex = LocalClassIndex, NameColor = LocalNameColor, Badge = LocalBadge });
                 State = NetState.Lobby;
             }
         }
@@ -378,6 +382,8 @@ namespace Slopgame
             writer.WriteValueSafe(LocalName ?? "Player");
             writer.WriteValueSafe(LocalClassIndex);
             writer.WriteValueSafe(LocalReady);
+            writer.WriteValueSafe(LocalNameColor);
+            writer.WriteValueSafe(LocalBadge);
             Send(HelloMessage, writer);
         }
 
@@ -387,9 +393,13 @@ namespace Slopgame
             reader.ReadValueSafe(out string name);
             reader.ReadValueSafe(out int classIndex);
             reader.ReadValueSafe(out bool ready);
+            reader.ReadValueSafe(out int nameColor);
+            reader.ReadValueSafe(out int badge);
             var peer = Peer(sender);
             if (peer == null) return;
             peer.Name = CleanName(name);
+            peer.NameColor = NameTag.ClampColor(nameColor);
+            peer.Badge = badge >= 0 && badge <= Developers.BadgeCount ? badge : 0;
             peer.Ready = peer.ClassIndex == classIndex && ready;
             peer.ClassIndex = classIndex;
             BroadcastRoster();
@@ -404,6 +414,17 @@ namespace Slopgame
             else if (State == NetState.Lobby) SendHello();
         }
 
+        /// <summary>The local name's colour and developer badge, shared with the party like the name.</summary>
+        public void RestyleLocal(int nameColor, int badge)
+        {
+            LocalNameColor = NameTag.ClampColor(nameColor);
+            LocalBadge = badge;
+            var self = State != NetState.Offline ? Peer(LocalId) : null;
+            if (self != null) { self.NameColor = LocalNameColor; self.Badge = LocalBadge; }
+            if (IsHost) BroadcastRoster();
+            else if (State == NetState.Lobby) SendHello();
+        }
+
         public static string CleanName(string name)
         {
             name = (name ?? "").Trim();
@@ -414,7 +435,7 @@ namespace Slopgame
         private void BroadcastRoster()
         {
             var self = Peer(LocalId);
-            if (self != null) { self.Name = LocalName; self.ClassIndex = LocalClassIndex; }
+            if (self != null) { self.Name = LocalName; self.ClassIndex = LocalClassIndex; self.NameColor = LocalNameColor; self.Badge = LocalBadge; }
             using var writer = Writer();
             writer.WriteValueSafe(peers.Count);
             foreach (var peer in peers)
@@ -423,6 +444,8 @@ namespace Slopgame
                 writer.WriteValueSafe(peer.Name);
                 writer.WriteValueSafe(peer.ClassIndex);
                 writer.WriteValueSafe(peer.Ready);
+                writer.WriteValueSafe(peer.NameColor);
+                writer.WriteValueSafe(peer.Badge);
             }
             Send(RosterMessage, writer);
         }
@@ -441,6 +464,8 @@ namespace Slopgame
                 reader.ReadValueSafe(out peer.Name);
                 reader.ReadValueSafe(out peer.ClassIndex);
                 reader.ReadValueSafe(out peer.Ready);
+                reader.ReadValueSafe(out peer.NameColor);
+                reader.ReadValueSafe(out peer.Badge);
                 peers.Add(peer);
             }
             foreach (var id in previous)

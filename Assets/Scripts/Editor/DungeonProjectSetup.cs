@@ -85,14 +85,13 @@ namespace Slopgame.Editor
                     if (specimen == null || !run.IsCharacterLocked(specimen)) throw new Exception("Specimen should start locked.");
                     var knight = run.SelectedCharacter;
                     run.SelectCharacter(specimen);
-                    if (run.SelectedCharacter != knight) throw new Exception("Locked Specimen was selected without a PIN.");
-                    if (run.UnlockSpecimen("") || run.UnlockSpecimen("123") || run.UnlockSpecimen("0000") || run.UnlockSpecimen("12345") || !run.IsCharacterLocked(specimen))
-                        throw new Exception("Incorrect PIN unlocked Specimen.");
-                    if (!run.UnlockSpecimen("1234")) throw new Exception("Correct Specimen PIN was rejected.");
+                    if (run.SelectedCharacter != knight) throw new Exception("Locked Specimen was selected without a developer account.");
+                    if (System.Linq.Enumerable.Contains(run.AvailableCharacters, specimen)) throw new Exception("Locked Specimen is offered to pick.");
+                    run.GrantDeveloperAccessForTests();
                     run.SelectCharacter(specimen);
-                    if (run.SelectedCharacter != specimen) throw new Exception("Unlocked Specimen cannot be selected.");
+                    if (run.SelectedCharacter != specimen) throw new Exception("Specimen cannot be selected on a developer account.");
                     run.ShowMainMenu();
-                    if (run.IsCharacterLocked(specimen)) throw new Exception("Specimen unlock did not survive a menu reset.");
+                    if (run.IsCharacterLocked(specimen)) throw new Exception("Developer access did not survive a menu reset.");
                     run.SelectCharacter(knight);
                     run.SelectCharacter(run.SelectedCharacter);
                     run.Restart();

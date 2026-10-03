@@ -17,8 +17,6 @@ namespace Slopgame
     {
         public const int MaxUsername = 20, MaxPassword = 30, MaxDisplayName = 16;
         private static readonly Regex UsernameRule = new Regex(@"^[A-Za-z0-9.\-@_]{3,20}$");
-        // Kept for the developers: nobody can create these, though their owners still sign in to them as usual.
-        private static readonly string[] ReservedUsernames = { "Splinters06", "tioqy" };
         private const float RestoreRetryDelay = 30f;
 
         /// <summary>Set before anything starts the services: false keeps test runs away from the player's saved sign-in.</summary>
@@ -33,6 +31,9 @@ namespace Slopgame
         public string Username { get; private set; }
         public string DisplayName { get; private set; }
         public bool IsSignedIn => Username != null;
+        /// <summary>Which developer account is signed in (see <see cref="Developers"/>), or 0.</summary>
+        public int DeveloperBadge => Developers.BadgeFor(Username);
+        public bool IsDeveloper => DeveloperBadge > 0;
         public bool IsBusy { get; private set; }
         public string Status { get; private set; }
         public bool StatusIsError { get; private set; }
@@ -113,9 +114,8 @@ namespace Slopgame
         public static string CheckUsername(string username)
         {
             if (!UsernameRule.IsMatch(username ?? "")) return "Usernames are 3-20 letters, numbers or . - @ _";
-            foreach (string reserved in ReservedUsernames)
-                if (string.Equals(username, reserved, StringComparison.OrdinalIgnoreCase)) return "That username is taken.";
-            return null;
+            // The developers' names: their owners still sign in to them as usual.
+            return Developers.IsReserved(username) ? "That username is taken." : null;
         }
 
         public static string CheckPassword(string password)

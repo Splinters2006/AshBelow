@@ -7,6 +7,8 @@ namespace Slopgame
     {
         public ulong Id { get; private set; }
         public string PlayerName { get; private set; }
+        public int NameColor { get; private set; }
+        public int Badge { get; private set; }
         public CharacterDefinition Character { get; private set; }
         public int Health { get; private set; }
         public int MaxHealth { get; private set; }
@@ -35,13 +37,15 @@ namespace Slopgame
         private bool facingLeft, visible = true;
         private int lookKey;
 
-        public static RemoteHero Create(DungeonRun run, ulong id, string playerName, CharacterDefinition character, Vector2 position)
+        public static RemoteHero Create(DungeonRun run, ulong id, string playerName, int nameColor, int badge, CharacterDefinition character, Vector2 position)
         {
             var body = DungeonVisuals.Create(playerName, run.transform, position, Vector2.one * 0.65f, character.Color, 4);
             var hero = body.gameObject.AddComponent<RemoteHero>();
             hero.run = run;
             hero.Id = id;
             hero.PlayerName = playerName;
+            hero.NameColor = nameColor;
+            hero.Badge = badge;
             hero.Character = character;
             hero.body = body;
             hero.target = position;

@@ -731,7 +731,7 @@ namespace Slopgame
                 if (hero == null) continue;
                 Rect row = new Rect(24, 200 + i * 44, 292, 38);
                 DungeonUi.Panel(row, DungeonUi.PanelColor);
-                DungeonUi.Label(new Rect(row.x + 14, row.y + 4, 170, 20), hero.PlayerName, 14, hero.Character.Color);
+                NameTag.Draw(new Rect(row.x + 14, row.y + 3, 152, 20), hero.PlayerName, hero.NameColor, hero.Badge, 14, titleBelow: false);
                 DungeonUi.Label(new Rect(row.x + 170, row.y + 4, 108, 20), hero.IsAlive ? $"{hero.Health} / {hero.MaxHealth} HP" : "FALLEN", 13,
                     hero.IsAlive ? DungeonUi.Muted : new Color(1f, 0.4f, 0.4f), TextAnchor.UpperRight);
                 DungeonUi.Bar(new Rect(row.x + 14, row.y + 27, row.width - 28, 4), hero.IsAlive ? hero.Health / (float)hero.MaxHealth : 0f, hero.Character.Color);
@@ -745,7 +745,8 @@ namespace Slopgame
                 Vector3 screen = Run.View.WorldToScreenPoint(hero.transform.position + Vector3.up * 0.75f);
                 if (screen.z < 0f) continue;
                 Vector2 point = DungeonUi.ScreenToCanvas(screen, GameSettings.HudScale);
-                DungeonUi.Label(new Rect(point.x - 90, point.y - 24, 180, 20), hero.PlayerName, 13, hero.Character.Color, TextAnchor.MiddleCenter);
+                // A developer's title sits under the name, so their tag starts a line higher.
+                NameTag.Draw(new Rect(point.x - 90, point.y - (hero.Badge > 0 ? 36 : 24), 180, 34), hero.PlayerName, hero.NameColor, hero.Badge, 13, TextAnchor.UpperCenter);
             }
             PinTop();
             if (Run.Player.Health <= 0 && Run.IsPlaying)

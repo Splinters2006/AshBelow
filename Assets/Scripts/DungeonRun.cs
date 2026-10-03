@@ -53,15 +53,17 @@ namespace Slopgame
         public bool IsInMainMenu { get; private set; }
         public IReadOnlyList<CharacterDefinition> Characters => characters;
         public CharacterDefinition SelectedCharacter { get; private set; }
-        public bool SpecimenUnlocked { get; private set; }
-        public bool IsCharacterLocked(CharacterDefinition character) => character != null && character.Weapon == WeaponType.Mutation && !SpecimenUnlocked;
-
-        public bool UnlockSpecimen(string pin)
-        {
-            if (pin != "1234") return false;
-            SpecimenUnlocked = true;
-            return true;
-        }
+        /// <summary>Signed in to a developer account (see <see cref="Developers"/>): debug admin mode and the Specimen.</summary>
+        public bool HasDeveloperAccess => (Account != null && Account.IsDeveloper) || developerAccessForTests;
+        /// <summary>The Specimen is only for the developers.</summary>
+        public bool IsCharacterLocked(CharacterDefinition character) => character != null && character.Weapon == WeaponType.Mutation && !HasDeveloperAccess;
+        /// <summary>The heroes this player can pick, in roster order.</summary>
+        public IReadOnlyList<CharacterDefinition> AvailableCharacters => System.Array.FindAll(characters, character => !IsCharacterLocked(character));
+        private bool developerAccessForTests;
+#if UNITY_EDITOR
+        /// <summary>Tests cannot sign in to a developer account, so they are let in directly.</summary>
+        public void GrantDeveloperAccessForTests() => developerAccessForTests = true;
+#endif
         private CharacterDefinition[] characters;
         private MainMenu menu;
         private DungeonHud hud;
@@ -129,6 +131,7 @@ namespace Slopgame
             // Test runs use a throwaway wallet, so they must not sign in to the player's account or sync over its cloud save.
             PlayerAccount.KeepSignIn = saveDirectory == Application.persistentDataPath;
             Account = gameObject.AddComponent<PlayerAccount>();
+            Account.SignedOut += OnSignedOut;
             CloudSync = gameObject.AddComponent<CloudProgressSync>();
             CloudSync.Run = this;
             CloudSync.Account = Account;
@@ -169,8 +172,17 @@ namespace Slopgame
         public void SelectCharacter(CharacterDefinition character)
         {
             if (!IsInMainMenu || System.Array.IndexOf(characters, character) < 0) return;
-            if (IsCharacterLocked(character)) { menu.RequestUnlock(character); return; }
+            if (IsCharacterLocked(character)) return;
             SelectedCharacter = character;
+        }
+
+        /// <summary>Leaving a developer account takes its debug admin mode and Specimen with it.</summary>
+        private void OnSignedOut()
+        {
+            if (HasDeveloperAccess) return;
+            DebugMode.Set(false);
+            if (IsInMainMenu && IsCharacterLocked(SelectedCharacter))
+                SelectedCharacter = System.Array.Find(characters, character => character.Weapon == WeaponType.Sword) ?? characters[0];
         }
 
         /// <summary>Main menu travel map: the world the next descent (solo, or a co-op party this player hosts) begins in.</summary>
@@ -769,7 +781,7 @@ namespace Slopgame
 
         private void Update()
         {
-            if (PlayerInput.DebugToggle) DebugMode.Toggle();
+            if (PlayerInput.DebugToggle && HasDeveloperAccess) DebugMode.Toggle();
             if (Progress.HasUnsavedChanges && Time.unscaledTime >= nextSaveRetry)
             { Progress.Save(); nextSaveRetry = Time.unscaledTime + 5f; }
             if (!IsPlaying) return;
