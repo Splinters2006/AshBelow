@@ -103,13 +103,21 @@ namespace Slopgame
                 }
             }
             IsPosing = false;
+            // Every cut's damage is ruled out before any lands, so Open Veins knows the whole sheathe's total even for
+            // the enemies its own cuts kill.
+            var damages = new int[marked.Count];
             int cuts = 0, total = 0;
-            var cut = new List<DungeonEnemy>();
             for (int i = 0; i < marked.Count; i++)
             {
                 var enemy = marked[i];
                 if (enemy == null || enemy.Health <= 0 || !owed.TryGetValue(enemy, out int stored)) continue;
-                int damage = Mathf.Max(1, Mathf.RoundToInt(stored * ReleaseMultiplier));
+                damages[i] = Mathf.Max(1, Mathf.RoundToInt(stored * ReleaseMultiplier));
+                total += damages[i];
+            }
+            for (int i = 0; i < marked.Count; i++)
+            {
+                var enemy = marked[i];
+                if (damages[i] <= 0 || enemy == null || enemy.Health <= 0) continue;
                 Vector2 from = lines[i * 2], to = lines[i * 2 + 1], at = enemy.transform.position;
                 KatanaVfx.Slice(root, from, to, SamuraiAttack.Blood, 0.5f);
                 HeroVfx.Sparks(root, at, SamuraiAttack.Blood, 16, 6f, 0.45f);
@@ -117,14 +125,15 @@ namespace Slopgame
                 CombatVfx.Ring(root, at, enemy.HitRadius + 0.6f, SamuraiAttack.Blood, 0.3f);
                 CoopFx.KatanaSlice(run, from, to, SamuraiAttack.Blood, 0.5f);
                 CoopFx.Ring(run, at, enemy.HitRadius + 0.6f, SamuraiAttack.Blood, 0.3f);
-                enemy.Hit(damage, hero, 0.6f);
-                total += damage;
-                cut.Add(enemy);
+                // Open Veins: every enemy cut is left bleeding for the whole sheathe's damage, not just its own share. A cut
+                // that kills still killed a bleeding enemy, so Crimson Bloom bursts with the wound it would have opened.
+                float bleed = IsUpgraded ? CombatDamage.BleedTotal(Player, enemy, total) : 0f;
+                if (IsUpgraded) enemy.BeginBleedingBlow(bleed);
+                try { enemy.Hit(damages[i], hero, 0.6f); }
+                finally { if (IsUpgraded) enemy.EndBleedingBlow(bleed); }
+                if (IsUpgraded) CombatDamage.InflictBleed(Player, enemy, total);
                 cuts++;
             }
-            // Open Veins: every survivor is left bleeding for the whole sheathe's damage, not just its own share.
-            if (IsUpgraded)
-                foreach (var enemy in cut) CombatDamage.InflictBleed(Player, enemy, total);
             owed.Clear();
             if (cuts > 0)
             {

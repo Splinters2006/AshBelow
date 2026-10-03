@@ -93,14 +93,16 @@ namespace Slopgame
 
         /// <summary>
         /// A bleeding death unfolds into a crimson flower whose petal tips reach the passive's actual damage radius: one
-        /// crisp ring sweeps out to that edge, six smooth petals open and turn into place over a darker inner whorl,
-        /// then the flower fades from the tips in, leaving the edge outlined for a moment.
+        /// crisp ring sweeps out to that edge, six pointed petals open and turn into place over a darker inner whorl,
+        /// then the flower fades from the tips in, leaving the edge outlined for a moment. Drawn as pixel art.
         /// </summary>
         public static void CrimsonBloom(Transform root, Vector2 center, float radius)
         {
             var effect = Spawn<KatanaVfx>(root, 0.7f, 10);
             if (effect == null) return;
             effect.style = Style.Bloom;
+            // Pixel art, like the rest of the game's sprites: rings and discs snap to the pixel grid on their own.
+            effect.Mesh.Pixelated = true;
             effect.origin = center;
             effect.reach = Mathf.Max(0.1f, radius);
             effect.aim = FlameMesh.Polar(Random.value * Mathf.PI * 2f, 1f);
@@ -123,7 +125,7 @@ namespace Slopgame
             for (int i = 0; i < BloomPetals; i++)
                 Petal(turn + (i + 0.5f) * Mathf.PI * 2f / BloomPetals - 0.2f * open, reach * 0.55f * open, reach * 0.16f * open,
                     FlameMesh.Alpha(deep, 0.85f * fade), FlameMesh.Alpha(deep, 0.95f * fade), FlameMesh.Alpha(blood, 0.5f * fade), 0f);
-            // The petals: smooth crimson blades from the heart to the radius, each with a pale vein down its middle.
+            // The petals: crimson blades from the heart to the radius, each with a pale vein down its middle.
             for (int i = 0; i < BloomPetals; i++)
                 Petal(turn + i * Mathf.PI * 2f / BloomPetals, reach * 0.97f * open, reach * 0.24f * open,
                     FlameMesh.Alpha(blood, 0.9f * fade), FlameMesh.Alpha(deep, fade), FlameMesh.Alpha(pale, 0.75f * fade), t);
@@ -134,31 +136,48 @@ namespace Slopgame
         }
 
         /// <summary>
-        /// One smooth, pointed petal from the bloom's heart along <paramref name="angle"/>: <paramref name="body"/> down its
-        /// middle shading to <paramref name="edge"/> at its rim, with a <paramref name="vein"/> line along its spine. It
-        /// fades from the tip inward as <paramref name="wither"/> runs past halfway.
+        /// One pointed pixel-art petal from the bloom's heart along <paramref name="angle"/>: <paramref name="body"/> down
+        /// its middle shading to <paramref name="edge"/> at its rim in flat bands, with a one-pixel <paramref name="vein"/>
+        /// along its spine. It fades from the tip inward, in steps, as <paramref name="wither"/> runs past halfway.
         /// </summary>
         private void Petal(float angle, float length, float width, Color body, Color edge, Color vein, float wither)
         {
             if (length < 0.02f || width < 0.005f) return;
-            const int Segments = 12;
-            Vector2 along = FlameMesh.Polar(angle, 1f), side = Vector2.Perpendicular(along);
+            const float P = FlameMesh.Pixel;
+            Vector2 along = FlameMesh.Polar(angle, 1f), side = Vector2.Perpendicular(along), tip = origin + along * length;
             float cut = wither < 0.5f ? 1f : 1f - (wither - 0.5f) * 1.4f;
-            for (int i = 0; i < Segments; i++)
+            int x0 = Mathf.FloorToInt((Mathf.Min(origin.x, tip.x) - width) / P), x1 = Mathf.CeilToInt((Mathf.Max(origin.x, tip.x) + width) / P);
+            int y0 = Mathf.FloorToInt((Mathf.Min(origin.y, tip.y) - width) / P), y1 = Mathf.CeilToInt((Mathf.Max(origin.y, tip.y) + width) / P);
+            for (int y = y0; y < y1; y++)
             {
-                float u0 = i / (float)Segments, u1 = (i + 1) / (float)Segments;
-                // Swells from a narrow neck to its widest a third of the way out, then tapers to a sharp tip.
-                float w0 = width * PetalWidth(u0), w1 = width * PetalWidth(u1);
-                float a0 = Mathf.Clamp01((cut - u0) * 4f), a1 = Mathf.Clamp01((cut - u1) * 4f);
-                Vector2 p0 = origin + along * length * u0, p1 = origin + along * length * u1;
-                Color b0 = FlameMesh.Alpha(body, a0), b1 = FlameMesh.Alpha(body, a1), e0 = FlameMesh.Alpha(edge, a0), e1 = FlameMesh.Alpha(edge, a1);
-                Mesh.Quad(p0, p0 + side * w0, p1 + side * w1, p1, b0, e0, e1, b1);
-                Mesh.Quad(p0, p0 - side * w0, p1 - side * w1, p1, b0, e0, e1, b1);
-                if (u0 > 0.08f && u1 < 0.85f)
+                // Neighbouring pixels of one colour merge into a single block.
+                int runStart = 0;
+                Color runColor = default;
+                for (int x = x0; x <= x1; x++)
                 {
-                    float v0 = width * 0.07f * (1f - u0), v1 = width * 0.07f * (1f - u1);
-                    Color c0 = FlameMesh.Alpha(vein, a0), c1 = FlameMesh.Alpha(vein, a1);
-                    Mesh.Quad(p0 - side * v0, p0 + side * v0, p1 + side * v1, p1 - side * v1, c0, c0, c1, c1);
+                    Color color = default;
+                    if (x < x1)
+                    {
+                        Vector2 at = new Vector2((x + 0.5f) * P, (y + 0.5f) * P) - origin;
+                        float u = Vector2.Dot(at, along) / length, v = Mathf.Abs(Vector2.Dot(at, side));
+                        // Swells from a narrow neck to its widest a third of the way out, then tapers to a sharp tip,
+                        // never thinner than a pixel so the point stays unbroken.
+                        float w = Mathf.Max(width * PetalWidth(u), P * 0.5f);
+                        if (u >= 0f && u <= 1f && v <= w)
+                        {
+                            float alpha = Mathf.Ceil(Mathf.Clamp01((cut - u) * 4f) * 3f) / 3f, across = v / w;
+                            if (alpha > 0f)
+                            {
+                                color = FlameMesh.Alpha(across < 0.4f ? body : across < 0.75f ? Color.Lerp(body, edge, 0.5f) : edge, alpha);
+                                if (u > 0.08f && u < 0.85f && v <= Mathf.Max(width * 0.07f * (1f - u), P * 0.5f))
+                                    color = Color.Lerp(color, new Color(vein.r, vein.g, vein.b, color.a), vein.a);
+                            }
+                        }
+                    }
+                    if (x > x0 && color == runColor) continue;
+                    if (x > x0 && runColor.a > 0.01f) Mesh.Rect(new Vector2(runStart * P, y * P), new Vector2(x * P, (y + 1) * P), runColor);
+                    runStart = x;
+                    runColor = color;
                 }
             }
         }
