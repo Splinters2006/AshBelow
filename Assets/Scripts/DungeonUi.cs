@@ -236,7 +236,14 @@ namespace Slopgame
         }
 
         /// <summary>A single-line text box in the menu style.</summary>
-        public static string TextField(string id, Rect rect, string value, int maxLength, int size = 20)
+        public static string TextField(string id, Rect rect, string value, int maxLength, int size = 20) =>
+            GUI.TextField(rect, value ?? "", maxLength, FieldStyle(id, rect, size));
+
+        /// <summary>A text box in the menu style that shows dots instead of what is typed.</summary>
+        public static string PasswordField(string id, Rect rect, string value, int maxLength, int size = 20) =>
+            GUI.PasswordField(rect, value ?? "", '*', maxLength, FieldStyle(id, rect, size));
+
+        private static GUIStyle FieldStyle(string id, Rect rect, int size)
         {
             Initialize();
             Panel(rect, PanelColor);
@@ -249,7 +256,7 @@ namespace Slopgame
                 fields.Add(size, style);
             }
             GUI.SetNextControlName(id);
-            return GUI.TextField(rect, value ?? "", maxLength, style);
+            return style;
         }
 
         public static void Bar(Rect rect, float amount, Color color)

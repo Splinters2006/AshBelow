@@ -151,6 +151,14 @@ namespace Slopgame.Editor
             Require(!recovered.IsReadOnly && recovered.Ash == balance && recovered.Rank("health") == healthRanks, "Backup recovery failed.");
             recovered.AwardAsh(5);
             Require(new PermanentProgress(root).Ash == balance + 5, "Recovered save could not be written safely.");
+            string cloudCopy = recovered.ExportJson();
+            var otherPc = new PermanentProgress(Path.Combine(root, "other-pc"));
+            int revision = otherPc.Revision;
+            Require(otherPc.IsEmpty && otherPc.Adopt(cloudCopy) && otherPc.Revision > revision && otherPc.Ash == balance + 5
+                && otherPc.Rank("health") == healthRanks && new PermanentProgress(Path.Combine(root, "other-pc")).ExportJson() == cloudCopy,
+                "A cloud save was not adopted and written to disk intact.");
+            Require(!otherPc.Adopt("{\"version\":99,\"ash\":5,\"upgrades\":[]}") && !otherPc.Adopt("not json") && otherPc.Ash == balance + 5,
+                "A damaged or newer cloud save replaced good progress.");
             File.WriteAllText(save.SavePath, "{\"version\":99,\"ash\":987,\"upgrades\":[]}");
             var future = new PermanentProgress(root);
             future.AwardAsh(1);
@@ -161,7 +169,7 @@ namespace Slopgame.Editor
             blocked.AwardAsh(100);
             Require(blocked.Ash == 100 && blocked.HasUnsavedChanges && !blocked.TryPurchase("health") && blocked.Rank("health") == 0,
                 "Failed write lost earned Ash or granted an unsaved purchase.");
-            Debug.Log("ASH_STORAGE_OK: prices/caps, all upgrades, reload, backup recovery, future schema, and failed writes");
+            Debug.Log("ASH_STORAGE_OK: prices/caps, all upgrades, reload, backup recovery, cloud adopt, future schema, and failed writes");
         }
         private static void StartHero(DungeonRun run)
         {

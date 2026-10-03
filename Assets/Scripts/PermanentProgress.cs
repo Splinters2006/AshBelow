@@ -38,6 +38,10 @@ namespace Slopgame
         public bool IsReadOnly { get; private set; }
         public string LastError { get; private set; }
         public bool HasUnsavedChanges => dirty;
+        /// <summary>Counts every write to disk, so cloud sync can tell when there is something new to upload.</summary>
+        public int Revision { get; private set; }
+        /// <summary>True while nothing has been earned yet, so another save can replace this one without asking.</summary>
+        public bool IsEmpty => data.ash == 0 && data.guardians == 0 && data.upgrades.Count == 0 && data.clearedWorlds.Count == 0 && data.discovered.Count == 0;
         public event Action Changed;
 
         public PermanentProgress(string directory)
@@ -65,9 +69,11 @@ namespace Slopgame
             return Math.Min(rank, PermanentUpgradeCatalog.Get(id)?.MaxRank ?? int.MaxValue);
         }
 
-        private static SaveData Read(string path)
+        private static SaveData Read(string path) => Parse(File.ReadAllText(path));
+
+        private static SaveData Parse(string json)
         {
-            var loaded = JsonUtility.FromJson<SaveData>(File.ReadAllText(path));
+            var loaded = JsonUtility.FromJson<SaveData>(json);
             if (loaded == null || loaded.version != 1 || loaded.ash < 0 || loaded.guardians < 0 || loaded.upgrades == null)
                 throw new InvalidDataException("Unsupported or damaged progress file.");
             var ids = new HashSet<string>();
@@ -247,6 +253,41 @@ namespace Slopgame
             return true;
         }
 
+        /// <summary>The saved progress as JSON, for the cloud copy. Debug-mode ranks are never part of it.</summary>
+        public string ExportJson() => JsonUtility.ToJson(data);
+
+        /// <summary>A short line about a save, for choosing between this PC's progress and the cloud's.</summary>
+        public static string Describe(string json)
+        {
+            try { return Describe(Parse(json)); }
+            catch (Exception error) when (error is InvalidDataException || error is ArgumentException) { return "Unreadable save"; }
+        }
+        public string Describe() => Describe(data);
+        private static string Describe(SaveData save)
+        {
+            int ranks = 0;
+            foreach (var entry in save.upgrades) ranks += entry.rank;
+            return $"{save.ash} ash  /  {ranks} upgrade ranks  /  {save.clearedWorlds.Count} worlds cleared  /  {save.discovered.Count} discoveries";
+        }
+
+        /// <summary>Replaces this progress with a save from elsewhere (the cloud), writing it to disk first.</summary>
+        public bool Adopt(string json)
+        {
+            if (IsReadOnly) return false;
+            SaveData next;
+            try { next = Parse(json); }
+            catch (Exception error) when (error is InvalidDataException || error is ArgumentException)
+            {
+                LastError = "The cloud save is damaged or needs a newer game version.";
+                return false;
+            }
+            if (!Persist(next)) return false;
+            data = next;
+            dirty = false;
+            Changed?.Invoke();
+            return true;
+        }
+
         public bool Save()
         {
             if (IsReadOnly) return false;
@@ -269,6 +310,7 @@ namespace Slopgame
                 else File.Move(temp, SavePath);
                 recoveredBackup = false;
                 LastError = null;
+                Revision++;
                 return true;
             }
             catch (Exception error) when (error is IOException || error is UnauthorizedAccessException || error is NotSupportedException)

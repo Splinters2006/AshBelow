@@ -7,6 +7,8 @@ namespace Slopgame
     {
         private const string NameKey = "AshBelow.CoopName", AddressKey = "AshBelow.CoopAddress";
         private string code = "", address, playerName;
+        // The account display name last taken over, so signing in (or renaming on the account page) names you here too.
+        private string accountName;
         private Vector2 heroScroll;
 
         public void Draw(DungeonRun run)
@@ -17,6 +19,11 @@ namespace Slopgame
                 playerName = Load(NameKey, "Player");
                 address = Load(AddressKey, "127.0.0.1");
                 session.RenameLocal(playerName);
+            }
+            if (run.Account.DisplayName != accountName)
+            {
+                accountName = run.Account.DisplayName;
+                if (!string.IsNullOrEmpty(accountName)) { playerName = accountName; Save(NameKey, playerName); session.RenameLocal(playerName); }
             }
             if (session.State == NetState.Lobby) DrawLobby(run, session);
             else if (session.State == NetState.Connecting) DrawConnecting(session);

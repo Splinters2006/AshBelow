@@ -86,6 +86,8 @@ namespace Slopgame
         private bool arrivingByTravel;
         private float nextSaveRetry;
         public PermanentProgress Progress { get; private set; }
+        public PlayerAccount Account { get; private set; }
+        public CloudProgressSync CloudSync { get; private set; }
         public int RunAshEarned { get; private set; }
         public CoopSync Coop { get; private set; }
         /// <summary>True during a co-op descent; the local hero is still <see cref="Player"/>.</summary>
@@ -115,6 +117,12 @@ namespace Slopgame
                 saveDirectory = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "ashbelow-tests", System.Guid.NewGuid().ToString("N"));
 #endif
             Progress = new PermanentProgress(saveDirectory);
+            // Test runs use a throwaway wallet, so they must not sign in to the player's account or sync over its cloud save.
+            PlayerAccount.KeepSignIn = saveDirectory == Application.persistentDataPath;
+            Account = gameObject.AddComponent<PlayerAccount>();
+            CloudSync = gameObject.AddComponent<CloudProgressSync>();
+            CloudSync.Run = this;
+            CloudSync.Account = Account;
             view = Camera.main;
             if (view == null) view = new GameObject("Dungeon Camera", typeof(Camera)).GetComponent<Camera>();
             view.orthographic = true;

@@ -8,7 +8,7 @@ namespace Slopgame
         private static readonly Color Ember = new Color(1f, 0.46f, 0.2f);
 
         public DungeonRun Run { get; set; }
-        private bool selecting, shopping, coop, settings, codex;
+        private bool selecting, shopping, coop, settings, codex, account;
         private Vector2 heroScroll;
         // The move last hovered on the hero page (a guardian artifact, or the hero's charged attack, right click or R),
         // and the hero it belongs to. It starts on the charged attack, so the demo is never idle.
@@ -23,7 +23,7 @@ namespace Slopgame
         private static readonly Rect InfoRect = new Rect(368, PageTop, 410, PageHeight), DemoPanel = new Rect(786, PageTop, 424, PageHeight),
             DemoRect = new Rect(786, PageTop, 424, 270);
         /// <summary>True while the hero page is the one showing: it gets the smaller title, for the room.</summary>
-        private bool OnHeroPage => selecting && !shopping && !coop && !settings && !codex && lockedCharacter == null;
+        private bool OnHeroPage => selecting && !shopping && !coop && !settings && !codex && !account && lockedCharacter == null;
         private CharacterDefinition lockedCharacter;
         private string specimenPin = "";
         private bool incorrectPin;
@@ -41,7 +41,8 @@ namespace Slopgame
         private readonly CoopMenu coopMenu = new CoopMenu();
         private readonly SettingsMenu settingsMenu = new SettingsMenu();
         private readonly Encyclopedia encyclopedia = new Encyclopedia();
-        public void ResetPage(bool showCoop = false) { lockedCharacter = null; specimenPin = ""; selecting = false; shopping = false; settings = false; codex = false; coop = showCoop; leaveConfirmUntil = 0f; settingsMenu.Cancel(); }
+        private readonly AccountMenu accountMenu = new AccountMenu();
+        public void ResetPage(bool showCoop = false) { lockedCharacter = null; specimenPin = ""; selecting = false; shopping = false; settings = false; codex = false; account = false; coop = showCoop; leaveConfirmUntil = 0f; settingsMenu.Cancel(); accountMenu.Cancel(); }
         public void ShowCoop() => ResetPage(true);
 
         private void LateUpdate()
@@ -93,6 +94,11 @@ namespace Slopgame
                 {
                     shop.Draw(Run);
                     if (DungeonUi.Button("shopBack", new Rect(70, 598, 268, 48), "Back", DungeonUi.Muted)) shopping = false;
+                }
+                else if (account)
+                {
+                    accountMenu.Draw(Run);
+                    if (DungeonUi.Button("accountBack", new Rect(70, 598, 268, 48), "Back", DungeonUi.Muted)) { accountMenu.Cancel(); account = false; }
                 }
                 else if (codex)
                 {
@@ -163,7 +169,7 @@ namespace Slopgame
             float t = Time.unscaledTime;
             DungeonUi.Panel(new Rect(70, 62, 36, 2), AbilityCatalog.Gold);
             DungeonUi.Label(new Rect(118, 52, 700, 25), "A ROGUELIKE DESCENT", 14, AbilityCatalog.Gold);
-            string title = settings ? "SETTINGS" : shopping ? "ASH SHOP" : codex ? "ENCYCLOPEDIA" : coop ? "CO-OP" : "ASH / BELOW";
+            string title = settings ? "SETTINGS" : shopping ? "ASH SHOP" : codex ? "ENCYCLOPEDIA" : account ? "ACCOUNT" : coop ? "CO-OP" : "ASH / BELOW";
             // The encyclopedia and settings pages need the room, so they get a smaller title.
             bool compact = settings || codex || OnHeroPage;
             int size = compact ? 40 : 66;
@@ -177,6 +183,7 @@ namespace Slopgame
             DungeonUi.Label(compact ? new Rect(70, 138, 1100, 30) : new Rect(70, 188, 1100, 42), settings ? "Resize the menus and HUD, fade the HUD, switch autofire on or off for each hero and rebind every action. Changes save instantly."
                 : shopping ? "Spend the ash you carry home. Grow stronger with every descent."
                 : codex ? "Everything you have met in the ash. Unfound entries stay hidden until a descent turns them up."
+                : account ? "Sign in to carry your ash, upgrades and unlocks to any PC."
                 : coop ? "Descend with up to three friends. Fallen heroes rise again on the next floor."
                 : selecting ? "Choose your hero. Shape your build. Claim the relics below." : "Twelve heroes. Two relic abilities. One life in the ash.", compact ? 17 : 20, DungeonUi.Muted);
 
@@ -208,7 +215,8 @@ namespace Slopgame
             if (DungeonUi.Button("encyclopedia", new Rect(970, 342, 205, 48), "Encyclopedia", AbilityCatalog.Gold)) codex = true;
             if (DungeonUi.Button("shop", new Rect(755, 402, 205, 48), "Ash shop", DungeonUi.Teal)) shopping = true;
             if (DungeonUi.Button("settings", new Rect(970, 402, 205, 48), "Settings", DungeonUi.Teal)) settings = true;
-            if (DungeonUi.Button("quit", new Rect(755, 462, 420, 48), "Quit", DungeonUi.Muted))
+            if (DungeonUi.Button("account", new Rect(755, 462, 205, 48), AccountLabel(), DungeonUi.Teal)) account = true;
+            if (DungeonUi.Button("quit", new Rect(970, 462, 205, 48), "Quit", DungeonUi.Muted))
             {
 #if UNITY_EDITOR
                 UnityEditor.EditorApplication.isPlaying = false;
@@ -219,6 +227,14 @@ namespace Slopgame
             if (DungeonUi.Button("debugMode", new Rect(755, 548, 420, 38),
                 DebugMode.Enabled ? "Debug admin mode: ON  (F1)" : "Debug admin mode: OFF  (F1)",
                 DebugMode.Enabled ? DungeonHud.DebugColor : DungeonUi.Muted)) DebugMode.Toggle();
+        }
+
+        /// <summary>The landing button shows who is signed in, shortened to fit.</summary>
+        private string AccountLabel()
+        {
+            string name = Run.Account.Username;
+            if (name == null) return "Account";
+            return name.Length > 12 ? name.Substring(0, 11) + "…" : name;
         }
 
         /// <summary>The roster standing in a bobbing line; clicking a hero jumps straight to them on the selection page.</summary>

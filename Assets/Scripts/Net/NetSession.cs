@@ -6,7 +6,6 @@ using System.Threading.Tasks;
 using Unity.Collections;
 using Unity.Netcode;
 using Unity.Netcode.Transports.UTP;
-using Unity.Services.Authentication;
 using Unity.Services.Core;
 using Unity.Services.Multiplayer;
 using UnityEngine;
@@ -61,7 +60,6 @@ namespace Slopgame
         private NetworkManager manager;
         private UnityTransport transport;
         private ISession session;
-        private bool servicesReady;
         private PortMapper portMapper;
 
         public CoopPeer Peer(ulong id) => peers.Find(peer => peer.Id == id);
@@ -270,14 +268,8 @@ namespace Slopgame
             Status = "Connecting to Unity services…";
             try
             {
-                if (!servicesReady)
-                {
-                    // A per-process profile lets several copies of the game on one PC sign in as different players.
-                    var options = new InitializationOptions().SetProfile("p" + Guid.NewGuid().ToString("N").Substring(0, 12));
-                    await UnityServices.InitializeAsync(options);
-                    servicesReady = true;
-                }
-                if (!AuthenticationService.Instance.IsSignedIn) await AuthenticationService.Instance.SignInAnonymouslyAsync();
+                // Signed-in accounts play as themselves; everyone else gets an anonymous player.
+                await PlayerAccount.EnsureSignedInAsync();
                 return State == NetState.Connecting;
             }
             catch (Exception error)
