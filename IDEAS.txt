@@ -1,3 +1,0 @@
-fix boss ai spamming the same move in coop
-fix some bosses moves not showing up in coop
-tune down world 1 co op boss scaling
