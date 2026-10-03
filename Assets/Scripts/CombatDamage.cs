@@ -112,6 +112,20 @@ namespace Slopgame
             // Pinned Wounds: the Samurai's bleeds cut deeper while their victim cannot move.
             float held = player != null && player.Powerups.Count(PowerupType.PinnedWounds) > 0 ? PinnedWoundsMultiplier : 1f;
             enemy.Bleed(hit, DungeonEnemy.BleedDuration, BleedTicksFor(player), stun, held);
+            // Cold Blooded: the wound freezes its victim solid, for as long as the hero's ice would.
+            if (player != null && player.Powerups.Count(PowerupType.ColdBlooded) > 0) enemy.Freeze(FreezeDurationFor(player));
+        }
+
+        /// <summary>
+        /// Scorchblood spreads: <paramref name="enemy"/> is set burning and bleeding from <paramref name="hit"/> at once,
+        /// and the two combine whoever's talent it was that scorched the source.
+        /// </summary>
+        public static void Scorch(DungeonPlayer player, DungeonEnemy enemy, int hit)
+        {
+            if (enemy == null || enemy.Health <= 0 || hit <= 0) return;
+            enemy.ArmScorchblood();
+            enemy.Burn(BurnTicksFor(player), BurnTickDamage(hit));
+            InflictBleed(player, enemy, hit);
         }
 
         /// <summary>Pinned Wounds: how much harder a bleed cuts while its victim is immobilized.</summary>
@@ -353,13 +367,16 @@ namespace Slopgame
         {
             var run = player.Run;
             Vector2 center = origin.transform.position;
-            var color = ElementColor(first);
+            // Scorchblood: a scorchblooded enemy's fire carries its blood with it.
+            bool scorch = first == DamageElement.Fire && origin.IsScorchblooded;
+            var color = scorch ? DungeonEnemy.ScorchColor : ElementColor(first);
             HeroVfx.Pulse(run.ProjectileRoot, center, ClashRadius, color, 0.3f);
             CoopFx.Pulse(run, center, ClashRadius, color, 0.3f);
             foreach (var enemy in run.Enemies.ToArray())
             {
                 if (enemy == null || enemy == origin || enemy.Health <= 0 || Vector2.Distance(center, enemy.transform.position) > ClashRadius + enemy.HitRadius) continue;
-                if (first == DamageElement.Fire) enemy.Burn(BurnTicksFor(player), BurnTickDamage(hit));
+                if (scorch) Scorch(player, enemy, hit);
+                else if (first == DamageElement.Fire) enemy.Burn(BurnTicksFor(player), BurnTickDamage(hit));
                 else enemy.Freeze(FreezeDurationFor(player));
             }
         }
@@ -431,6 +448,8 @@ namespace Slopgame
             var run = player.Run;
             int damage = ShockDamage(hit);
             float radius = ShockRadiusFor(player);
+            // Flash Freeze: everything the arc jumps to (never its origin) freezes for as long as the hero's ice would.
+            float freeze = player.Powerups.Count(PowerupType.FlashFreeze) > 0 ? FreezeDurationFor(player) : 0f;
             HeroVfx.Pulse(run.ProjectileRoot, center, radius, ShockColor, 0.2f);
             CoopFx.Pulse(run, center, radius, ShockColor, 0.2f);
             foreach (var enemy in run.Enemies.ToArray())
@@ -444,6 +463,7 @@ namespace Slopgame
                 HeroVfx.Sparks(run.ProjectileRoot, target, ShockColor, 5, 3f, 0.2f);
                 enemy.TouchWithElement();
                 enemy.Hit(damage, center, 0.3f);
+                if (freeze > 0f) enemy.Freeze(freeze);
             }
         }
     }

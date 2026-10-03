@@ -22,7 +22,9 @@ namespace Slopgame
             // Seeing Red: the upgraded Super Angry charges barrages faster still.
             * (Player.Mechanic is SuperAngry angry ? angry.ChargeDurationMultiplier : 1f)
             // Swift as the Wind: the Samurai's flurry winds up faster too.
-            * (Player.Weapon is SamuraiAttack samurai ? samurai.SwiftIntervalMultiplier : 1f);
+            * (Player.Weapon is SamuraiAttack samurai ? samurai.SwiftIntervalMultiplier : 1f)
+            // Hot Streak: the attack after a kill charges faster.
+            * Player.Powerups.HotStreakChargeMultiplier;
         public const float KnightChargeDuration = 0.75f, WizardChargeMultiplier = 4f;
         // Retaliation: after a parry the Knight's next slash is fully charged the moment he starts it.
         // Razor's Edge: so is every stab while the Assassin's upgraded Sharpened Dagger is up.
@@ -84,6 +86,8 @@ namespace Slopgame
             float charge = Amount;
             ReleasedOvercharged = Overcharge >= 1f;
             Cancel();
+            // Hot Streak is spent before the hits land, so a kill by this attack quickens the next one.
+            Player.Powerups.ConsumeHotStreak();
             IsStriking = true;
             bool thrown;
             try { thrown = Player.Powerups.BasicAttack(() => Player.Weapon.TryAttack(Player.AimDirection, charge)); }

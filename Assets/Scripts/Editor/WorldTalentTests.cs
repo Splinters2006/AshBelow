@@ -382,8 +382,53 @@ namespace Slopgame.Editor
             Require(powers.ArmorCharges == wards + 1, "Soul Shield did not grant ward");
             for (int i = 0; i < 80; i++) powers.OnKill(player, null);
             Require(powers.ArmorCharges == 3, "Soul Shield bypassed ward cap");
+            // Hot Streak: those kills quicken only the next charge, by 50% however many there were, and it goes with that attack.
+            Near(powers.HotStreakChargeMultiplier, 1f, "Hot Streak quickened a charge before it was taken");
+            powers.Add(PowerupType.HotStreak);
+            powers.OnKill(player, null);
+            powers.OnKill(player, null);
+            Near(powers.HotStreakChargeMultiplier, 1f / 1.5f, "Hot Streak did not quicken the next charge by 50% (or stacked)");
+            powers.ConsumeHotStreak();
+            Near(powers.HotStreakChargeMultiplier, 1f, "Hot Streak outlasted the attack it quickened");
             Vector2 center = run.Map.Centers[1];
             var target = run.Enemies[1];
+            // Cold Blooded: opening a bleed freezes the victim for the hero's freeze time. The wound is closed again afterwards.
+            target.Health = 1000;
+            typeof(DungeonEnemy).GetField("frozenUntil", PrivateInstance).SetValue(target, 0f);
+            CombatDamage.InflictBleed(player, target, 10);
+            Require(target.IsBleeding && !target.IsFrozen, "A bleed froze without Cold Blooded");
+            powers.Add(PowerupType.ColdBlooded);
+            CombatDamage.InflictBleed(player, target, 10);
+            Near(Field<float>(target, "frozenUntil") - Time.time, CombatDamage.FreezeDurationFor(player), "Cold Blooded did not freeze a bleeding enemy");
+            target.ConsumeBleed();
+            typeof(DungeonEnemy).GetField("frozenUntil", PrivateInstance).SetValue(target, 0f);
+            // Scorchblood: burning and bleeding combine only with the talent; then the wounds owe half as much again, and a
+            // Pyre Burst from the scorchblooded enemy scorches its neighbour. Everything is put back afterwards.
+            var third = run.Enemies.Find(e => e != enemy && e != target && e.Boss == null && e.Health > 0);
+            Require(third != null, "No third enemy for the Scorchblood checks");
+            third.Health = 1000;
+            third.transform.position = (Vector2)target.transform.position + Vector2.right * 0.6f;
+            target.Burn(3, 2);
+            CombatDamage.InflictBleed(player, target, 10);
+            Require(target.IsBurning && target.IsBleeding && !target.IsScorchblooded, "Burning and bleeding combined without Scorchblood");
+            target.ConsumeBleed();
+            powers.Add(PowerupType.Scorchblood);
+            CombatDamage.InflictBleed(player, target, 10);
+            Require(target.IsScorchblooded, "Scorchblood did not combine burning and bleeding");
+            Near(target.BleedRemaining, CombatDamage.BleedTotal(player, target, 10) * DungeonEnemy.ScorchbloodMultiplier, "Scorchblood did not strengthen the bleed");
+            powers.Remove(PowerupType.Scorchblood);
+            powers.Add(PowerupType.PyreBurst);
+            powers.OnKill(player, target);
+            Require(third.IsScorchblooded, "Pyre Burst from a scorchblooded enemy did not spread scorchblood");
+            powers.Remove(PowerupType.PyreBurst);
+            foreach (var scorched in new[] { target, third })
+            {
+                scorched.ConsumeBleed();
+                typeof(DungeonEnemy).GetField("burnTicks", PrivateInstance).SetValue(scorched, 0);
+                typeof(DungeonEnemy).GetField("scorchArmed", PrivateInstance).SetValue(scorched, false);
+                typeof(DungeonEnemy).GetField("frozenUntil", PrivateInstance).SetValue(scorched, 0f);
+            }
+            third.Health = 1000;
             enemy.transform.position = center + Vector2.left;
             target.transform.position = (Vector2)enemy.transform.position + Vector2.right * 2.65f;
             target.Health = 1000;
@@ -392,6 +437,16 @@ namespace Slopgame.Editor
             powers.Add(PowerupType.StaticField);
             CombatDamage.Shock(player, enemy.transform.position, enemy, 4);
             Require(target.Health == 999, "Static Field did not expand shock damage");
+            // Flash Freeze: the shock freezes the enemies it arcs into, but not the one it started from.
+            Require(!target.IsFrozen, "A shock froze without Flash Freeze");
+            powers.Add(PowerupType.FlashFreeze);
+            // The earlier shocks knocked the target back, so bring it well inside the arc again.
+            target.transform.position = (Vector2)enemy.transform.position + Vector2.right * 1.5f;
+            typeof(DungeonEnemy).GetField("frozenUntil", PrivateInstance).SetValue(enemy, 0f);
+            CombatDamage.Shock(player, enemy.transform.position, enemy, 4);
+            Near(Field<float>(target, "frozenUntil") - Time.time, CombatDamage.FreezeDurationFor(player), "Flash Freeze did not freeze an enemy the shock arced into");
+            Require(!enemy.IsFrozen, "Flash Freeze froze the enemy the shock started from");
+            typeof(DungeonEnemy).GetField("frozenUntil", PrivateInstance).SetValue(target, 0f);
         }
 
         /// <summary>The immobilize talents; they are taken off again afterwards so later checks see a clean talent sheet.</summary>

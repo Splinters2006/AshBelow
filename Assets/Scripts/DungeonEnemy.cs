@@ -122,6 +122,44 @@ namespace Slopgame
         public bool BurnPending => burningBlows > 0 || (Health <= 0 && Time.time < burningBlowLingers);
         /// <summary>Burning, or killed by a blow that was lighting it: what kill talents count as a burning enemy.</summary>
         public bool CountsAsBurning => IsBurning || BurnPending;
+
+        /// <summary>
+        /// Scorchblood: burning and bleeding at once, from a hero with the talent. The blood feeds the flames: both tick
+        /// <see cref="ScorchbloodMultiplier"/> times harder, and the fire will not go out while the enemy still bleeds.
+        /// </summary>
+        public bool IsScorchblooded => scorchArmed && IsBurning && IsBleeding && Health > 0;
+        /// <summary>How hard the burn and wounds tick (and what they still owe), kept through death so a scorchblooded body pays out in full.</summary>
+        private float ScorchFactor => scorchArmed && IsBurning && IsBleeding ? ScorchbloodMultiplier : 1f;
+        /// <summary>Scorchblooded, or killed while it was: what makes a death spread scorchblood (Pyre Burst, Crimson Bloom).</summary>
+        public bool CountsAsScorchblooded => scorchArmed && CountsAsBurning && CountsAsBleeding;
+        public const float ScorchbloodMultiplier = 1.5f;
+        public static readonly Color ScorchColor = new Color(1f, 0.22f, 0.06f);
+        private bool scorchArmed, scorchShown;
+
+        /// <summary>Scorchblood: once this enemy both burns and bleeds, the two combine.</summary>
+        public void ArmScorchblood()
+        {
+            if (IsInvulnerable || Health <= 0) return;
+            // Only the host deals the ticks, so it has to know; this machine keeps it too, to draw it.
+            if (Guest && !scorchArmed) Run.Coop.ReportDamage(this, CoopDamageKind.Scorchblood, 0, transform.position);
+            scorchArmed = true;
+        }
+
+        /// <summary>The local hero's burns and bleeds arm scorchblood when they have the talent.</summary>
+        private void ArmScorchbloodFromHero()
+        {
+            if (FromLocalHero && Run.Player.Powerups.Count(PowerupType.Scorchblood) > 0) ArmScorchblood();
+        }
+
+        /// <summary>The combined status's look: the flame turns blood red, a burning drop hangs in it, and it flares as it ignites.</summary>
+        private void UpdateScorchblood()
+        {
+            bool scorched = IsScorchblooded;
+            // Both have gone out: the next burn and bleed must arm it again.
+            if (!IsBurning && !IsBleeding) scorchArmed = false;
+            if (scorched && !scorchShown && Run.ProjectileRoot != null) ScorchbloodVfx.Ignite(Run.ProjectileRoot, transform.position, HitRadius);
+            scorchShown = scorched;
+        }
         private int burningBlows;
         private float burningBlowLingers;
 
@@ -336,17 +374,41 @@ namespace Slopgame
             bool bleeding = IsBleeding && Health > 0;
             bleedIndicator.gameObject.SetActive(bleeding);
             if (!bleeding) return;
+            bool scorched = IsScorchblooded;
             float drip = Mathf.Repeat(Time.time * 1.4f, 1f), fall = Mathf.Clamp01((drip - 0.5f) / 0.5f);
-            bleedIndicator.transform.localPosition = new Vector2(IsBurning ? -0.32f : 0f, 0.95f - 0.3f * fall * fall);
-            bleedIndicator.transform.localScale = (Vector3)(BleedDropSize * Mathf.Lerp(0.5f, 1f, Mathf.Clamp01(drip / 0.5f))) + Vector3.forward;
-            bleedIndicator.color = FlameMesh.Alpha(BleedColor, 1f - fall * fall);
-            // Blood keeps running off the body between the cuts, on every machine.
+            // Scorchblood: the drop hangs, glowing, in the heart of the flame instead of beside it.
+            bleedIndicator.sortingOrder = scorched ? 10 : 9;
+            if (scorched)
+            {
+                bleedIndicator.transform.localPosition = new Vector2(0f, 0.86f + 0.03f * Mathf.Sin(Time.time * 6f));
+                bleedIndicator.transform.localScale = (Vector3)(BleedDropSize * (0.75f + 0.08f * Mathf.Sin(Time.time * 9f))) + Vector3.forward;
+                bleedIndicator.color = Color.Lerp(FlameMesh.Yellow, ScorchColor, 0.5f + 0.5f * Mathf.Sin(Time.time * 7f));
+            }
+            else
+            {
+                bleedIndicator.transform.localPosition = new Vector2(IsBurning ? -0.32f : 0f, 0.95f - 0.3f * fall * fall);
+                bleedIndicator.transform.localScale = (Vector3)(BleedDropSize * Mathf.Lerp(0.5f, 1f, Mathf.Clamp01(drip / 0.5f))) + Vector3.forward;
+                bleedIndicator.color = FlameMesh.Alpha(BleedColor, 1f - fall * fall);
+            }
+            // Blood keeps running off the body between the cuts, on every machine; scorchblooded, it boils off as embers.
             if (Time.time < nextBleedDrip || Run.ProjectileRoot == null) return;
             nextBleedDrip = Time.time + Random.Range(0.12f, 0.22f);
             Vector2 wound = (Vector2)transform.position + Random.insideUnitCircle * HitRadius * 0.7f;
-            HeroVfx.Sparks(Run.ProjectileRoot, wound, BleedColor, 2, 1.6f, 0.35f, Vector2.down, 50f, 0.8f);
+            if (scorched) HeroVfx.Sparks(Run.ProjectileRoot, wound, Random.value < 0.5f ? ScorchColor : FlameMesh.Yellow, 2, 1.8f, 0.4f, Vector2.up, 50f, 0.8f);
+            else HeroVfx.Sparks(Run.ProjectileRoot, wound, BleedColor, 2, 1.6f, 0.35f, Vector2.down, 50f, 0.8f);
         }
         private float nextBleedDrip;
+
+        /// <summary>The flame over a burning enemy; scorchblooded, it grows and flickers between blood red and orange.</summary>
+        private void UpdateBurnIndicator()
+        {
+            if (burnIndicator == null) return;
+            burnIndicator.gameObject.SetActive(IsBurning);
+            bool scorched = IsScorchblooded;
+            float flicker = Mathf.Sin(Time.time * 12f);
+            burnIndicator.color = scorched ? Color.Lerp(FlameMesh.Crimson, FlameMesh.Orange, 0.5f + 0.5f * Mathf.Sin(Time.time * 17f)) : burnColor;
+            burnIndicator.transform.localScale = new Vector3(0.28f, 0.4f, 1f) * (scorched ? 1.35f : 1f) * (1f + 0.12f * flicker);
+        }
 
         private const float CurseSkullSize = 0.42f, CurseSkullHeight = 1.4f, CurseSkullPop = 0.3f;
 
@@ -385,20 +447,22 @@ namespace Slopgame
             UpdateMarkIndicator();
             if (burnTicks > 0 && Time.time >= nextBurn)
             {
-                burnTicks--;
+                bool scorched = IsScorchblooded;
+                // Scorchblood: the last flame holds while there is blood to feed it.
+                if (burnTicks > 1 || !scorched) burnTicks--;
                 nextBurn = Time.time + 1f;
                 dotTick = true;
-                try { Hit(burnDamage); }
+                try { Hit(scorched ? Mathf.CeilToInt(burnDamage * ScorchbloodMultiplier) : burnDamage); }
                 finally { dotTick = false; }
                 if (Health <= 0) return;
-                CombatVfx.Ring(Run.ProjectileRoot, transform.position, 0.4f, burnColor, 0.2f);
+                CombatVfx.Ring(Run.ProjectileRoot, transform.position, scorched ? 0.55f : 0.4f, scorched ? ScorchColor : burnColor, 0.2f);
             }
             SettleDeathMark();
             if (Health <= 0) return;
             int bled = TickWounds();
             if (bled > 0)
             {
-                HeroVfx.Sparks(Run.ProjectileRoot, transform.position, BleedColor, 5, 2f, 0.3f, Vector2.down, 90f, 0.8f);
+                HeroVfx.Sparks(Run.ProjectileRoot, transform.position, IsScorchblooded ? ScorchColor : BleedColor, 5, 2f, 0.3f, Vector2.down, 90f, 0.8f);
                 dotTick = true;
                 try { Hit(bled, transform.position, 0f); }
                 finally { dotTick = false; }
@@ -414,13 +478,9 @@ namespace Slopgame
                 finally { dotTick = false; }
                 if (Health <= 0) return;
             }
+            UpdateScorchblood();
             UpdateBleedIndicator();
-            if (burnIndicator != null)
-            {
-                burnIndicator.gameObject.SetActive(IsBurning);
-                burnIndicator.color = burnColor;
-                burnIndicator.transform.localScale = new Vector3(0.28f, 0.4f, 1f) * (1f + 0.12f * Mathf.Sin(Time.time * 12f));
-            }
+            UpdateBurnIndicator();
             if (Boss != null) return;
             if (IsHeld || IsTrainingDummy) { UpdateColor(); return; }
             Vector2 position = transform.position;
@@ -479,12 +539,9 @@ namespace Slopgame
             if (hasSnapshot)
                 transform.position = Vector2.Distance(transform.position, netPosition) > 2.5f ? netPosition
                     : Vector2.Lerp(transform.position, netPosition, 1f - Mathf.Exp(-14f * Time.deltaTime));
+            UpdateScorchblood();
             UpdateBleedIndicator();
-            if (burnIndicator != null)
-            {
-                burnIndicator.gameObject.SetActive(IsBurning);
-                burnIndicator.transform.localScale = new Vector3(0.28f, 0.4f, 1f) * (1f + 0.12f * Mathf.Sin(Time.time * 12f));
-            }
+            UpdateBurnIndicator();
             if (Boss != null) { if (Boss.DealsContactDamage) TryContactHit(Boss.ContactReach); return; }
             UpdateColor();
             if (!IsRanged) TryContactHit(HitRadius + 0.27f);
@@ -905,7 +962,8 @@ namespace Slopgame
             get
             {
                 float total = bleedCarry;
-                foreach (var wound in wounds) total += wound.PerTick * wound.TicksLeft * (IsImmobilized ? wound.HeldMultiplier : 1f);
+                float scorch = ScorchFactor;
+                foreach (var wound in wounds) total += wound.PerTick * wound.TicksLeft * (IsImmobilized ? wound.HeldMultiplier : 1f) * scorch;
                 return wounds.Count > 0 ? total : 0f;
             }
         }
@@ -920,6 +978,7 @@ namespace Slopgame
         {
             if (IsInvulnerable || hit <= 0 || ticks <= 0 || duration <= 0f || Health <= 0) return;
             heldMultiplier = Mathf.Max(1f, heldMultiplier);
+            ArmScorchbloodFromHero();
             // The held multiplier crosses the wire in the message's (otherwise unused) knockback.
             if (Guest) Run.Coop.ReportDamage(this, CoopDamageKind.Bleed, hit, transform.position, ticks, duration, knockback: heldMultiplier);
             // The stun stays on the machine that opened the wound: a guest reports it to the host when its own count runs out.
@@ -933,6 +992,7 @@ namespace Slopgame
         private int TickWounds()
         {
             if (wounds.Count == 0) return 0;
+            float scorch = ScorchFactor;
             for (int i = wounds.Count - 1; i >= 0; i--)
             {
                 var wound = wounds[i];
@@ -940,7 +1000,7 @@ namespace Slopgame
                 {
                     wound.TicksLeft--;
                     wound.NextAt += wound.Interval;
-                    bleedCarry += wound.PerTick * (IsImmobilized ? wound.HeldMultiplier : 1f);
+                    bleedCarry += wound.PerTick * (IsImmobilized ? wound.HeldMultiplier : 1f) * scorch;
                 }
                 if (wound.TicksLeft <= 0) wounds.RemoveAt(i);
             }
@@ -1011,6 +1071,7 @@ namespace Slopgame
         {
             if (IsInvulnerable) return;
             TouchWithElement();
+            ArmScorchbloodFromHero();
             if (Guest) { Run.Coop.ReportDamage(this, CoopDamageKind.Burn, damage, transform.position, ticks, 0f, color); return; }
             if (burnTicks == 0)
             {

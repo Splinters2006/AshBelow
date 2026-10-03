@@ -60,7 +60,15 @@ namespace Slopgame
         // Reaper.
         SoulBurst, SoulHoard, GrimHarvest,
         // Samurai.
-        PinnedWounds
+        PinnedWounds,
+        // Universal: a kill quickens the next charge.
+        HotStreak,
+        // Universal: bleeding freezes.
+        ColdBlooded,
+        // Universal: shocks freeze the enemies they arc into.
+        FlashFreeze,
+        // Universal: burning and bleeding combine.
+        Scorchblood
     }
 
     public sealed class PowerupDefinition
@@ -103,8 +111,8 @@ namespace Slopgame
             new PowerupDefinition(PowerupType.Riposte, "Knight: Riposte", "+1 damage to reflected bolts", 3, WeaponType.Sword),
             new PowerupDefinition(PowerupType.QuickDraw, "Archer: Quick Draw", "15% shorter bow charge time per rank", 2, WeaponType.Bow),
             new PowerupDefinition(PowerupType.Bodkin, "Archer: Bodkin", "+0.5x maximum charged arrow damage", 2, WeaponType.Bow),
-            new PowerupDefinition(PowerupType.LightningRange, "Storm Reach", "+1 lightning cast range and +0.5 jump range", 3, WeaponType.Staff),
-            new PowerupDefinition(PowerupType.LightningPower, "High Voltage", "+1 damage per lightning strike", 3, WeaponType.Staff),
+            new PowerupDefinition(PowerupType.LightningRange, "Storm Reach", "+1 Zap cast range and +0.5 jump range", 3, WeaponType.Staff),
+            new PowerupDefinition(PowerupType.LightningPower, "High Voltage", "+1 damage per Zap", 3, WeaponType.Staff),
             new PowerupDefinition(PowerupType.LightningChains, "Conductivity", "Unlock chaining; +1 chain target per rank", 2, WeaponType.Staff),
             new PowerupDefinition(PowerupType.RushPower, "Battering Ram", "+2 Shield Rush damage", 3, WeaponType.Sword, AbilityType.ShieldRush),
             new PowerupDefinition(PowerupType.ShatterRadius, "Fault Line", "+0.5 Earthshatter radius", 3, WeaponType.Sword, AbilityType.Earthshatter),
@@ -171,7 +179,7 @@ namespace Slopgame
             new PowerupDefinition(PowerupType.Longsword, "Knight: Longsword", "Basic slash reach +0.25 per rank", 3, WeaponType.Sword),
             new PowerupDefinition(PowerupType.VolleyDrills, "Archer: Volley Drills", "Triple Shot cooldown is 10% shorter per rank", 3, WeaponType.Bow),
             new PowerupDefinition(PowerupType.Farshot, "Archer: Farshot", "Basic arrows and Triple Shot travel +1 farther per rank", 3, WeaponType.Bow),
-            new PowerupDefinition(PowerupType.StormRhythm, "Wizard: Storm Rhythm", "Lightning cooldown is 10% shorter per rank", 3, WeaponType.Staff),
+            new PowerupDefinition(PowerupType.StormRhythm, "Wizard: Storm Rhythm", "Zap cooldown is 10% shorter per rank", 3, WeaponType.Staff),
             new PowerupDefinition(PowerupType.Stormcraft, "Wizard: Stormcraft", "Elemental effect chance +5% per rank", 3, WeaponType.Staff),
             new PowerupDefinition(PowerupType.ShadowDance, "Assassin: Shadow Dance", "Shadowstep cooldown is 10% shorter per rank", 3, WeaponType.Daggers),
             new PowerupDefinition(PowerupType.LongDaggers, "Assassin: Long Daggers", "Basic stab reach +0.25 per rank", 3, WeaponType.Daggers),
@@ -288,7 +296,11 @@ namespace Slopgame
             new PowerupDefinition(PowerupType.SoulBurst, "Reaper: Soul Burst", "Killing an enemy that would leave a soul when it dies also makes it explode, hurting everything around it", 1, WeaponType.Scythe),
             new PowerupDefinition(PowerupType.SoulHoard, "Reaper: Soul Hoard", "You can hold 25 / 50 / 100 more souls by rank", 3, WeaponType.Scythe),
             new PowerupDefinition(PowerupType.GrimHarvest, "Grim Harvest", "Reaper's Technique's swings harvest a soul from every enemy they hit", 1, WeaponType.Scythe, AbilityType.ReapersTechnique),
-            new PowerupDefinition(PowerupType.PinnedWounds, "Samurai: Pinned Wounds", "Bleeding you inflict deals 1.5x damage while its victim is immobilized (paralysed, frozen, stunned or rooted)", 1, WeaponType.Katana)
+            new PowerupDefinition(PowerupType.PinnedWounds, "Samurai: Pinned Wounds", "Bleeding you inflict deals 1.5x damage while its victim is immobilized (paralysed, frozen, stunned or rooted)", 1, WeaponType.Katana),
+            new PowerupDefinition(PowerupType.HotStreak, "Hot Streak", "After a kill, your next attack charges 50% faster (doesn't stack)", 1),
+            new PowerupDefinition(PowerupType.ColdBlooded, "Cold Blooded", "Making an enemy bleed freezes it", 1),
+            new PowerupDefinition(PowerupType.FlashFreeze, "Flash Freeze", "Enemies a shock arcs into (not the one it started from) are frozen", 1),
+            new PowerupDefinition(PowerupType.Scorchblood, "Scorchblood", "Enemies both burning and bleeding are scorchblooded: both tick 50% harder and the fire won't go out while they bleed. Pyre Burst, Crimson Bloom and Elemental Clash from a scorchblooded enemy spread scorchblood", 1)
         };
 
         private static readonly Dictionary<PowerupType, PowerupDefinition> byType = BuildLookup();

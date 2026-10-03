@@ -22,7 +22,7 @@ namespace Slopgame
     }
 
     public enum CoopChoice : byte { Upgrade, Artifact, Waves }
-    public enum CoopDamageKind : byte { Hit, Burn, Chill, Paralyze, Curse, Freeze, Fear, Stun, Root, Bleed, Poison, Mark, DeathMark, ClearParalysis, ClearHolds, ClearBleed, RefreshBleed }
+    public enum CoopDamageKind : byte { Hit, Burn, Chill, Paralyze, Curse, Freeze, Fear, Stun, Root, Bleed, Poison, Mark, DeathMark, ClearParalysis, ClearHolds, ClearBleed, RefreshBleed, Scorchblood }
     public enum CoopBoltEventKind : byte { Reflected, Consumed }
     /// <summary>
     /// Heal, Protect and Bless help a teammate. BlessingCredit tells a Paladin how much bonus damage their blessing
@@ -32,7 +32,7 @@ namespace Slopgame
     public enum FxKind : byte { Arrow, Spell, Slash, Bolt, GlowBolt, Ring, Pulse, Punch, RearHit, Knife, PiercingShot, Aegis, Holy, Sanctuary,
         Windstep, Shadowstep, Stab, Quake, HolySword, Venom, HeavyPunch, Flurry, SanctuaryEnd, TailStab, TailSweep, Pentagram, DemonPaw, Coin, DemonHead, Sharpen, CoinFlip, CoinRain, Angel, Jackpot,
         PlasmaRay, PlasmaOrb, SentryTurret, MicroMissile, IceWall, Wings, SoulSiphon, Ricochet, Net, ShadowClone, DeathMark, RocketBoost, OrbitalLaser, Grapple, BrawlerMove, Insurance, InsuranceClaim, Card, Dice,
-        Shield, Whirlwind, WarBanner, Consecration, Heal, Lance, Intervention, BallLightning, IceBreak, NightmareSnap, SnapTether, InterventionSaved, AvatarOfDeath, DemonicPower, SuperAngry, ShieldTaunt, Retribution, RockCover, HallowedGround, KatanaCrescent, KatanaThrust, KatanaSlice, KatanaSheathe, SliceDiceChunk, Bloodpop, PrimalRage, Bloodscent, CrimsonBloom, PyreBurst }
+        Shield, Whirlwind, WarBanner, Consecration, Heal, Lance, Intervention, BallLightning, IceBreak, NightmareSnap, SnapTether, InterventionSaved, AvatarOfDeath, DemonicPower, SuperAngry, ShieldTaunt, Retribution, RockCover, HallowedGround, KatanaCrescent, KatanaThrust, KatanaSlice, KatanaSheathe, SliceDiceChunk, Bloodpop, PrimalRage, Bloodscent, CrimsonBloom, PyreBurst, Scorchburst }
 
     public struct PlayerStateMessage
     {

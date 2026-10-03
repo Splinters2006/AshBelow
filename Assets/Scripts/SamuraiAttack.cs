@@ -353,11 +353,12 @@ namespace Slopgame
             if (!Player.Permanent.HasPassive(WeaponType.Katana)) return;
             int damage = Mathf.CeilToInt(enemy.BleedOwed - 0.0001f);
             if (damage <= 0) return;
-            StartCoroutine(Bloom(enemy.transform.position, BloomRadiusFor(enemy.PeakHealth), damage));
+            StartCoroutine(Bloom(enemy.transform.position, BloomRadiusFor(enemy.PeakHealth), damage, enemy.CountsAsScorchblooded));
         }
 
         // A beat after the death, so a chain of blooms ripples outward rather than landing all at once.
-        private IEnumerator Bloom(Vector2 center, float radius, int damage)
+        /// <param name="scorch">The body was scorchblooded: the bloom scorches what it reaches instead of only bleeding it.</param>
+        private IEnumerator Bloom(Vector2 center, float radius, int damage, bool scorch)
         {
             var run = Player.Run;
             var root = run.ProjectileRoot;
@@ -365,9 +366,19 @@ namespace Slopgame
             if (!run.IsPlaying || root != run.ProjectileRoot) yield break;
             KatanaVfx.CrimsonBloom(root, center, radius);
             CoopFx.CrimsonBloom(run, center, radius);
+            if (scorch)
+            {
+                ScorchbloodVfx.Burst(root, center, radius);
+                CoopFx.Scorchburst(run, center, radius);
+            }
             foreach (var enemy in run.Enemies.ToArray())
                 if (enemy != null && enemy.Health > 0 && Vector2.Distance(center, enemy.transform.position) <= radius + enemy.HitRadius)
+                {
                     enemy.Hit(damage, center, 0.6f);
+                    // The bloom's blood opens a wound (as one of the Samurai's hits would), or scorches from a scorchblooded body.
+                    if (scorch) CombatDamage.Scorch(Player, enemy, Player.Damage);
+                    else CombatDamage.InflictBleed(Player, enemy, Player.Damage);
+                }
         }
 
         // ---------------------------------------------------------------- Trail of Blood (second passive)

@@ -392,7 +392,7 @@ namespace Slopgame
         }
 
         public static string SpecialName(WeaponType weapon) => weapon == WeaponType.Bow ? "Triple shot"
-            : weapon == WeaponType.Mutation ? "Guard / hook" : weapon == WeaponType.Staff ? "Lightning" : weapon == WeaponType.Daggers ? "Shadowstep"
+            : weapon == WeaponType.Mutation ? "Guard / hook" : weapon == WeaponType.Staff ? "Zap" : weapon == WeaponType.Daggers ? "Shadowstep"
             : weapon == WeaponType.Fists ? "Empower" : weapon == WeaponType.Tail ? "Tail sweep" : weapon == WeaponType.Coins ? "Coin volley" : weapon == WeaponType.Beam ? "Plasma cannon" : weapon == WeaponType.Scythe ? "Soul skull" : weapon == WeaponType.Katana ? "Dash slash" : weapon == WeaponType.Hammer ? "Holy Sword" : "Reflect shield";
         public static float SpecialCooldown(WeaponType weapon) => weapon == WeaponType.Bow ? 6f
             : weapon == WeaponType.Mutation ? SpecimenAttack.GuardCooldown : weapon == WeaponType.Staff ? 3f : weapon == WeaponType.Daggers ? 4f

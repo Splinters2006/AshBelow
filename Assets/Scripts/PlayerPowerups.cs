@@ -110,6 +110,13 @@ namespace Slopgame
         public const int RhythmBeat = 4, SpellbladeStrikes = 3, SpellbladeBonus = 2;
         private int rhythmCount, spellbladeStrikes;
         private bool elementalPrimed, inBasicAttack, rhythmBeat, spellbladeActive;
+        /// <summary>Hot Streak: how much faster the next attack charges after a kill.</summary>
+        public const float HotStreakChargeSpeed = 0.5f;
+        /// <summary>Hot Streak: a kill has quickened the next attack's charge (a second kill before it goes adds nothing).</summary>
+        public bool HotStreakPrimed { get; private set; }
+        public float HotStreakChargeMultiplier => HotStreakPrimed ? 1f / (1f + HotStreakChargeSpeed) : 1f;
+        /// <summary>Hot Streak: the quickened attack has gone.</summary>
+        public void ConsumeHotStreak() => HotStreakPrimed = false;
         private float closeCallReadyAt;
         public const int TipJarCoins = 25;
         private int tipJar;
@@ -342,6 +349,7 @@ namespace Slopgame
             // A holding blow that killed outright still sets off the hold talents (Static Hold's shock goes off around it).
             if (enemy != null && enemy.HoldPending && !enemy.IsImmobilized) OnImmobilized(player, enemy, 0f);
             if (Count(PowerupType.ElementalKills) > 0) elementalPrimed = true;
+            if (Count(PowerupType.HotStreak) > 0) HotStreakPrimed = true;
             if (held && Count(PowerupType.NerveSnap) > 0) player.ResetClassSkill();
             float cut = (Count(PowerupType.Bloodrush) > 0 ? KillCooldownCut : 0f) + (held && Count(PowerupType.StillHunter) > 0 ? StillHunterCut : 0f);
             if (cut > 0f) player.ReduceCooldowns(cut);
@@ -355,12 +363,22 @@ namespace Slopgame
         {
             var run = player.Run;
             Vector2 center = dead.transform.position;
+            // Scorchblood: a scorchblooded body bursts in blood and fire, and scorches everything the blast reaches.
+            bool scorch = dead.CountsAsScorchblooded;
             PyreBurstVfx.Play(run.ProjectileRoot, center, radius);
             CoopFx.PyreBurst(run, center, radius);
+            if (scorch)
+            {
+                ScorchbloodVfx.Burst(run.ProjectileRoot, center, radius);
+                CoopFx.Scorchburst(run, center, radius);
+            }
             ScreenFx.Shake(0.06f + 0.03f * radius, 0.15f);
             foreach (var enemy in run.Enemies.ToArray())
                 if (enemy != null && enemy != dead && enemy.Health > 0 && Vector2.Distance(center, enemy.transform.position) <= radius + enemy.HitRadius)
+                {
                     CombatDamage.Apply(player, enemy, player.Damage, DamageElement.Fire, center, 0.6f);
+                    if (scorch) CombatDamage.Scorch(player, enemy, player.Damage);
+                }
         }
 
         /// <summary>Prospector: whether a fallen enemy leaves a second helping of crystals.</summary>

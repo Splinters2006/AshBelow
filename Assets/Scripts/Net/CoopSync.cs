@@ -439,6 +439,7 @@ namespace Slopgame
                 else if (message.Kind == CoopDamageKind.Bleed) enemy.Bleed(message.Amount, message.Duration, message.Ticks, 0f, message.Knockback);
                 else if (message.Kind == CoopDamageKind.ClearBleed) enemy.ConsumeBleed();
                 else if (message.Kind == CoopDamageKind.RefreshBleed) enemy.RefreshBleed(message.Duration);
+                else if (message.Kind == CoopDamageKind.Scorchblood) enemy.ArmScorchblood();
                 else if (message.Kind == CoopDamageKind.Poison) enemy.Poison(message.Ticks, message.Amount);
                 else if (message.Kind == CoopDamageKind.Mark) enemy.Mark(message.Duration);
                 else if (message.Kind == CoopDamageKind.DeathMark) enemy.DeathMark(message.Duration);

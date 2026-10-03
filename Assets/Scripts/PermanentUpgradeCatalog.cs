@@ -61,7 +61,7 @@ namespace Slopgame
             new PermanentUpgradeDefinition("knight_health", "Iron Constitution", "+1 Knight maximum HP per rank", 3, 35, 25, WeaponType.Sword),
             new PermanentUpgradeDefinition("archer_draw", "Trained Draw", "5% shorter bow charge time per rank", 3, 45, 35, WeaponType.Bow),
             new PermanentUpgradeDefinition("archer_damage", "Honed Arrows", "+1 Archer base damage per rank", 2, 100, 100, WeaponType.Bow),
-            new PermanentUpgradeDefinition("wizard_lightning", "Storm Scholar", "+1 lightning damage per rank", 3, 50, 40, WeaponType.Staff),
+            new PermanentUpgradeDefinition("wizard_lightning", "Storm Scholar", "+1 Zap damage per rank", 3, 50, 40, WeaponType.Staff),
             new PermanentUpgradeDefinition("wizard_effect", "Elemental Focus", "+3% elemental effect chance per rank", 3, 45, 35, WeaponType.Staff),
             new PermanentUpgradeDefinition("assassin_crit", "Lethal Training", "+3% physical critical chance per rank", 3, 45, 35, WeaponType.Daggers),
             new PermanentUpgradeDefinition("assassin_speed", "Silent Stride", "+0.15 Assassin movement speed per rank", 3, 35, 25, WeaponType.Daggers),
