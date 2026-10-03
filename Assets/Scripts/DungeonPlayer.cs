@@ -592,6 +592,19 @@ namespace Slopgame
             return true;
         }
 
+        /// <summary>Takes away a rank of <paramref name="type"/> and undoes the stat change granting it made (the testing grounds).</summary>
+        public bool RevokePowerup(PowerupType type)
+        {
+            if (!Powerups.Remove(type)) return false;
+            if (type == PowerupType.Damage) BaseDamage = Mathf.Max(1, BaseDamage - 1);
+            if (type == PowerupType.Vitality || type == PowerupType.BulkUp) rawMaxHealth = Mathf.Max(1, rawMaxHealth - 2);
+            if (type == PowerupType.BloodPact) rawMaxHealth++;
+            if (type == PowerupType.Movement) Speed -= 0.7f;
+            Health = Mathf.Min(Health, MaxHealth);
+            (Weapon as SpecimenAttack)?.OnTalentTaken(type);
+            return true;
+        }
+
         // Regular hero sprites face right; mirror them when aiming left (small dead zone avoids flicker).
         private void FaceAim()
         {

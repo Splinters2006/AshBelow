@@ -143,6 +143,8 @@ namespace Slopgame
             PlayerAccount.KeepSignIn = saveDirectory == Application.persistentDataPath;
             Account = gameObject.AddComponent<PlayerAccount>();
             Account.SignedOut += OnSignedOut;
+            // The developer accounts own the whole Ash shop and encyclopedia while signed in.
+            Account.SignedIn += () => Progress.OwnsEverything = Account.IsDeveloper;
             CloudSync = gameObject.AddComponent<CloudProgressSync>();
             CloudSync.Run = this;
             CloudSync.Account = Account;
@@ -190,6 +192,7 @@ namespace Slopgame
         /// <summary>Leaving a developer account takes its debug admin mode and Specimen with it.</summary>
         private void OnSignedOut()
         {
+            Progress.OwnsEverything = false;
             if (HasDeveloperAccess) return;
             DebugMode.Set(false);
             if (IsInMainMenu && IsCharacterLocked(SelectedCharacter))

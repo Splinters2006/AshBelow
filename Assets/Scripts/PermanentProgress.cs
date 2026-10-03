@@ -61,8 +61,20 @@ namespace Slopgame
             var entry = data.classGuardians.Find(value => value.id == key);
             return entry == null ? 0 : entry.rank;
         }
+        /// <summary>
+        /// Signed in to a developer account (see <see cref="Developers"/>): every Ash shop upgrade is owned at its max rank
+        /// and the whole encyclopedia is found. Like debug ranks, none of this is written to the save.
+        /// </summary>
+        public bool OwnsEverything
+        {
+            get => ownsEverything;
+            set { if (ownsEverything == value) return; ownsEverything = value; Changed?.Invoke(); }
+        }
+        private bool ownsEverything;
+
         public int Rank(string id)
         {
+            if (ownsEverything) return PermanentUpgradeCatalog.Get(id)?.MaxRank ?? 0;
             var entry = data.upgrades.Find(value => value.id == id);
             int rank = entry == null ? 0 : entry.rank;
             if (DebugMode.Enabled && debugRanks.TryGetValue(id, out int debugRank)) rank = Math.Max(rank, debugRank);
@@ -160,7 +172,7 @@ namespace Slopgame
         /// Class upgrades gated behind guardians (the class mechanics) need that class to have beaten them; world rewards need
         /// their world cleared once; a mechanic's R upgrade also needs the mechanic itself. Debug mode unlocks everything.
         /// </summary>
-        public bool IsAvailable(PermanentUpgradeDefinition upgrade) => upgrade != null && (DebugMode.Enabled
+        public bool IsAvailable(PermanentUpgradeDefinition upgrade) => upgrade != null && (DebugMode.Enabled || ownsEverything
             || (upgrade.ClassWeapon.HasValue ? GuardiansDefeatedAs(upgrade.ClassWeapon.Value) : data.guardians) >= upgrade.RequiredGuardians
             && (upgrade.RequiredWorld < 0 || HasClearedWorld(upgrade.RequiredWorld))
             && (upgrade.RequiredGuardian == null || HasSlain(upgrade.RequiredGuardian))
@@ -216,7 +228,7 @@ namespace Slopgame
 
         /// <summary>True once an encyclopedia entry has turned up in any descent.</summary>
         public IReadOnlyList<string> Discovered => data.discovered;
-        public bool IsDiscovered(string id) => data.discovered.Contains(id);
+        public bool IsDiscovered(string id) => ownsEverything ? !string.IsNullOrEmpty(id) : data.discovered.Contains(id);
 
         /// <summary>Records an encyclopedia entry (see <see cref="Encyclopedia"/> for the id scheme); saves only when it is new.</summary>
         public void Discover(string id)

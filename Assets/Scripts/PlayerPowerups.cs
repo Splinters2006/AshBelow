@@ -42,6 +42,17 @@ namespace Slopgame
             return true;
         }
 
+        /// <summary>Takes away one rank of <paramref name="type"/> (the testing grounds' build page).</summary>
+        public bool Remove(PowerupType type)
+        {
+            int count = Count(type);
+            if (count == 0) return false;
+            if (count == 1) stacks.Remove(type);
+            else stacks[type] = count - 1;
+            if ((type == PowerupType.Armor || type == PowerupType.PaladinWard) && ArmorCharges > 0) ArmorCharges--;
+            return true;
+        }
+
         public void SaveRun(HeroSnapshot hero)
         {
             foreach (var pair in stacks) if (pair.Value > 0) hero.talents.Add(new SavedCount(pair.Key.ToString(), pair.Value));

@@ -97,6 +97,15 @@ namespace Slopgame
             for (int slot = 0; slot < SlotCount; slot++) if (equipped[slot] == from) equipped[slot] = to;
         }
 
+        /// <summary>Lowers an ability one rank, unlearning it at rank 1 (the testing grounds' build page).</summary>
+        public bool Unlearn(AbilityType type)
+        {
+            if (!IsLearned(type)) return false;
+            if (Rank(type) > 1) ranks[type] = Rank(type) - 1;
+            else Forget(type);
+            return true;
+        }
+
         /// <summary>Unlearns an ability (taking it off its key).</summary>
         public void Forget(AbilityType type)
         {

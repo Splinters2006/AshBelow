@@ -152,6 +152,43 @@ namespace Slopgame
             return clicked;
         }
 
+        /// <summary>
+        /// One segment of a tab bar drawn over a shared track: the active tab is filled with its accent and cannot be
+        /// clicked; the others light up on hover. Returns true when an inactive tab is clicked.
+        /// </summary>
+        public static bool Tab(string id, Rect rect, string text, Color accent, bool active, int size = 14)
+        {
+            Initialize();
+            bool hovered = !active && rect.Contains(Event.current.mousePosition);
+            hovers.TryGetValue(id, out float hover);
+            if (Event.current.type == EventType.Repaint)
+            {
+                hover = Mathf.MoveTowards(hover, hovered ? 1f : 0f, Time.unscaledDeltaTime * 8f);
+                hovers[id] = hover;
+            }
+            if (active)
+            {
+                Panel(rect, new Color(accent.r * 0.24f, accent.g * 0.24f, accent.b * 0.24f, 1f));
+                Panel(new Rect(rect.x + 10, rect.yMax - 3, rect.width - 20, 2), accent);
+            }
+            else if (hover > 0f) Panel(rect, new Color(accent.r, accent.g, accent.b, 0.1f * hover));
+            Label(rect, text, size, active ? accent : Color.Lerp(Muted, Text, hover), TextAnchor.MiddleCenter);
+            return !active && GUI.Button(rect, GUIContent.none, invisible);
+        }
+
+        /// <summary>A thin rule in the muted colour, for dividing sections of a panel.</summary>
+        public static void Divider(Rect rect) => Panel(rect, new Color(Muted.r, Muted.g, Muted.b, 0.22f));
+
+        /// <summary>A row of <paramref name="max"/> small squares with the first <paramref name="filled"/> lit; drawn right to left from <paramref name="right"/>.</summary>
+        public static void Pips(float right, float centerY, int filled, int max, Color color, float size = 8f, float gap = 4f)
+        {
+            for (int i = 0; i < max; i++)
+            {
+                float x = right - (max - i) * (size + gap) + gap;
+                Panel(new Rect(x, centerY - size / 2f, size, size), i < filled ? color : new Color(Muted.r, Muted.g, Muted.b, 0.25f));
+            }
+        }
+
         /// <summary>The settings cog wheel shown on every menu and the HUD: a square button with a gear on it.</summary>
         public static bool CogButton(string id, Rect rect, bool open = false)
         {
