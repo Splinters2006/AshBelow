@@ -627,7 +627,7 @@ namespace Slopgame.Editor
             EnsureHero("Gambler", WeaponType.Coins, 5, 5.1f, new Color(0.35f, 0.72f, 0.45f), GamblerDescription);
             EnsureHero("Augment", WeaponType.Beam, 5, 5f, new Color(0.55f, 0.68f, 0.9f), AugmentDescription);
             EnsureHero("Reaper", WeaponType.Scythe, 5, 4.8f, new Color(0.5f, 0.56f, 0.7f), ReaperDescription);
-            EnsureHero("Samurai", WeaponType.Katana, 5, 5.3f, new Color(0.86f, 0.2f, 0.22f), SamuraiDescription, 2);
+            EnsureHero("Samurai", WeaponType.Katana, 5, 5.3f, new Color(0.86f, 0.2f, 0.22f), SamuraiDescription, 3);
             EnsureHero("Specimen", WeaponType.Mutation, 3, 5f, new Color(0.62f, 0.74f, 0.7f), SpecimenDescription);
             AssetDatabase.SaveAssets();
             Debug.Log("CHARACTER_ASSETS_OK: Twelve classes ready.");

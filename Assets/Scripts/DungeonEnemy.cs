@@ -53,22 +53,23 @@ namespace Slopgame
         /// <summary>Held or rooted: what talents mean by an immobilized enemy (paralysed, frozen, stunned or rooted).</summary>
         public bool IsImmobilized => IsHeld || IsRooted;
         /// <summary>
-        /// True while a blow that paralyses its victim is landing (a vital stab, a paralysing sweep, a hit under a demonic
-        /// rune). If that blow kills, the enemy still counts as held for the "on paralysis" and "killing an immobilized
-        /// enemy" talents, as if the paralysis had taken hold first.
+        /// True while a blow that holds its victim is landing (a vital stab, a paralysing sweep, a hit under a demonic
+        /// rune, a freezing or seizing hit). If that blow kills, the enemy still counts as held for the "on paralysis" and
+        /// "killing an immobilized enemy" talents, as if the hold had taken hold first. So does an enemy that dies with
+        /// Bled Dry owed: death ends its bleeding, and with it comes the stun.
         /// </summary>
-        public bool HoldPending => holdingBlow || (Health <= 0 && Time.time < holdingBlowLingers);
-        /// <summary>Immobilized, or killed by a blow that was paralysing it: what kill talents count as a held enemy.</summary>
+        public bool HoldPending => holdingBlows > 0 || BledDryPending || (Health <= 0 && Time.time < holdingBlowLingers);
+        /// <summary>Immobilized, or killed by a blow that was holding it: what kill talents count as a held enemy.</summary>
         public bool CountsAsHeld => IsImmobilized || HoldPending;
-        private bool holdingBlow;
+        private int holdingBlows;
         private float holdingBlowLingers;
 
-        /// <summary>A paralysing blow is about to land (see <see cref="HoldPending"/>); pair with <see cref="EndHoldingBlow"/>.</summary>
-        public void BeginHoldingBlow() => holdingBlow = true;
+        /// <summary>A holding blow is about to land (see <see cref="HoldPending"/>); pair with <see cref="EndHoldingBlow"/>.</summary>
+        public void BeginHoldingBlow() => holdingBlows++;
 
         public void EndHoldingBlow()
         {
-            holdingBlow = false;
+            holdingBlows = Mathf.Max(0, holdingBlows - 1);
             // A co-op guest only learns of the kill when the host confirms it, so the mark lingers for that long.
             if (Health <= 0 && Run != null && Run.IsGuest) holdingBlowLingers = Time.time + 1f;
         }
@@ -83,22 +84,54 @@ namespace Slopgame
         public bool CountsAsBleeding => IsBleeding || BleedPending > 0f;
         /// <summary>The bleed damage left to deal, counting wounds a killing blow was about to open.</summary>
         public float BleedOwed => BleedRemaining + BleedPending;
+        /// <summary>
+        /// Dead with a Bled Dry stun owed, from wounds it already had or ones the killing blow was opening: its bleeding
+        /// ended with its death, so it counts as stunned for the kill talents (unless a guardian would have shaken the stun off).
+        /// </summary>
+        public bool BledDryPending => Health <= 0 && (Boss == null || Time.time >= stunImmuneUntil) && ((wounds.Count > 0 && bleedStun > 0f)
+            || (BleedPending > 0f && (bleedingBlows > 0 ? pendingBleedStun : Time.time < bleedingBlowLingers ? lingeringBleedStun : 0f) > 0f));
         private int bleedingBlows;
-        private float pendingBleed, lingeringBleed, bleedingBlowLingers;
+        private float pendingBleed, lingeringBleed, bleedingBlowLingers, pendingBleedStun, lingeringBleedStun;
 
-        /// <summary>A blow that opens <paramref name="bleed"/> damage of wounds is about to land; pair with <see cref="EndBleedingBlow"/>.</summary>
-        public void BeginBleedingBlow(float bleed)
+        /// <summary>
+        /// A blow that opens <paramref name="bleed"/> damage of wounds (with a Bled Dry <paramref name="stun"/>) is about to
+        /// land; pair with <see cref="EndBleedingBlow"/>.
+        /// </summary>
+        public void BeginBleedingBlow(float bleed, float stun = 0f)
         {
             bleedingBlows++;
             pendingBleed += Mathf.Max(0f, bleed);
+            if (bleed > 0f) pendingBleedStun = Mathf.Max(pendingBleedStun, stun);
         }
 
         public void EndBleedingBlow(float bleed)
         {
             // A co-op guest only learns of the kill when the host confirms it, so the mark lingers for that long.
-            if (Health <= 0 && Run != null && Run.IsGuest && pendingBleed > 0f) { lingeringBleed = pendingBleed; bleedingBlowLingers = Time.time + 1f; }
+            if (Health <= 0 && Run != null && Run.IsGuest && pendingBleed > 0f)
+            { lingeringBleed = pendingBleed; lingeringBleedStun = pendingBleedStun; bleedingBlowLingers = Time.time + 1f; }
             bleedingBlows = Mathf.Max(0, bleedingBlows - 1);
             pendingBleed = bleedingBlows > 0 ? Mathf.Max(0f, pendingBleed - Mathf.Max(0f, bleed)) : 0f;
+            if (bleedingBlows == 0) pendingBleedStun = 0f;
+        }
+
+        /// <summary>
+        /// True while a blow that sets its victim alight is landing (a fire hit whose effect went off, a Kindling freeze).
+        /// If that blow kills, the enemy still died burning for the "killing a burning enemy" talents (Pyre Burst).
+        /// </summary>
+        public bool BurnPending => burningBlows > 0 || (Health <= 0 && Time.time < burningBlowLingers);
+        /// <summary>Burning, or killed by a blow that was lighting it: what kill talents count as a burning enemy.</summary>
+        public bool CountsAsBurning => IsBurning || BurnPending;
+        private int burningBlows;
+        private float burningBlowLingers;
+
+        /// <summary>A blow that lights its victim is about to land (see <see cref="BurnPending"/>); pair with <see cref="EndBurningBlow"/>.</summary>
+        public void BeginBurningBlow() => burningBlows++;
+
+        public void EndBurningBlow()
+        {
+            burningBlows = Mathf.Max(0, burningBlows - 1);
+            // A co-op guest only learns of the kill when the host confirms it, so the mark lingers for that long.
+            if (Health <= 0 && Run != null && Run.IsGuest) burningBlowLingers = Time.time + 1f;
         }
         public bool IsBleeding => wounds.Count > 0 || netBleeding;
         public bool IsPoisoned => poisonTicks > 0 || netPoisoned;
@@ -245,7 +278,17 @@ namespace Slopgame
         public EnemyHitRegion LastHitRegion { get; private set; }
         public event System.Action<EnemyHitRegion> HitReceived;
 
-        private void Awake() { Facing = GetComponent<EnemyFacing>(); }
+        private void Awake()
+        {
+            Facing = GetComponent<EnemyFacing>();
+            dummy = GetComponent<TrainingDummy>();
+        }
+
+        /// <summary>One of the crystal shop's training dummies: it stands still, never fights back and never dies.</summary>
+        public bool IsTrainingDummy => dummy != null;
+        private TrainingDummy dummy;
+        /// <summary>A training dummy at rest is drawn a touch dim, so the white flash of a hit shows on it.</summary>
+        private static readonly Color DummyTint = new Color(0.82f, 0.82f, 0.82f);
 
         private void Start()
         {
@@ -254,7 +297,7 @@ namespace Slopgame
             var world = Run.World;
             if (IsRanged && Variant == null) gameObject.name = world.CasterName;
             tactics = GetComponent<EnemyTactics>();
-            if (Boss == null) body.sprite = Variant != null ? Variant.Sprite
+            if (Boss == null && !IsTrainingDummy) body.sprite = Variant != null ? Variant.Sprite
                 : world.HighTech ? NeonSprites.Enemy(IsRanged, IsTank) : DungeonVisuals.EnemySprite(IsRanged, IsTank);
             burnIndicator = DungeonVisuals.Create("Burn indicator", transform, transform.position,
                 new Vector2(0.28f, 0.4f), burnColor, 9);
@@ -367,7 +410,7 @@ namespace Slopgame
                 burnIndicator.transform.localScale = new Vector3(0.28f, 0.4f, 1f) * (1f + 0.12f * Mathf.Sin(Time.time * 12f));
             }
             if (Boss != null) return;
-            if (IsHeld) { UpdateColor(); return; }
+            if (IsHeld || IsTrainingDummy) { UpdateColor(); return; }
             Vector2 position = transform.position;
             // Heroes in Shadow Veil are invisible: with nobody to see, the enemy holds still and keeps its facing.
             if (!Run.TryNearestVisibleHero(position, out Vector2 target))
@@ -410,7 +453,7 @@ namespace Slopgame
                 : IsRooted ? RootedTint
                 : IsFrozen ? FrozenTint
                 : IsChilled ? AbilityCatalog.Ice : Variant != null ? Variant.Tint
-                : IsTank ? Run.World.BruteTint : IsRanged ? Run.World.CasterTint : Run.World.BasicTint;
+                : IsTrainingDummy ? DummyTint : IsTank ? Run.World.BruteTint : IsRanged ? Run.World.CasterTint : Run.World.BasicTint;
         }
 
         /// <summary>Co-op guest: follow the host's snapshots; only contact with the local hero is judged here.</summary>
@@ -514,7 +557,7 @@ namespace Slopgame
                     CombatVfx.Ring(Run.ProjectileRoot, transform.position, HitRadius + 0.5f, Color.white, 0.25f);
                 }
             }
-            if (DebugMode.Enabled) damage = Mathf.Max(damage, Health);
+            if (DebugMode.Enabled && !IsTrainingDummy) damage = Mathf.Max(damage, Health);
             LastHitRegion = Facing.RegionFrom(source);
             HitReceived?.Invoke(LastHitRegion);
             // True Poser: while the Samurai holds her pose, her blows deal nothing and are owed until she sheathes.
@@ -534,6 +577,7 @@ namespace Slopgame
                 if (Health <= 0) SetVisible(false);
                 return;
             }
+            if (dummy != null) dummy.Struck(CursedDamage(damage), dotTick);
             Health -= CursedDamage(damage);
             if (deathMarkDue > 0f) deathMarkStored += CursedDamage(damage);
             hitUntil = Time.time + 0.15f;

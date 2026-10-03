@@ -444,7 +444,12 @@ namespace Slopgame.Editor
         {
             var player = run.Player;
             var pouch = player.Crystals;
-            Require(run.InShop && run.Floor == 4 && run.Enemies.Count == 0 && run.Shop != null && !run.IsBossFloor, "The floor before the boss did not lead into the crystal shop.");
+            Require(run.InShop && run.Floor == 4 && run.HostileCount == 0 && run.Shop != null && !run.IsBossFloor, "The floor before the boss did not lead into the crystal shop.");
+            Require(run.Enemies.Count == TrainingDummy.Count && run.Enemies.TrueForAll(enemy => enemy.IsTrainingDummy), "The shop did not set out its training dummies.");
+            var dummy = run.Enemies[0];
+            Vector2 planted = dummy.transform.position;
+            dummy.Hit(TrainingDummy.DummyHealth + 5, planted + Vector2.left, 3f);
+            Require(dummy.Health > 0 && run.Enemies.Contains(dummy) && run.HostileCount == 0, "A training dummy fell or locked the stairs.");
             Require(run.Map.CanStand(run.Map.Centers[0]) && run.Map.CanStand(run.Exit) && !run.Map.IsFloor(27, 22), "The shop room layout is wrong.");
             var shop = run.Shop;
             CrystalShop.Offer Offer(CrystalShop.Ware ware) => Array.Find(CrystalShop.Offers, offer => offer.Ware == ware);

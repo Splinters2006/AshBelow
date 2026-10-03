@@ -326,16 +326,16 @@ namespace Slopgame
             CountAttackKill(player);
 
             // Nerve Snap, Still Hunter and Domino count any immobilized enemy: paralysed, frozen, stunned or rooted, and
-            // one killed by the very blow that was paralysing it.
+            // one killed by the very blow that was holding it (or bleeding out into Bled Dry's stun).
             bool held = enemy != null && enemy.CountsAsHeld;
-            // A paralysing blow that killed outright still sets off the hold talents (Static Hold's shock goes off around it).
+            // A holding blow that killed outright still sets off the hold talents (Static Hold's shock goes off around it).
             if (enemy != null && enemy.HoldPending && !enemy.IsImmobilized) OnImmobilized(player, enemy, 0f);
             if (Count(PowerupType.ElementalKills) > 0) elementalPrimed = true;
             if (held && Count(PowerupType.NerveSnap) > 0) player.ResetClassSkill();
             float cut = (Count(PowerupType.Bloodrush) > 0 ? KillCooldownCut : 0f) + (held && Count(PowerupType.StillHunter) > 0 ? StillHunterCut : 0f);
             if (cut > 0f) player.ReduceCooldowns(cut);
 
-            if (enemy != null && enemy.IsBurning && Count(PowerupType.PyreBurst) > 0) PyreBurst(player, enemy, PyreBurstRadius);
+            if (enemy != null && enemy.CountsAsBurning && Count(PowerupType.PyreBurst) > 0) PyreBurst(player, enemy, PyreBurstRadius);
             if (held && Count(PowerupType.Domino) > 0) Domino(player, enemy);
         }
 

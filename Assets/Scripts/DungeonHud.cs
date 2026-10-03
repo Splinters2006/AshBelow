@@ -93,6 +93,7 @@ namespace Slopgame
                 if (flash.a > 0f) DungeonUi.Panel(new Rect(-2000, -2000, 6000, 6000), flash);
                 // The HUD over the floor is drawn at the player's opacity; the settings page and the screens below stay solid.
                 GUI.color = new Color(1f, 1f, 1f, GameSettings.HudOpacity);
+                DamageNumbers.Draw(Run.View);
                 DrawStatus();
                 if (Run.Player == null) return;
                 if (Run.IsNetworked) DrawTeam();
@@ -238,7 +239,7 @@ namespace Slopgame
             string guardian = Run.World.IsWaveWorld ? $"LEVEL {Run.LevelNumber + 1:00}" : $"FLOOR {Run.Floor + 1:00}";
             if (Run.IsWaveFloor && !Run.WavesPending) where += $"  /  WAVE {Run.CurrentWave}/{Run.WavesThisLevel}";
             DungeonUi.Label(new Rect(405, 28, 470, 25), Run.InShop ? $"CRYSTAL SHOP  /  GUARDIAN OF {guardian} AHEAD" : Run.IsBossFloor ? $"{where}  /  BOSS ARENA"
-                : $"{where}  /  {Run.Enemies.Count} ENEMIES", 17, Run.InShop ? CrystalPouch.CrystalColor : AbilityCatalog.Gold, TextAnchor.MiddleCenter);
+                : $"{where}  /  {Run.HostileCount} ENEMIES", 17, Run.InShop ? CrystalPouch.CrystalColor : AbilityCatalog.Gold, TextAnchor.MiddleCenter);
             if (Run.IsPlaying && Time.time < Run.WorldBannerUntil)
             {
                 // Fades out over its last second.

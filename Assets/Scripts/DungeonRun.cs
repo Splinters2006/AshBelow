@@ -8,6 +8,16 @@ namespace Slopgame
         public DungeonMap Map { get; private set; }
         public DungeonPlayer Player { get; private set; }
         public List<DungeonEnemy> Enemies { get; } = new List<DungeonEnemy>();
+        /// <summary>The enemies still to beat: every one but the crystal shop's training dummies.</summary>
+        public int HostileCount
+        {
+            get
+            {
+                int count = 0;
+                foreach (var enemy in Enemies) if (enemy != null && !enemy.IsTrainingDummy) count++;
+                return count;
+            }
+        }
         public bool IsPlaying { get; private set; }
         public bool ChoosingUpgrade { get; private set; }
         public bool ChoosingArtifact { get; private set; }
@@ -29,10 +39,10 @@ namespace Slopgame
         public Vector2 Exit => exit;
         public string Objective => InShop ? ShopObjective
             : Artifact != null ? "Claim the glowing artifact  /  " + KeyBindings.Label(GameAction.Interact)
-            : IsBossFloor && Enemies.Count > 0 ? "Defeat the arena guardian"
+            : IsBossFloor && HostileCount > 0 ? "Defeat the arena guardian"
             : WavesPending ? "Touch the monolith to call the waves  /  " + KeyBindings.Label(GameAction.Interact)
-            : IsWaveFloor ? (Enemies.Count == 0 ? "Level cleared" : waveReserves.Count > 0 ? $"Survive the waves  /  {waveReserves.Count} more to come" : "Survive the final wave")
-            : Enemies.Count == 0 ? (ExitIsPortal ? "Step through the portal  /  " : "Find the gold stairs  /  ") + KeyBindings.Label(GameAction.Interact)
+            : IsWaveFloor ? (HostileCount == 0 ? "Level cleared" : waveReserves.Count > 0 ? $"Survive the waves  /  {waveReserves.Count} more to come" : "Survive the final wave")
+            : HostileCount == 0 ? (ExitIsPortal ? "Step through the portal  /  " : "Find the gold stairs  /  ") + KeyBindings.Label(GameAction.Interact)
             : "Clear the floor to unlock the stairs";
         /// <summary>True on a world's third guardian floor, where a portal out of the world stands in for the stairs.</summary>
         public bool ExitIsPortal => IsBossFloor && !InShop && WorldCatalog.CompletesWorld(Floor);
@@ -699,7 +709,7 @@ namespace Slopgame
         /// </summary>
         private bool UpdateWave()
         {
-            if (!IsWaveFloor || WavesPending || Enemies.Count > 0 || Artifact != null) return false;
+            if (!IsWaveFloor || WavesPending || HostileCount > 0 || Artifact != null) return false;
             if (waveClearedAt < 0f)
             {
                 waveClearedAt = Time.time;
@@ -805,8 +815,8 @@ namespace Slopgame
                 else StartWaves();
                 return;
             }
-            stairs.SetUnlocked(Enemies.Count == 0 && Artifact == null && !WavesPending);
-            if (Artifact == null && Enemies.Count == 0 && !WavesPending && canInteract && Vector2.Distance(Player.transform.position, exit) < 1.2f)
+            stairs.SetUnlocked(HostileCount == 0 && Artifact == null && !WavesPending);
+            if (Artifact == null && HostileCount == 0 && !WavesPending && canInteract && Vector2.Distance(Player.transform.position, exit) < 1.2f)
             {
                 if (IsNetworked) Coop.RequestInteract(CoopChoice.Upgrade);
                 else BeginUpgradeChoice();
@@ -850,7 +860,7 @@ namespace Slopgame
                 Progress.Discover(Encyclopedia.GuardianId(enemy.Boss.Title));
                 if (Player != null) Player.Mechanic?.OnGuardianDefeated();
             }
-            if (Enemies.Count == 0 && !floorRewardGranted)
+            if (HostileCount == 0 && !floorRewardGranted)
             { reward += 10; floorRewardGranted = true; }
             RunAshEarned += reward;
             floorAshEarned += reward;
@@ -956,7 +966,7 @@ namespace Slopgame
 
         public void BeginArtifactChoice()
         {
-            if (!IsPlaying || Artifact == null || Enemies.Count != 0) return;
+            if (!IsPlaying || Artifact == null || HostileCount != 0) return;
             IsPlaying = false;
             ChoosingArtifact = true;
             ArrangingAbilities = false;
@@ -1049,7 +1059,7 @@ namespace Slopgame
         }
         public void BeginUpgradeChoice()
         {
-            if (!IsPlaying || Enemies.Count != 0 || Artifact != null || WavesPending) return;
+            if (!IsPlaying || HostileCount != 0 || Artifact != null || WavesPending) return;
             // The third guardian's stairs end the world: a cleared screen offers the next world or the menu.
             if (IsBossFloor && WorldCatalog.CompletesWorld(Floor)) { ShowWorldComplete(); return; }
             if (IsBossFloor || InShop) { NextFloor(); return; }

@@ -260,6 +260,7 @@ namespace Slopgame
             shop.seed = StockSeed(run.Seed, run.Floor, run.IsNetworked ? run.Coop.LocalId : (ulong?)null);
             shop.Restock(shop.seed);
             shop.Furnish();
+            TrainingDummy.PlaceIn(run, level);
             return shop;
         }
 

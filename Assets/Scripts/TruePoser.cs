@@ -128,7 +128,7 @@ namespace Slopgame
                 // Open Veins: every enemy cut is left bleeding for the whole sheathe's damage, not just its own share. A cut
                 // that kills still killed a bleeding enemy, so Crimson Bloom bursts with the wound it would have opened.
                 float bleed = IsUpgraded ? CombatDamage.BleedTotal(Player, enemy, total) : 0f;
-                if (IsUpgraded) enemy.BeginBleedingBlow(bleed);
+                if (IsUpgraded) enemy.BeginBleedingBlow(bleed, CombatDamage.BledDryStunFor(Player));
                 try { enemy.Hit(damages[i], hero, 0.6f); }
                 finally { if (IsUpgraded) enemy.EndBleedingBlow(bleed); }
                 if (IsUpgraded) CombatDamage.InflictBleed(Player, enemy, total);

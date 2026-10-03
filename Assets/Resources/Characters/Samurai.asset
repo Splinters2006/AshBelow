@@ -16,6 +16,6 @@ MonoBehaviour:
   description: A brooding swordswoman in a red, white and black Edo kimono. She speaks little, poses often, and leaves a red trail where the talking stopped.
   color: {r: 0.86, g: 0.2, b: 0.22, a: 1}
   startingHealth: 5
-  startingDamage: 2
+  startingDamage: 3
   moveSpeed: 5.3
   weapon: 11

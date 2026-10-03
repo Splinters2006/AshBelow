@@ -38,7 +38,7 @@ namespace Slopgame
             RearHitMarker.Show(player.Run, enemy);
             int damage = KillerInstinct(player, AssassinBonus(player, enemy, ShadowstepDamageForRoll(player, Random.value)));
             bool seize = SeizesTouched(player, enemy);
-            enemy.Hit(damage, source);
+            HoldingHit(enemy, seize, () => enemy.Hit(damage, source));
             if (enemy.Health <= 0) FadeAway(player);
             if (seize) enemy.Stun(ElementalImmobilizationStun);
             player.Mechanic?.OnBackstab();
@@ -96,6 +96,10 @@ namespace Slopgame
         /// <summary>Bled Dry's stun once a bleed has run out, by rank.</summary>
         public static readonly float[] BledDryStun = { 0f, 0.5f, 1f, 1.5f };
 
+        /// <summary>The Bled Dry stun a bleed this hero opens carries once it runs out.</summary>
+        public static float BledDryStunFor(DungeonPlayer player)
+            => player != null ? BledDryStun[Mathf.Clamp(player.Powerups.Count(PowerupType.BledDry), 0, BledDryStun.Length - 1)] : 0f;
+
         /// <summary>How many times a bleed this hero opens cuts: the base ten plus Deep Wounds, over the same five seconds.</summary>
         public static int BleedTicksFor(DungeonPlayer player)
             => DungeonEnemy.BleedTicks + (player != null ? DeepWoundsTicks[Mathf.Clamp(player.Powerups.Count(PowerupType.DeepWounds), 0, DeepWoundsTicks.Length - 1)] : 0);
@@ -104,7 +108,7 @@ namespace Slopgame
         public static void InflictBleed(DungeonPlayer player, DungeonEnemy enemy, int hit)
         {
             if (enemy == null || enemy.Health <= 0 || hit <= 0) return;
-            float stun = player != null ? BledDryStun[Mathf.Clamp(player.Powerups.Count(PowerupType.BledDry), 0, BledDryStun.Length - 1)] : 0f;
+            float stun = BledDryStunFor(player);
             // Pinned Wounds: the Samurai's bleeds cut deeper while their victim cannot move.
             float held = player != null && player.Powerups.Count(PowerupType.PinnedWounds) > 0 ? PinnedWoundsMultiplier : 1f;
             enemy.Bleed(hit, DungeonEnemy.BleedDuration, BleedTicksFor(player), stun, held);
@@ -129,7 +133,7 @@ namespace Slopgame
         {
             if (enemy == null || enemy.Health <= 0) return;
             float bleed = BleedTotal(player, enemy, damage);
-            enemy.BeginBleedingBlow(bleed);
+            enemy.BeginBleedingBlow(bleed, BledDryStunFor(player));
             try { Apply(player, enemy, damage, DamageElement.Physical, source, knockback); }
             finally { enemy.EndBleedingBlow(bleed); }
             InflictBleed(player, enemy, damage);
@@ -222,8 +226,10 @@ namespace Slopgame
                     + (critical && player.Weapon is SpecimenAttack edge && edge.BleedsOnCritical ? 1 : 0)
                     + (player.ClassWeapon == WeaponType.Daggers && behind && player.Powerups.Count(PowerupType.Bleed) > 0 ? 1 : 0);
                 float bleed = wounds * BleedTotal(player, enemy, rolled);
-                enemy.BeginBleedingBlow(bleed);
-                try { enemy.Hit(rolled, source, knockback); }
+                // An infused hit's element is decided before it lands too, so a kill still froze or lit its victim.
+                var infused = infusion != DamageElement.Physical && (critical || ElementalQuiver.IsImbued(player)) ? infusion : DamageElement.Physical;
+                enemy.BeginBleedingBlow(bleed, BledDryStunFor(player));
+                try { EffectHit(player, enemy, infused, seize, () => enemy.Hit(rolled, source, knockback)); }
                 finally { enemy.EndBleedingBlow(bleed); }
                 if (seize) enemy.Stun(ElementalImmobilizationStun);
                 if (critical && player.Weapon is SpecimenAttack specimen) specimen.OnCritical(enemy, rolled);
@@ -239,7 +245,7 @@ namespace Slopgame
                 RuneParalysis(player, enemy);
                 for (int i = 0; i < katanaWounds; i++) InflictBleed(player, enemy, rolled);
                 // Elemental Surge: while the Archer's quiver surges, every infused hit sets off its element, not only crits.
-                if (infusion != DamageElement.Physical && (critical || ElementalQuiver.IsImbued(player))) ApplyEffect(player, enemy, infusion, rolled);
+                if (infused != DamageElement.Physical) ApplyEffect(player, enemy, infused, rolled);
                 if (enemy.Health <= 0) Overkill(player, enemy, rolled - healthBefore);
                 return;
             }
@@ -247,7 +253,15 @@ namespace Slopgame
             if (element == DamageElement.Lightning && enemy.IsBurning && player.Powerups.Count(PowerupType.Pyromancer) > 0) damage++;
             bool wasBurning = enemy.IsBurning, wasFrozen = enemy.IsFrozen;
             HitVfx(player, enemy.transform.position, source, ElementColor(element), false);
-            enemy.Hit(damage, source, knockback);
+            // The effect roll comes before the hit lands, so a hit that kills still froze or lit its victim (see EffectHit).
+            bool effect = false;
+            if (HasEffect(element))
+            {
+                // Elemental Kills' charge is spent on the next elemental hit, even one that would have set off anyway.
+                bool primed = player.Powerups.ConsumeElementalPrime();
+                effect = guaranteedEffect || primed || opening || Random.value < player.Powerups.ElementalEffectChance;
+            }
+            EffectHit(player, enemy, effect ? element : DamageElement.Physical, seize, () => enemy.Hit(damage, source, knockback));
             if (seize) enemy.Stun(ElementalImmobilizationStun);
             CreditBlessing(player);
             IncarnateFear(player, enemy);
@@ -259,10 +273,30 @@ namespace Slopgame
                 else if (wasFrozen && element != DamageElement.Ice) Clash(player, enemy, DamageElement.Ice, damage);
             }
             // Holy and demonic damage have no status effect; the rest roll for one instead of critical damage.
-            if (!HasEffect(element)) return;
-            // Elemental Kills' charge is spent on the next elemental hit, even one that would have set off anyway.
-            bool primed = player.Powerups.ConsumeElementalPrime();
-            if (guaranteedEffect || primed || opening || Random.value < player.Powerups.ElementalEffectChance) ApplyEffect(player, enemy, element, damage);
+            if (effect) ApplyEffect(player, enemy, element, damage);
+        }
+
+        /// <summary>
+        /// Lands <paramref name="hit"/> knowing what it will inflict once it does: a seizing hit or a freeze holds its
+        /// victim, and fire (or Kindling) lights it. If the hit kills first, the enemy still counts as held or burning for
+        /// the kill talents, so every effect a killing blow carries sets off the ones that follow from it.
+        /// </summary>
+        private static void EffectHit(DungeonPlayer player, DungeonEnemy enemy, DamageElement effect, bool seize, System.Action hit)
+        {
+            bool burns = effect == DamageElement.Fire || (HasEffect(effect) && player != null && player.Powerups.Count(PowerupType.Kindling) > 0);
+            if (!burns) { HoldingHit(enemy, seize || effect == DamageElement.Ice, hit); return; }
+            enemy.BeginBurningBlow();
+            try { HoldingHit(enemy, seize || effect == DamageElement.Ice, hit); }
+            finally { enemy.EndBurningBlow(); }
+        }
+
+        /// <summary>Lands <paramref name="hit"/>; if it <paramref name="holds"/>, a kill still counts its victim as held (see DungeonEnemy.HoldPending).</summary>
+        private static void HoldingHit(DungeonEnemy enemy, bool holds, System.Action hit)
+        {
+            if (!holds) { hit(); return; }
+            enemy.BeginHoldingBlow();
+            try { hit(); }
+            finally { enemy.EndHoldingBlow(); }
         }
 
         public const float FadeAwayTime = 1f;
