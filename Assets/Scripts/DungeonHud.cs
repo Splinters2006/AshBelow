@@ -183,7 +183,7 @@ namespace Slopgame
             DungeonUi.Panel(new Rect(-2000, -2000, 6000, 6000), DungeonUi.Background);
             DungeonUi.Label(new Rect(70, 52, 700, 25), pausedForSettings ? "THE DESCENT IS PAUSED" : Run.IsNetworked && Run.IsPlaying ? "THE DESCENT GOES ON AROUND YOU" : "THE DESCENT WAITS", 14, AbilityCatalog.Gold);
             DungeonUi.Label(new Rect(65, 80, 1100, 56), "SETTINGS", 40);
-            DungeonUi.Label(new Rect(70, 138, 1100, 30), "Resize the menus and HUD, fade the HUD, switch autofire on or off for each hero and rebind every action. Changes save instantly.", 17, DungeonUi.Muted);
+            DungeonUi.Label(new Rect(70, 138, 1100, 30), "Resize the menus and HUD, fade the HUD, switch autofire for each hero, rebind every action and pick your name colour. Changes save instantly.", 17, DungeonUi.Muted);
             settingsMenu.Draw();
             if (DungeonUi.Button("hudSettingsBack", new Rect(70, 598, 268, 48), "Back", DungeonUi.Muted)) CloseSettings();
             if (DungeonUi.Button("hudSettingsReset", new Rect(860, 598, 350, 48), "Reset to defaults", DungeonUi.Teal)) settingsMenu.ResetToDefaults();

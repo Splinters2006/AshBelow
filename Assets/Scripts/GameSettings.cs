@@ -15,7 +15,10 @@ namespace Slopgame
         // The old single autofire switch is kept only as the starting value of every hero's own switch.
         private const string MenuKey = "ui.menuScale", HudKey = "ui.hudScale", HudOpacityKey = "ui.hudOpacity", AutofireKey = "gameplay.autofire",
             HeroAutofirePrefix = "gameplay.autofire.";
+        // Kept under the co-op page's old key, where the colour was first picked.
+        private const string NameColorKey = "AshBelow.CoopColor";
         private static float? menuScale, hudScale, hudOpacity;
+        private static int? nameColor;
         private static readonly Dictionary<WeaponType, bool> autofire = new Dictionary<WeaponType, bool>();
 
         /// <summary>Size of the main menu and its pages.</summary>
@@ -37,6 +40,22 @@ namespace Slopgame
         {
             get => hudOpacity ??= Load(HudOpacityKey, MinOpacity);
             set => hudOpacity = Save(HudOpacityKey, value, MinOpacity);
+        }
+
+        /// <summary>The colour (<see cref="NameTag.Colors"/>) the party sees your name in.</summary>
+        public static int NameColor
+        {
+            get
+            {
+                if (nameColor == null) { int.TryParse(PlayerPrefs.GetString(NameColorKey, "0"), out int saved); nameColor = NameTag.ClampColor(saved); }
+                return nameColor.Value;
+            }
+            set
+            {
+                nameColor = NameTag.ClampColor(value);
+                PlayerPrefs.SetString(NameColorKey, nameColor.Value.ToString());
+                PlayerPrefs.Save();
+            }
         }
 
         /// <summary>

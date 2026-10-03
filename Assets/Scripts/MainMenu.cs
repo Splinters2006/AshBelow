@@ -171,7 +171,7 @@ namespace Slopgame
             DungeonUi.Label(new Rect(65 + glow, y + glow, 1100, height), title, size, new Color(Ember.r, Ember.g, Ember.b, flicker));
             DungeonUi.Label(new Rect(65 + glow * 2, y + glow * 2.5f, 1100, height), title, size, new Color(0f, 0f, 0f, 0.6f));
             DungeonUi.Label(new Rect(65, y, 1100, height), title, size);
-            DungeonUi.Label(compact ? new Rect(70, 138, 1100, 30) : new Rect(70, 188, 1100, 42), settings ? "Resize the menus and HUD, fade the HUD, switch autofire on or off for each hero and rebind every action. Changes save instantly."
+            DungeonUi.Label(compact ? new Rect(70, 138, 1100, 30) : new Rect(70, 188, 1100, 42), settings ? "Resize the menus and HUD, fade the HUD, switch autofire for each hero, rebind every action and pick your name colour. Changes save instantly."
                 : shopping ? "Spend the ash you carry home. Grow stronger with every descent."
                 : codex ? "Everything you have met in the ash. Unfound entries stay hidden until a descent turns them up."
                 : account ? "Sign in to carry your ash, upgrades, unlocks and saved descents to any PC."

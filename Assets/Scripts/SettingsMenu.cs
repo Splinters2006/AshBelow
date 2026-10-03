@@ -4,7 +4,7 @@ namespace Slopgame
 {
     /// <summary>
     /// The settings page of the main menu (and the HUD's cog): UI sizes and HUD opacity above either the control
-    /// rebinding or the autofire switches, one per hero.
+    /// rebinding or the autofire switches, one per hero, with the co-op name colour along the bottom.
     /// </summary>
     public sealed class SettingsMenu
     {
@@ -29,6 +29,7 @@ namespace Slopgame
                 keybinds.Cancel();
                 showAutofire = !showAutofire;
             }
+            DrawNameColor(new Rect(350, 598, 498, 48));
             if (showAutofire) { DrawAutofire(); return; }
             DungeonUi.Label(new Rect(70, 236, 400, 20), "CONTROLS", 12, DungeonUi.Muted);
             DungeonUi.Label(new Rect(480, 236, 730, 20), "AUTOFIRE IS SWITCHED ON AND OFF FOR EACH HERO", 12, DungeonUi.Muted, TextAnchor.UpperRight);
@@ -59,6 +60,23 @@ namespace Slopgame
             DungeonUi.Label(new Rect(70, 568, 1140, 24),
                 "Holding the attack button with autofire on releases a fully charged attack the moment it is ready, then starts charging the next one.",
                 14, DungeonUi.Muted);
+        }
+
+        /// <summary>Swatches for the name colour everyone in a co-op party sees, between Back and Reset; the chosen one is outlined.</summary>
+        private static void DrawNameColor(Rect row)
+        {
+            const float Gap = 6f;
+            int count = NameTag.Colors.Length, chosen = GameSettings.NameColor;
+            DungeonUi.Panel(row, DungeonUi.PanelColor);
+            DungeonUi.Label(new Rect(row.x + 14, row.y, 130, row.height), "Name colour", 16, NameTag.ColorOf(chosen), TextAnchor.MiddleLeft);
+            float left = row.x + 140, size = (row.xMax - 10 - left - Gap * (count - 1)) / count;
+            for (int i = 0; i < count; i++)
+            {
+                Rect swatch = new Rect(left + i * (size + Gap), row.y + 8, size, row.height - 16);
+                if (i == chosen) DungeonUi.Panel(new Rect(swatch.x - 2, swatch.y - 2, swatch.width + 4, swatch.height + 4), DungeonUi.Text);
+                DungeonUi.Panel(swatch, NameTag.Colors[i]);
+                if (GUI.Button(swatch, GUIContent.none, GUIStyle.none) && i != chosen) GameSettings.NameColor = i;
+            }
         }
 
         public void ResetToDefaults()

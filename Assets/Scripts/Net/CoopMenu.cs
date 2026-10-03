@@ -5,11 +5,10 @@ namespace Slopgame
     /// <summary>The co-op page of the main menu: host or join a party, pick a hero, and begin the descent together.</summary>
     public sealed class CoopMenu
     {
-        private const string NameKey = "AshBelow.CoopName", AddressKey = "AshBelow.CoopAddress", ColorKey = "AshBelow.CoopColor";
+        private const string NameKey = "AshBelow.CoopName", AddressKey = "AshBelow.CoopAddress";
         private string code = "", address, playerName;
         // The account display name last taken over, so signing in (or renaming on the account page) names you here too.
         private string accountName;
-        private int nameColor = -1;
         private Vector2 heroScroll;
 
         public void Draw(DungeonRun run)
@@ -20,10 +19,9 @@ namespace Slopgame
                 playerName = Load(NameKey, "Player");
                 address = Load(AddressKey, "127.0.0.1");
                 session.RenameLocal(playerName);
-                int.TryParse(Load(ColorKey, "0"), out nameColor);
-                nameColor = NameTag.ClampColor(nameColor);
             }
-            // Signing in to (or out of) a developer account changes how the name is drawn for the whole party.
+            // The colour is picked on the settings page; signing in to (or out of) a developer account changes how the name is drawn for the whole party.
+            int nameColor = GameSettings.NameColor;
             if (session.LocalNameColor != nameColor || session.LocalBadge != run.Account.DeveloperBadge)
                 session.RestyleLocal(nameColor, run.Account.DeveloperBadge);
             if (run.Account.DisplayName != accountName)
@@ -43,9 +41,8 @@ namespace Slopgame
             SyncClass(run, session);
             DungeonUi.Panel(new Rect(70, 250, 540, 336), DungeonUi.PanelColor);
             DungeonUi.Label(new Rect(100, 270, 480, 24), "YOUR NAME", 14, DungeonUi.Muted);
-            string renamed = DungeonUi.TextField("coopName", new Rect(100, 298, 252, 46), playerName, 16);
+            string renamed = DungeonUi.TextField("coopName", new Rect(100, 298, 480, 46), playerName, 16);
             if (renamed != playerName) { playerName = renamed; Save(NameKey, playerName); session.RenameLocal(playerName); }
-            DrawColorPicker(new Rect(364, 298, 216, 46));
             DungeonUi.Label(new Rect(100, 364, 480, 24), "ONLINE  /  UP TO 4 PLAYERS, NO PORT FORWARDING", 14, AbilityCatalog.Gold);
             if (DungeonUi.Button("coopHost", new Rect(100, 394, 480, 52), "Host a party", AbilityCatalog.Gold)) session.HostOnline();
             code = DungeonUi.TextField("coopCode", new Rect(100, 468, 300, 52), code, 12, 24).ToUpperInvariant();
@@ -136,24 +133,6 @@ namespace Slopgame
             // Below the panels, where the status line would go (a lobby host has no status).
             if (!string.IsNullOrEmpty(session.PortStatus) && string.IsNullOrEmpty(session.Status))
                 DungeonUi.Label(new Rect(70, 596, 770, 50), session.PortStatus, 14, DungeonUi.Muted);
-        }
-
-        /// <summary>Swatches for the name colour everyone in the party sees; the chosen one is outlined.</summary>
-        private void DrawColorPicker(Rect area)
-        {
-            const int columns = 4;
-            float width = (area.width - (columns - 1) * 4f) / columns, height = (area.height - 4f) / 2f;
-            for (int i = 0; i < NameTag.Colors.Length; i++)
-            {
-                Rect swatch = new Rect(area.x + i % columns * (width + 4f), area.y + i / columns * (height + 4f), width, height);
-                if (i == nameColor) DungeonUi.Panel(new Rect(swatch.x - 2, swatch.y - 2, swatch.width + 4, swatch.height + 4), DungeonUi.Text);
-                DungeonUi.Panel(swatch, NameTag.Colors[i]);
-                if (GUI.Button(swatch, GUIContent.none, GUIStyle.none) && i != nameColor)
-                {
-                    nameColor = i;
-                    Save(ColorKey, i.ToString());
-                }
-            }
         }
 
         /// <summary>Starts the party with the hero last picked on the solo screen.</summary>
