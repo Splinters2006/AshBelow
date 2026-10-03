@@ -13,7 +13,7 @@ namespace Slopgame
     {
         public const float ChargeDuration = 1f, RayInterval = 0.45f;
         public const float RayRange = 5.5f, ChargedRayRange = 8f, RayWidth = 0.12f, ChargedRayWidth = 0.34f, RayKnockback = 0.35f;
-        public const float CannonCooldown = 5f, CannonChargeTime = 1f, CannonHoldLimit = 0.4f;
+        public const float CannonCooldown = 5f, CannonChargeTime = 1f, CannonHoldLimit = 0.4f, CannonChargeBonus = 1.5f;
         public static readonly Color Plasma = new Color(0.35f, 1f, 0.78f);
         public static readonly Color Core = new Color(0.88f, 1f, 0.96f);
         public static readonly Color MissileColor = new Color(1f, 0.6f, 0.3f);
@@ -56,8 +56,8 @@ namespace Slopgame
         /// <summary>The ray's reach for a charge: Focused Lens adds a unit per stack.</summary>
         public float RayReach(float charge) => Mathf.Lerp(RayRange, ChargedRayRange, Mathf.Clamp01(charge)) + Player.Powerups.Count(PowerupType.FocusedLens);
         public static float RayWidthFor(float charge) => Mathf.Lerp(RayWidth, ChargedRayWidth, Mathf.Clamp01(charge));
-        /// <summary>Twice the hero's damage, up to three times more at full charge; Overcharge adds one per stack.</summary>
-        public int CannonDamage(float charge) => Player.Damage * 2 + Mathf.RoundToInt(Player.Damage * 3f * Mathf.Clamp01(charge))
+        /// <summary>Twice the hero's damage, up to one and a half times more at full charge; Overcharge adds one per stack.</summary>
+        public int CannonDamage(float charge) => Player.Damage * 2 + Mathf.RoundToInt(Player.Damage * CannonChargeBonus * Mathf.Clamp01(charge))
             + Player.Powerups.Count(PowerupType.Overcharge);
         public float BlastRadius(float charge) => 1.1f + 0.9f * Mathf.Clamp01(charge) + 0.3f * Player.Powerups.Count(PowerupType.Overcharge);
         /// <summary>Capacitor Bank (Ash shop) shortens the cooldown; Overclock halves it.</summary>
