@@ -1,5 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Security.Cryptography;
+using System.Text;
 using System.Threading.Tasks;
 using Unity.Services.CloudSave;
 using UnityEngine;
@@ -8,8 +11,9 @@ namespace Slopgame
 {
     /// <summary>
     /// Keeps the permanent progress in Cloud Save while an account is signed in, so it follows the player to other PCs.
-    /// The save on disk stays the real one: the cloud copy is uploaded a few seconds after each write. When the account's
-    /// cloud save and this PC's progress disagree at sign-in, the player picks which to keep before anything is uploaded.
+    /// The save on disk stays the real one: the cloud copy is uploaded a few seconds after each write. At sign-in, including
+    /// the automatic one at start-up, the progress last synced on this PC decides which side changed since: that side wins
+    /// on its own, and only when both changed does the player pick which to keep before anything is uploaded.
     /// </summary>
     public sealed class CloudProgressSync : MonoBehaviour
     {
@@ -30,12 +34,14 @@ namespace Slopgame
         private PermanentProgress Progress => Run.Progress;
         private string syncedJson;
         private int syncedRevision = -1;
-        private float uploadAt = -1f;
+        private float uploadAt = -1f, pullAt = -1f;
 
         private void Start()
         {
             Account.SignedIn += OnSignedIn;
             Account.SignedOut += OnSignedOut;
+            // The start-up sign-in may already have finished.
+            if (Account.IsSignedIn) OnSignedIn();
         }
 
         private void OnDestroy()
@@ -51,12 +57,14 @@ namespace Slopgame
         {
             IsLinked = false;
             CloudJson = syncedJson = null;
-            uploadAt = -1f;
+            uploadAt = pullAt = -1f;
             Status = null;
         }
 
         private void Update()
         {
+            // A check that failed (say the PC was offline at start-up) is tried again until it goes through.
+            if (!IsLinked && !IsChoosing && !IsBusy && Account.IsSignedIn && pullAt >= 0f && Time.unscaledTime >= pullAt) _ = Pull();
             if (!IsLinked || IsBusy || !Account.IsSignedIn || Progress.IsReadOnly) return;
             if (Progress.Revision == syncedRevision) { uploadAt = -1f; return; }
             if (uploadAt < 0f) uploadAt = Time.unscaledTime + UploadDelay;
@@ -75,6 +83,7 @@ namespace Slopgame
             if (IsBusy || !Account.IsSignedIn) return;
             IsLinked = false;
             CloudJson = null;
+            pullAt = -1f;
             if (Progress.IsReadOnly) { Status = "Cloud sync is paused until this PC's save can be read."; return; }
             IsBusy = true;
             Status = "Checking cloud save…";
@@ -83,11 +92,13 @@ namespace Slopgame
                 var items = await CloudSaveService.Instance.Data.Player.LoadAsync(new HashSet<string> { Key });
                 if (!Account.IsSignedIn) return;
                 string cloud = items.TryGetValue(Key, out var item) ? item.Value.GetAs<string>() : null;
-                string local = Progress.ExportJson();
+                string local = Progress.ExportJson(), synced = ReadSynced();
                 if (cloud == local) Link(cloud, "Progress is synced.");
                 else if (cloud == null) await Push(local, "Progress uploaded to your account.");
-                // A fresh PC simply takes the account's progress.
-                else if (Progress.IsEmpty) Adopt(cloud);
+                // A fresh PC, or one that has not played since it last synced, simply takes the account's progress.
+                else if (Progress.IsEmpty || Hash(local) == synced) Adopt(cloud);
+                // Only this PC moved on since the last sync (played offline, or the upload never finished).
+                else if (Hash(cloud) == synced) await Push(local, "Progress uploaded to your account.");
                 else { CloudJson = cloud; Status = "This account already has progress. Choose which to keep."; }
             }
             catch (Exception error) { Fail("Could not reach the cloud save", error); }
@@ -167,6 +178,7 @@ namespace Slopgame
         {
             IsLinked = true;
             syncedJson = json;
+            WriteSynced(json);
             syncedRevision = Progress.Revision;
             uploadAt = -1f;
             Status = message;
@@ -175,9 +187,36 @@ namespace Slopgame
         private void Fail(string what, Exception error)
         {
             Debug.LogWarning(what + ": " + error);
-            // A failed upload stays linked and tries again shortly; a failed check needs the player to press Sync now.
-            Status = what + ". " + (IsLinked ? "Trying again shortly." : "Use Sync now to try again.");
+            // Both a failed upload and a failed check try again shortly; Sync now does it straight away.
+            Status = what + ". Trying again shortly.";
             uploadAt = IsLinked ? Time.unscaledTime + RetryDelay : -1f;
+            pullAt = IsLinked ? -1f : Time.unscaledTime + RetryDelay;
+        }
+
+        // What this PC last agreed with the account on, kept per account beside the progress file as a hash.
+        private string SyncedPath => Path.Combine(Path.GetDirectoryName(Progress.SavePath), "synced-" + Account.Username + ".txt");
+
+        private string ReadSynced()
+        {
+            try { return File.Exists(SyncedPath) ? File.ReadAllText(SyncedPath).Trim() : null; }
+            catch (Exception error) when (error is IOException || error is UnauthorizedAccessException) { return null; }
+        }
+
+        private void WriteSynced(string json)
+        {
+            if (!Account.IsSignedIn) return;
+            try { File.WriteAllText(SyncedPath, Hash(json)); }
+            catch (Exception error) when (error is IOException || error is UnauthorizedAccessException)
+            {
+                Debug.LogWarning("Could not note the synced progress: " + error.Message);
+            }
+        }
+
+        private static string Hash(string json)
+        {
+            if (json == null) return null;
+            using var sha = SHA256.Create();
+            return BitConverter.ToString(sha.ComputeHash(Encoding.UTF8.GetBytes(json))).Replace("-", "");
         }
     }
 }

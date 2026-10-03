@@ -17,6 +17,9 @@ namespace Slopgame
     {
         public const int MaxUsername = 20, MaxPassword = 30, MaxDisplayName = 16;
         private static readonly Regex UsernameRule = new Regex(@"^[A-Za-z0-9.\-@_]{3,20}$");
+        // Kept for the developers: nobody can create these, though their owners still sign in to them as usual.
+        private static readonly string[] ReservedUsernames = { "Splinters06", "tioqy" };
+        private const float RestoreRetryDelay = 30f;
 
         /// <summary>Set before anything starts the services: false keeps test runs away from the player's saved sign-in.</summary>
         public static bool KeepSignIn { get; set; }
@@ -35,6 +38,7 @@ namespace Slopgame
         public bool StatusIsError { get; private set; }
         public event Action SignedIn, SignedOut;
         private bool hooked;
+        private float restoreAt = -1f;
 
         /// <summary>Starts Unity Services once; a failed start is tried again on the next call.</summary>
         public static async Task EnsureServicesAsync()
@@ -81,6 +85,14 @@ namespace Slopgame
             if (KeepSignIn) _ = Run(Restore(), null);
         }
 
+        private void Update()
+        {
+            // The start-up sign-in could not reach Unity (offline, say): keep trying, so syncing starts once it can.
+            if (restoreAt < 0f || Time.unscaledTime < restoreAt || IsBusy) return;
+            restoreAt = -1f;
+            if (!IsSignedIn) _ = Run(Restore(), null);
+        }
+
         private void OnDestroy()
         {
             if (hooked && UnityServices.State == ServicesInitializationState.Initialized) AuthenticationService.Instance.Expired -= OnExpired;
@@ -98,8 +110,13 @@ namespace Slopgame
             if (!IsSignedIn) Report(null);
         }
 
-        public static string CheckUsername(string username) => UsernameRule.IsMatch(username ?? "") ? null
-            : "Usernames are 3-20 letters, numbers or . - @ _";
+        public static string CheckUsername(string username)
+        {
+            if (!UsernameRule.IsMatch(username ?? "")) return "Usernames are 3-20 letters, numbers or . - @ _";
+            foreach (string reserved in ReservedUsernames)
+                if (string.Equals(username, reserved, StringComparison.OrdinalIgnoreCase)) return "That username is taken.";
+            return null;
+        }
 
         public static string CheckPassword(string password)
         {
@@ -237,7 +254,12 @@ namespace Slopgame
             catch (Exception error)
             {
                 Debug.LogWarning((failure ?? "Could not restore the sign-in") + ": " + error);
-                if (failure == null) Report(null);
+                if (failure == null && IsOffline(error))
+                {
+                    restoreAt = Time.unscaledTime + RestoreRetryDelay;
+                    Report("Could not reach your account. Trying again shortly.", true);
+                }
+                else if (failure == null) Report(null);
                 else Report(failure + ". " + Explain(error), true);
             }
             finally
@@ -259,13 +281,18 @@ namespace Slopgame
             return (tag > 0 ? name.Substring(0, tag) : name).Replace('_', ' ');
         }
 
+        private static bool IsOffline(Exception error) => error is RequestFailedException failed && failed.ErrorCode == CommonErrorCodes.TransportError;
+
         private static string Explain(Exception error)
         {
             // Service start-up failures arrive wrapped in several layers of inner exceptions.
             if (error.ToString().Contains("UnityProjectNotLinkedException")) return "Accounts are not set up in this build yet (no Unity Cloud project).";
+            // Username & Password has to be added as an identity provider in the Unity Cloud dashboard.
+            if (error.Message.Contains("usernamepassword") && error.Message.Contains("not available"))
+                return "Username sign-in is not enabled for this game yet.";
             if (error is RequestFailedException failed)
             {
-                if (failed.ErrorCode == CommonErrorCodes.TransportError) return "Check your internet connection and try again.";
+                if (IsOffline(error)) return "Check your internet connection and try again.";
                 if (failed.ErrorCode == AuthenticationErrorCodes.InvalidParameters) return "Check the username and password.";
                 if (failed.ErrorCode == AuthenticationErrorCodes.ClientInvalidUserState) return "Another sign-in is still finishing. Try again in a moment.";
                 if (!string.IsNullOrEmpty(failed.Message)) return failed.Message;

@@ -221,7 +221,10 @@ namespace Slopgame
             if (DungeonUi.Button("encyclopedia", new Rect(970, 342, 205, 48), "Encyclopedia", AbilityCatalog.Gold)) codex = true;
             if (DungeonUi.Button("shop", new Rect(755, 402, 205, 48), "Ash shop", DungeonUi.Teal)) shopping = true;
             if (DungeonUi.Button("settings", new Rect(970, 402, 205, 48), "Settings", DungeonUi.Teal)) settings = true;
-            if (DungeonUi.Button("account", new Rect(755, 462, 205, 48), AccountLabel(), DungeonUi.Teal)) account = true;
+            // Progress changed both here and on another PC since the last sync: the account page asks which to keep.
+            bool choosing = Run.Account.IsSignedIn && Run.CloudSync.IsChoosing;
+            if (DungeonUi.Button("account", new Rect(755, 462, 205, 48), choosing ? "Choose save" : AccountLabel(),
+                choosing ? AbilityCatalog.Gold : DungeonUi.Teal)) account = true;
             if (DungeonUi.Button("quit", new Rect(970, 462, 205, 48), "Quit", DungeonUi.Muted))
             {
 #if UNITY_EDITOR
