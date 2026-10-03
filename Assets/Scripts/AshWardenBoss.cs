@@ -86,7 +86,8 @@ namespace Slopgame
         {
             Enemy.Facing.TurnToward(offset, Time.deltaTime * Enemy.ActionSpeedMultiplier);
             if (shatterAt > 0f && Time.time >= shatterAt) BurstShatterstones();
-            if (Spiraling) { SpiralTick(); return; }
+            // Keep ticking until SpiralTick itself sees the spiral end and deals the next attack (spiralUntil goes back to 0).
+            if (spiralUntil > 0f) { SpiralTick(); return; }
             if (charging)
             {
                 if (Enemy.ActionTime < fireAt) return;
@@ -130,6 +131,7 @@ namespace Slopgame
                         Fire(transform.position, Quaternion.Euler(0, 0, angle) * lockedAim);
                     }
                     HeroVfx.Pulse(Run.ProjectileRoot, transform.position, 1.6f, Frost, 0.35f);
+                    CoopFx.Pulse(Run, transform.position, 1.6f, Frost, 0.35f);
                     Finish();
                     break;
                 case Spiral:
@@ -140,6 +142,7 @@ namespace Slopgame
                 case Cage:
                     foreach (var center in cageCenters) CastCage(center);
                     HeroVfx.Pulse(Run.ProjectileRoot, transform.position, 1.6f, Frost, 0.35f);
+                    CoopFx.Pulse(Run, transform.position, 1.6f, Frost, 0.35f);
                     Finish();
                     break;
                 case Lance:

@@ -201,6 +201,10 @@ namespace Slopgame.Editor
             Require(DungeonRun.ScaleHealth(5, 0) == 5, "A missing party size counts as solo.");
             Require(DungeonBoss.ScaledHealth(10, 1) == 60 && DungeonBoss.ScaledHealth(10, 0) == 60, "Solo guardians: 6x base health.");
             Require(DungeonBoss.ScaledHealth(10, 2) == 150 && DungeonBoss.ScaledHealth(10, 3) == 240 && DungeonBoss.ScaledHealth(10, 4) == 330, "Each extra hero adds 150% of solo guardian health.");
+            Require(DungeonBoss.ScaledHealth(10, 2, DungeonBoss.FirstWorldPartyHealth) == 120 && DungeonBoss.ScaledHealth(10, 4, DungeonBoss.FirstWorldPartyHealth) == 240,
+                "First-world guardians: each extra hero adds 100% of solo health.");
+            Require(DungeonBoss.PartyHealthFor(WorldCatalog.All[0]) == DungeonBoss.FirstWorldPartyHealth
+                && DungeonBoss.PartyHealthFor(WorldCatalog.All[1]) == DungeonBoss.PartyHealth, "Only the first world's guardians scale gentler in co-op.");
         }
 
         private static void TestDeterminism()

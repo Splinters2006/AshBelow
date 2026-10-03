@@ -45,11 +45,20 @@ namespace Slopgame
         /// <summary>Guardians also close in this much faster than their style's base speed.</summary>
         public const float ChaseSpeedBoost = 1.15f;
 
+        /// <summary>How much of solo health each extra hero adds to a guardian: 150% (normal enemies add 100%).</summary>
+        public const float PartyHealth = 1.5f;
+        /// <summary>The first world's guardians scale gentler in co-op: each extra hero adds only 100%, as for normal enemies.</summary>
+        public const float FirstWorldPartyHealth = 1f;
+
         /// <summary>
-        /// A guardian's health for a party: each extra hero adds 150% of solo health (normal enemies add 100%),
+        /// A guardian's health for a party: each extra hero adds <paramref name="perHero"/> of solo health,
         /// so a bigger party still has to work through every attack.
         /// </summary>
-        public static int ScaledHealth(int baseHealth, int partySize) => Mathf.CeilToInt(baseHealth * HealthMultiplier * (1f + 1.5f * (Mathf.Max(1, partySize) - 1)));
+        public static int ScaledHealth(int baseHealth, int partySize, float perHero = PartyHealth)
+            => Mathf.CeilToInt(baseHealth * HealthMultiplier * (1f + perHero * (Mathf.Max(1, partySize) - 1)));
+
+        /// <summary>The per-hero co-op health scaling for guardians in <paramref name="world"/>.</summary>
+        public static float PartyHealthFor(WorldDefinition world) => world.Index == 0 ? FirstWorldPartyHealth : PartyHealth;
 
         /// <summary>
         /// Each world's three guardians in order from its <see cref="WorldDefinition.FirstGuardian"/>: the ash guardians on
@@ -95,7 +104,7 @@ namespace Slopgame
                 : Kind == BossKind.Archdemon ? (BossBehaviour)gameObject.AddComponent<ArchdemonBoss>()
                 : gameObject.AddComponent<AshWardenBoss>();
             // Every world past the first fields tougher guardians, deadlier worlds (the Infernal Court) tougher still.
-            MaxHealth = Mathf.CeilToInt(ScaledHealth(Behaviour.BaseHealth(run.Floor), run.PartySize) * run.World.GuardianHealthMultiplier);
+            MaxHealth = Mathf.CeilToInt(ScaledHealth(Behaviour.BaseHealth(run.Floor), run.PartySize, PartyHealthFor(run.World)) * run.World.GuardianHealthMultiplier);
             Enemy.Health = MaxHealth;
             Behaviour.Setup(this);
             Enemy.Speed *= ChaseSpeedBoost;

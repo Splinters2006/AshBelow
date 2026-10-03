@@ -316,6 +316,8 @@ namespace Slopgame
             state = State.Staggered;
             ScreenFx.Shake(0.45f, 0.5f);
             HeroVfx.Sparks(Run.ProjectileRoot, ground, Glow, 26, 7f, 0.5f, null, 360f, 1.5f);
+            HeroVfx.Pulse(Run.ProjectileRoot, ground, 2.4f, Glow, 0.4f);
+            CoopFx.Pulse(Run, ground, 2.4f, Glow, 0.4f);
             stateUntil = Enemy.ActionTime + (IsEnraged ? 2.2f : 3f);
             for (int i = 0; i < 16; i++) Fire(ground, Quaternion.Euler(0, 0, i * 22.5f) * Vector2.up);
         }
