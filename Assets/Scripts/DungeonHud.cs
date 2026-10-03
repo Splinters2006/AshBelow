@@ -787,9 +787,10 @@ namespace Slopgame
 
         /// <summary>
         /// The testing grounds' grant page: this hero's discovered abilities, then every discovered talent the hero could
-        /// ever take, each with its rank and a button that adds one more (greyed out when it cannot be taken yet).
+        /// ever take, each with its rank and a button that adds one more (greyed out when it cannot be taken yet), and what
+        /// the hovered one does.
         /// </summary>
-        private void DrawGrantRows(Rect area)
+        private void DrawGrantRows(Rect page)
         {
             var player = Run.Player;
             var progress = Run.Progress;
@@ -800,7 +801,12 @@ namespace Slopgame
             foreach (var talent in PowerupCatalog.All)
                 if (!talent.Retired && (!talent.ClassWeapon.HasValue || talent.ClassWeapon == player.ClassWeapon)
                     && progress.IsDiscovered(Encyclopedia.TalentId(talent.Type))) grantTalents.Add(talent);
-            const float RowHeight = 38f, HeaderHeight = 28f;
+            const float RowHeight = 38f, HeaderHeight = 28f, FooterHeight = 46f;
+            // The hovered row's description sits in a footer under the list, as on the Talents page.
+            var area = new Rect(page.x, page.y, page.width, page.height - FooterHeight - 8);
+            bool overList = area.Contains(Event.current.mousePosition);
+            string hoveredName = null, hoveredDescription = null;
+            Color hoveredColor = DungeonUi.Teal;
             float width = area.width - 18;
             float height = HeaderHeight * 2 + (grantAbilities.Count + grantTalents.Count) * RowHeight + (grantAbilities.Count == 0 ? RowHeight : 0f);
             grantScroll = GUI.BeginScrollView(area, grantScroll, new Rect(0, 0, width, Mathf.Max(area.height - 4, height)));
@@ -812,8 +818,9 @@ namespace Slopgame
             {
                 int rank = player.Abilities.Rank(ability.Type);
                 bool can = rank < PlayerAbilities.MaxRank;
-                GrantRow($"grantAbility{ability.Type}", new Rect(0, y, width, RowHeight), ability.Name, $"{rank}/{PlayerAbilities.MaxRank}", ability.Color, can,
-                    () => player.Abilities.Learn(ability.Type), rank > 0, () => player.Abilities.Unlearn(ability.Type));
+                if (GrantRow($"grantAbility{ability.Type}", new Rect(0, y, width, RowHeight), ability.Name, $"{rank}/{PlayerAbilities.MaxRank}", ability.Color, can,
+                    () => player.Abilities.Learn(ability.Type), rank > 0, () => player.Abilities.Unlearn(ability.Type), overList))
+                    (hoveredName, hoveredDescription, hoveredColor) = (ability.Name, ability.Description, ability.Color);
                 y += RowHeight;
             }
             GrantHeader(new Rect(0, y, width, HeaderHeight), "TALENTS", DungeonUi.Teal);
@@ -821,12 +828,22 @@ namespace Slopgame
             foreach (var talent in grantTalents)
             {
                 int rank = player.Powerups.Count(talent.Type);
-                GrantRow($"grantTalent{talent.Type}", new Rect(0, y, width, RowHeight), talent.Name, $"{rank}/{talent.MaxStacks}",
+                if (GrantRow($"grantTalent{talent.Type}", new Rect(0, y, width, RowHeight), talent.Name, $"{rank}/{talent.MaxStacks}",
                     rank > 0 ? Color.white : DungeonUi.Muted, player.Powerups.CanTake(talent.Type), () => player.GrantPowerup(talent.Type),
-                    rank > 0, () => player.RevokePowerup(talent.Type));
+                    rank > 0, () => player.RevokePowerup(talent.Type), overList))
+                    (hoveredName, hoveredDescription, hoveredColor) = (talent.Name, talent.Description, talent.ClassWeapon.HasValue ? Run.SelectedCharacter.Color : DungeonUi.Teal);
                 y += RowHeight;
             }
             GUI.EndScrollView();
+
+            var footer = new Rect(page.x, page.yMax - FooterHeight, page.width, FooterHeight);
+            DungeonUi.Divider(new Rect(footer.x, footer.y - 6, footer.width, 1));
+            if (hoveredName != null)
+            {
+                DungeonUi.Label(new Rect(footer.x + 2, footer.y, footer.width, 18), hoveredName.ToUpperInvariant(), 11, hoveredColor);
+                DungeonUi.Label(new Rect(footer.x + 2, footer.y + 17, footer.width, FooterHeight - 17), hoveredDescription, 12, DungeonUi.Muted);
+            }
+            else DungeonUi.Label(footer, "Hover a talent or ability to see what it does.", 12, DungeonUi.Muted, TextAnchor.MiddleLeft);
         }
 
         private readonly System.Collections.Generic.List<AbilityDefinition> grantAbilities = new System.Collections.Generic.List<AbilityDefinition>();
@@ -840,17 +857,22 @@ namespace Slopgame
             DungeonUi.Divider(new Rect(rect.x + label, rect.center.y, rect.width - label, 1));
         }
 
-        /// <summary>One card of the grant page: the name and rank, a "-" that drops a rank, and a "+" that takes another when it can.</summary>
-        private static void GrantRow(string id, Rect row, string name, string rank, Color color, bool can, System.Func<bool> grant,
-            bool canRemove, System.Func<bool> remove)
+        /// <summary>
+        /// One card of the grant page: the name and rank, a "-" that drops a rank, and a "+" that takes another when it can.
+        /// Returns whether the mouse is over it (only when <paramref name="overList"/>, so rows scrolled out of view never count).
+        /// </summary>
+        private static bool GrantRow(string id, Rect row, string name, string rank, Color color, bool can, System.Func<bool> grant,
+            bool canRemove, System.Func<bool> remove, bool overList)
         {
             var card = new Rect(row.x, row.y, row.width, row.height - 4);
-            DungeonUi.Panel(card, DungeonUi.PanelColor);
+            bool hover = overList && card.Contains(Event.current.mousePosition);
+            DungeonUi.Panel(card, hover ? Color.Lerp(DungeonUi.PanelColor, can ? color : DungeonUi.Muted, 0.12f) : DungeonUi.PanelColor);
             DungeonUi.Panel(new Rect(card.x, card.y, 3, card.height), can ? color : DungeonUi.Muted);
             DungeonUi.Label(new Rect(card.x + 12, card.y, card.width - 140, card.height), name, 14, color, TextAnchor.MiddleLeft);
             DungeonUi.Label(new Rect(card.xMax - 132, card.y, 44, card.height), rank, 12, DungeonUi.Muted, TextAnchor.MiddleRight);
             if (DungeonUi.Button(id + "Remove", new Rect(card.xMax - 80, card.y + 3, 36, card.height - 6), "-", DebugColor, canRemove, 18)) remove();
             if (DungeonUi.Button(id, new Rect(card.xMax - 40, card.y + 3, 36, card.height - 6), "+", DebugColor, can, 18)) grant();
+            return hover;
         }
 
         /// <summary>
