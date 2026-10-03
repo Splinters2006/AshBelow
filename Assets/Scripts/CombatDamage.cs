@@ -113,12 +113,35 @@ namespace Slopgame
         /// <summary>Pinned Wounds: how much harder a bleed cuts while its victim is immobilized.</summary>
         public const float PinnedWoundsMultiplier = 1.5f;
 
-        /// <summary>The Samurai's katana: Blood Shall Flow bleeds on every hit and Jagged Blade on one in ten. A hit can open both.</summary>
-        private static void KatanaBleeds(DungeonPlayer player, DungeonEnemy enemy, int hit)
+        /// <summary>The whole damage a bleed this hero opens from <paramref name="hit"/> would deal on <paramref name="enemy"/>, every cut together.</summary>
+        public static float BleedTotal(DungeonPlayer player, DungeonEnemy enemy, int hit)
         {
-            if (player == null || !(player.Weapon is SamuraiAttack samurai) || enemy == null || enemy.Health <= 0) return;
-            if (samurai.IsBloodFlowing) InflictBleed(player, enemy, hit);
-            if (player.Powerups.Count(PowerupType.JaggedBlade) > 0 && Random.value < JaggedBladeChance) InflictBleed(player, enemy, hit);
+            if (enemy == null || hit <= 0) return 0f;
+            float held = player != null && enemy.IsImmobilized && player.Powerups.Count(PowerupType.PinnedWounds) > 0 ? PinnedWoundsMultiplier : 1f;
+            return hit * DungeonEnemy.BleedTickShare * BleedTicksFor(player) * held;
+        }
+
+        /// <summary>
+        /// A physical hit that leaves its victim bleeding. If the hit kills before the wound opens, the enemy still died
+        /// bleeding (see <see cref="DungeonEnemy.BleedPending"/>).
+        /// </summary>
+        public static void ApplyBleeding(DungeonPlayer player, DungeonEnemy enemy, int damage, Vector2 source, float knockback = 1f)
+        {
+            if (enemy == null || enemy.Health <= 0) return;
+            float bleed = BleedTotal(player, enemy, damage);
+            enemy.BeginBleedingBlow(bleed);
+            try { Apply(player, enemy, damage, DamageElement.Physical, source, knockback); }
+            finally { enemy.EndBleedingBlow(bleed); }
+            InflictBleed(player, enemy, damage);
+        }
+
+        /// <summary>The Samurai's katana: Blood Shall Flow bleeds on every hit and Jagged Blade on one in ten. A hit can open both.</summary>
+        private static int KatanaWounds(DungeonPlayer player)
+        {
+            if (player == null || !(player.Weapon is SamuraiAttack samurai)) return 0;
+            int wounds = samurai.IsBloodFlowing ? 1 : 0;
+            if (player.Powerups.Count(PowerupType.JaggedBlade) > 0 && Random.value < JaggedBladeChance) wounds++;
+            return wounds;
         }
 
         public const float OverkillBaseRadius = 1f, OverkillRadiusPerDamage = 0.25f, OverkillMaxRadius = 3.5f;
@@ -191,11 +214,20 @@ namespace Slopgame
                 bool critical = rolled > damage;
                 if (critical) player.Powerups.OnCritical(player);
                 HitVfx(player, enemy.transform.position, source, infusion != DamageElement.Physical ? ElementColor(infusion) : new Color(1f, 0.95f, 0.8f), critical);
-                enemy.Hit(rolled, source, knockback);
+                // Barbed Arrows (the Archer's second passive): her critical strikes open a bleed.
+                bool barbed = critical && player.ClassWeapon == WeaponType.Bow && player.Permanent.HasSecondPassive(WeaponType.Bow);
+                int katanaWounds = KatanaWounds(player);
+                // Every wound this hit opens once it lands, counted first so a hit that kills still killed a bleeding enemy.
+                int wounds = katanaWounds + (barbed ? 1 : 0)
+                    + (critical && player.Weapon is SpecimenAttack edge && edge.BleedsOnCritical ? 1 : 0)
+                    + (player.ClassWeapon == WeaponType.Daggers && behind && player.Powerups.Count(PowerupType.Bleed) > 0 ? 1 : 0);
+                float bleed = wounds * BleedTotal(player, enemy, rolled);
+                enemy.BeginBleedingBlow(bleed);
+                try { enemy.Hit(rolled, source, knockback); }
+                finally { enemy.EndBleedingBlow(bleed); }
                 if (seize) enemy.Stun(ElementalImmobilizationStun);
                 if (critical && player.Weapon is SpecimenAttack specimen) specimen.OnCritical(enemy, rolled);
-                // Barbed Arrows (the Archer's second passive): her critical strikes open a bleed.
-                if (critical && player.ClassWeapon == WeaponType.Bow && player.Permanent.HasSecondPassive(WeaponType.Bow)) InflictBleed(player, enemy, rolled);
+                if (barbed) InflictBleed(player, enemy, rolled);
                 if (player.ClassWeapon == WeaponType.Daggers && behind)
                 {
                     if (!ShadowClone.IsStriking) player.Mechanic?.OnBackstab();
@@ -205,7 +237,7 @@ namespace Slopgame
                 CreditBlessing(player);
                 IncarnateFear(player, enemy);
                 RuneParalysis(player, enemy);
-                KatanaBleeds(player, enemy, rolled);
+                for (int i = 0; i < katanaWounds; i++) InflictBleed(player, enemy, rolled);
                 // Elemental Surge: while the Archer's quiver surges, every infused hit sets off its element, not only crits.
                 if (infusion != DamageElement.Physical && (critical || ElementalQuiver.IsImbued(player))) ApplyEffect(player, enemy, infusion, rolled);
                 if (enemy.Health <= 0) Overkill(player, enemy, rolled - healthBefore);

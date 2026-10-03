@@ -72,6 +72,34 @@ namespace Slopgame
             // A co-op guest only learns of the kill when the host confirms it, so the mark lingers for that long.
             if (Health <= 0 && Run != null && Run.IsGuest) holdingBlowLingers = Time.time + 1f;
         }
+
+        /// <summary>
+        /// The bleed damage a blow landing now would open, if it does not kill first. A blow that kills before its wounds
+        /// open still counts its victim as bleeding for the "killing a bleeding enemy" talents (Trail of Blood), and
+        /// Crimson Bloom bursts with the wounds it would have opened.
+        /// </summary>
+        public float BleedPending => bleedingBlows > 0 ? pendingBleed : Health <= 0 && Time.time < bleedingBlowLingers ? lingeringBleed : 0f;
+        /// <summary>Bleeding, or killed by a blow that was opening a wound: what kill talents count as a bleeding enemy.</summary>
+        public bool CountsAsBleeding => IsBleeding || BleedPending > 0f;
+        /// <summary>The bleed damage left to deal, counting wounds a killing blow was about to open.</summary>
+        public float BleedOwed => BleedRemaining + BleedPending;
+        private int bleedingBlows;
+        private float pendingBleed, lingeringBleed, bleedingBlowLingers;
+
+        /// <summary>A blow that opens <paramref name="bleed"/> damage of wounds is about to land; pair with <see cref="EndBleedingBlow"/>.</summary>
+        public void BeginBleedingBlow(float bleed)
+        {
+            bleedingBlows++;
+            pendingBleed += Mathf.Max(0f, bleed);
+        }
+
+        public void EndBleedingBlow(float bleed)
+        {
+            // A co-op guest only learns of the kill when the host confirms it, so the mark lingers for that long.
+            if (Health <= 0 && Run != null && Run.IsGuest && pendingBleed > 0f) { lingeringBleed = pendingBleed; bleedingBlowLingers = Time.time + 1f; }
+            bleedingBlows = Mathf.Max(0, bleedingBlows - 1);
+            pendingBleed = bleedingBlows > 0 ? Mathf.Max(0f, pendingBleed - Mathf.Max(0f, bleed)) : 0f;
+        }
         public bool IsBleeding => wounds.Count > 0 || netBleeding;
         public bool IsPoisoned => poisonTicks > 0 || netPoisoned;
         /// <summary>Suffering any damage over time: burning, bleeding or poisoned.</summary>

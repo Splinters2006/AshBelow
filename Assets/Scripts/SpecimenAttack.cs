@@ -862,10 +862,13 @@ namespace Slopgame
         public bool ForcesCrit(DungeonEnemy enemy) => Marked(exposed, enemy) || Marked(bound, enemy)
             || (Rank(PowerupType.LowBlow) > 0 && Marked(tripped, enemy) && enemy.IsStunned);
 
+        /// <summary>Bleeding Edge: his critical hits open a wound.</summary>
+        public bool BleedsOnCritical => Rank(PowerupType.BleedingEdge) > 0;
+
         /// <summary>One of his hits was a critical hit: Bleeding Edge opens a wound, and the Edge's crits feed Breaking Point.</summary>
         public void OnCritical(DungeonEnemy enemy, int damage)
         {
-            if (Rank(PowerupType.BleedingEdge) > 0 && enemy != null && enemy.Health > 0) CombatDamage.InflictBleed(Player, enemy, damage);
+            if (BleedsOnCritical && enemy != null && enemy.Health > 0) CombatDamage.InflictBleed(Player, enemy, damage);
             if (Form == SpecimenForm.Edge) FeedMechanic(1);
         }
 

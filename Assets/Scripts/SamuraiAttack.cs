@@ -62,19 +62,19 @@ namespace Slopgame
         }
 
         /// <summary>One crescent cut: strikes everything in the cone and draws the blade's arc, alternating forehand and backhand.</summary>
-        private int Cut(Vector2 aim, int damage, float reach, float cone, float knockback, Color color, float duration = 0.3f, List<DungeonEnemy> struck = null)
+        private int Cut(Vector2 aim, int damage, float reach, float cone, float knockback, Color color, float duration = 0.3f, bool bleeding = false)
         {
             var run = Player.Run;
             Vector2 origin = transform.position;
-            int hits = Sweep(origin, aim, damage, reach, cone, knockback, struck);
+            int hits = Sweep(origin, aim, damage, reach, cone, knockback, bleeding);
             KatanaVfx.Crescent(run.ProjectileRoot, origin, aim, reach, cone, color, backhand, duration);
             CoopFx.KatanaCrescent(run, origin, aim, reach, cone, color, backhand, duration);
             backhand = !backhand;
             return hits;
         }
 
-        /// <summary>Hits every enemy whose body reaches into the cone; returns how many, and lists them in <paramref name="struck"/>.</summary>
-        private int Sweep(Vector2 origin, Vector2 aim, int damage, float reach, float cone, float knockback, List<DungeonEnemy> struck = null)
+        /// <summary>Hits every enemy whose body reaches into the cone (leaving it <paramref name="bleeding"/>, if asked); returns how many.</summary>
+        private int Sweep(Vector2 origin, Vector2 aim, int damage, float reach, float cone, float knockback, bool bleeding = false)
         {
             var run = Player.Run;
             int hits = 0;
@@ -83,8 +83,8 @@ namespace Slopgame
                 if (enemy == null || enemy.Health <= 0) continue;
                 Vector2 at = enemy.transform.position;
                 if (!SwordAttack.OverlapsCone(at - origin, aim, reach, cone, enemy.HitRadius) || !run.HasLineOfSight(origin, at)) continue;
-                CombatDamage.Apply(Player, enemy, damage, DamageElement.Physical, origin, knockback);
-                struck?.Add(enemy);
+                if (bleeding) CombatDamage.ApplyBleeding(Player, enemy, damage, origin, knockback);
+                else CombatDamage.Apply(Player, enemy, damage, DamageElement.Physical, origin, knockback);
                 hits++;
             }
             return hits;
@@ -159,8 +159,7 @@ namespace Slopgame
                 CoopFx.KatanaSlice(run, at - aim * (enemy.HitRadius + 0.6f), at + aim * (enemy.HitRadius + 0.6f), Blood, 0.3f);
                 HeroVfx.Sparks(root, at, Blood, 12, 5.5f, 0.3f, Vector2.Perpendicular(aim), 70f);
                 HeroVfx.Sparks(root, at, Blood, 12, 5.5f, 0.3f, -Vector2.Perpendicular(aim), 70f);
-                CombatDamage.Apply(Player, enemy, damage, DamageElement.Physical, at - aim, 0.2f);
-                CombatDamage.InflictBleed(Player, enemy, damage);
+                CombatDamage.ApplyBleeding(Player, enemy, damage, at - aim, 0.2f);
             }
             ScreenFx.Shake(cut.Count > 0 ? 0.2f + 0.03f * Mathf.Min(cut.Count, 5) : 0.07f, cut.Count > 0 ? 0.16f : 0.08f);
             if (cut.Count > 0) ScreenFx.Flash(new Color(1f, 1f, 1f, 0.12f), 0.08f);
@@ -243,15 +242,13 @@ namespace Slopgame
             bool chunk = stage == 2;
             float bonus = 1f + FineDicingBonus[Mathf.Clamp(Player.Powerups.Count(PowerupType.FineDicing), 0, FineDicingBonus.Length - 1)];
             int damage = Mathf.Max(1, Mathf.RoundToInt((Player.Damage * ComboDamage[stage] + (rank - 1) * (stage + 1)) * bonus));
-            var struck = new List<DungeonEnemy>();
-            int hits = Cut(aim, damage, ComboReach[stage] * Size, ComboCone[stage], chunk ? 2f : 0.6f, chunk ? Blood : Steel, chunk ? 0.45f : 0.3f, struck);
+            int hits = Cut(aim, damage, ComboReach[stage] * Size, ComboCone[stage], chunk ? 2f : 0.6f, chunk ? Blood : Steel, chunk ? 0.45f : 0.3f, chunk);
             // Each slash has its own look over the blade's arc: a ruled line, a lattice of cuts, a ground-splitting cleave.
             var root = Player.Run.ProjectileRoot;
             SliceDiceChunkVfx.Play(root, transform.position, aim, ComboReach[stage] * Size, ComboCone[stage], stage);
             CoopFx.SliceDiceChunk(Player.Run, transform.position, aim, ComboReach[stage] * Size, ComboCone[stage], stage);
             if (chunk)
             {
-                foreach (var enemy in struck) CombatDamage.InflictBleed(Player, enemy, damage);
                 if (hits > 0) HeroVfx.Sparks(root, (Vector2)transform.position + aim * ComboReach[stage] * Size * 0.6f, Blood, 18, 6f, 0.4f, aim, 110f, 1.3f);
                 ScreenFx.Shake(0.25f, 0.2f);
             }
@@ -283,8 +280,7 @@ namespace Slopgame
                 if (enemy == null || enemy.Health <= 0
                     || !BrawlerAttack.InRectangle((Vector2)enemy.transform.position - origin, aim, length, halfWidth, enemy.HitRadius)
                     || !run.HasLineOfSight(origin, enemy.transform.position)) continue;
-                CombatDamage.Apply(Player, enemy, damage, DamageElement.Physical, origin, 1.6f);
-                CombatDamage.InflictBleed(Player, enemy, damage);
+                CombatDamage.ApplyBleeding(Player, enemy, damage, origin, 1.6f);
             }
             KatanaVfx.Thrust(run.ProjectileRoot, origin, aim, length, halfWidth, Blood);
             CoopFx.KatanaThrust(run, origin, aim, length, halfWidth, Blood);
@@ -350,9 +346,9 @@ namespace Slopgame
         public void OnEnemyDied(DungeonEnemy enemy, bool localKill = false)
         {
             if (Player == null || Player.Permanent == null) return;
-            if (localKill && enemy.IsBleeding && Player.Health > 0 && Player.Permanent.HasSecondPassive(WeaponType.Katana)) AddTrailStack(enemy.transform.position);
+            if (localKill && enemy.CountsAsBleeding && Player.Health > 0 && Player.Permanent.HasSecondPassive(WeaponType.Katana)) AddTrailStack(enemy.transform.position);
             if (!Player.Permanent.HasPassive(WeaponType.Katana)) return;
-            int damage = Mathf.CeilToInt(enemy.BleedRemaining - 0.0001f);
+            int damage = Mathf.CeilToInt(enemy.BleedOwed - 0.0001f);
             if (damage <= 0) return;
             StartCoroutine(Bloom(enemy.transform.position, BloomRadiusFor(enemy.PeakHealth), damage));
         }
