@@ -18,7 +18,7 @@ namespace Slopgame
         public bool IsTank { get; set; }
         /// <summary>Summoned by a guardian mid-fight; dissolves when its guardian falls.</summary>
         public bool IsMinion { get; set; }
-        public float HitRadius => Boss != null ? Boss.HitRadius : IsTank ? 0.5f : 0.38f;
+        public float HitRadius => Boss != null ? Boss.HitRadius : IsTrainingDummy ? TrainingDummy.Radius : IsTank ? 0.5f : 0.38f;
         /// <summary>True while a boss is out of reach (such as the Archdemon in flight); blows glance off.</summary>
         public bool IsInvulnerable => Boss != null && Boss.IsInvulnerable;
         public float MoveRadius => IsTank ? 0.42f : 0.28f;

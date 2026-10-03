@@ -11,6 +11,8 @@ namespace Slopgame
     public sealed class TrainingDummy : MonoBehaviour
     {
         public const int Count = 3, DummyHealth = 99999;
+        /// <summary>How wide the dummy stands; its sprite is a little taller than it is wide.</summary>
+        public const float Size = 1.15f, Radius = 0.55f;
         public const float RestoreAfter = 3f;
         public static readonly Color Straw = new Color(0.86f, 0.72f, 0.42f);
         private static Sprite sprite;
@@ -25,14 +27,14 @@ namespace Slopgame
         {
             if (run == null || run.IsNetworked) return;
             var room = DungeonMap.ShopRoom;
-            float middle = (room.xMin + room.xMax - 1) / 2f, y = room.yMin + 0.6f;
+            float middle = (room.xMin + room.xMax - 1) / 2f, y = room.yMin + 0.9f;
             for (int i = 0; i < Count; i++)
                 Create(run, level, new Vector2(middle + (i - (Count - 1) / 2f) * 3f, y));
         }
 
         private static void Create(DungeonRun run, Transform level, Vector2 position)
         {
-            var body = DungeonVisuals.Create("Training dummy", level, position, Vector2.one * 0.75f, Color.white, 3);
+            var body = DungeonVisuals.Create("Training dummy", level, position, Vector2.one * Size, Color.white, 3);
             body.sprite = Sprite;
             body.gameObject.AddComponent<TrainingDummy>();
             var enemy = body.gameObject.AddComponent<DungeonEnemy>();
@@ -40,8 +42,8 @@ namespace Slopgame
             enemy.Health = DummyHealth;
             enemy.Speed = 0f;
             run.Enemies.Add(enemy);
-            var shadow = DungeonVisuals.Create("Dummy shadow", body.transform, position + Vector2.down * 0.42f, new Vector2(0.6f, 0.12f), new Color(0f, 0f, 0f, 0.35f), 2);
-            shadow.transform.localScale = new Vector3(0.8f, 0.16f, 1f);
+            var shadow = DungeonVisuals.Create("Dummy shadow", body.transform, position + Vector2.down * 0.78f, new Vector2(0.6f, 0.12f), new Color(0f, 0f, 0f, 0.35f), 2);
+            shadow.transform.localScale = new Vector3(0.75f, 0.12f, 1f);
         }
 
         private void Awake() => home = transform.position;
@@ -50,7 +52,7 @@ namespace Slopgame
         public void Struck(int damage, bool tick)
         {
             lastHitAt = Time.time;
-            DamageNumbers.Show(transform.position, damage, tick ? DamageNumbers.TickColor : DamageNumbers.HitColor);
+            DamageNumbers.Show((Vector2)transform.position + Vector2.up * 0.35f, damage, tick ? DamageNumbers.TickColor : DamageNumbers.HitColor);
             // It can never fall: a blow that would empty it just patches it up again.
             if (Enemy.Health - damage <= 0) Enemy.Health = DummyHealth + damage;
         }
@@ -62,20 +64,38 @@ namespace Slopgame
             if (Enemy != null && Enemy.Health < DummyHealth && Time.time - lastHitAt >= RestoreAfter) Enemy.Health = DummyHealth;
         }
 
-        /// <summary>A straw sack on a post, with a painted target on its chest.</summary>
+        /// <summary>
+        /// A burlap dummy on a post: a stitched head with cross eyes under a straw tuft, a rope collar, a crossbar for arms
+        /// with straw spilling from the ends, a painted bullseye on its chest and a straw skirt, all on a plank stand.
+        /// </summary>
         private static Sprite Sprite => sprite != null ? sprite : sprite = DungeonVisuals.PaletteSprite("Training dummy", new[]
         {
-            "....OOOO....", "...OSSSSO...", "...OSKSKO...", "...OSSSSO...", "....OOOO....", "..OOORROOO..",
-            ".OSSRWWRSSO.", ".OSSRWRRSSO.", "..OSRRRRSO..", "..OSSSSSSO..", "...OOPPOO...", ".....PP.....",
-            ".....PP.....", "....OPPO....", "...OOOOOO..."
+            "........H.Hs.H..........", ".......sHsHsHs..........", "......OOOOOOOOOO........", ".....OBBBBBBBBbbO.......",
+            "....OBBBBBBBBBBbbO......", "....OBKBKBBBKBKbbO......", "....OBBKBBBBBKBbbO......", "....OBKBKBBBKBKbbO......",
+            "....OBBBBBBBBBBbbO......", "....OBBBKKKKKBBbbO......", ".....OBBBBBBBBbbO.......", "......OOYYYYYYOO........",
+            "..H...OYyYyYyYyO....H...", ".sHOOOOOOOOOOOOOOOOOOsH.", "HsSPPPOBBBBBBBBbbOPPPSsH", ".HspppOBBRRRRRRbbOpppsH.",
+            "..s..OBBRRWWWWRRbbO..s..", ".....OBRRWWRRWWRRbO.....", ".....OBRWWRRRRWWRbO.....", ".....OBRWRRRRRRWRbO.....",
+            ".....OBRWWRRRRWWRbO.....", ".....OBRRWWRRWWRRbO.....", ".....OBBRRWWWWRRbbO.....", ".....OBBBRRRRRRbbbO.....",
+            ".....OsSsSHsSsSHsSO.....", "......OsHsSOOsSHsO......", ".......OOO.PP.OOO.......", "...........PP...........",
+            "..........OPpO..........", "..........OPpO..........", ".......OOOPPPpOOO.......", "......OGGGGGGGGGGO......",
+            ".....OGgGgGgGgGgGgO.....", "......OOOOOOOOOOOO......"
         }, key => key switch
         {
             'O' => new Color(0.3f, 0.2f, 0.1f),
             'S' => Straw,
-            'K' => new Color(0.2f, 0.12f, 0.08f),
+            's' => new Color(0.69f, 0.54f, 0.27f),
+            'H' => new Color(0.96f, 0.87f, 0.59f),
+            'B' => new Color(0.76f, 0.63f, 0.44f),
+            'b' => new Color(0.59f, 0.46f, 0.31f),
+            'K' => new Color(0.24f, 0.14f, 0.09f),
             'R' => new Color(0.78f, 0.18f, 0.16f),
             'W' => new Color(0.95f, 0.92f, 0.85f),
             'P' => new Color(0.48f, 0.3f, 0.15f),
+            'p' => new Color(0.33f, 0.2f, 0.1f),
+            'Y' => new Color(0.84f, 0.75f, 0.47f),
+            'y' => new Color(0.63f, 0.53f, 0.31f),
+            'G' => new Color(0.43f, 0.31f, 0.2f),
+            'g' => new Color(0.31f, 0.23f, 0.14f),
             _ => Color.clear
         });
     }
