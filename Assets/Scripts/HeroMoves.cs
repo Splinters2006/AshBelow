@@ -50,7 +50,7 @@ namespace Slopgame
             WeaponType.Coins => "Throw one coin for every coin you carry across a 90-degree cone, without spending any.",
             WeaponType.Beam => "Hold to charge the arm cannon and release to fire an orb that bursts in flame.",
             WeaponType.Scythe => "Spend souls on homing skulls: tap for one, hold for a fearsome one, and hold to the full for three.",
-            WeaponType.Katana => "Dash toward the cursor and slice everything in your path for double damage.",
+            WeaponType.Katana => "Dash toward the cursor and slice everything in your path for double damage, leaving it bleeding.",
             _ => "Guard as the Behemoth, or hook as the Edge."
         };
     }

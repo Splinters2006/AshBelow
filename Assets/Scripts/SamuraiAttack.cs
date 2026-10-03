@@ -6,7 +6,7 @@ namespace Slopgame
 {
     /// <summary>
     /// The Samurai's katana. Tapping cuts a quick crescent; holding to a full charge looses a flurry of rapid, weak
-    /// slashes. Right click dashes forward and slices everything in her path. Her boss artifacts are cast from here,
+    /// slashes. Right click dashes forward and slices everything in her path, leaving it bleeding. Her boss artifacts are cast from here,
     /// and most of what she does opens wounds: see <see cref="DungeonEnemy.Bleed"/>.
     /// </summary>
     public sealed class SamuraiAttack : MonoBehaviour, IPlayerWeapon
@@ -120,7 +120,7 @@ namespace Slopgame
 
         // ---------------------------------------------------------------- dash slash (right click)
 
-        /// <summary>Dashes toward the cursor and cuts everything she passes with one clean slice.</summary>
+        /// <summary>Dashes toward the cursor and cuts everything she passes with one clean slice, opening a wound on each.</summary>
         public bool TryHeavyAttack(Vector2 aim)
         {
             if (!Player.Run.IsPlaying || Player.IsRolling || Player.IsBusy || IsFlurrying || HeavyCooldownRemaining > 0f || aim.sqrMagnitude < 0.001f) return false;
@@ -160,6 +160,7 @@ namespace Slopgame
                 HeroVfx.Sparks(root, at, Blood, 12, 5.5f, 0.3f, Vector2.Perpendicular(aim), 70f);
                 HeroVfx.Sparks(root, at, Blood, 12, 5.5f, 0.3f, -Vector2.Perpendicular(aim), 70f);
                 CombatDamage.Apply(Player, enemy, damage, DamageElement.Physical, at - aim, 0.2f);
+                CombatDamage.InflictBleed(Player, enemy, damage);
             }
             ScreenFx.Shake(cut.Count > 0 ? 0.2f + 0.03f * Mathf.Min(cut.Count, 5) : 0.07f, cut.Count > 0 ? 0.16f : 0.08f);
             if (cut.Count > 0) ScreenFx.Flash(new Color(1f, 1f, 1f, 0.12f), 0.08f);
