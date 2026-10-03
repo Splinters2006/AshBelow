@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Rendering;
 
 namespace Slopgame
 {
@@ -304,6 +305,10 @@ namespace Slopgame
             tactics = GetComponent<EnemyTactics>();
             if (Boss == null && !IsTrainingDummy) body.sprite = Variant != null ? Variant.Sprite
                 : world.HighTech ? NeonSprites.Enemy(IsRanged, IsTank) : DungeonVisuals.EnemySprite(IsRanged, IsTank);
+            // A small enemy must never hide under a hero (a teammate walking past at 1 HP would run into it unseen),
+            // so the whole enemy draws as one above the heroes' bodies. Guardians are big enough to hide heroes instead.
+            if (Boss == null && !IsTrainingDummy && !TryGetComponent<SortingGroup>(out _))
+                gameObject.AddComponent<SortingGroup>().sortingOrder = AboveHeroes;
             burnIndicator = DungeonVisuals.Create("Burn indicator", transform, transform.position,
                 new Vector2(0.28f, 0.4f), burnColor, 9);
             burnIndicator.sprite = DungeonVisuals.FlameSprite;
@@ -320,6 +325,8 @@ namespace Slopgame
             curseIndicator.gameObject.SetActive(false);
         }
 
+        /// <summary>Over a hero's body (4) and its details (5), under a hero's shield and the combat effects.</summary>
+        private const int AboveHeroes = 6;
         private static readonly Vector2 BleedDropSize = new Vector2(0.24f, 0.31f);
 
         /// <summary>The bleed status: blood runs off the enemy's body, and a drop hangs over it, swelling and falling again and again (beside the flame if it burns too).</summary>

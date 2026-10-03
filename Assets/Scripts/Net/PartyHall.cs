@@ -21,6 +21,7 @@ namespace Slopgame
         public Vector2 Portal => Center;
         private readonly List<HeroStatue> statues = new List<HeroStatue>();
         private StairVisual portal;
+        private float nextMote;
 
         /// <summary>Stands the statues, the portal and the dummies in <paramref name="level"/> around the arena's middle.</summary>
         public static PartyHall Build(DungeonRun run, Transform level, Vector2 center)
@@ -88,12 +89,30 @@ namespace Slopgame
             var near = StatueAt(at);
             foreach (var statue in statues) statue.Refresh(statue == near, statue.Character == Run.SelectedCharacter);
             portal.SetUnlocked(session.LocalReady);
+            float left = Run.Coop.CountdownLeft;
+            if (left >= 0f && left < DescentIris.PullTime) { PullIntoPortal(player, left); return; }
             if (Run.HudCapturesInput || !PlayerInput.Interact) return;
             if (near != null)
             {
                 if (near.Character != Run.SelectedCharacter && Run.SwapLobbyHero(near.Character)) near.Flash();
             }
             else if (AtPortal(at)) session.SetLocalReady(!session.LocalReady);
+        }
+
+        /// <summary>
+        /// The countdown's last moments: the portal flares and draws the hero in, faster the nearer the descent, while
+        /// the screen closes on it (see <see cref="DescentIris"/>). Each player pulls their own hero, so the party sees
+        /// everyone go in together.
+        /// </summary>
+        private void PullIntoPortal(DungeonPlayer player, float left)
+        {
+            player.Occupy(0.1f);
+            float pull = 1f - left / DescentIris.PullTime;
+            player.transform.position = Vector2.MoveTowards(player.transform.position, Portal, Time.unscaledDeltaTime * (2f + 14f * pull * pull));
+            if (Time.unscaledTime < nextMote) return;
+            nextMote = Time.unscaledTime + 0.18f;
+            HeroVfx.Motes(transform, Portal, 1.6f, AbilityCatalog.Gold, 8, 0.6f);
+            HeroVfx.Pulse(transform, Portal, 1.2f + 1.6f * pull, FlameMesh.Alpha(AbilityCatalog.Gold, 0.6f), 0.4f);
         }
     }
 }

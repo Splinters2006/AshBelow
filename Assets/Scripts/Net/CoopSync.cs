@@ -126,6 +126,15 @@ namespace Slopgame
                 var character = Run.Characters[Mathf.Clamp(peer.ClassIndex, 0, Run.Characters.Count - 1)];
                 remoteHeroes.Add(RemoteHero.Create(Run, peer.Id, peer.Name, peer.NameColor, peer.Badge, character, Run.Player.transform.position));
             }
+            DropTeammatesIn();
+        }
+
+        /// <summary>While the local hero drops into a new world, the teammates come down just after, one by one.</summary>
+        private void DropTeammatesIn()
+        {
+            if (HeroArrival.Local == null) return;
+            for (int i = 0; i < remoteHeroes.Count; i++)
+                if (remoteHeroes[i] != null) HeroArrival.Play(remoteHeroes[i].gameObject, Run.World.Accent, false, 0.14f * (i + 1));
         }
 
         /// <summary>Guest: asks the host to restart. The descent restarts once every guest has asked (the host can restart outright).</summary>
@@ -204,6 +213,7 @@ namespace Slopgame
             if (Run.Player != null && Run.Player.Health <= 0) Run.Player.Revive();
             if (IsHost) dead.Clear();
             foreach (var hero in remoteHeroes) hero.Teleport(Run.Player.transform.position);
+            DropTeammatesIn();
         }
 
         private void OnPeerLeft(ulong id)

@@ -99,10 +99,14 @@ namespace Slopgame
                 // The HUD over the floor is drawn at the player's opacity; the settings page and the screens below stay solid.
                 GUI.color = new Color(1f, 1f, 1f, GameSettings.HudOpacity);
                 DamageNumbers.Draw(Run.View);
+                // Labels pinned to things in the world go under the iris, so the screen closing and opening hides them too.
+                if (Run.Player != null && Run.IsInLobby) { PinCenter(); PartyHallHud.DrawWorldLabels(Run); }
+                if (Run.Player != null && (Run.IsNetworked || Run.IsInLobby)) DrawNameTags();
+                DescentIris.Draw(Run);
                 DrawStatus();
                 if (Run.Player == null) return;
                 if (Run.IsNetworked) DrawTeam();
-                else if (Run.IsInLobby) { PinCenter(); PartyHallHud.DrawWorldLabels(Run); DrawNameTags(); }
+                else if (Run.IsInLobby) { PinCenter(); PartyHallHud.DrawCountdown(Run); }
                 DrawHotbar();
                 var mechanic = Run.Player.Mechanic;
                 PinTopRight();
@@ -944,7 +948,7 @@ namespace Slopgame
             DungeonUi.ScrollingText("card" + title, new Rect(rect.x + 24, rect.y + 180, rect.width - 40, rect.height - 180 - 80), description, 17, DungeonUi.Muted);
         }
 
-        /// <summary>Teammate health, their name tags in the world, and the fallen-hero banner.</summary>
+        /// <summary>Teammate health and the fallen-hero banner.</summary>
         private void DrawTeam()
         {
             var team = Run.Coop.RemoteHeroes;
@@ -960,7 +964,6 @@ namespace Slopgame
                     hero.IsAlive ? DungeonUi.Muted : new Color(1f, 0.4f, 0.4f), TextAnchor.UpperRight);
                 DungeonUi.Bar(new Rect(row.x + 14, row.y + 27, row.width - 28, 4), hero.IsAlive ? hero.Health / (float)hero.MaxHealth : 0f, hero.Character.Color);
             }
-            DrawNameTags();
             PinTop();
             if (Run.Player.Health <= 0 && Run.IsPlaying)
             {
@@ -993,7 +996,8 @@ namespace Slopgame
             for (int i = 0; i < team.Count; i++)
             {
                 var hero = team[i];
-                if (hero == null || !hero.IsAlive || Run.View == null) continue;
+                // Mid-arrival the hero is hidden where it will land, so its tag waits for the landing too.
+                if (hero == null || !hero.IsAlive || Run.View == null || hero.TryGetComponent<HeroArrival>(out _)) continue;
                 Vector3 screen = Run.View.WorldToScreenPoint(hero.transform.position + Vector3.up * 0.75f);
                 if (screen.z < 0f) continue;
                 Vector2 point = DungeonUi.ScreenToCanvas(screen, GameSettings.HudScale);

@@ -72,7 +72,7 @@ namespace Slopgame
             if (wasAlive && !IsAlive)
             {
                 DiedAt = Time.time;
-                if (run != null && run.ProjectileRoot != null) DeathAnimation.Play(transform, run.ProjectileRoot, DeathAnimation.HeroDuration);
+                if (run != null && run.ProjectileRoot != null) DeathAnimation.Play(transform, run.ProjectileRoot, DeathAnimation.HeroDuration, soul: true);
             }
             MaxHealth = Mathf.Max(1, (int)state.MaxHealth);
             // Big jumps (a blink, a new floor) snap instead of sliding through walls.

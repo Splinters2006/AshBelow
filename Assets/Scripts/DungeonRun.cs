@@ -248,6 +248,8 @@ namespace Slopgame
             checkpoint = null;
             Time.timeScale = 1f;
             ScreenFx.Clear();
+            HeroArrival.ClearLocal();
+            FloorTransition.Clear();
             IsInMainMenu = true;
             if (level != null) { level.gameObject.SetActive(false); Destroy(level.gameObject); level = null; }
             if (Player != null) { Player.gameObject.SetActive(false); Destroy(Player.gameObject); Player = null; }
@@ -297,6 +299,8 @@ namespace Slopgame
                 foreach (var powerup in PowerupCatalog.All) if (Player.Powerups.CanTake(powerup.Type)) pool.Add(powerup);
                 if (pool.Count > 0) Player.GrantPowerup(pool[UnityEngine.Random.Range(0, pool.Count)].Type);
             }
+            // Every descent, solo or from the party hall, begins with the hero dropping into its first world.
+            arrivingByTravel = true;
             NextFloor();
         }
 
@@ -589,9 +593,9 @@ namespace Slopgame
                 // Cheat Death and Scholar's Reroll refresh in every new world.
                 Player.Powerups.CheatDeathSpent = false;
                 rerolledThisWorld = false;
-                ScreenFx.Flash(FlameMesh.Alpha(World.Accent, 0.6f), 1.2f);
-                WorldBannerUntil = Time.time + 4f;
-                HeroVfx.Pulse(level, Player.transform.position, 3f, World.Accent, 0.9f);
+                // The hero drops in from above as the screen opens on the new world, under its banner.
+                HeroArrival.Play(Player.gameObject, World.Accent, true);
+                WorldBannerUntil = Time.time + HeroArrival.Hold + HeroArrival.Fall + 4f;
             }
             // Seeded variants: skitters from floor 2, husks and world specialists from floor 3.
             var variants = new System.Random(Seed + Floor * 6151);
@@ -625,6 +629,10 @@ namespace Slopgame
                 Coop.RegisterFloor(all);
             }
             view.transform.position = new Vector3(Player.transform.position.x, Player.transform.position.y, -10);
+            // The screen opens on the hero stepping off the last stair (a world's first floor drops the hero in instead).
+            FloorTransition.BeginOpen();
+            if (HeroArrival.Local == null)
+                Debris.Burst(level, (Vector2)Player.transform.position + Vector2.down * 0.35f, new Color(0.55f, 0.52f, 0.48f, 0.7f), 8, 1.6f, 1.2f, 0.06f, 0.6f, 7);
             UpdatePaths();
             Checkpoint(Floor, InShop);
         }
@@ -929,6 +937,7 @@ namespace Slopgame
             UpdatePaths();
             // The testing grounds and the party hall have no stairs, waves or rewards (the hall runs itself, see PartyHall).
             if (IsTesting || IsInLobby) return;
+            if (UpdateDescent()) return;
             if (UpdateWave()) return;
             bool canInteract = Player.Health > 0 && !HudCapturesInput && PlayerInput.Interact;
             if (Artifact != null && canInteract && Vector2.Distance(Player.transform.position, Artifact.transform.position) < 1.5f)
@@ -952,8 +961,32 @@ namespace Slopgame
             if (Artifact == null && HostileCount == 0 && !WavesPending && canInteract && Vector2.Distance(Player.transform.position, exit) < 1.2f)
             {
                 if (IsNetworked) Coop.RequestInteract(CoopChoice.Upgrade);
-                else BeginUpgradeChoice();
+                else BeginDescent();
             }
+        }
+
+        /// <summary>Solo: the hero walks down the stairs as the screen closes on them, then the floor's pick (or the next floor).</summary>
+        private void BeginDescent()
+        {
+            if (!IsPlaying || HostileCount != 0 || Artifact != null || WavesPending || FloorTransition.IsClosing) return;
+            FloorTransition.BeginClose(exit);
+            Player.Charge.Cancel();
+            Player.Weapon?.Hide();
+        }
+
+        /// <summary>While the screen closes on the stairs the hero is drawn down them; true while it plays.</summary>
+        private bool UpdateDescent()
+        {
+            if (!FloorTransition.IsClosing) return false;
+            Player.Occupy(0.1f);
+            Player.Protect(0.1f);
+            Player.transform.position = Vector2.MoveTowards(Player.transform.position, exit + Vector2.up * 0.3f, Time.unscaledDeltaTime * 2.5f);
+            if (!FloorTransition.IsShut) return true;
+            FloorTransition.Hold();
+            BeginUpgradeChoice();
+            // Nothing followed (the floor was not left after all): open again where the hero stands.
+            if (!ChoosingUpgrade && !WorldComplete && IsPlaying && FloorTransition.IsHeld) FloorTransition.BeginOpen();
+            return true;
         }
 
         private void LateUpdate()

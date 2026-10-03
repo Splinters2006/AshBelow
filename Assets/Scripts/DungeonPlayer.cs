@@ -522,7 +522,7 @@ namespace Slopgame
             if (Health > 0) return true;
             // The hero topples over; a solo death holds the game-over screen back until the fall has played.
             FellAt = Time.unscaledTime;
-            if (Run.ProjectileRoot != null) DeathAnimation.Play(transform, Run.ProjectileRoot, DeathAnimation.HeroDuration, true);
+            if (Run.ProjectileRoot != null) DeathAnimation.Play(transform, Run.ProjectileRoot, DeathAnimation.HeroDuration, true, true);
             SetVisible(false);
             if (!Run.IsNetworked) { Run.EndRun(); return true; }
             Run.LocalHeroDied();

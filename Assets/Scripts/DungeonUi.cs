@@ -110,6 +110,33 @@ namespace Slopgame
         }
 
         /// <summary>
+        /// How far text <paramref name="overflow"/> pixels too wide for its row has slid along this frame: it rests at the
+        /// start, glides to the end, rests, and glides back.
+        /// </summary>
+        public static float MarqueeOffset(float overflow)
+        {
+            if (overflow <= 0f) return 0f;
+            const float Rest = 1.4f, Speed = 28f;
+            float glide = overflow / Speed, cycle = 2f * (Rest + glide);
+            float t = Mathf.Repeat(Time.unscaledTime, cycle);
+            if (t < Rest) return 0f;
+            if (t < Rest + glide) return Mathf.SmoothStep(0f, overflow, (t - Rest) / glide);
+            if (t < 2f * Rest + glide) return overflow;
+            return Mathf.SmoothStep(overflow, 0f, (t - 2f * Rest - glide) / glide);
+        }
+
+        /// <summary>One line of text that slides back and forth inside <paramref name="rect"/> when it is too long to fit.</summary>
+        public static void MarqueeLabel(Rect rect, string value, int size, Color color, TextAnchor align = TextAnchor.UpperLeft)
+        {
+            var style = LabelStyle(size, align);
+            float width = style.CalcSize(new GUIContent(value)).x;
+            if (width <= rect.width) { Label(rect, value, size, color, align); return; }
+            GUI.BeginGroup(rect);
+            Label(new Rect(-MarqueeOffset(width - rect.width), 0, width + 4, rect.height), value, size, color);
+            GUI.EndGroup();
+        }
+
+        /// <summary>
         /// Wrapped text that scrolls (mouse wheel or scrollbar) when it does not fit in <paramref name="rect"/>,
         /// with a small hint while more text lies below.
         /// </summary>
