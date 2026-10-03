@@ -38,13 +38,14 @@ namespace Slopgame
         private int pendingUpgrade = -1;
         private AbilityType pendingAbility = AbilityType.None;
         private static readonly Rect RestartRect = new Rect(896, 24, 112, 40);
-        private static readonly Rect PurseRect = new Rect(900, 262, 356, 260);
-        /// <summary>The purse panel, taller when it holds the safe or sells more wares (Card Shark's deck).</summary>
+        private static readonly Rect PurseRect = new Rect(900, 262, 356, 0);
+        /// <summary>The purse panel: a header, the wares as a two-column grid of tiles, the safe's box when it has one, and a footer.</summary>
         private static Rect PurseArea(GamblerPurse purse)
-            => new Rect(PurseRect.x, PurseRect.y, PurseRect.width, PurseRect.height + (purse.HasSafe ? 64 : 0)
-                + 58 * Mathf.Max(0, purse.OnSale.Count - BasePurseWares));
-        /// <summary>How many wares the purse panel's base height fits.</summary>
-        private const int BasePurseWares = 3;
+            => new Rect(PurseRect.x, PurseRect.y, PurseRect.width, PurseHeader + PurseTileRows(purse) * PurseTileStep
+                + (purse.HasSafe ? PurseSafeHeight + PurseTileGap : 0) + PurseFooter);
+        private const float PurseHeader = 52, PurseFooter = 40, PurseTileHeight = 98, PurseTileGap = 8, PurseTileStep = PurseTileHeight + PurseTileGap,
+            PursePadding = 16, PurseSafeHeight = 70;
+        private static int PurseTileRows(GamblerPurse purse) => (purse.OnSale.Count + 1) / 2;
         private static readonly Rect ShopRect = new Rect(836, 84, 420, 476);
         private bool ShopOpen => Run.Shop != null && Run.Shop.IsOpen;
         /// <summary>The run just ended with the hero's fall still playing: the game-over screen waits for it.</summary>
@@ -517,7 +518,7 @@ namespace Slopgame
             DungeonUi.Bar(new Rect(rect.x + 12, rect.yMax - 7, rect.width - 24, 3), mechanic.Readiness, mechanic.Color);
         }
 
-        /// <summary>The Gambler's purse shop. Play goes on while it is open.</summary>
+        /// <summary>The Gambler's purse shop: a tile per ware, then the safe in its own box. Play goes on while it is open.</summary>
         private void DrawPurse(GamblerPurse purse)
         {
             var rect = PurseArea(purse);
@@ -527,26 +528,38 @@ namespace Slopgame
             DungeonUi.Label(new Rect(rect.x + 150, rect.y + 18, 186, 24), cards > 0 ? $"{purse.Coins?.Coins ?? 1:N0} COINS  /  {cards} CARDS" : $"{purse.Coins?.Coins ?? 1:N0} COINS",
                 cards > 0 ? 14 : 16, GamblerAttack.Gold, TextAnchor.UpperRight);
             var wares = purse.OnSale;
+            float tileWidth = (rect.width - PursePadding * 2 - PurseTileGap) / 2f;
             for (int i = 0; i < wares.Count; i++)
             {
                 var offer = wares[i];
-                var row = new Rect(rect.x + 16, rect.y + 52 + i * 58, rect.width - 32, 52);
+                var tile = new Rect(rect.x + PursePadding + (i % 2) * (tileWidth + PurseTileGap), rect.y + PurseHeader + (i / 2) * PurseTileStep,
+                    tileWidth, PurseTileHeight);
                 bool affordable = purse.CanBuy(offer);
-                if (DungeonUi.Button("purse" + i, new Rect(row.x, row.y, row.width, 32), $"{offer.Name}  /  {offer.Cost}c", GamblerAttack.Gold, affordable)) purse.Buy(offer);
-                DungeonUi.Label(new Rect(row.x + 6, row.y + 34, row.width - 12, 18), offer.Description, 12, DungeonUi.Muted);
+                // The whole tile is the button; its name, price and effect sit on top of it.
+                if (DungeonUi.Button("purse" + i, tile, string.Empty, GamblerAttack.Gold, affordable)) purse.Buy(offer);
+                DungeonUi.Label(new Rect(tile.x + 10, tile.y + 8, tile.width - 20, 20), offer.Name, 15, affordable ? DungeonUi.Text : DungeonUi.Muted);
+                DungeonUi.Label(new Rect(tile.x + 10, tile.y + 28, tile.width - 20, 20), PurseTag(purse, offer), 16, affordable ? GamblerAttack.Gold : DungeonUi.Muted);
+                DungeonUi.Label(new Rect(tile.x + 10, tile.y + 50, tile.width - 20, PurseTileHeight - 56), offer.Description, 11, DungeonUi.Muted);
             }
             if (purse.HasSafe)
             {
                 // The safe: ten coins in per click, exactly half out per click, and interest from every guardian.
-                float top = rect.y + 52 + wares.Count * 58, half = (rect.width - 40) / 2f;
-                DungeonUi.Label(new Rect(rect.x + 22, top, rect.width - 44, 18), $"THE SAFE  /  {purse.Safe:N0} COINS  /  x{purse.Interest:0.0#} PER GUARDIAN", 12, GamblerAttack.Gold);
-                if (DungeonUi.Button("safeDeposit", new Rect(rect.x + 16, top + 22, half, 32), $"Deposit {GamblerPurse.SafeDeposit}c", GamblerAttack.Gold, purse.CanDeposit)) purse.Deposit();
-                if (DungeonUi.Button("safeWithdraw", new Rect(rect.x + 24 + half, top + 22, half, 32), $"Withdraw 50%  /  {purse.SafeWithdrawal:N0}c", GamblerAttack.Gold, purse.CanWithdraw)) purse.Withdraw();
+                var safe = new Rect(rect.x + PursePadding, rect.y + PurseHeader + PurseTileRows(purse) * PurseTileStep, rect.width - PursePadding * 2, PurseSafeHeight);
+                float half = (safe.width - 24) / 2f;
+                DungeonUi.Panel(safe, DungeonUi.PanelColor);
+                DungeonUi.Label(new Rect(safe.x + 10, safe.y + 7, half, 18), $"THE SAFE  /  {purse.Safe:N0}c", 13, GamblerAttack.Gold);
+                DungeonUi.Label(new Rect(safe.x + 14 + half, safe.y + 8, half, 18), $"x{purse.Interest:0.0#} PER GUARDIAN", 11, DungeonUi.Muted, TextAnchor.UpperRight);
+                if (DungeonUi.Button("safeDeposit", new Rect(safe.x + 8, safe.y + 30, half, 32), $"Deposit {GamblerPurse.SafeDeposit}c", GamblerAttack.Gold, purse.CanDeposit, 15)) purse.Deposit();
+                if (DungeonUi.Button("safeWithdraw", new Rect(safe.x + 16 + half, safe.y + 30, half, 32), $"Withdraw {purse.SafeWithdrawal:N0}c", GamblerAttack.Gold, purse.CanWithdraw, 15)) purse.Withdraw();
             }
-            DungeonUi.Label(new Rect(rect.x + 20, rect.yMax - 36, rect.width - 40, 30),
-                purse.LastResult ?? $"{KeyBindings.Label(GameAction.Mechanic)} closes the purse. Coins spent here leave your volley.", 13,
+            DungeonUi.Label(new Rect(rect.x + 20, rect.yMax - 34, rect.width - 40, 30),
+                purse.LastResult ?? $"{KeyBindings.Label(GameAction.Mechanic)} closes the purse. Coins spent here leave your volley.", 12,
                 purse.LastResult != null ? GamblerAttack.Gold : DungeonUi.Muted);
         }
+
+        /// <summary>A purse tile's price line, or why it can't be bought when that isn't the coins.</summary>
+        private static string PurseTag(GamblerPurse purse, GamblerPurse.Offer offer)
+            => offer.Ware == GamblerPurse.Ware.Draught && purse.Player.Health >= purse.Player.MaxHealth ? "FULL HP" : $"{offer.Cost}c";
 
         /// <summary>Height of one ware's row: roomy while the stock fits, squeezed (never below 38) when it would run off the screen.</summary>
         private static float ShopRowStep(int wares)
