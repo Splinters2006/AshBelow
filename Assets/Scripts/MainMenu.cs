@@ -341,6 +341,8 @@ namespace Slopgame
             DrawDemo(character);
             DrawMoveCaption(character);
             if (DungeonUi.Button("back", new Rect(70, 598, 268, 48), "Back", DungeonUi.Muted)) selecting = false;
+            // The testing grounds: try the hero on training dummies with any talent the encyclopedia has found.
+            if (DungeonUi.Button("testing", new Rect(350, 598, 198, 48), "Testing grounds", DungeonUi.Teal, size: 16)) Run.BeginTesting();
             // Autofire is switched per hero: here for the one on the page (the settings page lists them all).
             bool autofire = GameSettings.AutofireFor(character.Weapon);
             if (DungeonUi.Button("heroAutofire", new Rect(560, 598, 280, 48), autofire ? "Autofire: ON" : "Autofire: OFF", autofire ? AbilityCatalog.Gold : DungeonUi.Muted, size: 17))

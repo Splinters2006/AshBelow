@@ -37,7 +37,8 @@ namespace Slopgame
         public bool InShop { get; private set; }
         public CrystalShop Shop { get; private set; }
         public Vector2 Exit => exit;
-        public string Objective => InShop ? ShopObjective
+        public string Objective => IsTesting ? "Open Build to add any talent you have discovered"
+            : InShop ? ShopObjective
             : Artifact != null ? "Claim the glowing artifact  /  " + KeyBindings.Label(GameAction.Interact)
             : IsBossFloor && HostileCount > 0 ? "Defeat the arena guardian"
             : WavesPending ? "Touch the monolith to call the waves  /  " + KeyBindings.Label(GameAction.Interact)
@@ -209,7 +210,7 @@ namespace Slopgame
             if (Coop != null && Coop.Session.State != NetState.Offline && !disconnected) Coop.Session.Leave();
             // A signed-in player's descent waits to be continued; otherwise it ends here.
             if (CanSuspend) SuspendRun();
-            else if (!IsInMainMenu) StashCrystals();
+            else if (!IsInMainMenu && !IsTesting) StashCrystals();
             ClearRun();
             menu.ResetPage(disconnected);
         }
@@ -224,6 +225,7 @@ namespace Slopgame
         private void ClearRun()
         {
             IsPlaying = false;
+            IsTesting = false;
             ChoosingUpgrade = false;
             ChoosingArtifact = false;
             WorldComplete = false;
@@ -245,6 +247,7 @@ namespace Slopgame
 
         public void Restart()
         {
+            if (IsTesting) { BeginTesting(); return; }
             if (IsNetworked) { Coop.HostBeginRun(); return; }
             BeginRun(UnityEngine.Random.Range(0, 1000000), 1, StartWorld);
         }
@@ -280,6 +283,65 @@ namespace Slopgame
                 if (pool.Count > 0) Player.GrantPowerup(pool[UnityEngine.Random.Range(0, pool.Count)].Type);
             }
             NextFloor();
+        }
+
+        // ---------------------------------------------------------------- testing grounds
+
+        /// <summary>
+        /// The testing grounds: instead of a descent, the hero stands in an open arena with a pentagon of training dummies
+        /// and may take any talent (or ability) the encyclopedia has found. Nothing here is saved or earns ash.
+        /// </summary>
+        public bool IsTesting { get; private set; }
+        public const int TestingDummies = 5;
+        public const float TestingDummyRing = 3.2f;
+
+        /// <summary>Opens the testing grounds with the selected hero, in the starting world's colours. Solo only.</summary>
+        public void BeginTesting()
+        {
+            if (SelectedCharacter == null || IsCharacterLocked(SelectedCharacter) || IsNetworked) return;
+            IsInMainMenu = false;
+            IsTesting = true;
+            Seed = UnityEngine.Random.Range(0, 1000000);
+            PartySize = 1;
+            Floor = WorldCatalog.FirstFloor(StartWorld);
+            InShop = false;
+            WorldBannerUntil = 0f;
+            Kills = 0;
+            RunAshEarned = 0;
+            guardiansThisRun = 0;
+            checkpoint = null;
+            CreatePlayer();
+            ScreenFx.Clear();
+            Boss = null;
+            Artifact = null;
+            Shop = null;
+            ChoosingArtifact = false;
+            ChoosingUpgrade = false;
+            WorldComplete = false;
+            upgradeChoices.Clear();
+            Player.Powerups.BeginFloor();
+            if (level != null) { level.gameObject.SetActive(false); Destroy(level.gameObject); }
+            Enemies.Clear();
+            waveReserves.Clear();
+            WavesThisLevel = 0;
+            WaveBannerUntil = 0f;
+            wavesStarted = false;
+            monolith = null;
+            // The guardians' open arena, with the dummies in its middle and the hero just below them.
+            Map = new DungeonMap(Seed, true);
+            level = new GameObject("Testing grounds").transform;
+            level.SetParent(transform);
+            view.backgroundColor = World.Background;
+            DungeonVisuals.DrawMap(Map, level, World, false);
+            DungeonVisuals.DecorateArena(level, World);
+            Vector2 center = DungeonMap.Arena.center - new Vector2(0.5f, 0.5f);
+            TrainingDummy.PlaceRing(this, level, center, TestingDummies, TestingDummyRing);
+            Player.transform.position = center + Vector2.down * (TestingDummyRing + 2.5f);
+            exit = Player.transform.position;
+            lastHeroCells.Clear();
+            IsPlaying = true;
+            view.transform.position = new Vector3(Player.transform.position.x, Player.transform.position.y, -10);
+            UpdatePaths();
         }
 
         private void CreatePlayer()
@@ -561,7 +623,7 @@ namespace Slopgame
         // ---------------------------------------------------------------- wave worlds
 
         /// <summary>True on a wave world's regular levels: waves of enemies in the arena instead of rooms to explore.</summary>
-        public bool IsWaveFloor => World.IsWaveWorld && !IsBossFloor && !InShop && Floor > 0;
+        public bool IsWaveFloor => World.IsWaveWorld && !IsBossFloor && !InShop && Floor > 0 && !IsTesting;
         /// <summary>The level's number within its world, 1-15 (guardians on levels 5, 10 and 15).</summary>
         public int LevelNumber => (Floor - 1) % WorldCatalog.FloorsPerWorld + 1;
         /// <summary>How many waves this level sends (0 away from wave levels).</summary>
@@ -796,6 +858,8 @@ namespace Slopgame
             { Progress.Save(); nextSaveRetry = Time.unscaledTime + 5f; }
             if (!IsPlaying) return;
             UpdatePaths();
+            // The testing grounds have no stairs, waves or rewards: only the dummies.
+            if (IsTesting) return;
             if (UpdateWave()) return;
             bool canInteract = Player.Health > 0 && !HudCapturesInput && PlayerInput.Interact;
             if (Artifact != null && canInteract && Vector2.Distance(Player.transform.position, Artifact.transform.position) < 1.5f)
@@ -837,7 +901,7 @@ namespace Slopgame
         private Vector2 cameraShake;
 
         /// <summary>Solo debug mode only: abandons the current floor (boss arenas included) and builds the next one.</summary>
-        public bool CanSkipRoom => DebugMode.Enabled && !IsNetworked && IsPlaying;
+        public bool CanSkipRoom => DebugMode.Enabled && !IsNetworked && IsPlaying && !IsTesting;
 
         public void DebugSkipRoom()
         {
@@ -882,9 +946,10 @@ namespace Slopgame
         public static int EnemyHealthForFloor(int floor) => 2 + Mathf.Max(0, floor - 3);
         public void EndRun()
         {
-            if (!IsNetworked) RunSave.End();
+            // Falling in the testing grounds leaves the saved descent and the stash alone.
+            if (!IsNetworked && !IsTesting) RunSave.End();
             checkpoint = null;
-            StashCrystals();
+            if (!IsTesting) StashCrystals();
             IsPlaying = false;
             ChoosingUpgrade = false;
             ChoosingArtifact = false;

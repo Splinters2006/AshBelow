@@ -32,6 +32,20 @@ namespace Slopgame
                 Create(run, level, new Vector2(middle + (i - (Count - 1) / 2f) * 3f, y));
         }
 
+        /// <summary>
+        /// Stands <paramref name="count"/> dummies evenly around <paramref name="center"/>, the first straight above it
+        /// (five make a pentagon: the testing grounds).
+        /// </summary>
+        public static void PlaceRing(DungeonRun run, Transform level, Vector2 center, int count, float radius)
+        {
+            if (run == null || count <= 0) return;
+            for (int i = 0; i < count; i++)
+            {
+                float angle = (90f + 360f * i / count) * Mathf.Deg2Rad;
+                Create(run, level, center + new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * radius);
+            }
+        }
+
         private static void Create(DungeonRun run, Transform level, Vector2 position)
         {
             var body = DungeonVisuals.Create("Training dummy", level, position, Vector2.one * Size, Color.white, 3);

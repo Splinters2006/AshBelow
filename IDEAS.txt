@@ -1,1 +1,0 @@
-add 3 training dummies to shopkeeper rooms where players can test their damage, they should display damage numbers when taking damage

@@ -7,7 +7,8 @@ namespace Slopgame
         public static readonly Color DebugColor = new Color(1f, 0.38f, 0.62f);
         public DungeonRun Run { get; set; }
         private float displayedHealth = 1f, displayedBossHealth = 1f, modalFade;
-        private bool showTalents, showAbilitiesTab;
+        private bool showTalents, showAbilitiesTab, showGrantTab;
+        private Vector2 grantScroll;
         // The settings page behind the cog wheel; a solo descent pauses while it is open.
         private readonly SettingsMenu settingsMenu = new SettingsMenu();
         private bool showSettings, pausedForSettings;
@@ -238,7 +239,7 @@ namespace Slopgame
             string where = Run.World.IsWaveWorld ? $"LEVEL {Run.LevelNumber:00}" : $"FLOOR {Run.Floor:00}";
             string guardian = Run.World.IsWaveWorld ? $"LEVEL {Run.LevelNumber + 1:00}" : $"FLOOR {Run.Floor + 1:00}";
             if (Run.IsWaveFloor && !Run.WavesPending) where += $"  /  WAVE {Run.CurrentWave}/{Run.WavesThisLevel}";
-            DungeonUi.Label(new Rect(405, 28, 470, 25), Run.InShop ? $"CRYSTAL SHOP  /  GUARDIAN OF {guardian} AHEAD" : Run.IsBossFloor ? $"{where}  /  BOSS ARENA"
+            DungeonUi.Label(new Rect(405, 28, 470, 25), Run.IsTesting ? $"TESTING GROUNDS  /  {Run.Enemies.Count} TRAINING DUMMIES" : Run.InShop ? $"CRYSTAL SHOP  /  GUARDIAN OF {guardian} AHEAD" : Run.IsBossFloor ? $"{where}  /  BOSS ARENA"
                 : $"{where}  /  {Run.HostileCount} ENEMIES", 17, Run.InShop ? CrystalPouch.CrystalColor : AbilityCatalog.Gold, TextAnchor.MiddleCenter);
             if (Run.IsPlaying && Time.time < Run.WorldBannerUntil)
             {
@@ -282,7 +283,12 @@ namespace Slopgame
                 }
             }
             // Build and Menu share the corner with the settings cog (see DrawCog).
-            if (DungeonUi.Button("talents", new Rect(1020, 24, 92, 40), "Build", DungeonUi.Teal)) showTalents = !showTalents;
+            if (DungeonUi.Button("talents", new Rect(1020, 24, 92, 40), "Build", DungeonUi.Teal))
+            {
+                showTalents = !showTalents;
+                // The testing grounds open Build on the page that grants talents.
+                if (showTalents && Run.IsTesting) { showGrantTab = true; showAbilitiesTab = false; }
+            }
             if (DungeonUi.Button("menu", new Rect(1118, 24, 92, 40), Run.IsNetworked ? "Leave" : "Menu", DungeonUi.Muted)) AskToLeave();
         }
 
@@ -638,8 +644,25 @@ namespace Slopgame
         private void DrawTalents()
         {
             DungeonUi.Panel(new Rect(922, 82, 334, 470), DungeonUi.Background);
-            if (DungeonUi.Button("buildTab", new Rect(940, 96, 144, 30), "Talents", DungeonUi.Teal, showAbilitiesTab)) showAbilitiesTab = false;
-            if (DungeonUi.Button("abilitiesTab", new Rect(1094, 96, 144, 30), "Abilities", AbilityCatalog.Gold, !showAbilitiesTab)) showAbilitiesTab = true;
+            if (Run.IsTesting)
+            {
+                // A third tab grants anything the encyclopedia has found.
+                if (DungeonUi.Button("buildTab", new Rect(940, 96, 94, 30), "Talents", DungeonUi.Teal, showAbilitiesTab || showGrantTab, 15)) showAbilitiesTab = showGrantTab = false;
+                if (DungeonUi.Button("abilitiesTab", new Rect(1042, 96, 94, 30), "Abilities", AbilityCatalog.Gold, !showAbilitiesTab, 15)) { showAbilitiesTab = true; showGrantTab = false; }
+                if (DungeonUi.Button("grantTab", new Rect(1144, 96, 94, 30), "Add", DebugColor, !showGrantTab, 15)) { showGrantTab = true; showAbilitiesTab = false; }
+            }
+            else
+            {
+                showGrantTab = false;
+                if (DungeonUi.Button("buildTab", new Rect(940, 96, 144, 30), "Talents", DungeonUi.Teal, showAbilitiesTab)) showAbilitiesTab = false;
+                if (DungeonUi.Button("abilitiesTab", new Rect(1094, 96, 144, 30), "Abilities", AbilityCatalog.Gold, !showAbilitiesTab)) showAbilitiesTab = true;
+            }
+            if (showGrantTab)
+            {
+                DungeonUi.Label(new Rect(946, 134, 288, 44), "Testing grounds: take any talent or ability\nyour encyclopedia has found.", 14, DungeonUi.Muted);
+                DrawGrantRows(new Rect(944, 182, 290, 356));
+                return;
+            }
             if (showAbilitiesTab)
             {
                 DungeonUi.Label(new Rect(946, 136, 288, 40), $"Choose which abilities sit on {SlotKey(0)} and {SlotKey(1)}.\nCooldowns stay with each ability.", 14, DungeonUi.Muted);
@@ -662,6 +685,60 @@ namespace Slopgame
             }
             if (row == 0) DungeonUi.Label(new Rect(0, 0, 260, 80), "Clear floors to earn talents.\nGuardians offer active abilities.", 16, DungeonUi.Muted);
             GUI.EndScrollView();
+        }
+
+        /// <summary>
+        /// The testing grounds' grant page: this hero's discovered abilities, then every discovered talent the hero could
+        /// ever take, each with its rank and a button that adds one more (greyed out when it cannot be taken yet).
+        /// </summary>
+        private void DrawGrantRows(Rect area)
+        {
+            var player = Run.Player;
+            var progress = Run.Progress;
+            grantAbilities.Clear();
+            grantTalents.Clear();
+            foreach (var ability in AbilityCatalog.All)
+                if (ability.ClassWeapon == player.ClassWeapon && progress.IsDiscovered(Encyclopedia.AbilityId(ability.Type))) grantAbilities.Add(ability);
+            foreach (var talent in PowerupCatalog.All)
+                if (!talent.Retired && (!talent.ClassWeapon.HasValue || talent.ClassWeapon == player.ClassWeapon)
+                    && progress.IsDiscovered(Encyclopedia.TalentId(talent.Type))) grantTalents.Add(talent);
+            const float RowHeight = 34f, HeaderHeight = 26f;
+            float width = area.width - 22;
+            float height = HeaderHeight * 2 + (grantAbilities.Count + grantTalents.Count) * RowHeight + (grantAbilities.Count == 0 ? RowHeight : 0f);
+            grantScroll = GUI.BeginScrollView(area, grantScroll, new Rect(0, 0, width, Mathf.Max(area.height - 4, height)));
+            float y = 0f;
+            DungeonUi.Label(new Rect(0, y, width, HeaderHeight), "ABILITIES", 12, AbilityCatalog.Gold, TextAnchor.MiddleLeft);
+            y += HeaderHeight;
+            if (grantAbilities.Count == 0) { DungeonUi.Label(new Rect(0, y, width, RowHeight), "None found yet", 14, DungeonUi.Muted, TextAnchor.MiddleLeft); y += RowHeight; }
+            foreach (var ability in grantAbilities)
+            {
+                int rank = player.Abilities.Rank(ability.Type);
+                bool can = rank < PlayerAbilities.MaxRank;
+                GrantRow($"grantAbility{ability.Type}", new Rect(0, y, width, RowHeight), ability.Name, $"{rank}/{PlayerAbilities.MaxRank}", ability.Color, can,
+                    () => player.Abilities.Learn(ability.Type));
+                y += RowHeight;
+            }
+            DungeonUi.Label(new Rect(0, y, width, HeaderHeight), "TALENTS", 12, DungeonUi.Teal, TextAnchor.MiddleLeft);
+            y += HeaderHeight;
+            foreach (var talent in grantTalents)
+            {
+                int rank = player.Powerups.Count(talent.Type);
+                GrantRow($"grantTalent{talent.Type}", new Rect(0, y, width, RowHeight), talent.Name, $"{rank}/{talent.MaxStacks}",
+                    rank > 0 ? Color.white : DungeonUi.Muted, player.Powerups.CanTake(talent.Type), () => player.GrantPowerup(talent.Type));
+                y += RowHeight;
+            }
+            GUI.EndScrollView();
+        }
+
+        private readonly System.Collections.Generic.List<AbilityDefinition> grantAbilities = new System.Collections.Generic.List<AbilityDefinition>();
+        private readonly System.Collections.Generic.List<PowerupDefinition> grantTalents = new System.Collections.Generic.List<PowerupDefinition>();
+
+        /// <summary>One line of the grant page: the name and rank, and a "+" that takes another rank when it can.</summary>
+        private static void GrantRow(string id, Rect row, string name, string rank, Color color, bool can, System.Func<bool> grant)
+        {
+            DungeonUi.Label(new Rect(row.x, row.y, row.width - 92, row.height), name, 14, color, TextAnchor.MiddleLeft);
+            DungeonUi.Label(new Rect(row.xMax - 90, row.y, 40, row.height), rank, 13, DungeonUi.Muted, TextAnchor.MiddleRight);
+            if (DungeonUi.Button(id, new Rect(row.xMax - 40, row.y + 3, 36, row.height - 6), "+", DebugColor, can, 18)) grant();
         }
 
         /// <summary>

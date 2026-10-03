@@ -91,7 +91,7 @@ namespace Slopgame
                 DungeonUi.Panel(new Rect(point.x - size * 0.5f, point.y - size * 0.5f, size, size), color);
             }
             var stairs = map.Centers[map.Centers.Count - 1];
-            if (IsExplored(stairs))
+            if (IsExplored(stairs) && !Run.IsTesting)
                 Dot(stairs, 7f, Run.HostileCount == 0 && Run.Artifact == null && !Run.WavesPending ? AbilityCatalog.Gold : new Color(0.55f, 0.45f, 0.25f));
             if (Run.Artifact != null) Dot(Run.Artifact.transform.position, 7f, AbilityCatalog.Gold);
             float blink = 0.75f + 0.25f * Mathf.Sin(Time.unscaledTime * 6f);

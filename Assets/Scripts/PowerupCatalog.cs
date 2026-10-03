@@ -90,8 +90,8 @@ namespace Slopgame
     {
         public static readonly IReadOnlyList<PowerupDefinition> All = new[]
         {
-            new PowerupDefinition(PowerupType.Damage, "Keen Edge", "+1 base attack damage", int.MaxValue),
-            new PowerupDefinition(PowerupType.Vitality, "Vitality", "+2 maximum HP and fully heal", int.MaxValue),
+            new PowerupDefinition(PowerupType.Damage, "Keen Edge", "+1 base attack damage", 5),
+            new PowerupDefinition(PowerupType.Vitality, "Vitality", "+2 maximum HP and fully heal", 5),
             new PowerupDefinition(PowerupType.Movement, "Fleet Foot", "+0.7 movement speed", 5),
             new PowerupDefinition(PowerupType.AttackSpeed, "Quick Hands", "+20% base attack and charge speed", 5),
             new PowerupDefinition(PowerupType.CriticalHits, "Precision", "+10% physical crit / elemental effect chance", 5),

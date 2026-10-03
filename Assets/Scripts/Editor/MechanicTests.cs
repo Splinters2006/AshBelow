@@ -169,8 +169,8 @@ namespace Slopgame.Editor
                 case WeaponType.Scythe:
                 {
                     var reaper = (ReaperAttack)player.Weapon;
-                    for (int purchase = 0; purchase < 7; purchase++) player.GrantPowerup(PowerupType.Damage);
-                    Require(player.BaseDamage == 8 && player.Damage == 4, "Reaper base damage was not halved after damage purchases.");
+                    for (int purchase = 0; purchase < 5; purchase++) player.GrantPowerup(PowerupType.Damage);
+                    Require(player.BaseDamage == 6 && player.Damage == 3, "Reaper base damage was not halved after damage purchases.");
                     var army = (ArmyOfTheDead)player.Mechanic;
                     reaper.AddSouls(49);
                     Require(!army.CanIncarnate, "Avatar of Death accepted fewer than 50 souls.");
