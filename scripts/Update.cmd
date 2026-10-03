@@ -23,7 +23,8 @@ exit /b 1
 
 :run
 rem The updater replaces this file while it runs, so everything after it stays on one line that cmd has already read.
-%PYTHON% "%~dp0update-game.py" --mode release --platform windows --directory "%~dp0." %* && (echo. & pause & exit /b 0) || (echo. & pause & exit /b 1)
+rem The game's own update button sets ASHBELOW_NO_PAUSE, so a successful update closes this window by itself.
+%PYTHON% "%~dp0update-game.py" --mode release --platform windows --directory "%~dp0." %* && (echo. & (if not defined ASHBELOW_NO_PAUSE pause) & exit /b 0) || (echo. & pause & exit /b 1)
 
 rem Sets PYTHON to the given command if it runs Python 3.10 or newer.
 :try

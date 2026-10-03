@@ -64,6 +64,7 @@ namespace Slopgame
             return !Run.IsPlaying || showSettings || confirmingMenu || CornerButtonsRect.Contains(point)
                 || ((Run.CanSkipRoom || CanRestartCoop) && RestartRect.Contains(point))
                 || (showTalents && TalentsRect.Contains(point))
+                || (Run.IsInLobby && !showTalents && PartyHallHud.PanelRect.Contains(point))
                 || (ShopOpen && ShopPanelRect(Run.Shop).Contains(point))
                 || (!ShopOpen && Run.Player != null && Run.Player.Mechanic is GamblerPurse purse && purse.IsOpen && PurseArea(purse).Contains(point));
         }
@@ -101,6 +102,7 @@ namespace Slopgame
                 DrawStatus();
                 if (Run.Player == null) return;
                 if (Run.IsNetworked) DrawTeam();
+                else if (Run.IsInLobby) { PinCenter(); PartyHallHud.DrawWorldLabels(Run); DrawNameTags(); }
                 DrawHotbar();
                 var mechanic = Run.Player.Mechanic;
                 PinTopRight();
@@ -108,6 +110,7 @@ namespace Slopgame
                 if (Run.IsPlaying && ShopOpen && !confirmingMenu) DrawShop(Run.Shop);
                 else if (Run.IsPlaying && mechanic is GamblerPurse purse && purse.IsOpen && !confirmingMenu) DrawPurse(purse);
                 if (!ShopOpen && showTalents && Run.IsPlaying && !confirmingMenu) DrawTalents();
+                else if (Run.IsInLobby && !confirmingMenu) PartyHallHud.DrawPanel(Run);
                 else if (!ShopOpen && Run.IsPlaying && Run.Minimap != null) Run.Minimap.Draw(new Rect(1026, 84, 224, 159));
                 if (Run.IsPlaying || DeathPending)
                 {
@@ -134,7 +137,7 @@ namespace Slopgame
         private void AskToLeave()
         {
             confirmingMenu = true;
-            pausedForConfirm = Run.IsPlaying && !Run.IsNetworked && Time.timeScale > 0f;
+            pausedForConfirm = Run.IsPlaying && !Run.IsNetworked && !Run.IsInLobby && Time.timeScale > 0f;
             if (pausedForConfirm) Time.timeScale = 0f;
         }
 
@@ -150,11 +153,11 @@ namespace Slopgame
         {
             PinCenter();
             GUI.color = Color.white;
-            bool party = Run.IsNetworked;
+            bool party = Run.IsNetworked || Run.IsInLobby;
             bool saved = Run.CanSuspend;
             string question = party ? "Leave the party?" : "Return to the main menu?";
-            string detail = party
-                ? "You leave the descent and the party goes on without you. The Ash you earned is kept."
+            string detail = Run.IsInLobby ? (Run.Coop.IsHost ? "You close the party hall and everyone in it is sent back to the menu." : "You leave the party hall and go back to the co-op page.")
+                : party ? "You leave the descent and the party goes on without you. The Ash you earned is kept."
                 : saved && Run.WorldComplete ? "Your descent is saved to your account. Continue it from the main menu, on this PC or another, in the next world."
                 : saved ? "Your descent is saved to your account. Continue it from the main menu, on this PC or another: this floor starts over."
                 : Run.WorldComplete ? "This descent ends here. The Ash you earned is kept. Sign in to an account to save descents instead."
@@ -170,7 +173,7 @@ namespace Slopgame
             if (!DungeonUi.CogButton("hudCog", CogRect)) return;
             showSettings = true;
             // A solo descent stands still while the settings are open; a co-op one cannot.
-            pausedForSettings = Run.IsPlaying && !Run.IsNetworked;
+            pausedForSettings = Run.IsPlaying && !Run.IsNetworked && !Run.IsInLobby;
             if (pausedForSettings) Time.timeScale = 0f;
         }
 
@@ -186,7 +189,8 @@ namespace Slopgame
         private void DrawSettings()
         {
             DungeonUi.Panel(new Rect(-2000, -2000, 6000, 6000), DungeonUi.Background);
-            DungeonUi.Label(new Rect(70, 52, 700, 25), pausedForSettings ? "THE DESCENT IS PAUSED" : Run.IsNetworked && Run.IsPlaying ? "THE DESCENT GOES ON AROUND YOU" : "THE DESCENT WAITS", 14, AbilityCatalog.Gold);
+            DungeonUi.Label(new Rect(70, 52, 700, 25), pausedForSettings ? "THE DESCENT IS PAUSED" : Run.IsInLobby ? "THE PARTY HALL GOES ON AROUND YOU"
+                : Run.IsNetworked && Run.IsPlaying ? "THE DESCENT GOES ON AROUND YOU" : "THE DESCENT WAITS", 14, AbilityCatalog.Gold);
             DungeonUi.Label(new Rect(65, 80, 1100, 56), "SETTINGS", 40);
             DungeonUi.Label(new Rect(70, 138, 1100, 30), "Resize the menus and HUD, fade the HUD, switch autofire for each hero, rebind every action and pick your name colour. Changes save instantly.", 17, DungeonUi.Muted);
             settingsMenu.Draw();
@@ -242,7 +246,8 @@ namespace Slopgame
             string where = Run.World.IsWaveWorld ? $"LEVEL {Run.LevelNumber:00}" : $"FLOOR {Run.Floor:00}";
             string guardian = Run.World.IsWaveWorld ? $"LEVEL {Run.LevelNumber + 1:00}" : $"FLOOR {Run.Floor + 1:00}";
             if (Run.IsWaveFloor && !Run.WavesPending) where += $"  /  WAVE {Run.CurrentWave}/{Run.WavesThisLevel}";
-            DungeonUi.Label(new Rect(405, 28, 470, 25), Run.IsTesting ? $"TESTING GROUNDS  /  {Run.Enemies.Count} TRAINING DUMMIES" : Run.InShop ? $"CRYSTAL SHOP  /  GUARDIAN OF {guardian} AHEAD" : Run.IsBossFloor ? $"{where}  /  BOSS ARENA"
+            DungeonUi.Label(new Rect(405, 28, 470, 25), Run.IsTesting ? $"TESTING GROUNDS  /  {Run.Enemies.Count} TRAINING DUMMIES"
+                : Run.IsInLobby ? $"PARTY HALL  /  {Run.Coop.Session.Peers.Count} {(Run.Coop.Session.Peers.Count == 1 ? "HERO" : "HEROES")}" : Run.InShop ? $"CRYSTAL SHOP  /  GUARDIAN OF {guardian} AHEAD" : Run.IsBossFloor ? $"{where}  /  BOSS ARENA"
                 : $"{where}  /  {Run.HostileCount} ENEMIES", 17, Run.InShop ? CrystalPouch.CrystalColor : AbilityCatalog.Gold, TextAnchor.MiddleCenter);
             if (Run.IsPlaying && Time.time < Run.WorldBannerUntil)
             {
@@ -292,7 +297,7 @@ namespace Slopgame
                 // The testing grounds open Build on the page that grants talents.
                 if (showTalents && Run.IsTesting) { showGrantTab = true; showAbilitiesTab = showStatsTab = false; }
             }
-            if (DungeonUi.Button("menu", new Rect(1118, 24, 92, 40), Run.IsNetworked ? "Leave" : "Menu", DungeonUi.Muted)) AskToLeave();
+            if (DungeonUi.Button("menu", new Rect(1118, 24, 92, 40), Run.IsNetworked || Run.IsInLobby ? "Leave" : "Menu", DungeonUi.Muted)) AskToLeave();
         }
 
         private void DrawHotbar()
@@ -948,18 +953,7 @@ namespace Slopgame
                     hero.IsAlive ? DungeonUi.Muted : new Color(1f, 0.4f, 0.4f), TextAnchor.UpperRight);
                 DungeonUi.Bar(new Rect(row.x + 14, row.y + 27, row.width - 28, 4), hero.IsAlive ? hero.Health / (float)hero.MaxHealth : 0f, hero.Character.Color);
             }
-            // Name tags float over teammates in the world, so they use the plain centred canvas.
-            PinCenter();
-            for (int i = 0; i < team.Count; i++)
-            {
-                var hero = team[i];
-                if (hero == null || !hero.IsAlive || Run.View == null) continue;
-                Vector3 screen = Run.View.WorldToScreenPoint(hero.transform.position + Vector3.up * 0.75f);
-                if (screen.z < 0f) continue;
-                Vector2 point = DungeonUi.ScreenToCanvas(screen, GameSettings.HudScale);
-                // A developer's title sits under the name, so their tag starts a line higher.
-                NameTag.Draw(new Rect(point.x - 90, point.y - (hero.Badge > 0 ? 36 : 24), 180, 34), hero.PlayerName, hero.NameColor, hero.Badge, 13, TextAnchor.UpperCenter);
-            }
+            DrawNameTags();
             PinTop();
             if (Run.Player.Health <= 0 && Run.IsPlaying)
             {
@@ -981,6 +975,23 @@ namespace Slopgame
                         e.Use();
                     }
                 }
+            }
+        }
+
+        /// <summary>Name tags float over teammates in the world, so they use the plain centred canvas.</summary>
+        private void DrawNameTags()
+        {
+            var team = Run.Coop.RemoteHeroes;
+            PinCenter();
+            for (int i = 0; i < team.Count; i++)
+            {
+                var hero = team[i];
+                if (hero == null || !hero.IsAlive || Run.View == null) continue;
+                Vector3 screen = Run.View.WorldToScreenPoint(hero.transform.position + Vector3.up * 0.75f);
+                if (screen.z < 0f) continue;
+                Vector2 point = DungeonUi.ScreenToCanvas(screen, GameSettings.HudScale);
+                // A developer's title sits under the name, so their tag starts a line higher.
+                NameTag.Draw(new Rect(point.x - 90, point.y - (hero.Badge > 0 ? 36 : 24), 180, 34), hero.PlayerName, hero.NameColor, hero.Badge, 13, TextAnchor.UpperCenter);
             }
         }
 

@@ -2,14 +2,13 @@ using UnityEngine;
 
 namespace Slopgame
 {
-    /// <summary>The co-op page of the main menu: host or join a party, pick a hero, and begin the descent together.</summary>
+    /// <summary>The co-op page of the main menu: host or join a party, which then gathers in the party hall.</summary>
     public sealed class CoopMenu
     {
         private const string NameKey = "AshBelow.CoopName", AddressKey = "AshBelow.CoopAddress";
         private string code = "", address, playerName;
         // The account display name last taken over, so signing in (or renaming on the account page) names you here too.
         private string accountName;
-        private Vector2 heroScroll;
 
         public void Draw(DungeonRun run)
         {
@@ -29,7 +28,7 @@ namespace Slopgame
                 accountName = run.Account.DisplayName;
                 if (!string.IsNullOrEmpty(accountName)) { playerName = accountName; Save(NameKey, playerName); session.RenameLocal(playerName); }
             }
-            if (session.State == NetState.Lobby) DrawLobby(run, session);
+            if (session.State == NetState.Lobby) DrawLobby();
             else if (session.State == NetState.Connecting) DrawConnecting(session);
             else DrawOffline(run, session);
             if (!string.IsNullOrEmpty(session.Status))
@@ -68,71 +67,11 @@ namespace Slopgame
             if (DungeonUi.Button("coopCancel", new Rect(100, 380, 268, 48), "Cancel", DungeonUi.Muted)) { session.Leave(); session.Status = null; }
         }
 
-        private void DrawLobby(DungeonRun run, NetSession session)
+        /// <summary>A party is joined in the party hall (see <see cref="PartyHall"/>); this only shows for the frame before it opens.</summary>
+        private static void DrawLobby()
         {
-            DungeonUi.Panel(new Rect(70, 250, 540, 336), DungeonUi.PanelColor);
-            if (!string.IsNullOrEmpty(session.JoinCode))
-            {
-                DungeonUi.Label(new Rect(100, 268, 300, 24), "JOIN CODE", 14, DungeonUi.Muted);
-                DungeonUi.Label(new Rect(100, 290, 330, 54), session.JoinCode, 40, AbilityCatalog.Gold);
-                if (DungeonUi.Button("coopCopy", new Rect(450, 290, 130, 44), "Copy", DungeonUi.Teal)) GUIUtility.systemCopyBuffer = session.JoinCode;
-            }
-            else if (session.IsHost) DrawDirectHost(session);
-            else
-            {
-                DungeonUi.Label(new Rect(100, 268, 480, 24), "P2P PARTY", 14, DungeonUi.Muted);
-                DungeonUi.Label(new Rect(100, 296, 480, 50), "Connected directly to the host.", 16, DungeonUi.Text);
-            }
-            DungeonUi.Label(new Rect(100, 360, 480, 24), $"PARTY  {session.Peers.Count} / {NetSession.MaxPlayers}", 14, DungeonUi.Muted);
-            for (int i = 0; i < session.Peers.Count; i++)
-            {
-                var peer = session.Peers[i];
-                var hero = run.Characters[Mathf.Clamp(peer.ClassIndex, 0, run.Characters.Count - 1)];
-                string tags = (i == 0 ? "  /  HOST" : "") + (peer.Id == session.LocalId ? "  /  YOU" : "") + (peer.Ready ? "  /  READY" : "");
-                float named = NameTag.Draw(new Rect(100, 386 + i * 46, 300, 40), peer.Name, peer.NameColor, peer.Badge, 16);
-                DungeonUi.Label(new Rect(100 + named, 389 + i * 46, 300 - named, 20), tags, 13, DungeonUi.Muted);
-                DungeonUi.Label(new Rect(400, 390 + i * 46, 180, 40), hero.DisplayName, 18, hero.Color, TextAnchor.UpperRight);
-            }
-
-            DungeonUi.Panel(new Rect(650, 250, 560, 336), DungeonUi.PanelColor);
-            DungeonUi.Label(new Rect(680, 268, 500, 24), "YOUR HERO", 14, DungeonUi.Muted);
-            // Two columns that scroll once there are more heroes than fit above the note.
-            int rows = (run.AvailableCharacters.Count + 1) / 2;
-            heroScroll = GUI.BeginScrollView(new Rect(680, 300, 522, 176), heroScroll, new Rect(0, 0, 500, Mathf.Max(176, rows * 58 - 10)));
-            for (int i = 0, slot = 0; i < run.Characters.Count; i++)
-            {
-                var hero = run.Characters[i];
-                // Heroes this account cannot play (the developers' Specimen) are left out of the list.
-                if (run.IsCharacterLocked(hero)) continue;
-                bool selected = i == session.LocalClassIndex;
-                if (DungeonUi.Button("coopClass" + i, new Rect(slot % 2 * 256, slot / 2 * 58, 244, 48), hero.DisplayName, selected ? hero.Color : DungeonUi.Muted))
-                {
-                    run.SelectCharacter(hero);
-                    if (run.SelectedCharacter == hero) session.SetLocalClass(i);
-                }
-                slot++;
-            }
-            GUI.EndScrollView();
-            DungeonUi.Label(new Rect(680, 486, 500, 60), "The descent starts when everyone is ready. Enemies scale with the party; each hero keeps their own Ash.", 15, DungeonUi.Muted);
-
-            if (DungeonUi.Button("coopReady", new Rect(860, 598, 350, 48),
-                session.LocalReady ? "Cancel ready" : "Ready up", session.LocalReady ? DungeonUi.Teal : AbilityCatalog.Gold))
-                session.SetLocalReady(!session.LocalReady);
-
-        }
-
-        /// <summary>The share panel of a direct host: the internet address with a copy button, the LAN one and the router result.</summary>
-        private static void DrawDirectHost(NetSession session)
-        {
-            string shared = session.PublicAddress ?? session.LanAddress;
-            DungeonUi.Label(new Rect(100, 262, 330, 22), session.PublicAddress != null ? "SHARE THIS ADDRESS" : "LAN ADDRESS", 14, DungeonUi.Muted);
-            DungeonUi.Label(new Rect(100, 282, 340, 40), shared ?? "Finding your address…", shared != null ? 26 : 18, AbilityCatalog.Gold);
-            if (shared != null && DungeonUi.Button("coopCopy", new Rect(450, 280, 130, 40), "Copy", DungeonUi.Teal)) GUIUtility.systemCopyBuffer = shared;
-            if (session.PublicAddress != null && session.LanAddress != null)
-                DungeonUi.Label(new Rect(100, 318, 480, 20), "Same network: " + session.LanAddress, 13, DungeonUi.Muted);
-            // Below the panels, where the status line would go (a lobby host has no status).
-            if (!string.IsNullOrEmpty(session.PortStatus) && string.IsNullOrEmpty(session.Status))
-                DungeonUi.Label(new Rect(70, 596, 770, 50), session.PortStatus, 14, DungeonUi.Muted);
+            DungeonUi.Panel(new Rect(70, 250, 1140, 200), DungeonUi.PanelColor);
+            DungeonUi.Label(new Rect(100, 300, 1080, 50), "Entering the party hall…", 32, DungeonUi.Text);
         }
 
         /// <summary>Starts the party with the hero last picked on the solo screen.</summary>

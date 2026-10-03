@@ -13,6 +13,7 @@ import stat
 import subprocess
 import sys
 import tempfile
+import time
 import urllib.error
 import urllib.request
 import zipfile
@@ -21,6 +22,8 @@ DEFAULT_REPO = "Splinters2006/AshBelow"
 MAX_ARCHIVE_BYTES = 2 * 1024**3
 MAX_EXTRACTED_BYTES = 8 * 1024**3
 RELEASE_MARKER = ".ashbelow-release.json"
+# Written by a --relaunch update for the game to show when it opens again (then the game deletes it).
+UPDATE_RESULT = ".ashbelow-update-result.json"
 # Each build ZIP is recognised by its asset name prefix, its launcher and the Unity runtime next to it.
 PLATFORMS = {
     "windows": {"label": "Windows", "prefix": "AshBelow-", "executable": "AshBelow.exe", "runtime": "UnityPlayer.dll"},
@@ -206,6 +209,70 @@ def replace_installation(directory, root, previous):
         raise
 
 
+def installed_matches(directory, asset):
+    """True when the install already is this release asset. Builds record their own ZIP's name; updates add its id."""
+    marker = directory / RELEASE_MARKER
+    if not marker.is_file():
+        return False
+    try:
+        installed = json.loads(marker.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return False
+    return installed.get("asset_id") == asset["id"] or installed.get("asset_name") == asset["name"]
+
+
+def process_running(pid):
+    if sys.platform == "win32":
+        import ctypes
+        kernel32 = ctypes.windll.kernel32
+        handle = kernel32.OpenProcess(0x00100000, False, pid)  # SYNCHRONIZE
+        if not handle:
+            return False
+        try:
+            return kernel32.WaitForSingleObject(handle, 0) == 0x102  # WAIT_TIMEOUT: still running
+        finally:
+            kernel32.CloseHandle(handle)
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    return True
+
+
+def wait_for_exit(pid, timeout=60.0):
+    """Waits for the game that started this update to close, so its files can be replaced."""
+    deadline = time.monotonic() + timeout
+    while process_running(pid):
+        if time.monotonic() > deadline:
+            raise RuntimeError("Ash Below did not close, so it could not be updated. Close it and try again.")
+        time.sleep(0.25)
+
+
+def relaunch(directory, platform):
+    """Opens the game again once the updater is done, detached so it outlives this process."""
+    executable = directory / PLATFORMS[platform]["executable"]
+    if not executable.is_file():
+        return
+    options = {"cwd": str(directory), "stdin": subprocess.DEVNULL, "stdout": subprocess.DEVNULL, "stderr": subprocess.DEVNULL}
+    if sys.platform == "win32":
+        options["creationflags"] = 0x00000008 | 0x00000200  # DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP
+    else:
+        options["start_new_session"] = True
+    try:
+        subprocess.Popen([str(executable)], **options)
+    except OSError as error:
+        print(f"Could not reopen the game: {error}", file=sys.stderr)
+
+
+def write_result(directory, ok, message):
+    try:
+        (directory / UPDATE_RESULT).write_text(json.dumps({"ok": ok, "message": message}), encoding="utf-8")
+    except OSError:
+        pass
+
+
 def install_release(directory, repo, save_directory, asset_name=None, check=False, platform="windows"):
     executable = PLATFORMS[platform]["executable"]
     require_separate_save_directory(directory, save_directory)
@@ -217,8 +284,7 @@ def install_release(directory, repo, save_directory, asset_name=None, check=Fals
     print(f"Latest release: {release['tag_name']} / {asset['name']}")
     if check:
         return None
-    marker = directory / RELEASE_MARKER
-    if marker.is_file() and json.loads(marker.read_text(encoding="utf-8")).get("asset_id") == asset["id"]:
+    if installed_matches(directory, asset):
         print(f"Already up to date. Launch: {directory / executable}")
         return directory
     # A running game keeps its executable locked against writing on both Windows and Linux.
@@ -236,7 +302,7 @@ def install_release(directory, repo, save_directory, asset_name=None, check=Fals
         unpacked = staging / "unpacked"
         unpacked.mkdir()
         root = extract_release(archive, unpacked, platform)
-        (root / RELEASE_MARKER).write_text(json.dumps({"tag": release["tag_name"], "asset_id": asset["id"]}), encoding="utf-8")
+        (root / RELEASE_MARKER).write_text(json.dumps({"tag": release["tag_name"], "asset_id": asset["id"], "asset_name": asset["name"]}), encoding="utf-8")
         previous = staging / "previous"
         previous.mkdir()
         replace_installation(directory, root, previous)
@@ -279,20 +345,44 @@ def main(argv=None):
     parser.add_argument("--asset", help="Exact ZIP asset name, if the release contains multiple ZIPs for this platform")
     parser.add_argument("--save-directory", type=Path, default=default_save_directory())
     parser.add_argument("--check", action="store_true", help="Check for updates without installing or backing up saves")
+    # Used by the game's own "Check for updates" button: wait for it to close, update, then open it again.
+    parser.add_argument("--wait-pid", type=int, help="Wait for this process (the game) to exit before updating")
+    parser.add_argument("--relaunch", action="store_true", help="Release mode: reopen the game afterwards and leave it the result")
+    parser.add_argument("--log", type=Path, help="Write all output to this file instead of the console")
     args = parser.parse_args(argv)
     if not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", args.repo):
         parser.error("--repo must be owner/repository")
+    if args.log:
+        log = args.log.open("w", encoding="utf-8", buffering=1)
+        sys.stdout = sys.stderr = log
+    directory = args.directory.resolve()
+    relaunching = args.relaunch and args.mode == "release" and not args.check
     try:
+        if args.wait_pid:
+            wait_for_exit(args.wait_pid)
         if args.mode == "source":
-            update_source(args.directory.resolve(), args.save_directory, args.branch, args.check)
+            update_source(directory, args.save_directory, args.branch, args.check)
         else:
-            install_release(args.directory.resolve(), args.repo, args.save_directory, args.asset, args.check, args.platform)
+            install_release(directory, args.repo, args.save_directory, args.asset, args.check, args.platform)
+        if relaunching:
+            tag = None
+            try:
+                tag = json.loads((directory / RELEASE_MARKER).read_text(encoding="utf-8")).get("tag")
+            except (OSError, ValueError):
+                pass
+            write_result(directory, True, f"Updated to {tag}." if tag else "Updated to the latest version.")
         return 0
     except (OSError, ValueError, RuntimeError, zipfile.BadZipFile, subprocess.CalledProcessError) as error:
         print(f"Update stopped: {error}", file=sys.stderr)
         if isinstance(error, subprocess.CalledProcessError) and error.stderr:
             print(error.stderr.strip(), file=sys.stderr)
+        if relaunching:
+            write_result(directory, False, f"Update stopped: {error}")
         return 1
+    finally:
+        # Updated or not, the player gets their game back.
+        if relaunching:
+            relaunch(directory, args.platform)
 
 
 if __name__ == "__main__":

@@ -6,7 +6,9 @@ from pathlib import Path
 import shutil
 import stat
 import subprocess
+import sys
 import tempfile
+import threading
 import unittest
 from unittest import mock
 import zipfile
@@ -240,6 +242,41 @@ class UpdaterTests(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             updater.update_source(checkout, self.saves)
         self.assertEqual((checkout / "Assets/version.txt").read_text(), "local changes")
+
+    def test_build_marker_asset_name_counts_as_up_to_date(self):
+        # A build records its own ZIP's name, so a fresh download is not offered itself as an update.
+        (self.install / updater.RELEASE_MARKER).write_text(json.dumps({"asset_name": "AshBelow-test.zip"}))
+        self.assertTrue(updater.installed_matches(self.install, self.asset))
+        self.assertFalse(updater.installed_matches(self.install, {**self.asset, "id": 7, "name": "AshBelow-newer.zip"}))
+        (self.install / updater.RELEASE_MARKER).write_text("not json")
+        self.assertFalse(updater.installed_matches(self.install, self.asset))
+
+    def test_wait_for_exit_returns_once_the_game_closes(self):
+        game = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(0.5)"])
+        # The real game is not the updater's child; reaping it here keeps this one from lingering as a zombie.
+        reaper = threading.Thread(target=game.wait)
+        reaper.start()
+        updater.wait_for_exit(game.pid, timeout=10)
+        reaper.join()
+        self.assertFalse(updater.process_running(game.pid))
+
+    def test_relaunch_update_leaves_result_and_reopens_game_even_on_failure(self):
+        archive = self.archive()
+        with mock.patch.object(updater, "request_json", return_value=self.release), mock.patch.object(
+                updater, "download_asset", side_effect=lambda asset, dest: shutil.copyfile(archive, dest)), mock.patch.object(
+                updater, "relaunch") as reopen:
+            code = updater.main(["--directory", str(self.install), "--save-directory", str(self.saves), "--platform", "windows",
+                                 "--repo", "example/repo", "--relaunch"])
+            self.assertEqual(code, 0)
+            result = json.loads((self.install / updater.UPDATE_RESULT).read_text())
+            self.assertEqual(result, {"ok": True, "message": "Updated to v1.0."})
+            reopen.assert_called_once()
+        with mock.patch.object(updater, "request_json", side_effect=RuntimeError("offline")), mock.patch.object(updater, "relaunch") as reopen:
+            code = updater.main(["--directory", str(self.install), "--save-directory", str(self.saves), "--platform", "windows",
+                                 "--repo", "example/repo", "--relaunch"])
+            self.assertEqual(code, 1)
+            self.assertFalse(json.loads((self.install / updater.UPDATE_RESULT).read_text())["ok"])
+            reopen.assert_called_once()
 
 
 if __name__ == "__main__":

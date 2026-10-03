@@ -11,6 +11,14 @@ namespace Slopgame
     public sealed class CoopSync : MonoBehaviour
     {
         private const float StateInterval = 0.05f, SnapshotInterval = 1f / 15f;
+        /// <summary>The floor number heroes in the party hall report, so hall and descent positions never mix.</summary>
+        public const int HallFloor = -1;
+        /// <summary>Seconds between the whole party readying up and the descent starting, so nobody is thrown in mid-click.</summary>
+        public const float StartCountdown = 5f;
+        /// <summary>Seconds until the descent starts while the whole party is ready in the hall; negative otherwise.</summary>
+        public float CountdownLeft => allReadySince < 0f ? -1f : Mathf.Max(0f, StartCountdown - (Time.unscaledTime - allReadySince));
+        // When this machine saw the whole party ready (each machine counts from its own roster; the host decides the start).
+        private float allReadySince = -1f;
 
         public DungeonRun Run { get; set; }
         public NetSession Session { get; private set; }
@@ -42,7 +50,7 @@ namespace Slopgame
         {
             Session = gameObject.AddComponent<NetSession>();
             Session.PeerLeft += OnPeerLeft;
-            Session.Disconnected += () => { if (Run != null) Run.ShowMainMenu(true); };
+            Session.Disconnected += () => { ClearTeammates(); if (Run != null) Run.ShowMainMenu(true); };
             Session.Handle(CoopMessages.Start, OnStart);
             Session.Handle(CoopMessages.Lobby, (sender, reader) => { if (!IsHost) ReturnToLobbyLocal(); });
             Session.Handle(CoopMessages.State, OnState);
@@ -167,6 +175,9 @@ namespace Slopgame
             Run.ShowCoopLobby();
         }
 
+        /// <summary>Removes every teammate's hero from this machine (leaving the party, or between the hall and a descent).</summary>
+        public void ClearTeammates() => ClearRemoteHeroes();
+
         private void ClearRemoteHeroes()
         {
             foreach (var hero in remoteHeroes) if (hero != null) Destroy(hero.gameObject);
@@ -212,7 +223,13 @@ namespace Slopgame
 
         private void Update()
         {
-            if (IsHost && Session.AllReady) HostBeginRun();
+            // Anyone un-readying, swapping heroes, joining or leaving starts the countdown over.
+            if (Session.State == NetState.Lobby && Session.AllReady) { if (allReadySince < 0f) allReadySince = Time.unscaledTime; }
+            else allReadySince = -1f;
+            if (IsHost && allReadySince >= 0f && CountdownLeft <= 0f) HostBeginRun();
+            // Hosting or joining a party (from the co-op page) walks straight into the party hall.
+            if (Session.State == NetState.Lobby && Run.IsInMainMenu) Run.ShowCoopLobby();
+            if (Session.State == NetState.Lobby && Run.IsInLobby && Run.Player != null) { UpdateHall(); return; }
             if (!Active || Run.Player == null || Run.Map == null) return;
             if (Time.unscaledTime >= nextState)
             {
@@ -246,7 +263,7 @@ namespace Slopgame
             }
             var message = new PlayerStateMessage
             {
-                Id = LocalId, Floor = Run.Floor, Position = player.transform.position,
+                Id = LocalId, Floor = SyncFloor, Position = player.transform.position,
                 Aim = taunting ? taunt.Direction : player.Shield != null && player.Shield.IsBlocking ? player.Shield.Direction : player.AimDirection,
                 Flags = flags, MoreFlags = (byte)((player.Blessing != null && player.Blessing.BonusDamage > 0 ? PlayerStateMessage.Blessed : 0)
                     | (player.IsVeiled ? PlayerStateMessage.Veiled : 0)
@@ -272,8 +289,35 @@ namespace Slopgame
                 message.Write(writer);
                 Session.Send(CoopMessages.State, writer, NetworkDelivery.UnreliableSequenced, sender);
             }
-            if (message.Floor != Run.Floor) return;
+            if (message.Floor != SyncFloor) return;
             remoteHeroes.Find(hero => hero.Id == message.Id)?.Apply(message);
+        }
+
+        /// <summary>The floor this machine's hero is on, as hero states carry it: <see cref="HallFloor"/> in the party hall.</summary>
+        private int SyncFloor => Run.IsInLobby ? HallFloor : Run.Floor;
+
+        /// <summary>
+        /// The party hall: shares where the hero runs, and keeps one teammate hero per guest, rebuilt whenever they swap
+        /// heroes (or their name arrives) at the statues.
+        /// </summary>
+        private void UpdateHall()
+        {
+            if (Time.unscaledTime >= nextState)
+            {
+                nextState = Time.unscaledTime + StateInterval;
+                SendState();
+            }
+            remoteHeroes.RemoveAll(hero => hero == null);
+            foreach (var peer in Session.Peers)
+            {
+                if (peer.Id == LocalId) continue;
+                var character = Run.Characters[Mathf.Clamp(peer.ClassIndex, 0, Run.Characters.Count - 1)];
+                var hero = remoteHeroes.Find(candidate => candidate.Id == peer.Id);
+                if (hero != null && hero.Character == character && hero.PlayerName == peer.Name && hero.NameColor == peer.NameColor && hero.Badge == peer.Badge) continue;
+                Vector2 at = hero != null ? (Vector2)hero.transform.position : Run.Hall != null ? Run.Hall.Spawn : (Vector2)Run.Player.transform.position;
+                if (hero != null) { remoteHeroes.Remove(hero); Destroy(hero.gameObject); }
+                remoteHeroes.Add(RemoteHero.Create(Run, peer.Id, peer.Name, peer.NameColor, peer.Badge, character, at));
+            }
         }
 
         private void SendSnapshot()

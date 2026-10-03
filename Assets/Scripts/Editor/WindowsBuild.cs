@@ -56,6 +56,7 @@ namespace Slopgame.Editor
             if (report.summary.result != BuildResult.Succeeded)
                 throw new BuildFailedException("Windows build failed: " + report.summary.result);
             File.Copy("scripts/update-game.py", Path.Combine(folder, "update-game.py"));
+            WindowsBuild.WriteReleaseMarker(folder, release);
             File.Copy("scripts/Update.cmd", Path.Combine(folder, "Update.cmd"));
             File.Copy("scripts/install-python.ps1", Path.Combine(folder, "install-python.ps1"));
             File.WriteAllText(Path.Combine(folder, "START-HERE.txt"),
@@ -68,6 +69,16 @@ namespace Slopgame.Editor
             string archive = Path.Combine(releases, release + ".zip");
             ZipFile.CreateFromDirectory(folder, archive, System.IO.Compression.CompressionLevel.Optimal, true);
             Debug.Log("WINDOWS_BUILD_OK: " + archive);
+        }
+
+        /// <summary>
+        /// Records which release ZIP this build ships as, so the in-game update check (and the updater) know a fresh
+        /// download is already up to date. A tagged CI build also records its tag.
+        /// </summary>
+        public static void WriteReleaseMarker(string folder, string release)
+        {
+            string tag = Environment.GetEnvironmentVariable("GITHUB_REF_TYPE") == "tag" ? Environment.GetEnvironmentVariable("GITHUB_REF_NAME") : null;
+            File.WriteAllText(Path.Combine(folder, GameUpdater.MarkerFile), JsonUtility.ToJson(new GameUpdater.ReleaseMarker { tag = tag ?? "", asset_name = release + ".zip" }));
         }
     }
 }

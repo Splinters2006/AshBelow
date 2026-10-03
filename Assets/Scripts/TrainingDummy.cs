@@ -46,6 +46,12 @@ namespace Slopgame
             }
         }
 
+        /// <summary>Stands one dummy at <paramref name="position"/> (the co-op party hall's; each machine has its own).</summary>
+        public static void Place(DungeonRun run, Transform level, Vector2 position)
+        {
+            if (run != null) Create(run, level, position);
+        }
+
         private static void Create(DungeonRun run, Transform level, Vector2 position)
         {
             var body = DungeonVisuals.Create("Training dummy", level, position, Vector2.one * Size, Color.white, 3);

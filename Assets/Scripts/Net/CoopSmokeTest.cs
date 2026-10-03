@@ -251,7 +251,7 @@ namespace Slopgame
 
             yield return new WaitForSecondsRealtime(1f);
             if (host) run.Coop.HostReturnToLobby();
-            yield return Wait("back in the party lobby", () => session.State == NetState.Lobby && run.IsInMainMenu);
+            yield return Wait("back in the party hall", () => session.State == NetState.Lobby && run.IsInLobby);
             if (host)
             {
                 yield return new WaitForSecondsRealtime(1f);

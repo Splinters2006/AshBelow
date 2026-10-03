@@ -34,6 +34,7 @@ namespace Slopgame
         private readonly SettingsMenu settingsMenu = new SettingsMenu();
         private readonly Encyclopedia encyclopedia = new Encyclopedia();
         private readonly AccountMenu accountMenu = new AccountMenu();
+        private readonly UpdateMenu updateMenu = new UpdateMenu();
         public void ResetPage(bool showCoop = false) { selecting = false; shopping = false; settings = false; codex = false; account = false; coop = showCoop; leaveConfirmUntil = 0f; settingsMenu.Cancel(); accountMenu.Cancel(); }
         public void ShowCoop() => ResetPage(true);
 
@@ -74,6 +75,8 @@ namespace Slopgame
             {
                 DrawBackdrop();
                 DrawHeader();
+                // A found update asks first, over the page (never while in a party: updating closes the game).
+                if (Run.Updater.PromptOpen && Run.Coop.Session.State == NetState.Offline) { updateMenu.DrawPrompt(Run.Updater); return; }
                 // The cog in the header opens the settings over whichever page is showing; Back returns to it.
                 if (settings)
                 {
@@ -227,6 +230,7 @@ namespace Slopgame
             if (Run.HasDeveloperAccess && DungeonUi.Button("debugMode", new Rect(755, 548, 420, 38),
                 DebugMode.Enabled ? "Debug admin mode: ON  (F1)" : "Debug admin mode: OFF  (F1)",
                 DebugMode.Enabled ? DungeonHud.DebugColor : DungeonUi.Muted)) DebugMode.Toggle();
+            updateMenu.DrawButton(Run.Updater, new Rect(755, 598, 420, 40), new Rect(70, 598, 665, 40));
         }
 
         /// <summary>The account's saved descent, in place of the landing blurb: where it was left, and a button to go on.</summary>

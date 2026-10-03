@@ -38,6 +38,7 @@ namespace Slopgame
         public CrystalShop Shop { get; private set; }
         public Vector2 Exit => exit;
         public string Objective => IsTesting ? "Open Build to add any talent you have discovered"
+            : IsInLobby ? (Hall != null ? Hall.Prompt : "")
             : InShop ? ShopObjective
             : Artifact != null ? "Claim the glowing artifact  /  " + KeyBindings.Label(GameAction.Interact)
             : IsBossFloor && HostileCount > 0 ? "Defeat the arena guardian"
@@ -112,6 +113,7 @@ namespace Slopgame
         private int floorAshEarned, floorAshPaid, resumeAshPaid;
         public int RunAshEarned { get; private set; }
         public CoopSync Coop { get; private set; }
+        public GameUpdater Updater { get; private set; }
         /// <summary>True during a co-op descent; the local hero is still <see cref="Player"/>.</summary>
         public bool IsNetworked => Coop != null && Coop.Active;
         /// <summary>True on a co-op guest, whose enemies are driven by the host.</summary>
@@ -179,6 +181,7 @@ namespace Slopgame
             menu.Run = this;
             Coop = gameObject.AddComponent<CoopSync>();
             Coop.Run = this;
+            Updater = gameObject.AddComponent<GameUpdater>();
             ShowMainMenu();
         }
 
@@ -211,24 +214,30 @@ namespace Slopgame
         public void ShowMainMenu(bool disconnected)
         {
             if (Coop != null && Coop.Session.State != NetState.Offline && !disconnected) Coop.Session.Leave();
+            Coop?.ClearTeammates();
+            // Leaving the party hall goes back to the co-op page, where the party was joined.
+            bool fromHall = IsInLobby;
             // A signed-in player's descent waits to be continued; otherwise it ends here.
             if (CanSuspend) SuspendRun();
-            else if (!IsInMainMenu && !IsTesting) StashCrystals();
+            else if (!IsInMainMenu && !IsTesting && !IsInLobby) StashCrystals();
             ClearRun();
-            menu.ResetPage(disconnected);
+            menu.ResetPage(disconnected || fromHall);
         }
 
-        /// <summary>Back to the co-op party screen while staying connected.</summary>
+        /// <summary>Back to the co-op party while staying connected: the party hall, or the co-op page when not in a party.</summary>
         public void ShowCoopLobby()
         {
             ClearRun();
-            menu.ShowCoop();
+            if (Coop != null && Coop.Session.State == NetState.Lobby) BeginPartyHall();
+            else menu.ShowCoop();
         }
 
         private void ClearRun()
         {
             IsPlaying = false;
             IsTesting = false;
+            IsInLobby = false;
+            Hall = null;
             ChoosingUpgrade = false;
             ChoosingArtifact = false;
             WorldComplete = false;
@@ -266,6 +275,9 @@ namespace Slopgame
         {
             if (SelectedCharacter == null || IsCharacterLocked(SelectedCharacter)) return;
             IsInMainMenu = false;
+            // From the party hall: NextFloor below clears the hall away with its level.
+            IsInLobby = false;
+            Hall = null;
             Seed = seed;
             PartySize = Mathf.Max(1, partySize);
             // NextFloor below steps onto the world's first floor (floor 1 for the Ash Below).
@@ -302,8 +314,58 @@ namespace Slopgame
         public void BeginTesting()
         {
             if (SelectedCharacter == null || IsCharacterLocked(SelectedCharacter) || IsNetworked) return;
-            IsInMainMenu = false;
             IsTesting = true;
+            // The guardians' open arena, with the dummies in its middle and the hero just below them.
+            Vector2 center = OpenArena("Testing grounds");
+            TrainingDummy.PlaceRing(this, level, center, TestingDummies, TestingDummyRing);
+            PlaceHero(center + Vector2.down * (TestingDummyRing + 2.5f));
+        }
+
+        // ---------------------------------------------------------------- co-op party hall
+
+        /// <summary>
+        /// True in the co-op party hall: the party is connected but the descent has not begun. Each hero runs around the
+        /// open arena (teammates are shown live), swaps heroes at the statues and readies up at the portal.
+        /// </summary>
+        public bool IsInLobby { get; private set; }
+        public PartyHall Hall { get; private set; }
+
+        /// <summary>Opens the party hall with the hero picked for the party. Only while connected to a party lobby.</summary>
+        public void BeginPartyHall()
+        {
+            if (Coop == null || Coop.Session.State != NetState.Lobby) return;
+            var character = characters[Mathf.Clamp(Coop.Session.LocalClassIndex, 0, characters.Length - 1)];
+            // A hero this account cannot play (the Specimen after signing out) falls back to the Knight.
+            if (IsCharacterLocked(character)) character = System.Array.Find(characters, hero => hero.Weapon == WeaponType.Sword) ?? characters[0];
+            SelectedCharacter = character;
+            Coop.Session.SetLocalClass(System.Array.IndexOf(characters, character));
+            IsInLobby = true;
+            Vector2 center = OpenArena("Party hall");
+            Hall = PartyHall.Build(this, level, center);
+            PlaceHero(Hall.Spawn);
+        }
+
+        /// <summary>Party hall: swaps the local hero for <paramref name="character"/> where they stand, and tells the party.</summary>
+        public bool SwapLobbyHero(CharacterDefinition character)
+        {
+            int index = System.Array.IndexOf(characters, character);
+            if (!IsInLobby || index < 0 || IsCharacterLocked(character) || character == SelectedCharacter) return false;
+            Vector2 at = Player != null ? (Vector2)Player.transform.position : Hall.Spawn;
+            SelectedCharacter = character;
+            CreatePlayer();
+            Player.Powerups.BeginFloor();
+            Player.transform.position = at;
+            Coop.Session.SetLocalClass(index);
+            return true;
+        }
+
+        /// <summary>
+        /// Builds a fresh open arena outside any descent (the testing grounds or the party hall) in the starting world's
+        /// colours, with the selected hero, and returns its middle.
+        /// </summary>
+        private Vector2 OpenArena(string name)
+        {
+            IsInMainMenu = false;
             Seed = UnityEngine.Random.Range(0, 1000000);
             PartySize = 1;
             Floor = WorldCatalog.FirstFloor(StartWorld);
@@ -330,20 +392,23 @@ namespace Slopgame
             WaveBannerUntil = 0f;
             wavesStarted = false;
             monolith = null;
-            // The guardians' open arena, with the dummies in its middle and the hero just below them.
             Map = new DungeonMap(Seed, true);
-            level = new GameObject("Testing grounds").transform;
+            level = new GameObject(name).transform;
             level.SetParent(transform);
             view.backgroundColor = World.Background;
             DungeonVisuals.DrawMap(Map, level, World, false);
             DungeonVisuals.DecorateArena(level, World);
-            Vector2 center = DungeonMap.Arena.center - new Vector2(0.5f, 0.5f);
-            TrainingDummy.PlaceRing(this, level, center, TestingDummies, TestingDummyRing);
-            Player.transform.position = center + Vector2.down * (TestingDummyRing + 2.5f);
-            exit = Player.transform.position;
+            return DungeonMap.Arena.center - new Vector2(0.5f, 0.5f);
+        }
+
+        /// <summary>Stands the hero at <paramref name="position"/> in a just-opened arena and starts play there.</summary>
+        private void PlaceHero(Vector2 position)
+        {
+            Player.transform.position = position;
+            exit = position;
             lastHeroCells.Clear();
             IsPlaying = true;
-            view.transform.position = new Vector3(Player.transform.position.x, Player.transform.position.y, -10);
+            view.transform.position = new Vector3(position.x, position.y, -10);
             UpdatePaths();
         }
 
@@ -626,7 +691,7 @@ namespace Slopgame
         // ---------------------------------------------------------------- wave worlds
 
         /// <summary>True on a wave world's regular levels: waves of enemies in the arena instead of rooms to explore.</summary>
-        public bool IsWaveFloor => World.IsWaveWorld && !IsBossFloor && !InShop && Floor > 0 && !IsTesting;
+        public bool IsWaveFloor => World.IsWaveWorld && !IsBossFloor && !InShop && Floor > 0 && !IsTesting && !IsInLobby;
         /// <summary>The level's number within its world, 1-15 (guardians on levels 5, 10 and 15).</summary>
         public int LevelNumber => (Floor - 1) % WorldCatalog.FloorsPerWorld + 1;
         /// <summary>How many waves this level sends (0 away from wave levels).</summary>
@@ -861,8 +926,8 @@ namespace Slopgame
             { Progress.Save(); nextSaveRetry = Time.unscaledTime + 5f; }
             if (!IsPlaying) return;
             UpdatePaths();
-            // The testing grounds have no stairs, waves or rewards: only the dummies.
-            if (IsTesting) return;
+            // The testing grounds and the party hall have no stairs, waves or rewards (the hall runs itself, see PartyHall).
+            if (IsTesting || IsInLobby) return;
             if (UpdateWave()) return;
             bool canInteract = Player.Health > 0 && !HudCapturesInput && PlayerInput.Interact;
             if (Artifact != null && canInteract && Vector2.Distance(Player.transform.position, Artifact.transform.position) < 1.5f)
@@ -904,7 +969,7 @@ namespace Slopgame
         private Vector2 cameraShake;
 
         /// <summary>Solo debug mode only: abandons the current floor (boss arenas included) and builds the next one.</summary>
-        public bool CanSkipRoom => DebugMode.Enabled && !IsNetworked && IsPlaying && !IsTesting;
+        public bool CanSkipRoom => DebugMode.Enabled && !IsNetworked && IsPlaying && !IsTesting && !IsInLobby;
 
         public void DebugSkipRoom()
         {

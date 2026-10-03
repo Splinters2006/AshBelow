@@ -37,6 +37,7 @@ namespace Slopgame.Editor
             if (report.summary.result != BuildResult.Succeeded)
                 throw new BuildFailedException("Linux build failed: " + report.summary.result);
             File.Copy("scripts/update-game.py", Path.Combine(folder, "update-game.py"));
+            WindowsBuild.WriteReleaseMarker(folder, release);
             File.Copy("scripts/Update.sh", Path.Combine(folder, "Update.sh"));
             File.WriteAllText(Path.Combine(folder, "START-HERE.txt"),
                 "Extract the entire ZIP, then run ./AshBelow.x86_64 (first run: chmod +x AshBelow.x86_64). Keep all accompanying files and folders together.\n\n"

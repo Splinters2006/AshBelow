@@ -132,6 +132,7 @@ namespace Slopgame
             if (manager == null) return;
             if (manager.IsHost && id != manager.LocalClientId)
             {
+                if (Peer(id) == null) return;
                 peers.RemoveAll(peer => peer.Id == id);
                 BroadcastRoster();
                 PeerLeft?.Invoke(id);
@@ -154,6 +155,15 @@ namespace Slopgame
             if (self != null) { self.ClassIndex = index; self.Ready = false; }
             if (IsHost) BroadcastRoster();
             else if (State == NetState.Lobby) SendHello();
+        }
+
+        /// <summary>Host only: removes a guest from the party; they are told why on their co-op page.</summary>
+        public void Kick(ulong id)
+        {
+            if (!IsHost || id == LocalId || Peer(id) == null) return;
+            manager.DisconnectClient(id, "The host removed you from the party.");
+            // Update the roster now, whether or not Netcode also reports this disconnect (a second report is ignored).
+            OnClientDisconnected(id);
         }
 
         public void SetLocalReady(bool ready)
